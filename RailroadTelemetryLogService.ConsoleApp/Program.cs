@@ -21,7 +21,7 @@ class Program
             SubscribeToHotPacketEvent(subscriberType);
         }
 
-        var logDirectoryPath = @"C:\TrainDetection\Logs";
+        var logDirectoryPath = configuration.GetValue<string>("LogDirectoryPath");
         var lastPositions = new Dictionary<string, long>();
 
         while (true)
