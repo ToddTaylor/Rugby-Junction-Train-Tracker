@@ -1,44 +1,43 @@
-﻿using RailroadTelemetryLogService.Models;
-using System.Diagnostics;
+﻿using ConsoleApp.Models;
 using System.Text.RegularExpressions;
 
-namespace RailroadTelemetryLogService.ConsoleApp.Deserializers
+namespace ConsoleApp.Deserializers
 {
-    public class HotDeserializer
+    public class HotEotDeserializer
     {
-        public HotDeserializer() { }
+        public HotEotDeserializer() { }
 
-        public static HotPacket Deserialize(string data)
+        public static HotEotPacket Deserialize(string data)
         {
             data = ReplaceMultipleSpaces(data);
 
             var rawDataArray = SplitIntoToArrayBySpaces(data);
 
-            var packet = new HotPacket()
+            var packet = new HotEotPacket()
             {
                 TimeReceived = ConvertToDateTime(rawDataArray[0]),
-                EstimatedSignalStrength = ConvertToDecimal(rawDataArray[1]),
-                Source = ConvertToNullIfDash(rawDataArray[2]),
+                SIG = ConvertToDecimal(rawDataArray[1]),
+                SRC = ConvertToNullIfDash(rawDataArray[2]),
                 ID = ConvertToInteger(rawDataArray[3]),
-                BreakPipePressure = ConvertToInteger(rawDataArray[4]),
-                MotionStatus = ConvertToInteger(rawDataArray[5]),
+                BP = ConvertToInteger(rawDataArray[4]),
+                MOT = ConvertToInteger(rawDataArray[5]),
                 MarkerLightStatus = ConvertToInteger(rawDataArray[6]),
-                BatteryStatus = ConvertToNullIfDash(rawDataArray[7]),
-                BatteryChargeUsed = ConvertToInteger(rawDataArray[8]),
-                AirTurbineEquipped = ConvertToInteger(rawDataArray[9]),
-                Command = ConvertToNullIfDash(rawDataArray[10]),
-                MessageType = ConvertToNullIfDash(rawDataArray[11]),
-                EmergencyValveHealth = ConvertToInteger(rawDataArray[12]),
-                TwoWayLinkConfirmation = ConvertToInteger(rawDataArray[13]),
-                MovementRailroad = ConvertToNullIfDash(rawDataArray[14]),
-                MovementSymbol = ConvertToNullIfDash(rawDataArray[15])
+                BATST = ConvertToNullIfDash(rawDataArray[7]),
+                BATCU = ConvertToInteger(rawDataArray[8]),
+                TRB = ConvertToInteger(rawDataArray[9]),
+                CMD = ConvertToNullIfDash(rawDataArray[10]),
+                TYP = ConvertToNullIfDash(rawDataArray[11]),
+                VLV = ConvertToInteger(rawDataArray[12]),
+                CNF = ConvertToInteger(rawDataArray[13]),
+                RR = ConvertToNullIfDash(rawDataArray[14]),
+                SYMB = ConvertToNullIfDash(rawDataArray[15])
             };
 
             // Display each element value in the array, prefixed by its position in the array
-            for (int i = 0; i < rawDataArray.Length; i++)
-            {
-                Debug.WriteLine($"{i}: {rawDataArray[i]}");
-            }
+            //for (int i = 0; i < rawDataArray.Length; i++)
+            //{
+            //    Debug.WriteLine($"{i}: {rawDataArray[i]}");
+            //}
 
             return packet;
         }
