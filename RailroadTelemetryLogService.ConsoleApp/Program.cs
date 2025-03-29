@@ -21,43 +21,57 @@ class Program
             SubscribeToHotPacketEvent(subscriberType);
         }
 
-        var logFilePath = $@"C:\TrainDetection\Logs\eot{GetTodayDateString()}.log";
-        var lastPosition = 0L;
+        var logDirectoryPath = @"C:\TrainDetection\Logs";
+        var lastPositions = new Dictionary<string, long>();
 
         while (true)
         {
             try
             {
-                using var fileStream = new FileStream(logFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                var logFilePaths = Directory.GetFiles(logDirectoryPath, $"*{GetTodayDateString()}.log");
 
-                fileStream.Seek(lastPosition, SeekOrigin.Begin);
-
-                using var reader = new StreamReader(fileStream);
-
-                while (!reader.EndOfStream)
+                foreach (var logFilePath in logFilePaths)
                 {
-                    var line = reader.ReadLine();
-
-                    Console.WriteLine(line);
-
-                    if (IsHeaderRow(line))
+                    if (!lastPositions.ContainsKey(logFilePath))
                     {
-                        continue;
+                        lastPositions[logFilePath] = 0L;
                     }
 
-                    var hotPacket = HotEotDeserializer.Deserialize(line);
+                    using var fileStream = new FileStream(logFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                    fileStream.Seek(lastPositions[logFilePath], SeekOrigin.Begin);
 
-                    HotPacketReceived?.Invoke(null, new HotPacketEventArgs(hotPacket));
+                    using var reader = new StreamReader(fileStream);
+
+                    while (!reader.EndOfStream)
+                    {
+                        var line = reader.ReadLine();
+
+                        if (IsHeaderRow(line))
+                        {
+                            continue;
+                        }
+
+                        if (Path.GetFileName(logFilePath).StartsWith("eot", StringComparison.OrdinalIgnoreCase))
+                        {
+                            Console.WriteLine(line);
+                            var hotPacket = HotEotDeserializer.Deserialize(line);
+                            HotPacketReceived?.Invoke(null, new HotPacketEventArgs(hotPacket));
+                            lastPositions[logFilePath] = fileStream.Position;
+                        }
+
+                        if (Path.GetFileName(logFilePath).StartsWith("dpu", StringComparison.OrdinalIgnoreCase))
+                        {
+                            // TODO: Deserialize DPU packet
+                        }
+                    }
                 }
-
-                lastPosition = fileStream.Position;
             }
             catch (IOException ex)
             {
                 Console.WriteLine("Error reading the file: " + ex.Message);
             }
 
-            Thread.Sleep(1000); // Wait before checking the file again.
+            Thread.Sleep(1000); // Wait before checking the files again.
         }
     }
 
