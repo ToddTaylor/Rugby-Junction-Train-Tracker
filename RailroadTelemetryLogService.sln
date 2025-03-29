@@ -1,0 +1,30 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.13.35828.75
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleApp", "RailroadTelemetryLogService.ConsoleApp\ConsoleApp.csproj", "{DC5E8663-073A-0F2A-391E-5E59D9C3BB59}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleApp.UnitTests", "ConsoleApp.UnitTests\ConsoleApp.UnitTests.csproj", "{1C323408-FC0C-4329-8CA6-715964935F63}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{DC5E8663-073A-0F2A-391E-5E59D9C3BB59}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DC5E8663-073A-0F2A-391E-5E59D9C3BB59}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DC5E8663-073A-0F2A-391E-5E59D9C3BB59}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DC5E8663-073A-0F2A-391E-5E59D9C3BB59}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1C323408-FC0C-4329-8CA6-715964935F63}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1C323408-FC0C-4329-8CA6-715964935F63}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1C323408-FC0C-4329-8CA6-715964935F63}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1C323408-FC0C-4329-8CA6-715964935F63}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {DF85834B-4290-411A-A7A3-4E227E5667BD}
+	EndGlobalSection
+EndGlobal
