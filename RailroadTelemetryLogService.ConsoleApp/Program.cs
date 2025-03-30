@@ -5,20 +5,27 @@ using System.Reflection;
 
 class Program
 {
-    public delegate void HotPacketEventHandler(object sender, HotPacketEventArgs e);
-
-    public static event HotPacketEventHandler HotPacketReceived;
+    public delegate void DpuPacketEventHandler(object sender, DpuPacketEventArgs e);
+    public delegate void HotEotPacketEventHandler(object sender, HotEotPacketEventArgs e);
+    public static event DpuPacketEventHandler DpuPacketReceived;
+    public static event HotEotPacketEventHandler HotEotPacketReceived;
 
     static void Main()
     {
         var configuration = LoadConfiguration();
 
-        // Add subscribers to the HotPacketReceived event
-        var subscriberTypes = configuration.GetSection("HotPacketSubscription:Subscribers").Get<string[]>();
+        // Add subscribers to the events
+        var hotEotSubscriberTypes = configuration.GetSection("HotEotPacketSubscription:Subscribers").Get<string[]>();
+        var dotSubscriberTypes = configuration.GetSection("DpuPacketSubscription:Subscribers").Get<string[]>();
 
-        foreach (var subscriberType in subscriberTypes)
+        foreach (var subscriberType in hotEotSubscriberTypes)
         {
-            SubscribeToHotPacketEvent(subscriberType);
+            SubscribeToPacketEvent(subscriberType, "HotEotPacketReceived", "OnHotEotPacketReceived");
+        }
+
+        foreach (var subscriberType in dotSubscriberTypes)
+        {
+            SubscribeToPacketEvent(subscriberType, "DpuPacketReceived", "OnDpuPacketReceived");
         }
 
         var logDirectoryPath = configuration.GetValue<string>("LogDirectoryPath");
@@ -51,18 +58,21 @@ class Program
                             continue;
                         }
 
+                        Console.WriteLine(line);
+
                         if (Path.GetFileName(logFilePath).StartsWith("eot", StringComparison.OrdinalIgnoreCase))
                         {
-                            Console.WriteLine(line);
                             var hotPacket = HotEotDeserializer.Deserialize(line);
-                            HotPacketReceived?.Invoke(null, new HotPacketEventArgs(hotPacket));
-                            lastPositions[logFilePath] = fileStream.Position;
+                            HotEotPacketReceived?.Invoke(null, new HotEotPacketEventArgs(hotPacket));
                         }
 
                         if (Path.GetFileName(logFilePath).StartsWith("dpu", StringComparison.OrdinalIgnoreCase))
                         {
-                            // TODO: Deserialize DPU packet
+                            var dpuPacket = DpuDeserializer.Deserialize(line);
+                            DpuPacketReceived?.Invoke(null, new DpuPacketEventArgs(dpuPacket));
                         }
+
+                        lastPositions[logFilePath] = fileStream.Position;
                     }
                 }
             }
@@ -89,7 +99,7 @@ class Program
         return builder.Build();
     }
 
-    private static void SubscribeToHotPacketEvent(string subscriberTypeName)
+    private static void SubscribeToPacketEvent(string subscriberTypeName, string eventName, string methodName)
     {
         var type = Type.GetType(subscriberTypeName);
         if (type != null)
@@ -97,8 +107,8 @@ class Program
             var subscriber = Activator.CreateInstance(type);
             if (subscriber != null)
             {
-                var eventInfo = typeof(Program).GetEvent("HotPacketReceived");
-                var methodInfo = type.GetMethod("OnHotPacketReceived", BindingFlags.NonPublic | BindingFlags.Instance);
+                var eventInfo = typeof(Program).GetEvent(eventName);
+                var methodInfo = type.GetMethod(methodName, BindingFlags.NonPublic | BindingFlags.Instance);
                 if (eventInfo != null && methodInfo != null)
                 {
                     var handler = Delegate.CreateDelegate(eventInfo.EventHandlerType, subscriber, methodInfo);
@@ -113,7 +123,12 @@ class Program
         return DateTime.Now.ToString("yyyyMMdd");
     }
 
-    private static void OnHotPacketReceived(object sender, HotPacketEventArgs e)
+    private static void OnHotEotPacketReceived(object sender, HotEotPacketEventArgs e)
+    {
+        // Event subscribers will implement this method.
+    }
+
+    private static void OnDpuPacketReceived(object sender, DpuPacketEventArgs e)
     {
         // Event subscribers will implement this method.
     }

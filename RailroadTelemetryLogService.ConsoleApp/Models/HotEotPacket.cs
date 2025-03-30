@@ -2,101 +2,38 @@
 
 namespace ConsoleApp.Models
 {
-    public class HotEotPacket : IEquatable<HotEotPacket?>
+    public class HotEotPacket : PacketBase, IEquatable<HotEotPacket?>
     {
-        /// <summary>
-        /// ID
-        /// </summary>
         [JsonPropertyName("ID")]
-        public int? ID { get; set; }
+        public string? ID { get; set; }
 
-        /// <summary>
-        /// TRB
-        /// </summary>
         [JsonPropertyName("AirTurbineEquipped")]
         public int? TRB { get; set; }
 
-        /// <summary>
-        /// BATCU
-        /// </summary>
         [JsonPropertyName("BatteryChargeUsed")]
         public int? BATCU { get; set; }
 
-        /// <summary>
-        /// BATST
-        /// </summary>
         [JsonPropertyName("BatteryStatus")]
         public string? BATST { get; set; }
 
-        /// <summary>
-        /// BP
-        /// </summary>
-        [JsonPropertyName("BreakPipePressure")]
-        public int? BP { get; set; }
-
-        /// <summary>
-        /// CMD
-        /// </summary>
         [JsonPropertyName("Command")]
         public string? CMD { get; set; }
 
-        /// <summary>
-        /// VLV
-        /// </summary>
         [JsonPropertyName("EmergencyValveHealth")]
         public int? VLV { get; set; }
 
-        /// <summary>
-        /// SIG
-        /// </summary>
-        [JsonPropertyName("EstimatedSignalStrength")]
-        public decimal? SIG { get; set; }
+        [JsonPropertyName("MarkerLightStatus")]
+        public int? MRK { get; set; }
 
-        /// <summary>
-        /// MRK
-        /// </summary>
-        [JsonPropertyName(nameof(MarkerLightStatus))]
-        public int? MarkerLightStatus { get; set; }
-
-        /// <summary>
-        /// TYP
-        /// </summary>
         [JsonPropertyName("MessageType")]
         public string? TYP { get; set; }
 
-        /// <summary>
-        /// MOT
-        /// </summary>
         [JsonPropertyName("MotionStatus")]
         public int? MOT { get; set; }
 
-        /// <summary>
-        /// RR
-        /// </summary>
-        [JsonPropertyName("MovementRailroad")]
-        public string? RR { get; set; }
-
-        /// <summary>
-        /// SYMB
-        /// </summary>
-        [JsonPropertyName("MovementSymbol")]
-        public string? SYMB { get; set; }
-
-        /// <summary>
-        /// SRC
-        /// </summary>
         [JsonPropertyName("Source")]
         public string? SRC { get; set; }
 
-        /// <summary>
-        /// Time Received
-        /// </summary>
-        [JsonPropertyName("TimeReceived")]
-        public DateTime TimeReceived { get; set; }
-
-        /// <summary>
-        /// CNF
-        /// </summary>
         [JsonPropertyName("TwoWayLinkConfirmation")]
         public int? CNF { get; set; }
 
@@ -116,7 +53,7 @@ namespace ConsoleApp.Models
                    CMD == other.CMD &&
                    VLV == other.VLV &&
                    SIG == other.SIG &&
-                   MarkerLightStatus == other.MarkerLightStatus &&
+                   MRK == other.MRK &&
                    TYP == other.TYP &&
                    MOT == other.MOT &&
                    RR == other.RR &&
@@ -137,7 +74,7 @@ namespace ConsoleApp.Models
             hash.Add(CMD);
             hash.Add(VLV);
             hash.Add(SIG);
-            hash.Add(MarkerLightStatus);
+            hash.Add(MRK);
             hash.Add(TYP);
             hash.Add(MOT);
             hash.Add(RR);
