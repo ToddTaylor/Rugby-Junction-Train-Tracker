@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Moq;
+using Web.Server.Data;
 using Web.Server.Hubs;
 using Web.Server.Mappers;
 using Web.Server.Models;
@@ -15,22 +16,22 @@ namespace Web.Server.Services.Tests
     {
         private TelemetryService _telemetryService;
 
-        private Mock<DbContext> _mockDbContext;
-        private Mock<DbSet<Alert>> _mockAlertDbSet;
+        private Mock<TelemetryDbContext> _mockDbContext;
+        private Mock<DbSet<Telemetry>> _mockAlertDbSet;
         private Mock<IHubContext<NotificationHub>> _mockHubContext;
         private IMapper _mapper; // TODO: Don't mock this.
 
         [TestInitialize()]
         public void Initialize()
         {
-            _mockDbContext = new Mock<DbContext>();
+            _mockDbContext = new Mock<TelemetryDbContext>();
             _mockHubContext = new Mock<IHubContext<NotificationHub>>();
             var config = new MapperConfiguration(cfg =>
             {
                 cfg.AddProfile<AutoMapperProfile>();
             });
             _mapper = config.CreateMapper();
-            _mockAlertDbSet = new Mock<DbSet<Alert>>();
+            _mockAlertDbSet = new Mock<DbSet<Telemetry>>();
 
             _telemetryService = new TelemetryService(_mockHubContext.Object, _mapper, _mockDbContext.Object);
         }
@@ -39,10 +40,11 @@ namespace Web.Server.Services.Tests
         public void ProcessTelemetryTest()
         {
             // Arrange
-            _mockDbContext.Setup(m => m.Set<Alert>()).Returns(_mockAlertDbSet.Object);
+            _mockDbContext.Setup(m => m.Set<Telemetry>()).Returns(_mockAlertDbSet.Object);
 
-            var alert = new Alert
+            var alert = new Telemetry
             {
+                ID = 1,
                 BeaconID = "123",
                 AddressID = 1,
                 TrainID = 2,

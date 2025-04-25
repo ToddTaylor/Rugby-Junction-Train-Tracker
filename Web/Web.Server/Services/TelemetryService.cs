@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Web.Server.Data;
 using Web.Server.Hubs;
 using Web.Server.Models;
 
@@ -8,37 +9,40 @@ namespace Web.Server.Services
 {
     public class TelemetryService : ITelemetryService
     {
-        private DbContext _dbContext;
+        private TelemetryDbContext _dbContext;
         private readonly IMapper _mapper;
         private readonly IHubContext<NotificationHub> _hubContext;
         private static readonly Random _random = new Random();
 
-        public TelemetryService(IHubContext<NotificationHub> hubContext, IMapper mapper, DbContext dbContext)
+        public TelemetryService(
+            IHubContext<NotificationHub> hubContext, 
+            IMapper mapper,
+            TelemetryDbContext dbContext)
         {
             _dbContext = dbContext;
             _hubContext = hubContext;
             _mapper = mapper;
         }
 
-        public async void ProcessTelemetry(Alert alert)
+        public async void ProcessTelemetry(Telemetry telemetry)
         {
-            // TODO: Temporary lines just for unit testing.
-            //_dbContext.Set<Alert>().Add(alert);
-            //_dbContext.SaveChanges();
+            // Insert telemetry into the database.
+            _dbContext.Set<Telemetry>().Add(telemetry);
+            _dbContext.SaveChanges();
 
-            // Look-up existing alerts based on AlertID.  
+            // Look-up existing alerts based on Train ID and most recent timestamp.  
             var existingAlert = GetRandomObject(); // Fake data.
 
             // Calculate direction (N, S, E, W, etc.) based on the last alert's location.
             var fromGeoCoordinate = new GeoCoordinate(existingAlert.Latitude, existingAlert.Longitude);
-            var toGeoCoordinate = new GeoCoordinate(alert.Latitude, alert.Longitude);
+            var toGeoCoordinate = new GeoCoordinate(telemetry.Latitude, telemetry.Longitude);
 
             // TODO: Getting direction from difference between two beacons can be misleading. For example,
             // Waukesha is SW of Rugby, therefore the resulting direction of the train will be NE which is odd.
             var direction = GetDirection(fromGeoCoordinate, toGeoCoordinate);
 
             // Add direction to outgoing alert.
-            var mapAlert = _mapper.Map<MapAlert>(alert);
+            var mapAlert = _mapper.Map<MapAlert>(telemetry);
             mapAlert.Direction = direction;
 
             // Send real-time notification
@@ -77,11 +81,12 @@ namespace Web.Server.Services
                 return lonDiff > 0 ? "E" : "W";
             }
         }
-        private Alert GetRandomObject()
+        private Telemetry GetRandomObject()
         {
-            var array = new Alert[]
+            var array = new Telemetry[]
             {
                 new() {
+                    ID = 1,
                     AddressID = 329042,
                     BeaconID = "North Sussex",
                     Latitude = 43.162032,
@@ -91,6 +96,7 @@ namespace Web.Server.Services
                     Timestamp = DateTime.UtcNow
                 },
                 new() {
+                    ID = 2,
                     AddressID = 902342,
                     BeaconID = "Slinger",
                     Latitude = 43.336070,
@@ -100,6 +106,7 @@ namespace Web.Server.Services
                     Timestamp = DateTime.UtcNow
                 },
                 new() {
+                    ID = 3,
                     AddressID = 903242,
                     BeaconID = "Allenton",
                     Latitude = 43.419284,
@@ -109,6 +116,7 @@ namespace Web.Server.Services
                     Timestamp = DateTime.UtcNow
                 },
                 new() {
+                    ID = 4,
                     AddressID = 093242,
                     BeaconID = "Waukesha",
                     Latitude = 42.960318,

@@ -7,7 +7,7 @@ namespace Web.Server.Mappers
     {
         public AutoMapperProfile()
         {
-            CreateMap<Alert, MapAlert>();
+            CreateMap<Telemetry, MapAlert>();
             //.ForMember(dest => dest.AddressID, opt => opt.MapFrom(src => src.AddressID));
         }
     }

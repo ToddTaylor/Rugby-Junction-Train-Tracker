@@ -6,23 +6,23 @@ namespace Web.Server.Controllers.v1
 {
     [Route("api/v1/[controller]")]
     [ApiController]
-    public class TelemetryController : ControllerBase
+    public class TelemetriesController : ControllerBase
     {
         private readonly ITelemetryService _telemetryService;
-        private readonly ILogger<TelemetryController> _logger;
+        private readonly ILogger<TelemetriesController> _logger;
 
-        public TelemetryController(ILogger<TelemetryController> logger, ITelemetryService telemetryService)
+        public TelemetriesController(ILogger<TelemetriesController> logger, ITelemetryService telemetryService)
         {
             _logger = logger;
             _telemetryService = telemetryService;
         }
 
-        [HttpPost("Alert")]
-        public IActionResult Post([FromBody] Alert alert)
+        [HttpPost("Telemetry")]
+        public IActionResult Post([FromBody] Telemetry telemetry)
         {
             try
             {
-                _telemetryService.ProcessTelemetry(alert);
+                _telemetryService.ProcessTelemetry(telemetry);
 
                 return Ok();
             }

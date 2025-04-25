@@ -1,9 +1,17 @@
-﻿using System.Text.Json.Serialization;
+﻿using Swashbuckle.AspNetCore.Annotations;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace Web.Server.Models
 {
-    public class Alert : IEquatable<Alert?>
+    public class Telemetry : IEquatable<Telemetry?>
     {
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        [JsonIgnore]
+        public int ID { get; set; }
+
         [JsonRequired]
         [JsonPropertyName("BeaconID")]
         public required string BeaconID { get; set; }
@@ -40,10 +48,10 @@ namespace Web.Server.Models
 
         public override bool Equals(object? obj)
         {
-            return Equals(obj as Alert);
+            return Equals(obj as Telemetry);
         }
 
-        public bool Equals(Alert? other)
+        public bool Equals(Telemetry? other)
         {
             return other is not null &&
                    BeaconID == other.BeaconID &&
@@ -61,12 +69,12 @@ namespace Web.Server.Models
             return HashCode.Combine(BeaconID, AddressID, TrainID, Latitude, Longitude, Moving, Source, Timestamp);
         }
 
-        public static bool operator ==(Alert? left, Alert? right)
+        public static bool operator ==(Telemetry? left, Telemetry? right)
         {
-            return EqualityComparer<Alert>.Default.Equals(left, right);
+            return EqualityComparer<Telemetry>.Default.Equals(left, right);
         }
 
-        public static bool operator !=(Alert? left, Alert? right)
+        public static bool operator !=(Telemetry? left, Telemetry? right)
         {
             return !(left == right);
         }
