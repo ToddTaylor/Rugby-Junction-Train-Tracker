@@ -1,9 +1,8 @@
-﻿using AutoMapper;
+using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Web.Server.Data;
 using Web.Server.DTOs;
 using Web.Server.Entities;
+using Web.Server.Services;
 
 namespace Web.Server.Controllers.v1
 {
@@ -11,13 +10,13 @@ namespace Web.Server.Controllers.v1
     [ApiController]
     public class BeaconsController : ControllerBase
     {
-        private readonly TelemetryDbContext _context;
-        private readonly ILogger<TelemetriesController> _logger;
+        private readonly IBeaconService _beaconService;
+        private readonly ILogger<BeaconsController> _logger;
         private readonly IMapper _mapper;
 
-        public BeaconsController(TelemetryDbContext context, ILogger<TelemetriesController> logger, IMapper mapper)
+        public BeaconsController(IBeaconService beaconService, ILogger<BeaconsController> logger, IMapper mapper)
         {
-            _context = context;
+            _beaconService = beaconService;
             _logger = logger;
             _mapper = mapper;
         }
@@ -26,7 +25,8 @@ namespace Web.Server.Controllers.v1
         [HttpGet]
         public async Task<ActionResult<IEnumerable<BeaconDTO>>> GetBeacons()
         {
-            var beaconDTOs = _mapper.Map<IEnumerable<BeaconDTO>>(await GetBeaconsFromDb());
+            var beacons = await _beaconService.GetBeaconsAsync();
+            var beaconDTOs = _mapper.Map<IEnumerable<BeaconDTO>>(beacons);
 
             return Ok(beaconDTOs);
         }
@@ -35,7 +35,7 @@ namespace Web.Server.Controllers.v1
         [HttpGet("{id}")]
         public async Task<ActionResult<BeaconDTO>> GetBeacon(int id)
         {
-            var beacon = await _context.Beacons.FindAsync(id);
+            var beacon = await _beaconService.GetBeaconByIdAsync(id);
 
             if (beacon == null)
             {
@@ -44,47 +44,37 @@ namespace Web.Server.Controllers.v1
 
             var beaconDTO = _mapper.Map<BeaconDTO>(beacon);
 
-            return Ok(beacon);
+            return Ok(beaconDTO);
         }
 
         // PUT: api/v1/Beacons/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPut()]
+        [HttpPut]
         public async Task<IActionResult> PutBeacon(UpdateBeaconDTO updateBeaconDTO)
         {
             var beacon = _mapper.Map<Beacon>(updateBeaconDTO);
 
-            _context.Entry(beacon).State = EntityState.Modified;
-
             try
             {
-                await _context.SaveChangesAsync();
+                await _beaconService.UpdateBeaconAsync(updateBeaconDTO.ID, beacon);
             }
-            catch (DbUpdateConcurrencyException)
+            catch (KeyNotFoundException)
             {
-                if (!BeaconExists(updateBeaconDTO.ID))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
+                return NotFound();
             }
 
             return NoContent();
         }
 
         // POST: api/v1/Beacons
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
         public async Task<ActionResult<BeaconDTO>> PostBeacon(CreateBeaconDTO createBeaconDTO)
         {
             var beacon = _mapper.Map<Beacon>(createBeaconDTO);
-            _context.Beacons.Add(beacon);
-            await _context.SaveChangesAsync();
+            var createdBeacon = await _beaconService.CreateBeaconAsync(beacon);
 
-            return CreatedAtAction("GetBeacon", new { id = beacon.ID }, beacon);
+            var beaconDTO = _mapper.Map<BeaconDTO>(createdBeacon);
+
+            return CreatedAtAction("GetBeacon", new { id = createdBeacon.ID }, beaconDTO);
         }
 
         // POST: api/v1/Beacons/Health
@@ -96,41 +86,28 @@ namespace Web.Server.Controllers.v1
                 return BadRequest("A beacon ID is required.");
             }
 
-            // TODO: Replace with actual logic to check how long it's been since this beacon last reported telemetry.
-            // If it's been too long, return not healthy.
-
             // Simulate health check logic
-            bool isHealthy = beaconId == 12345;
-
-            if (isHealthy)
-            {
-                return Ok(new { Status = "Healthy", ID = beaconId });
-            }
-            else
+            var beacon = await _beaconService.GetBeaconByIdAsync(beaconId);
+            if (beacon == null)
             {
                 return NotFound(new { Status = "Unhealthy", ID = beaconId });
             }
+
+            return Ok(new { Status = "Healthy", ID = beaconId });
         }
 
         // DELETE: api/v1/Beacons/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteBeacon(int id)
         {
-            var beacon = await _context.Beacons.FindAsync(id);
-            if (beacon == null)
+            var success = await _beaconService.DeleteBeaconAsync(id);
+            if (!success)
             {
                 return NotFound();
             }
 
-            _context.Beacons.Remove(beacon);
-            await _context.SaveChangesAsync();
-
             return NoContent();
-        }
-
-        private bool BeaconExists(int id)
-        {
-            return _context.Beacons.Any(e => e.ID == id);
         }
     }
 }
+

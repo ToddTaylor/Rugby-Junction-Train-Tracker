@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using Web.Server.DTOs;
 using Web.Server.Entities;
@@ -10,13 +10,13 @@ namespace Web.Server.Controllers.v1
     [ApiController]
     public class RailroadsController : ControllerBase
     {
-        private readonly IRailroadService _service;
-        private readonly ILogger<TelemetriesController> _logger;
+        private readonly IRailroadService _railroadService;
+        private readonly ILogger<RailroadsController> _logger;
         private readonly IMapper _mapper;
 
-        public RailroadsController(IRailroadService service, ILogger<TelemetriesController> logger, IMapper mapper)
+        public RailroadsController(IRailroadService railroadService, ILogger<RailroadsController> logger, IMapper mapper)
         {
-            _service = service;
+            _railroadService = railroadService;
             _logger = logger;
             _mapper = mapper;
         }
@@ -25,7 +25,7 @@ namespace Web.Server.Controllers.v1
         [HttpGet]
         public async Task<ActionResult<IEnumerable<RailroadDTO>>> GetRailroads()
         {
-            var railroads = await _service.GetRailroads();
+            var railroads = await _railroadService.GetRailroads();
             var railroadDTOs = _mapper.Map<IEnumerable<RailroadDTO>>(railroads);
             return Ok(railroadDTOs);
         }
@@ -34,7 +34,7 @@ namespace Web.Server.Controllers.v1
         [HttpGet("{id}")]
         public async Task<ActionResult<RailroadDTO>> GetRailroad(int id)
         {
-            var railroad = await _service.GetRailroad(id);
+            var railroad = await _railroadService.GetRailroad(id);
 
             if (railroad == null)
             {
@@ -47,36 +47,52 @@ namespace Web.Server.Controllers.v1
         }
 
         // PUT: api/Railroads/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPut()]
-        public async Task<IActionResult> PutRailroad(UpdateRailroadDTO updateRailroadDTO)
+        [HttpPut("{id}")]
+        public async Task<IActionResult> PutRailroad(int id, UpdateRailroadDTO updateRailroadDTO)
         {
+            if (id != updateRailroadDTO.ID)
+            {
+                return BadRequest();
+            }
+
             var railroad = _mapper.Map<Railroad>(updateRailroadDTO);
 
-            _service.UpdateRailroad(railroad);
+            try
+            {
+                await _railroadService.UpdateRailroad(railroad);
+            }
+            catch (KeyNotFoundException)
+            {
+                return NotFound();
+            }
 
             return NoContent();
         }
 
         // POST: api/Railroads
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<RailroadDTO>> PostRailroad(UpdateRailroadDTO updateRailroadDTO)
+        public async Task<ActionResult<RailroadDTO>> PostRailroad(CreateRailroadDTO createRailroadDTO)
         {
-            var railroad = _mapper.Map<Railroad>(updateRailroadDTO);
+            var railroad = _mapper.Map<Railroad>(createRailroadDTO);
+            var createdRailroad = await _railroadService.CreateRailroad(railroad);
 
-            railroad = await _service.CreateRailroad(railroad);
+            var railroadDTO = _mapper.Map<RailroadDTO>(createdRailroad);
 
-            var railroadDTO = _mapper.Map<RailroadDTO>(railroad);
-
-            return Ok(railroadDTO);
+            return CreatedAtAction("GetRailroad", new { id = createdRailroad.ID }, railroadDTO);
         }
 
         // DELETE: api/Railroads/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteRailroad(int id)
         {
-            _service.DeleteRailroad(id);
+            try
+            {
+                await _railroadService.DeleteRailroad(id);
+            }
+            catch (KeyNotFoundException)
+            {
+                return NotFound();
+            }
 
             return NoContent();
         }

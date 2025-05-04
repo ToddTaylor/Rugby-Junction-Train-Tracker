@@ -1,6 +1,5 @@
-﻿using AutoMapper;
+using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Web.Server.DTOs;
 using Web.Server.Entities;
 using Web.Server.Services;
@@ -11,102 +10,93 @@ namespace Web.Server.Controllers.v1
     [ApiController]
     public class OwnersController : ControllerBase
     {
-        private readonly ITelemetryService _telemetryService;
+        private readonly IOwnerService _ownerService;
         private readonly ILogger<OwnersController> _logger;
         private readonly IMapper _mapper;
 
         public OwnersController(
             ILogger<OwnersController> logger,
             IMapper mapper,
-            ITelemetryService telemetryService)
+            IOwnerService ownerService)
         {
             _logger = logger;
             _mapper = mapper;
-            _telemetryService = telemetryService;
+            _ownerService = ownerService;
         }
 
         // GET: api/Owners
         [HttpGet]
         public async Task<ActionResult<IEnumerable<UpdateOwnerDTO>>> GetOwners()
         {
-            return await _context.Owners.ToListAsync();
+            var owners = await _ownerService.GetOwnersAsync();
+            var ownerDTOs = _mapper.Map<IEnumerable<UpdateOwnerDTO>>(owners);
+
+            return Ok(ownerDTOs);
         }
 
         // GET: api/Owners/5
         [HttpGet("{id}")]
         public async Task<ActionResult<UpdateOwnerDTO>> GetOwner(int id)
         {
-            var owner = await _context.Owners.FindAsync(id);
+            var owner = await _ownerService.GetOwnerByIdAsync(id);
 
             if (owner == null)
             {
                 return NotFound();
             }
 
-            return owner;
+            var ownerDTO = _mapper.Map<UpdateOwnerDTO>(owner);
+
+            return Ok(ownerDTO);
         }
 
         // PUT: api/Owners/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutOwner(UpdateOwnerDTO owner)
+        public async Task<IActionResult> PutOwner(int id, UpdateOwnerDTO updateOwnerDTO)
         {
-            if (id != owner.ID)
+            if (id != updateOwnerDTO.ID)
             {
                 return BadRequest();
             }
 
-            _context.Entry(owner).State = EntityState.Modified;
+            var owner = _mapper.Map<Owner>(updateOwnerDTO);
 
             try
             {
-                await _context.SaveChangesAsync();
+                await _ownerService.UpdateOwnerAsync(id, owner);
             }
-            catch (DbUpdateConcurrencyException)
+            catch (KeyNotFoundException)
             {
-                if (!OwnerExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
+                return NotFound();
             }
 
             return NoContent();
         }
 
         // POST: api/Owners
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<Owner>> PostOwner(CreateOwnerDTO owner)
+        public async Task<ActionResult<UpdateOwnerDTO>> PostOwner(CreateOwnerDTO createOwnerDTO)
         {
-            _context.Owners.Add(owner);
-            await _context.SaveChangesAsync();
+            var owner = _mapper.Map<Owner>(createOwnerDTO);
+            var createdOwner = await _ownerService.CreateOwnerAsync(owner);
 
-            return CreatedAtAction("GetOwner", new { id = owner.ID }, owner);
+            var ownerDTO = _mapper.Map<UpdateOwnerDTO>(createdOwner);
+
+            return CreatedAtAction("GetOwner", new { id = createdOwner.ID }, ownerDTO);
         }
 
         // DELETE: api/Owners/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteOwner(int id)
         {
-            var owner = await _context.Owners.FindAsync(id);
-            if (owner == null)
+            var success = await _ownerService.DeleteOwnerAsync(id);
+            if (!success)
             {
                 return NotFound();
             }
 
-            _context.Owners.Remove(owner);
-            await _context.SaveChangesAsync();
-
             return NoContent();
-        }
-
-        private bool OwnerExists(int id)
-        {
-            return _context.Owners.Any(e => e.ID == id);
         }
     }
 }
+

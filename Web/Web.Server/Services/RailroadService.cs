@@ -1,42 +1,40 @@
-﻿using Web.Server.Data;
 using Web.Server.Entities;
 
 namespace Web.Server.Services
 {
     public class RailroadService : IRailroadService
     {
-        private TelemetryDbContext _dbContext;
-        private static readonly Random _random = new Random();
+        private readonly IRailroadRepository _railroadRepository;
 
-        public RailroadService(
-            TelemetryDbContext dbContext)
+        public RailroadService(IRailroadRepository railroadRepository)
         {
-            _dbContext = dbContext;
+            _railroadRepository = railroadRepository;
         }
 
-        public Task<Railroad> GetRailroad(int ID)
+        public async Task<Railroad> GetRailroad(int id)
         {
-            throw new NotImplementedException();
+            return await _railroadRepository.GetByIdAsync(id);
         }
 
-        public Task<IEnumerable<Railroad>> GetRailroads()
+        public async Task<IEnumerable<Railroad>> GetRailroads()
         {
-            throw new NotImplementedException();
+            return await _railroadRepository.GetAllAsync();
         }
 
-        public Task<Railroad> CreateRailroad(Railroad railroad)
+        public async Task<Railroad> CreateRailroad(Railroad railroad)
         {
-            throw new NotImplementedException();
+            return await _railroadRepository.AddAsync(railroad);
         }
 
-        public async void UpdateRailroad(Railroad railroad)
+        public async Task UpdateRailroad(Railroad railroad)
         {
-            throw new NotImplementedException();
+            await _railroadRepository.UpdateAsync(railroad);
         }
 
-        public async void DeleteRailroad(int ID)
+        public async Task DeleteRailroad(int id)
         {
-            throw new NotImplementedException();
+            await _railroadRepository.DeleteAsync(id);
         }
     }
 }
+

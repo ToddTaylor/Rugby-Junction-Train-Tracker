@@ -2,10 +2,9 @@
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Moq;
-using Web.Server.Data;
+using Web.Server.Entities;
 using Web.Server.Hubs;
 using Web.Server.Mappers;
-using Web.Server.Entities;
 
 namespace Web.Server.Services.Tests
 {
@@ -14,9 +13,10 @@ namespace Web.Server.Services.Tests
     [TestClass()]
     public class TelemetryServiceTests
     {
-        private TelemetryService _telemetryService;
+        private TelemetryService? _telemetryService;
 
-        private Mock<TelemetryDbContext> _mockDbContext;
+        private Mock<IBeaconRepository> _mockBeaconRepository;
+        private Mock<ITelemetryRepository> _mockTelemetryRepository;
         private Mock<DbSet<Telemetry>> _mockAlertDbSet;
         private Mock<IHubContext<NotificationHub>> _mockHubContext;
         private IMapper _mapper; // TODO: Don't mock this.
@@ -24,8 +24,9 @@ namespace Web.Server.Services.Tests
         [TestInitialize()]
         public void Initialize()
         {
-            _mockDbContext = new Mock<TelemetryDbContext>();
+            _mockBeaconRepository = new Mock<IBeaconRepository>();
             _mockHubContext = new Mock<IHubContext<NotificationHub>>();
+            _mockTelemetryRepository = new Mock<ITelemetryRepository>();
             var config = new MapperConfiguration(cfg =>
             {
                 cfg.AddProfile<AutoMapperProfile>();
@@ -33,23 +34,21 @@ namespace Web.Server.Services.Tests
             _mapper = config.CreateMapper();
             _mockAlertDbSet = new Mock<DbSet<Telemetry>>();
 
-            _telemetryService = new TelemetryService(_mockHubContext.Object, _mapper, _mockDbContext.Object);
+            _telemetryService = new TelemetryService(_mockHubContext.Object, _mockTelemetryRepository.Object, _mockBeaconRepository.Object, _mapper);
         }
 
         [TestMethod()]
         public void ProcessTelemetryTest()
         {
             // Arrange
-            _mockDbContext.Setup(m => m.Set<Telemetry>()).Returns(_mockAlertDbSet.Object);
+            _mockBeaconRepository.Setup(m => m.Set<Telemetry>()).Returns(_mockAlertDbSet.Object);
 
             var alert = new Telemetry
             {
                 ID = 1,
-                BeaconID = "123",
+                Beacon = "123",
                 AddressID = 1,
                 TrainID = 2,
-                Latitude = 45.0,
-                Longitude = -93.0,
                 Moving = true,
                 Source = "HOT",
                 Timestamp = DateTime.UtcNow
@@ -60,7 +59,7 @@ namespace Web.Server.Services.Tests
 
             // Assert
             _mockAlertDbSet.Verify(m => m.Add(alert), Times.Once);
-            _mockDbContext.Verify(m => m.SaveChanges(), Times.Once);
+            _mockBeaconRepository.Verify(m => m.SaveChanges(), Times.Once);
         }
     }
 }
