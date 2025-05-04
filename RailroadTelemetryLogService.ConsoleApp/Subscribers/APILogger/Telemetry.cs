@@ -2,14 +2,14 @@
 
 namespace ConsoleApp.Subscribers.APILogger
 {
-    public class Alert
+    public class Telemetry
     {
         /// <summary>
         /// Unique identifier for the beacon sending the alert.
         /// </summary>
         [JsonPropertyName("BeaconID")]
         [JsonRequired]
-        public string? BeaconID { get; set; }
+        public required int BeaconID { get; set; }
 
         /// <summary>
         /// ID for HOT and EOT, ADDR for DPU telemetry.
@@ -19,7 +19,7 @@ namespace ConsoleApp.Subscribers.APILogger
         /// </summary>
         [JsonPropertyName("AddressID")]
         [JsonRequired]
-        public int AddressID { get; set; }
+        public required int AddressID { get; set; }
 
         /// <summary>
         /// Applies to DPU telemetry only (TRID).
@@ -32,18 +32,6 @@ namespace ConsoleApp.Subscribers.APILogger
         public int? TrainID { get; set; }
 
         /// <summary>
-        /// Latitude of the beacon in decimal degrees with two digits after the decimal point.
-        /// </summary>
-        [JsonPropertyName("Latitude")]
-        public double? Latitude { get; set; }
-
-        /// <summary>
-        /// Longitude of the beacon in decimal degrees with two digits after the decimal point.
-        /// </summary>
-        [JsonPropertyName("Longitude")]
-        public double? Longitude { get; set; }
-
-        /// <summary>
         /// Indicates whether the train is moving. Only applies to EOT telemetry.
         /// </summary>
         [JsonPropertyName("Moving")]
@@ -54,12 +42,14 @@ namespace ConsoleApp.Subscribers.APILogger
         /// HOT, EOT, DPU, HBD
         /// </summary>
         [JsonPropertyName("Source")]
-        public string? Source { get; set; }
+        [JsonRequired]
+        public required string Source { get; set; }
 
         /// <summary>
         /// Timestamp of when the alert was generated.
         /// </summary>
         [JsonPropertyName("Timestamp")]
-        public DateTime? Timestamp { get; set; }
+        [JsonRequired]
+        public required DateTime Timestamp { get; set; }
     }
 }

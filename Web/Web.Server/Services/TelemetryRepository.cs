@@ -1,5 +1,5 @@
 ﻿using Web.Server.Data;
-using Web.Server.Models;
+using Web.Server.Entities;
 
 namespace Web.Server.Services
 {

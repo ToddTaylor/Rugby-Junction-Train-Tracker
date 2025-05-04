@@ -1,5 +1,6 @@
 using ConsoleApp.Deserializers;
 using ConsoleApp.Models;
+using FluentAssertions;
 
 namespace ConsoleApp.UnitTests.Deserializers;
 
@@ -13,7 +14,7 @@ public class DpuDeserializerTests
         var data = "2025/03/29-15:42:57  0.5 57135  27 CM LD DI 18 1 - N8    FO 1 1 0 0 ---   REL ----- ----- --- ---   0  ----- ---- ---- ---- ---- ---                       ---- ------------";
         var expected = new DpuPacket
         {
-            TimeReceived = new DateTime(2025, 3, 29, 15, 42, 57),
+            TimeReceived = new DateTime(2025, 3, 29, 20, 42, 57), // UTC
             SIG = 0.5m,
             ADDR = "57135",
             TRID = "27",
@@ -36,7 +37,7 @@ public class DpuDeserializerTests
         var actual = DpuDeserializer.Deserialize(data);
 
         // Assert
-        Assert.AreEqual(expected, actual);
+        actual.Should().BeEquivalentTo(expected);
     }
 
     [TestMethod]
@@ -46,7 +47,7 @@ public class DpuDeserializerTests
         var data = "2025/03/29-15:44:19  2.8 29080  27 ST RM DI 22 - 1 N8    FO 1 1 0 0  48 -----  89.5  91.0   0 133 ----   0.0 ---- ---- ---- ---- ---                       ---- ------------";
         var expected = new DpuPacket
         {
-            TimeReceived = new DateTime(2025, 3, 29, 15, 44, 19),
+            TimeReceived = new DateTime(2025, 3, 29, 20, 44, 19), // UTC
             SIG = 2.8m,
             ADDR = "29080",
             TRID = "27",
@@ -73,7 +74,7 @@ public class DpuDeserializerTests
         var actual = DpuDeserializer.Deserialize(data);
 
         // Assert
-        Assert.AreEqual(expected, actual);
+        actual.Should().BeEquivalentTo(expected);
     }
 
     [TestMethod]
@@ -83,15 +84,15 @@ public class DpuDeserializerTests
         var data = "2025/03/29-15:41:58  0.4   INV --- -- -- -- -- - - ----- -- - - - - --- ----- ----- ----- --- --- ---- ----- ---- ---- ---- ---- ---                       ---- ------------";
         var expected = new DpuPacket
         {
-            TimeReceived = new DateTime(2025, 3, 29, 15, 41, 58),
+            TimeReceived = new DateTime(2025, 3, 29, 20, 41, 58),
             SIG = 0.4m,
-            RR = "INV"
+            ADDR = "INV"
         };
 
         // Act
         var actual = DpuDeserializer.Deserialize(data);
 
         // Assert
-        Assert.AreEqual(expected, actual);
+        actual.Should().BeEquivalentTo(expected);
     }
 }

@@ -5,7 +5,7 @@ using Moq;
 using Web.Server.Data;
 using Web.Server.Hubs;
 using Web.Server.Mappers;
-using Web.Server.Models;
+using Web.Server.Entities;
 
 namespace Web.Server.Services.Tests
 {
@@ -56,7 +56,7 @@ namespace Web.Server.Services.Tests
             };
 
             // Act
-            _telemetryService.ProcessTelemetry(alert);
+            _telemetryService.CreateTelemetry(alert);
 
             // Assert
             _mockAlertDbSet.Verify(m => m.Add(alert), Times.Once);

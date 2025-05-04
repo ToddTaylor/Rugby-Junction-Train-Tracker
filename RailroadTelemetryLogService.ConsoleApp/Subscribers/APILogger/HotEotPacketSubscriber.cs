@@ -18,13 +18,11 @@ namespace ConsoleApp.Subscribers.APILogger
 
             if (sendInvalidMessages == false && e.Packet.SRC == "INV") { return; }
 
-            var alert = new Alert
+            var alert = new Telemetry
             {
-                BeaconID = configuration.GetValue<string>("Beacon:BeaconID"),
+                BeaconID = configuration.GetValue<int>("Beacon:BeaconID"),
                 AddressID = int.Parse(e.Packet.ID),
                 TrainID = null,
-                Latitude = configuration.GetValue<double>("Beacon:Latitude"),
-                Longitude = configuration.GetValue<double>("Beacon:Longitude"),
                 Moving = (e.Packet.MOT.HasValue) ? Convert.ToBoolean(e.Packet.MOT) : null,
                 Source = e.Packet.SRC,
                 Timestamp = e.Packet.TimeReceived

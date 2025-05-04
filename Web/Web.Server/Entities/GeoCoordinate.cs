@@ -1,5 +1,5 @@
 ﻿
-namespace Web.Server.Models
+namespace Web.Server.Entities
 {
     public struct GeoCoordinate : IEquatable<GeoCoordinate>
     {

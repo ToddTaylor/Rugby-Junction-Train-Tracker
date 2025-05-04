@@ -5,7 +5,7 @@ namespace ConsoleApp.Models
     public class HotEotPacket : PacketBase, IEquatable<HotEotPacket?>
     {
         [JsonPropertyName("ID")]
-        public string? ID { get; set; }
+        public required string ID { get; set; }
 
         [JsonPropertyName("AirTurbineEquipped")]
         public int? TRB { get; set; }
@@ -32,7 +32,7 @@ namespace ConsoleApp.Models
         public int? MOT { get; set; }
 
         [JsonPropertyName("Source")]
-        public string? SRC { get; set; }
+        public required string SRC { get; set; }
 
         [JsonPropertyName("TwoWayLinkConfirmation")]
         public int? CNF { get; set; }

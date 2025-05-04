@@ -1,5 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Web.Server.Models;
+﻿using AutoMapper;
+using Microsoft.AspNetCore.Mvc;
+using Web.Server.DTOs;
+using Web.Server.Entities;
 using Web.Server.Services;
 
 namespace Web.Server.Controllers.v1
@@ -10,19 +12,38 @@ namespace Web.Server.Controllers.v1
     {
         private readonly ITelemetryService _telemetryService;
         private readonly ILogger<TelemetriesController> _logger;
+        private readonly IMapper _mapper;
 
-        public TelemetriesController(ILogger<TelemetriesController> logger, ITelemetryService telemetryService)
+        public TelemetriesController(
+            ILogger<TelemetriesController> logger,
+            IMapper mapper,
+            ITelemetryService telemetryService)
         {
             _logger = logger;
+            _mapper = mapper;
             _telemetryService = telemetryService;
         }
 
-        [HttpPost("Telemetry")]
-        public IActionResult Post([FromBody] Telemetry telemetry)
+        // GET: api/v1/Telemetries
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<TelemetryDTO>>> GetTelemetries()
         {
+            var telemetries = await _telemetryService.GetTelemetries();
+
+            var telemetryDTOs = _mapper.Map<IEnumerable<TelemetryDTO>>(telemetries);
+
+            return Ok(telemetryDTOs);
+        }
+
+        // POST: api/v1/Telemetries
+        [HttpPost("Telemetry")]
+        public IActionResult Post([FromBody] CreateTelemetryDTO telemetryDTO)
+        {
+            var telemetry = this._mapper.Map<Telemetry>(telemetryDTO);
+
             try
             {
-                _telemetryService.ProcessTelemetry(telemetry);
+                _telemetryService.CreateTelemetry(telemetry);
 
                 return Ok();
             }

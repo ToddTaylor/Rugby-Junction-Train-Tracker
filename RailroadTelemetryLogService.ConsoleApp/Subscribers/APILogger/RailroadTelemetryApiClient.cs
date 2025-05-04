@@ -6,13 +6,13 @@
         {
         }
 
-        public async Task SendAlertAsync(Alert alert)
+        public async Task SendAlertAsync(Telemetry alert)
         {
             var apiUrl = "https://localhost:44331/api/v1/Telemetry/Alert";
 
             try
             {
-                await PostAsync<Alert>(apiUrl, alert);
+                await PostAsync<Telemetry>(apiUrl, alert);
             }
             catch (Exception ex)
             {

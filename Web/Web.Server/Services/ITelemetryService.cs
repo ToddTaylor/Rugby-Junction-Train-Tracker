@@ -1,9 +1,11 @@
-﻿using Web.Server.Models;
+﻿using Web.Server.Entities;
 
 namespace Web.Server.Services
 {
     public interface ITelemetryService
     {
-        void ProcessTelemetry(Telemetry alert);
+        Task<IEnumerable<Telemetry>> GetTelemetries();
+
+        void CreateTelemetry(Telemetry alert);
     }
 }

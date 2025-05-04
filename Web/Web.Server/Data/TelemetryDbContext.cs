@@ -1,5 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Web.Server.Models;
+using Web.Server.Entities;
 
 namespace Web.Server.Data
 {
@@ -10,6 +10,9 @@ namespace Web.Server.Data
         {
         }
 
+        public DbSet<Beacon> Beacons { get; set; }
+        public DbSet<Owner> Owners { get; set; }
+        public DbSet<Railroad> Railroads { get; set; }
         public DbSet<Telemetry> Telemetries { get; set; }
     }
 }

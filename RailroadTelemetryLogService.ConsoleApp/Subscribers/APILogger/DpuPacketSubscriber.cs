@@ -21,13 +21,11 @@ namespace ConsoleApp.Subscribers.APILogger
 
             if (sendInvalidMessages == false && e.Packet.ADDR == "INV") { return; }
 
-            var alert = new Alert
+            var alert = new Telemetry
             {
-                BeaconID = configuration.GetValue<string>("Beacon:BeaconID"),
+                BeaconID = configuration.GetValue<int>("Beacon:BeaconID"),
                 AddressID = int.Parse(e.Packet.ADDR),
                 TrainID = int.Parse(e.Packet.TRID),
-                Latitude = configuration.GetValue<double>("Beacon:Latitude"),
-                Longitude = configuration.GetValue<double>("Beacon:Longitude"),
                 Moving = this.IsMoving(e.Packet),
                 Source = "DPU",
                 Timestamp = e.Packet.TimeReceived
@@ -59,7 +57,7 @@ namespace ConsoleApp.Subscribers.APILogger
         private bool? IsMoving(DpuPacket dpuPacket)
         {
             var parkingBrakeOff = 0;
-            var minimumBrakePSI = 85;
+            var minimumBrakePSI = 70;
 
             if (dpuPacket.BP.HasValue)
             {

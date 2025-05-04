@@ -1,41 +1,63 @@
-﻿using AutoMapper;
-using Microsoft.AspNetCore.SignalR;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.SignalR;
 using Web.Server.Data;
+using Web.Server.Entities;
 using Web.Server.Hubs;
-using Web.Server.Models;
 
 namespace Web.Server.Services
 {
     public class TelemetryService : ITelemetryService
     {
         private TelemetryDbContext _dbContext;
-        private readonly IMapper _mapper;
         private readonly IHubContext<NotificationHub> _hubContext;
         private static readonly Random _random = new Random();
 
         public TelemetryService(
-            IHubContext<NotificationHub> hubContext, 
-            IMapper mapper,
+            IHubContext<NotificationHub> hubContext,
             TelemetryDbContext dbContext)
         {
             _dbContext = dbContext;
             _hubContext = hubContext;
-            _mapper = mapper;
         }
 
-        public async void ProcessTelemetry(Telemetry telemetry)
+        public Task<IEnumerable<Telemetry>> GetTelemetries()
         {
-            // Insert telemetry into the database.
+            throw new NotImplementedException();
+        }
+
+        public async void CreateTelemetry(Telemetry telemetry)
+        {
+            // Look-up existing alerts based on Address ID and most recent timestamp.  
+            var existingTelemetry = _dbContext.Telemetries
+                .OrderByDescending(x => x.Timestamp)
+                .FirstOrDefault();
+
+            var beaconIsMultiRailroad = existingTelemetry?.Beacon.Railroads.Count > 1;
+
+            if (existingTelemetry == null && beaconIsMultiRailroad)
+            {
+                // There's no way to know which railroad the alert belongs to yet.
+                return;
+            }
+
+            // Insert telemetry into the database which will get the ID assigned.
             _dbContext.Set<Telemetry>().Add(telemetry);
+
+            // Update Beacon timestamp to let the system know the beacon is still alive.
+            var beacon = _dbContext.Beacons.FirstOrDefault(b => b.ID == telemetry.Beacon.ID);
+            if (beacon == null)
+            {
+                // Handle not found (e.g., log or throw an exception)
+                throw new InvalidOperationException("Beacon not found.");
+            }
+
+            // Update only the Timestamp
+            beacon.Timestamp = DateTime.UtcNow;
+
             _dbContext.SaveChanges();
 
-            // Look-up existing alerts based on Train ID and most recent timestamp.  
-            var existingAlert = GetRandomObject(); // Fake data.
-
             // Calculate direction (N, S, E, W, etc.) based on the last alert's location.
-            var fromGeoCoordinate = new GeoCoordinate(existingAlert.Latitude, existingAlert.Longitude);
-            var toGeoCoordinate = new GeoCoordinate(telemetry.Latitude, telemetry.Longitude);
+            var fromGeoCoordinate = new GeoCoordinate(existingTelemetry.Beacon.Latitude, existingTelemetry.Beacon.Longitude);
+            var toGeoCoordinate = new GeoCoordinate(telemetry.Beacon.Latitude, telemetry.Beacon.Longitude);
 
             // TODO: Getting direction from difference between two beacons can be misleading. For example,
             // Waukesha is SW of Rugby, therefore the resulting direction of the train will be NE which is odd.
@@ -81,14 +103,13 @@ namespace Web.Server.Services
                 return lonDiff > 0 ? "E" : "W";
             }
         }
-        private Telemetry GetRandomObject()
+        private MapAlert GetRandomObject()
         {
-            var array = new Telemetry[]
+            var array = new MapAlert[]
             {
                 new() {
-                    ID = 1,
                     AddressID = 329042,
-                    BeaconID = "North Sussex",
+                    Direction = "N",
                     Latitude = 43.162032,
                     Longitude = -88.200269,
                     Moving = true,
@@ -96,9 +117,8 @@ namespace Web.Server.Services
                     Timestamp = DateTime.UtcNow
                 },
                 new() {
-                    ID = 2,
                     AddressID = 902342,
-                    BeaconID = "Slinger",
+                    Direction = "S",
                     Latitude = 43.336070,
                     Longitude = -88.290659,
                     Moving = false,
@@ -106,9 +126,8 @@ namespace Web.Server.Services
                     Timestamp = DateTime.UtcNow
                 },
                 new() {
-                    ID = 3,
                     AddressID = 903242,
-                    BeaconID = "Allenton",
+                    Direction = "E",
                     Latitude = 43.419284,
                     Longitude = -88.340736,
                     Moving = false,
@@ -116,9 +135,8 @@ namespace Web.Server.Services
                     Timestamp = DateTime.UtcNow
                 },
                 new() {
-                    ID = 4,
                     AddressID = 093242,
-                    BeaconID = "Waukesha",
+                    Direction = "W",
                     Latitude = 42.960318,
                     Longitude = -88.240389,
                     Moving = false,
@@ -130,5 +148,6 @@ namespace Web.Server.Services
             int index = _random.Next(array.Length);
             return array[index];
         }
+
     }
 }

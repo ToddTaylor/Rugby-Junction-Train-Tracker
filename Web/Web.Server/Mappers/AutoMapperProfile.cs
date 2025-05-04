@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
-using Web.Server.Models;
+using Web.Server.DTOs;
+using Web.Server.Entities;
 
 namespace Web.Server.Mappers
 {
@@ -9,6 +10,9 @@ namespace Web.Server.Mappers
         {
             CreateMap<Telemetry, MapAlert>();
             //.ForMember(dest => dest.AddressID, opt => opt.MapFrom(src => src.AddressID));
+
+            CreateMap<CreateTelemetryDTO, Telemetry>()
+                .ForMember(dest => dest.Beacon.ID, opt => opt.MapFrom(src => src.BeaconID));
         }
     }
 }

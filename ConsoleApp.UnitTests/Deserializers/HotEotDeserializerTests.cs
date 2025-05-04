@@ -1,5 +1,6 @@
 using ConsoleApp.Deserializers;
 using ConsoleApp.Models;
+using FluentAssertions;
 
 namespace ConsoleApp.UnitTests.Deserializers;
 
@@ -13,7 +14,7 @@ public class HotEotDeserializerTests
         var data = "2025/03/28-06:53:19  0.9 HOT  6720 --- - - -- --- - SRQ NML - - CN   ------------";
         var expected = new HotEotPacket
         {
-            TimeReceived = new DateTime(2025, 3, 28, 6, 53, 19),
+            TimeReceived = new DateTime(2025, 3, 28, 11, 53, 19),
             SIG = 0.9m,
             SRC = "HOT",
             ID = "6720",
@@ -36,7 +37,7 @@ public class HotEotDeserializerTests
         var data = "2025/03/28-06:58:15  1.3 EOT  6720  88 1 1 OK   0 1 --- NML 1 0 CN   ------------";
         var expected = new HotEotPacket
         {
-            TimeReceived = new DateTime(2025, 3, 28, 6, 58, 15),
+            TimeReceived = new DateTime(2025, 3, 28, 11, 58, 15),
             SIG = 1.3m,
             SRC = "EOT",
             ID = "6720",
@@ -56,7 +57,7 @@ public class HotEotDeserializerTests
         var actual = HotEotDeserializer.Deserialize(data);
 
         // Assert
-        Assert.AreEqual(expected, actual);
+        actual.Should().BeEquivalentTo(expected);
     }
 
     [TestMethod]
@@ -66,7 +67,7 @@ public class HotEotDeserializerTests
         var data = "2025/03/28-06:58:15  1.3 EOT  6720  88 1 1 OK   0 1 --- NML 1 0 WSOR T4H         ";
         var expected = new HotEotPacket
         {
-            TimeReceived = new DateTime(2025, 3, 28, 6, 58, 15),
+            TimeReceived = new DateTime(2025, 3, 28, 11, 58, 15), // UTC
             SIG = 1.3m,
             SRC = "EOT",
             ID = "6720",
@@ -87,7 +88,7 @@ public class HotEotDeserializerTests
         var actual = HotEotDeserializer.Deserialize(data);
 
         // Assert
-        Assert.AreEqual(expected, actual);
+        actual.Should().BeEquivalentTo(expected);
     }
 
     [TestMethod]
@@ -97,7 +98,8 @@ public class HotEotDeserializerTests
         var data = "2025/03/28-09:04:33 ---- INV ----- --- - - -- --- - --- --- - - ---- ------------";
         var expected = new HotEotPacket
         {
-            TimeReceived = new DateTime(2025, 3, 28, 9, 04, 33),
+            TimeReceived = new DateTime(2025, 3, 28, 14, 04, 33), // UTC
+            ID = null,
             SRC = "INV"
         };
 
@@ -105,6 +107,6 @@ public class HotEotDeserializerTests
         var actual = HotEotDeserializer.Deserialize(data);
 
         // Assert
-        Assert.AreEqual(expected, actual);
+        actual.Should().BeEquivalentTo(expected);
     }
 }
