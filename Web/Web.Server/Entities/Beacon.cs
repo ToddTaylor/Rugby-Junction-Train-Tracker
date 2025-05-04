@@ -9,6 +9,8 @@ namespace Web.Server.Entities
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int ID { get; set; }
 
+        public int OwnerID { get; set; }
+
         public Owner Owner { get; set; }
 
         public required double Latitude { get; set; }

@@ -9,9 +9,11 @@ namespace Web.Server.Entities
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int ID { get; set; }
 
-        public required string Name { get; set; } = string.Empty;
+        public required string Name { get; set; }
 
-        public required string Subdivision { get; set; } = string.Empty;
+        public required string Subdivision { get; set; }
+
+        public List<Beacon> Beacons { get; set; } = new List<Beacon>();
 
         public override bool Equals(object? obj)
         {

@@ -15,6 +15,11 @@ namespace Web.Server.Services
 
         public async Task<Beacon> AddAsync(Beacon beacon)
         {
+            foreach (Railroad railroad in beacon.Railroads)
+            {
+                _context.Entry(railroad).State = EntityState.Unchanged;
+            }
+
             _context.Beacons.Add(beacon);
             await _context.SaveChangesAsync();
             return beacon;

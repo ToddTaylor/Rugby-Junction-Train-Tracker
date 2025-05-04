@@ -14,5 +14,10 @@ namespace Web.Server.Data
         public DbSet<Owner> Owners { get; set; }
         public DbSet<Railroad> Railroads { get; set; }
         public DbSet<Telemetry> Telemetries { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+        }
     }
 }
