@@ -18,13 +18,12 @@
                    Email == other.Email &&
                    City == other.City &&
                    State == other.State &&
-                   EqualityComparer<ICollection<BeaconDTO>>.Default.Equals(Beacons, other.Beacons) &&
                    ID == other.ID;
         }
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(base.GetHashCode(), FirstName, LastName, Email, City, State, Beacons, ID);
+            return HashCode.Combine(base.GetHashCode(), FirstName, LastName, Email, City, State, ID);
         }
 
         public static bool operator ==(UpdateOwnerDTO? left, UpdateOwnerDTO? right)

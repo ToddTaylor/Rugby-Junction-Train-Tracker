@@ -42,7 +42,16 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
+// Custom repositories
+builder.Services.AddScoped<IBeaconRepository, BeaconRepository>();
+builder.Services.AddScoped<IOwnerRepository, OwnerRepository>();
+builder.Services.AddScoped<IRailroadRepository, RailroadRepository>();
+builder.Services.AddScoped<ITelemetryRepository, TelemetryRepository>();
+
 // Custom services
+builder.Services.AddScoped<IBeaconService, BeaconService>();
+builder.Services.AddScoped<IOwnerService, OwnerService>();
+builder.Services.AddScoped<IRailroadService, RailroadService>();
 builder.Services.AddScoped<ITelemetryService, TelemetryService>();
 
 var app = builder.Build();

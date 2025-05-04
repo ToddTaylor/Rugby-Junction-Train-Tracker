@@ -6,7 +6,7 @@ using Web.Server.Services;
 
 namespace Web.Server.Controllers.v1
 {
-    [Route("api/[controller]")]
+    [Route("api/v1/[controller]")]
     [ApiController]
     public class OwnersController : ControllerBase
     {
@@ -75,12 +75,12 @@ namespace Web.Server.Controllers.v1
 
         // POST: api/Owners
         [HttpPost]
-        public async Task<ActionResult<UpdateOwnerDTO>> PostOwner(CreateOwnerDTO createOwnerDTO)
+        public async Task<ActionResult<CreateOwnerDTO>> PostOwner(CreateOwnerDTO createOwnerDTO)
         {
             var owner = _mapper.Map<Owner>(createOwnerDTO);
             var createdOwner = await _ownerService.CreateOwnerAsync(owner);
 
-            var ownerDTO = _mapper.Map<UpdateOwnerDTO>(createdOwner);
+            var ownerDTO = _mapper.Map<OwnerDTO>(createdOwner);
 
             return CreatedAtAction("GetOwner", new { id = createdOwner.ID }, ownerDTO);
         }

@@ -8,12 +8,24 @@ namespace Web.Server.Mappers
     {
         public AutoMapperProfile()
         {
+            // Beacon mappings
+            CreateMap<Beacon, BeaconDTO>();
+
+            // Owner mappings
+            CreateMap<CreateOwnerDTO, Owner>()
+                .ForMember(dest => dest.ID, opt => opt.Ignore())
+                .ForMember(dest => dest.Beacons, opt => opt.Ignore())
+                .ReverseMap();
+
+            CreateMap<Owner, OwnerDTO>();
+
+            // Telemetry mappings
+            CreateMap<CreateTelemetryDTO, Telemetry>()
+                .ForPath(dest => dest.Beacon.ID, opt => opt.MapFrom(src => src.BeaconID));
+
             CreateMap<Telemetry, MapAlert>()
                 .ForMember(dest => dest.Latitude, opt => opt.MapFrom(src => src.Beacon.Latitude))
                 .ForMember(dest => dest.Longitude, opt => opt.MapFrom(src => src.Beacon.Longitude));
-
-            CreateMap<CreateTelemetryDTO, Telemetry>()
-                .ForPath(dest => dest.Beacon.ID, opt => opt.MapFrom(src => src.BeaconID));
         }
     }
 }

@@ -6,7 +6,7 @@ using Web.Server.Services;
 
 namespace Web.Server.Controllers.v1
 {
-    [Route("api/[controller]")]
+    [Route("api/v1/[controller]")]
     [ApiController]
     public class RailroadsController : ControllerBase
     {

@@ -12,8 +12,6 @@
 
         public required string State { get; set; }
 
-        public required ICollection<BeaconDTO> Beacons { get; set; }
-
         public override bool Equals(object? obj)
         {
             return Equals(obj as CreateOwnerDTO);
@@ -26,13 +24,12 @@
                    LastName == other.LastName &&
                    Email == other.Email &&
                    City == other.City &&
-                   State == other.State &&
-                   EqualityComparer<ICollection<BeaconDTO>>.Default.Equals(Beacons, other.Beacons);
+                   State == other.State;
         }
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(FirstName, LastName, Email, City, State, Beacons);
+            return HashCode.Combine(FirstName, LastName, Email, City, State);
         }
 
         public static bool operator ==(CreateOwnerDTO? left, CreateOwnerDTO? right)
