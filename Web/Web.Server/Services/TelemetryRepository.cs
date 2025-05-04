@@ -15,6 +15,8 @@ namespace Web.Server.Services
 
         public async Task<Telemetry> AddAsync(Telemetry telemetry)
         {
+            _context.Entry(telemetry).State = EntityState.Unchanged;
+
             _context.Telemetries.Add(telemetry);
             await _context.SaveChangesAsync();
             return telemetry;

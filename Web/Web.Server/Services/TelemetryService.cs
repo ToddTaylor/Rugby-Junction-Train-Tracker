@@ -31,6 +31,8 @@ namespace Web.Server.Services
 
         public async Task CreateTelemetry(Telemetry telemetry)
         {
+            telemetry.Timestamp = DateTime.UtcNow;
+
             var existingTelemetry = (await _telemetryRepository.GetAllAsync())
                 .OrderByDescending(x => x.Timestamp)
                 .FirstOrDefault();

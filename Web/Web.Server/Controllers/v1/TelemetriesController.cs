@@ -36,7 +36,7 @@ namespace Web.Server.Controllers.v1
         }
 
         // POST: api/v1/Telemetries
-        [HttpPost("Telemetry")]
+        [HttpPost]
         public IActionResult Post([FromBody] CreateTelemetryDTO telemetryDTO)
         {
             var telemetry = this._mapper.Map<Telemetry>(telemetryDTO);
