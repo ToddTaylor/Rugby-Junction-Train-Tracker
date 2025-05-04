@@ -26,17 +26,17 @@ namespace Web.Server.Controllers.v1
 
         // GET: api/Owners
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<UpdateOwnerDTO>>> GetOwners()
+        public async Task<ActionResult<IEnumerable<OwnerDTO>>> GetOwners()
         {
             var owners = await _ownerService.GetOwnersAsync();
-            var ownerDTOs = _mapper.Map<IEnumerable<UpdateOwnerDTO>>(owners);
+            var ownerDTOs = _mapper.Map<IEnumerable<OwnerDTO>>(owners);
 
             return Ok(ownerDTOs);
         }
 
         // GET: api/Owners/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<UpdateOwnerDTO>> GetOwner(int id)
+        public async Task<ActionResult<OwnerDTO>> GetOwner(int id)
         {
             var owner = await _ownerService.GetOwnerByIdAsync(id);
 
@@ -45,7 +45,7 @@ namespace Web.Server.Controllers.v1
                 return NotFound();
             }
 
-            var ownerDTO = _mapper.Map<UpdateOwnerDTO>(owner);
+            var ownerDTO = _mapper.Map<OwnerDTO>(owner);
 
             return Ok(ownerDTO);
         }

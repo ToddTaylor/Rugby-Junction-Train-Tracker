@@ -19,6 +19,13 @@ namespace Web.Server.Mappers
 
             CreateMap<Owner, OwnerDTO>();
 
+            // Railroad mappings
+            CreateMap<CreateRailroadDTO, Railroad>()
+                .ForMember(dest => dest.ID, opt => opt.Ignore())
+                .ReverseMap();
+
+            CreateMap<Railroad, RailroadDTO>();
+
             // Telemetry mappings
             CreateMap<CreateTelemetryDTO, Telemetry>()
                 .ForPath(dest => dest.Beacon.ID, opt => opt.MapFrom(src => src.BeaconID));
