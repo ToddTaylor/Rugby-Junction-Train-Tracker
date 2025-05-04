@@ -24,6 +24,8 @@ namespace Web.Server.Mappers
 
             CreateMap<Owner, OwnerDTO>();
 
+            CreateMap<Owner, UpdateOwnerDTO>();
+
             // Railroad mappings
             CreateMap<CreateRailroadDTO, Railroad>()
                 .ForMember(dest => dest.ID, opt => opt.Ignore());
