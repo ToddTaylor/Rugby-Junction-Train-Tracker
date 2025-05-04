@@ -1,0 +1,13 @@
+using Web.Server.Entities;
+
+namespace Web.Server.Services
+{
+    public interface IBeaconRepository
+    {
+        Task<Beacon> AddAsync(Beacon beacon);
+        Task<IEnumerable<Beacon>> GetAllAsync();
+        Task<Beacon?> GetByIdAsync(int id);
+        Task<Beacon> UpdateAsync(Beacon beacon);
+        Task<bool> DeleteAsync(int id);
+    }
+}
