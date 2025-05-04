@@ -9,7 +9,7 @@ namespace Web.Server.Entities
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int ID { get; set; }
 
-        public required Beacon Beacon { get; set; }
+        public Beacon Beacon { get; set; }
 
         public required int AddressID { get; set; }
 

@@ -9,7 +9,7 @@ namespace Web.Server.Entities
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int ID { get; set; }
 
-        public required Owner Owner { get; set; }
+        public Owner Owner { get; set; }
 
         public required double Latitude { get; set; }
 
@@ -17,7 +17,7 @@ namespace Web.Server.Entities
 
         public required DateTime Timestamp { get; set; } = DateTime.UtcNow;
 
-        public required ICollection<Railroad> Railroads { get; set; }
+        public ICollection<Railroad> Railroads { get; set; }
 
         public override bool Equals(object? obj)
         {
