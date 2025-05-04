@@ -1,11 +1,6 @@
 using AutoMapper;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Web.Server.Entities;
 using Web.Server.Hubs;
 using Web.Server.Mappers;
@@ -20,6 +15,8 @@ namespace Web.Server.Services.Tests
         private Mock<IBeaconRepository> _mockBeaconRepository;
         private Mock<ITelemetryRepository> _mockTelemetryRepository;
         private Mock<IHubContext<NotificationHub>> _mockHubContext;
+        private Mock<IHubClients> _mockHubClients;
+        private Mock<IClientProxy> _mockClientProxy;
         private IMapper _mapper;
 
         [TestInitialize]
@@ -28,6 +25,8 @@ namespace Web.Server.Services.Tests
             _mockBeaconRepository = new Mock<IBeaconRepository>();
             _mockTelemetryRepository = new Mock<ITelemetryRepository>();
             _mockHubContext = new Mock<IHubContext<NotificationHub>>();
+            _mockHubClients = new Mock<IHubClients>();
+            _mockClientProxy = new Mock<IClientProxy>();
 
             var config = new MapperConfiguration(cfg =>
             {
@@ -74,7 +73,38 @@ namespace Web.Server.Services.Tests
                 AddressID = 100,
                 Source = "HOT",
                 Timestamp = DateTime.UtcNow,
-                Beacon = new Beacon { ID = 1, Latitude = 10.0, Longitude = 20.0, Timestamp = DateTime.UtcNow }
+                Beacon = new Beacon
+                {
+                    ID = 1,
+                    Latitude = 10.0,
+                    Longitude = 20.0,
+                    Timestamp = DateTime.UtcNow
+                }
+            };
+
+            var existingTelemetry = new List<Telemetry>()
+            {
+                new Telemetry
+                {
+                    ID = 1,
+                    AddressID = 100,
+                    Source = "HOT",
+                    Timestamp = DateTime.UtcNow,
+                    Beacon = new Beacon
+                    {
+                        ID = 1,
+                        Latitude = 10.0,
+                        Longitude = 20.0,
+                        Timestamp = DateTime.UtcNow,
+                        Railroads = new List<Railroad> {
+                            new Railroad {
+                                ID = 1,
+                                Name = "CN",
+                                Subdivision = "Waukesha"
+                            }
+                        }
+                    },
+                }
             };
 
             var existingBeacon = new Beacon
@@ -85,12 +115,33 @@ namespace Web.Server.Services.Tests
                 Timestamp = DateTime.UtcNow
             };
 
+            var expectedMapAlert = new MapAlert
+            {
+                AddressID = 100,
+                Latitude = 10.0,
+                Longitude = 20.0,
+                Source = "HOT",
+                Timestamp = DateTime.UtcNow,
+                Direction = "W"
+            };
+
+            var expectedObjects = new object[]
+            {
+                expectedMapAlert
+            };
+
+            _mockTelemetryRepository.Setup(repo => repo.GetAllAsync())
+                .ReturnsAsync(existingTelemetry);
             _mockTelemetryRepository.Setup(repo => repo.AddAsync(It.IsAny<Telemetry>()))
                 .ReturnsAsync(telemetry);
             _mockBeaconRepository.Setup(repo => repo.GetByIdAsync(telemetry.Beacon.ID))
                 .ReturnsAsync(existingBeacon);
             _mockBeaconRepository.Setup(repo => repo.UpdateAsync(It.IsAny<Beacon>()))
                 .ReturnsAsync(existingBeacon);
+            _mockHubContext.Setup(h => h.Clients).Returns(_mockHubClients.Object);
+            _mockHubClients.Setup(h => h.All).Returns(_mockClientProxy.Object);
+            _mockClientProxy.Setup(proxy => proxy.SendCoreAsync("MapAlert", expectedObjects, default))
+                .Returns(Task.CompletedTask);
 
             // Act
             _telemetryService.CreateTelemetry(telemetry);
@@ -99,6 +150,15 @@ namespace Web.Server.Services.Tests
             _mockTelemetryRepository.Verify(repo => repo.AddAsync(It.Is<Telemetry>(t => t == telemetry)), Times.Once);
             _mockBeaconRepository.Verify(repo => repo.GetByIdAsync(telemetry.Beacon.ID), Times.Once);
             _mockBeaconRepository.Verify(repo => repo.UpdateAsync(It.Is<Beacon>(b => b.ID == telemetry.Beacon.ID)), Times.Once);
+            //_mockClientProxy.Verify(proxy => proxy.SendCoreAsync(
+            //    "MapAlert",
+            //    It.Is<object[]>(args => args.Length == 1 && args[0] is MapAlert),
+            //    default), Times.Once);
+
+            _mockClientProxy.Verify(proxy => proxy.SendCoreAsync(
+                "MapAlert",
+                It.Is<object[]>(args => args[0] == expectedMapAlert),
+                default), Times.Once);
         }
 
         [TestMethod]
