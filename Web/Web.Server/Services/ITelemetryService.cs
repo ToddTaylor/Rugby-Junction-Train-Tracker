@@ -6,6 +6,6 @@ namespace Web.Server.Services
     {
         Task<IEnumerable<Telemetry>> GetTelemetries();
 
-        void CreateTelemetry(Telemetry alert);
+        Task CreateTelemetry(Telemetry alert);
     }
 }

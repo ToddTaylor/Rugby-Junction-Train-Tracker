@@ -29,7 +29,7 @@ namespace Web.Server.Services
             return await _telemetryRepository.GetAllAsync();
         }
 
-        public async void CreateTelemetry(Telemetry telemetry)
+        public async Task CreateTelemetry(Telemetry telemetry)
         {
             var existingTelemetry = (await _telemetryRepository.GetAllAsync())
                 .OrderByDescending(x => x.Timestamp)
