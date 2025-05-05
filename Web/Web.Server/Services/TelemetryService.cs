@@ -31,9 +31,22 @@ namespace Web.Server.Services
 
         public async Task CreateTelemetry(Telemetry telemetry)
         {
-            telemetry.Timestamp = DateTime.UtcNow;
+            var now = DateTime.UtcNow;
 
+
+            // Update the beacon so it's known that the beacon is active
+            var beacon = await _beaconRepository.GetByIdAsync(telemetry.Beacon.ID);
+            if (beacon == null)
+            {
+                throw new InvalidOperationException("Beacon not found.");
+            }
+
+            beacon.Timestamp = now;
+            await _beaconRepository.UpdateAsync(beacon);
+
+            // Check if the beacon is multi-railroad
             var existingTelemetry = (await _telemetryRepository.GetAllAsync())
+                .Where(x => x.Beacon.ID == telemetry.Beacon.ID)
                 .OrderByDescending(x => x.Timestamp)
                 .FirstOrDefault();
 
@@ -44,17 +57,11 @@ namespace Web.Server.Services
                 return;
             }
 
+            // Update the telemetry
+            telemetry.Timestamp = now;
             await _telemetryRepository.AddAsync(telemetry);
 
-            var beacon = await _beaconRepository.GetByIdAsync(telemetry.Beacon.ID);
-            if (beacon == null)
-            {
-                throw new InvalidOperationException("Beacon not found.");
-            }
-
-            beacon.Timestamp = DateTime.UtcNow;
-            await _beaconRepository.UpdateAsync(beacon);
-
+            // Prepare and send the map alert
             var fromGeoCoordinate = new GeoCoordinate(existingTelemetry.Beacon.Latitude, existingTelemetry.Beacon.Longitude);
             var toGeoCoordinate = new GeoCoordinate(telemetry.Beacon.Latitude, telemetry.Beacon.Longitude);
             var direction = GetDirection(fromGeoCoordinate, toGeoCoordinate);
