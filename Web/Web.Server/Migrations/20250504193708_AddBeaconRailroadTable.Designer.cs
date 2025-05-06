@@ -10,7 +10,7 @@ using Web.Server.Data;
 
 namespace Web.Server.Migrations
 {
-    [DbContext(typeof(TelemetryDbContext))]
+    [DbContext(typeof(Data.TelemetryDbContext))]
     [Migration("20250504193708_AddBeaconRailroadTable")]
     partial class AddBeaconRailroadTable
     {

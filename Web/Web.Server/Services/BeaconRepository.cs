@@ -15,9 +15,9 @@ namespace Web.Server.Services
 
         public async Task<Beacon> AddAsync(Beacon beacon)
         {
-            foreach (Railroad railroad in beacon.Railroads)
+            foreach (BeaconRailroad beaconRailroad in beacon.BeaconRailroads)
             {
-                _context.Entry(railroad).State = EntityState.Unchanged;
+                _context.Entry(beaconRailroad).State = EntityState.Unchanged;
             }
 
             _context.Beacons.Add(beacon);
@@ -27,12 +27,12 @@ namespace Web.Server.Services
 
         public async Task<IEnumerable<Beacon>> GetAllAsync()
         {
-            return await _context.Beacons.Include(b => b.Owner).Include(b => b.Railroads).ToListAsync();
+            return await _context.Beacons.Include(b => b.Owner).Include(b => b.BeaconRailroads).ToListAsync();
         }
 
         public async Task<Beacon?> GetByIdAsync(int id)
         {
-            return await _context.Beacons.Include(b => b.Owner).Include(b => b.Railroads).FirstOrDefaultAsync(b => b.ID == id);
+            return await _context.Beacons.Include(b => b.Owner).Include(b => b.BeaconRailroads).FirstOrDefaultAsync(b => b.ID == id);
         }
 
         public async Task<Beacon> UpdateAsync(Beacon beacon)
@@ -43,11 +43,9 @@ namespace Web.Server.Services
                 throw new KeyNotFoundException("Beacon not found.");
             }
 
-            existingBeacon.Latitude = beacon.Latitude;
-            existingBeacon.Longitude = beacon.Longitude;
             existingBeacon.Timestamp = beacon.Timestamp;
             existingBeacon.Owner = beacon.Owner;
-            existingBeacon.Railroads = beacon.Railroads;
+            existingBeacon.BeaconRailroads = beacon.BeaconRailroads;
 
             await _context.SaveChangesAsync();
             return existingBeacon;

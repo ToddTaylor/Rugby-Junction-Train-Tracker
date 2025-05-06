@@ -11,13 +11,25 @@ namespace Web.Server.Data
         }
 
         public DbSet<Beacon> Beacons { get; set; }
+        public DbSet<BeaconRailroad> BeaconRailroads { get; set; }
         public DbSet<Owner> Owners { get; set; }
         public DbSet<Railroad> Railroads { get; set; }
         public DbSet<Telemetry> Telemetries { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            base.OnModelCreating(modelBuilder);
+            modelBuilder.Entity<BeaconRailroad>()
+                .HasKey(br => new { br.BeaconID, br.RailroadID }); // composite key
+
+            modelBuilder.Entity<BeaconRailroad>()
+                .HasOne(br => br.Beacon)
+                .WithMany(b => b.BeaconRailroads)
+                .HasForeignKey(br => br.BeaconID);
+
+            modelBuilder.Entity<BeaconRailroad>()
+                .HasOne(br => br.Railroad)
+                .WithMany(r => r.BeaconRailroads)
+                .HasForeignKey(br => br.RailroadID);
         }
     }
 }

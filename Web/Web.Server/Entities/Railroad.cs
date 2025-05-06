@@ -13,7 +13,7 @@ namespace Web.Server.Entities
 
         public required string Subdivision { get; set; }
 
-        public List<Beacon> Beacons { get; set; } = new List<Beacon>();
+        public ICollection<BeaconRailroad> BeaconRailroads { get; set; }
 
         public override bool Equals(object? obj)
         {
@@ -25,12 +25,13 @@ namespace Web.Server.Entities
             return other is not null &&
                    ID == other.ID &&
                    Name == other.Name &&
-                   Subdivision == other.Subdivision;
+                   Subdivision == other.Subdivision &&
+                   EqualityComparer<ICollection<BeaconRailroad>>.Default.Equals(BeaconRailroads, other.BeaconRailroads);
         }
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(ID, Name, Subdivision);
+            return HashCode.Combine(ID, Name, Subdivision, BeaconRailroads);
         }
 
         public static bool operator ==(Railroad? left, Railroad? right)

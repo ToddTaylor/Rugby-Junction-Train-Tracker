@@ -13,13 +13,9 @@ namespace Web.Server.Entities
 
         public Owner Owner { get; set; }
 
-        public required double Latitude { get; set; }
-
-        public required double Longitude { get; set; }
-
         public required DateTime Timestamp { get; set; } = DateTime.UtcNow;
 
-        public ICollection<Railroad> Railroads { get; set; }
+        public ICollection<BeaconRailroad> BeaconRailroads { get; set; }
 
         public override bool Equals(object? obj)
         {
@@ -30,14 +26,15 @@ namespace Web.Server.Entities
         {
             return other is not null &&
                    ID == other.ID &&
-                   Latitude == other.Latitude &&
-                   Longitude == other.Longitude &&
-                   EqualityComparer<ICollection<Railroad>>.Default.Equals(Railroads, other.Railroads);
+                   OwnerID == other.OwnerID &&
+                   EqualityComparer<Owner>.Default.Equals(Owner, other.Owner) &&
+                   Timestamp == other.Timestamp &&
+                   EqualityComparer<ICollection<BeaconRailroad>>.Default.Equals(BeaconRailroads, other.BeaconRailroads);
         }
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(ID, Latitude, Longitude, Railroads);
+            return HashCode.Combine(ID, OwnerID, Owner, Timestamp, BeaconRailroads);
         }
 
         public static bool operator ==(Beacon? left, Beacon? right)

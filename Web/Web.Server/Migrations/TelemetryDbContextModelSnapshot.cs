@@ -9,7 +9,7 @@ using Web.Server.Data;
 
 namespace Web.Server.Migrations
 {
-    [DbContext(typeof(TelemetryDbContext))]
+    [DbContext(typeof(Data.TelemetryDbContext))]
     partial class TelemetryDbContextModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)

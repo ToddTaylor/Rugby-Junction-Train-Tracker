@@ -31,9 +31,6 @@ namespace Web.Server.Services
 
         public async Task CreateTelemetry(Telemetry telemetry)
         {
-            var now = DateTime.UtcNow;
-
-
             // Update the beacon so it's known that the beacon is active
             var beacon = await _beaconRepository.GetByIdAsync(telemetry.Beacon.ID);
             if (beacon == null)
@@ -41,29 +38,37 @@ namespace Web.Server.Services
                 throw new InvalidOperationException("Beacon not found.");
             }
 
+            var now = DateTime.UtcNow;
             beacon.Timestamp = now;
             await _beaconRepository.UpdateAsync(beacon);
 
-            // Check if the beacon is multi-railroad
-            var existingTelemetry = (await _telemetryRepository.GetAllAsync())
-                .Where(x => x.Beacon.ID == telemetry.Beacon.ID)
+            // Get previous telemetry for same train address before inserting new telemetry
+            var previousTelemetry = (await _telemetryRepository.GetAllAsync())
+                .Where(x => x.AddressID == telemetry.AddressID)
                 .OrderByDescending(x => x.Timestamp)
                 .FirstOrDefault();
 
-            var beaconIsMultiRailroad = existingTelemetry?.Beacon.Railroads.Count > 1;
+            // Insert new telemetry
+            telemetry.Timestamp = now;
+            telemetry = await _telemetryRepository.AddAsync(telemetry);
 
-            if (existingTelemetry == null && beaconIsMultiRailroad)
+            // Check if telemetry beacon is multi-railroad. 
+            var telemetryBeaconIsMultiRailroad = telemetry.Beacon.BeaconRailroads.Count > 1;
+
+            if (previousTelemetry == null && telemetryBeaconIsMultiRailroad)
             {
+                // There's no way to know which railroad the telemetry is on, so we can't send a map alert.
                 return;
             }
 
-            // Update the telemetry
-            telemetry.Timestamp = now;
-            await _telemetryRepository.AddAsync(telemetry);
+            var telemetryBeaconRailroad = telemetry.Beacon.BeaconRailroads.First();
+
+            // Match the current telemetry beacon railroad with the previous telemetry beacon railroad to get the geo coordinates.
+            var previousTelemetryBeaconRailroad = previousTelemetry?.Beacon.BeaconRailroads.Where(beaconRailroad => beaconRailroad.RailroadID == telemetryBeaconRailroad.RailroadID).First();
 
             // Prepare and send the map alert
-            var fromGeoCoordinate = new GeoCoordinate(existingTelemetry.Beacon.Latitude, existingTelemetry.Beacon.Longitude);
-            var toGeoCoordinate = new GeoCoordinate(telemetry.Beacon.Latitude, telemetry.Beacon.Longitude);
+            var fromGeoCoordinate = new GeoCoordinate(previousTelemetryBeaconRailroad.Latitude, previousTelemetryBeaconRailroad.Longitude);
+            var toGeoCoordinate = new GeoCoordinate(telemetryBeaconRailroad.Latitude, telemetryBeaconRailroad.Longitude);
             var direction = GetDirection(fromGeoCoordinate, toGeoCoordinate);
 
             var mapAlert = _mapper.Map<MapAlert>(telemetry);

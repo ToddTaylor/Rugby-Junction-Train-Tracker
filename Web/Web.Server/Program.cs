@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Web.Server.Data;
 using Web.Server.Hubs;
 using Web.Server.Mappers;
 using Web.Server.Services;
@@ -26,7 +25,7 @@ builder.Services.AddControllers();
 builder.Services.AddSignalR();
 
 // Add DbContext with SQLite connection string
-builder.Services.AddDbContext<TelemetryDbContext>(options =>
+builder.Services.AddDbContext<DbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("TelemetryDatabase")));
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -44,12 +43,14 @@ builder.Services.AddSwaggerGen(options =>
 
 // Custom repositories
 builder.Services.AddScoped<IBeaconRepository, BeaconRepository>();
+builder.Services.AddScoped<IBeaconRailroadRepository, BeaconRailroadRepository>();
 builder.Services.AddScoped<IOwnerRepository, OwnerRepository>();
 builder.Services.AddScoped<IRailroadRepository, RailroadRepository>();
 builder.Services.AddScoped<ITelemetryRepository, TelemetryRepository>();
 
 // Custom services
 builder.Services.AddScoped<IBeaconService, BeaconService>();
+builder.Services.AddScoped<IBeaconRailroadService, BeaconRailroadService>();
 builder.Services.AddScoped<IOwnerService, OwnerService>();
 builder.Services.AddScoped<IRailroadService, RailroadService>();
 builder.Services.AddScoped<ITelemetryService, TelemetryService>();

@@ -1,12 +1,13 @@
-﻿namespace Web.Server.DTOs
+﻿
+namespace Web.Server.DTOs
 {
     public class RailroadDTO : IEquatable<RailroadDTO?>
     {
         public int ID { get; set; }
 
-        public required string Name { get; set; } = string.Empty;
+        public required string Name { get; set; }
 
-        public required string Subdivision { get; set; } = string.Empty;
+        public required string Subdivision { get; set; }
 
         public override bool Equals(object? obj)
         {
