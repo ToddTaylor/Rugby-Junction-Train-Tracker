@@ -363,3 +363,5 @@ MigrationBackup/
 FodyWeavers.xsd
 *.geojson
 /Web/web.client/public/data
+/Web/Web.Server/appsettings.Development.json
+/Web/Web.Server/appsettings.Production.json
