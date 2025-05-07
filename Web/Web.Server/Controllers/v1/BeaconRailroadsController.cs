@@ -6,7 +6,7 @@ using Web.Server.Services;
 namespace Web.Server.Controllers.v1
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/v1/[controller]")]
     public class BeaconRailroadsController : ControllerBase
     {
         private readonly IBeaconRailroadService _service;

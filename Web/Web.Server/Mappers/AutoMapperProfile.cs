@@ -33,7 +33,12 @@ namespace Web.Server.Mappers
 
             // Telemetry mappings
             CreateMap<CreateTelemetryDTO, Telemetry>()
-                .ForPath(dest => dest.Beacon.ID, opt => opt.MapFrom(src => src.BeaconID));
+                .ForPath(dest => dest.Beacon.ID, opt => opt.MapFrom(src => src.BeaconID))
+                .ReverseMap()
+                .ForPath(dest => dest.BeaconID, opt => opt.MapFrom(src => src.Beacon.ID));
+
+            CreateMap<Telemetry, TelemetryDTO>()
+                .ForPath(dest => dest.Beacon.ID, opt => opt.MapFrom(src => src.Beacon.ID));
 
             CreateMap<Telemetry, MapAlert>()
                 .ForMember(dest => dest.Latitude, opt => opt.MapFrom(src => src.Beacon.BeaconRailroads.First().Latitude))

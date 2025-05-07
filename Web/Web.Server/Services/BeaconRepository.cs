@@ -15,9 +15,12 @@ namespace Web.Server.Services
 
         public async Task<Beacon> AddAsync(Beacon beacon)
         {
-            foreach (BeaconRailroad beaconRailroad in beacon.BeaconRailroads)
+            if (beacon.BeaconRailroads != null)
             {
-                _context.Entry(beaconRailroad).State = EntityState.Unchanged;
+                foreach (BeaconRailroad beaconRailroad in beacon.BeaconRailroads)
+                {
+                    _context.Entry(beaconRailroad).State = EntityState.Unchanged;
+                }
             }
 
             _context.Beacons.Add(beacon);
