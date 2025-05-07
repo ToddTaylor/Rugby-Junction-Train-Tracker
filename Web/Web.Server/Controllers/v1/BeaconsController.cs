@@ -48,9 +48,14 @@ namespace Web.Server.Controllers.v1
         }
 
         // PUT: api/v1/Beacons/5
-        [HttpPut]
-        public async Task<IActionResult> PutBeacon(UpdateBeaconDTO updateBeaconDTO)
+        [HttpPut("{id}")]
+        public async Task<IActionResult> PutBeacon(int id, UpdateBeaconDTO updateBeaconDTO)
         {
+            if (id != updateBeaconDTO.ID)
+            {
+                return BadRequest();
+            }
+
             var beacon = _mapper.Map<Beacon>(updateBeaconDTO);
 
             try
