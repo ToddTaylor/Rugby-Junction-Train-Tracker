@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi.Models;
 using System.Reflection;
 using System.Text.Json.Serialization;
 using Web.Server.Data;
@@ -47,6 +48,32 @@ builder.Services.AddSwaggerGen(options =>
         Title = "Train Telemetry API",
         Version = "v1",
         Description = "API for reporting train telemetry data for train tracking."
+    });
+    options.AddSecurityDefinition("ApiKey", new OpenApiSecurityScheme
+    {
+        Description = "API Key needed to access the endpoints. Add it to the request headers using the key 'X-Api-Key'.",
+        Type = SecuritySchemeType.ApiKey,
+        Name = "X-Api-Key",
+        In = ParameterLocation.Header,
+        Scheme = "ApiKeyScheme"
+    });
+
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "ApiKey"
+                },
+                Scheme = "ApiKeyScheme",
+                Name = "ApiKey",
+                In = ParameterLocation.Header
+            },
+            new List<string>()
+        }
     });
 });
 
