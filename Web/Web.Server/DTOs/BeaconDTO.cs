@@ -1,14 +1,13 @@
-﻿namespace Web.Server.DTOs
+﻿
+namespace Web.Server.DTOs
 {
     public class BeaconDTO : IEquatable<BeaconDTO?>
     {
         public int ID { get; set; }
 
-        public required UpdateOwnerDTO Owner { get; set; }
-
         public required DateTime Timestamp { get; set; } = DateTime.UtcNow;
 
-        public required ICollection<RailroadDTO> Railroads { get; set; }
+        public required ICollection<BeaconRailroadDTO> BeaconRailroads { get; set; }
 
         public override bool Equals(object? obj)
         {
@@ -19,14 +18,13 @@
         {
             return other is not null &&
                    ID == other.ID &&
-                   EqualityComparer<UpdateOwnerDTO>.Default.Equals(Owner, other.Owner) &&
                    Timestamp == other.Timestamp &&
-                   EqualityComparer<ICollection<RailroadDTO>>.Default.Equals(Railroads, other.Railroads);
+                   EqualityComparer<ICollection<BeaconRailroadDTO>>.Default.Equals(BeaconRailroads, other.BeaconRailroads);
         }
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(ID, Owner, Timestamp, Railroads);
+            return HashCode.Combine(ID, Timestamp, BeaconRailroads);
         }
 
         public static bool operator ==(BeaconDTO? left, BeaconDTO? right)

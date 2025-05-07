@@ -1,5 +1,6 @@
 ﻿
 
+
 namespace Web.Server.DTOs
 {
     public class UpdateBeaconDTO : CreateBeaconDTO, IEquatable<UpdateBeaconDTO?>
@@ -16,13 +17,12 @@ namespace Web.Server.DTOs
             return other is not null &&
                    base.Equals(other) &&
                    OwnerID == other.OwnerID &&
-                   EqualityComparer<List<int>>.Default.Equals(RailroadIDs, other.RailroadIDs) &&
                    ID == other.ID;
         }
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(base.GetHashCode(), OwnerID, RailroadIDs, ID);
+            return HashCode.Combine(base.GetHashCode(), OwnerID, ID);
         }
 
         public static bool operator ==(UpdateBeaconDTO? left, UpdateBeaconDTO? right)

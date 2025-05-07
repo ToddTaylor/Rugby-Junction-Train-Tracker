@@ -1,11 +1,10 @@
 ﻿
+
 namespace Web.Server.DTOs
 {
     public class CreateBeaconDTO : IEquatable<CreateBeaconDTO?>
     {
         public required int OwnerID { get; set; }
-
-        public required List<int> RailroadIDs { get; set; }
 
         public override bool Equals(object? obj)
         {
@@ -15,13 +14,12 @@ namespace Web.Server.DTOs
         public bool Equals(CreateBeaconDTO? other)
         {
             return other is not null &&
-                   OwnerID == other.OwnerID &&
-                   EqualityComparer<List<int>>.Default.Equals(RailroadIDs, other.RailroadIDs);
+                   OwnerID == other.OwnerID;
         }
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(OwnerID, RailroadIDs);
+            return HashCode.Combine(OwnerID);
         }
 
         public static bool operator ==(CreateBeaconDTO? left, CreateBeaconDTO? right)
