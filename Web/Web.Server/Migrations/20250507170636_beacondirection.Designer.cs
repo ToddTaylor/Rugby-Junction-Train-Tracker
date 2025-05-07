@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Web.Server.Data;
 
@@ -10,9 +11,11 @@ using Web.Server.Data;
 namespace Web.Server.Migrations
 {
     [DbContext(typeof(TelemetryDbContext))]
-    partial class TelemetryDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250507170636_beacondirection")]
+    partial class beacondirection
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.4");
@@ -44,9 +47,8 @@ namespace Web.Server.Migrations
                     b.Property<int>("RailroadID")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("Direction")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
+                    b.Property<int>("Direction")
+                        .HasColumnType("INTEGER");
 
                     b.Property<double>("Latitude")
                         .HasColumnType("REAL");

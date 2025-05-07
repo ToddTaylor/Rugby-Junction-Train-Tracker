@@ -1,5 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Web.Server.Entities;
+using Web.Server.Enums;
 
 namespace Web.Server.Data
 {
@@ -18,6 +20,11 @@ namespace Web.Server.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            // Converts the Direction enum to text in the database instead of an int
+            modelBuilder.Entity<BeaconRailroad>()
+                .Property(t => t.Direction)
+                .HasConversion(new EnumToStringConverter<Direction>());
+
             modelBuilder.Entity<BeaconRailroad>()
                 .HasKey(br => new { br.BeaconID, br.RailroadID }); // composite key
 

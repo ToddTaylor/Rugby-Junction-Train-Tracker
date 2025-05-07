@@ -25,7 +25,8 @@ namespace Web.Server.Controllers.v1
                 BeaconID = br.BeaconID,
                 RailroadID = br.RailroadID,
                 Latitude = br.Latitude,
-                Longitude = br.Longitude
+                Longitude = br.Longitude,
+                Direction = br.Direction
             }));
         }
 
@@ -43,7 +44,8 @@ namespace Web.Server.Controllers.v1
                 BeaconID = beaconRailroad.BeaconID,
                 RailroadID = beaconRailroad.RailroadID,
                 Latitude = beaconRailroad.Latitude,
-                Longitude = beaconRailroad.Longitude
+                Longitude = beaconRailroad.Longitude,
+                Direction = beaconRailroad.Direction
             });
         }
 
@@ -55,7 +57,8 @@ namespace Web.Server.Controllers.v1
                 BeaconID = dto.BeaconID,
                 RailroadID = dto.RailroadID,
                 Latitude = dto.Latitude,
-                Longitude = dto.Longitude
+                Longitude = dto.Longitude,
+                Direction = dto.Direction
             };
 
             var created = await _service.AddAsync(beaconRailroad);
@@ -65,7 +68,8 @@ namespace Web.Server.Controllers.v1
                 BeaconID = created.BeaconID,
                 RailroadID = created.RailroadID,
                 Latitude = created.Latitude,
-                Longitude = created.Longitude
+                Longitude = created.Longitude,
+                Direction = created.Direction
             });
         }
 
@@ -82,7 +86,8 @@ namespace Web.Server.Controllers.v1
                 BeaconID = dto.BeaconID,
                 RailroadID = dto.RailroadID,
                 Latitude = dto.Latitude,
-                Longitude = dto.Longitude
+                Longitude = dto.Longitude,
+                Direction = dto.Direction
             };
 
             await _service.UpdateAsync(beaconRailroad);

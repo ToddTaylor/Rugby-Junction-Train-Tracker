@@ -1,10 +1,65 @@
+using Web.Server.Enums;
+
 namespace Web.Server.DTOs
 {
-    public class BeaconRailroadDTO
+    public class BeaconRailroadDTO : IEquatable<BeaconRailroadDTO?>
     {
+        /// <summary>
+        /// The beacon unique identifier.
+        /// </summary>
         public int BeaconID { get; set; }
+
+        /// <summary>
+        /// The railroad unique identifier associated with the beacon.  I.e., which railroad the beacon monitors.
+        /// </summary>
         public int RailroadID { get; set; }
+
+        /// <summary>
+        /// The latitude coordinate of the beacon.
+        /// </summary>
+        /// <example>43.294944</example>
         public double Latitude { get; set; }
+
+        /// <summary>
+        /// The longitude coordinate of the beacon.
+        /// </summary>
+        /// <example>-88.253118</example>
         public double Longitude { get; set; }
+
+        /// <summary>
+        /// The direction in which telemetry data is moving.
+        /// </summary>
+        /// <example>NorthSouth</example>
+        public Direction Direction { get; set; }
+
+        public override bool Equals(object? obj)
+        {
+            return Equals(obj as BeaconRailroadDTO);
+        }
+
+        public bool Equals(BeaconRailroadDTO? other)
+        {
+            return other is not null &&
+                   BeaconID == other.BeaconID &&
+                   RailroadID == other.RailroadID &&
+                   Latitude == other.Latitude &&
+                   Longitude == other.Longitude &&
+                   Direction == other.Direction;
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(BeaconID, RailroadID, Latitude, Longitude, Direction);
+        }
+
+        public static bool operator ==(BeaconRailroadDTO? left, BeaconRailroadDTO? right)
+        {
+            return EqualityComparer<BeaconRailroadDTO>.Default.Equals(left, right);
+        }
+
+        public static bool operator !=(BeaconRailroadDTO? left, BeaconRailroadDTO? right)
+        {
+            return !(left == right);
+        }
     }
 }

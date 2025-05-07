@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using System.Reflection;
+using System.Text.Json.Serialization;
 using Web.Server.Data;
 using Web.Server.Hubs;
 using Web.Server.Mappers;
@@ -22,7 +24,10 @@ builder.Services.AddCors(options =>
 
 // Add services to the container.
 builder.Services.AddAutoMapper(typeof(AutoMapperProfile));
-builder.Services.AddControllers();
+builder.Services.AddControllers().AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
 builder.Services.AddSignalR();
 
 // Add DbContext with SQLite connection string
@@ -33,6 +38,9 @@ builder.Services.AddDbContext<TelemetryDbContext>(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
+    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    options.IncludeXmlComments(xmlPath, includeControllerXmlComments: true);
     options.EnableAnnotations();
     options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
     {

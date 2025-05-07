@@ -127,13 +127,15 @@ namespace Web.Server.Services.Tests
                             RailroadID = 12,
                             BeaconID = 1,
                             Latitude = 10.0,
-                            Longitude = 20.0
+                            Longitude = 20.0,
+                            Direction = Enums.Direction.NorthSouth
                         },
                         new BeaconRailroad {
                             RailroadID = 13,
                             BeaconID = 1,
                             Latitude = 14.0,
-                            Longitude = 32.0
+                            Longitude = 32.0,
+                            Direction = Enums.Direction.NorthwestSoutheast
                         }
                     }
                 }
@@ -157,7 +159,8 @@ namespace Web.Server.Services.Tests
                                 RailroadID = 12,
                                 BeaconID = 42,
                                 Latitude = 10.0,
-                                Longitude = 20.0
+                                Longitude = 20.0,
+                                Direction = Enums.Direction.NorthSouth
                             }
                         }
                     },

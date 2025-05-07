@@ -12,8 +12,7 @@ namespace Web.Server.Mappers
             CreateMap<CreateBeaconDTO, Beacon>()
                 .ForPath(dest => dest.Owner.ID, opt => opt.MapFrom(src => src.OwnerID))
                 .ForMember(dest => dest.Owner, opt => opt.Ignore())
-                .ForMember(dest => dest.BeaconRailroads,
-                    opt => opt.MapFrom(src => src.RailroadIDs.Select(id => new Railroad { ID = id, Name = "dummy", Subdivision = "dummy" })));
+                .ForMember(dest => dest.BeaconRailroads, opt => opt.Ignore());
             // TODO: Added [Required] to entity properties as alternative to having to add dummy values here.
             CreateMap<Beacon, BeaconDTO>();
 
