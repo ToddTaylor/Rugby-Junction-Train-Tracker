@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Web.Server.Data;
 using Web.Server.Hubs;
 using Web.Server.Mappers;
 using Web.Server.Services;
@@ -25,7 +26,7 @@ builder.Services.AddControllers();
 builder.Services.AddSignalR();
 
 // Add DbContext with SQLite connection string
-builder.Services.AddDbContext<DbContext>(options =>
+builder.Services.AddDbContext<TelemetryDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("TelemetryDatabase")));
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
