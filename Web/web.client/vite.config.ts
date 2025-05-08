@@ -21,6 +21,7 @@ if (!fs.existsSync(baseFolder)) {
 }
 
 if (!fs.existsSync(certFilePath) || !fs.existsSync(keyFilePath)) {
+
     if (0 !== child_process.spawnSync('dotnet', [
         'dev-certs',
         'https',
