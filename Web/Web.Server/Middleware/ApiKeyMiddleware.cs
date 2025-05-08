@@ -14,8 +14,8 @@
 
         public async Task InvokeAsync(HttpContext context)
         {
-            // Bypass Swagger endpoints
-            if (context.Request.Path.StartsWithSegments("/swagger"))
+            // Bypass Swagger and notification hub endpoints
+            if (context.Request.Path.StartsWithSegments("/swagger") || context.Request.Path.StartsWithSegments("/hubs"))
             {
                 await _next(context);
                 return;
