@@ -3,16 +3,16 @@ import '../App.css';
 import { useSignalR } from "../hooks/useSignalR";
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { Box, Typography } from '@mui/material';
-import { Alert } from "../types/types";
+import { MapAlert } from "../types/types";
 
 function TelemetryLog() {
-    const [alerts, setAlerts] = useState<Alert[]>([]);
+    const [alerts, setAlerts] = useState<MapAlert[]>([]);
 
-    useSignalR((alert: Alert) => {
+    useSignalR((alert: MapAlert) => {
         setAlerts(prev => [...prev, alert]);
     });
 
-    const sortedData: Alert[] = Array.from(alerts.values())
+    const sortedData: MapAlert[] = Array.from(alerts.values())
         .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
         .map((alert, index) => ({
             ...alert,

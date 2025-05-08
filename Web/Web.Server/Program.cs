@@ -100,14 +100,13 @@ builder.Services.AddScoped<ITelemetryService, TelemetryService>();
 var app = builder.Build();
 
 // Use the API Key Middleware
-app.UseMiddleware<Web.Server.Middleware.ApiKeyMiddleware>();
+//app.UseMiddleware<Web.Server.Middleware.ApiKeyMiddleware>();
 
 // CORS must come early in the pipeline
 app.UseCors(corsPolicyName);
 
 app.UseDefaultFiles();
 app.UseStaticFiles();
-
 
 // Configure the HTTP request pipeline.
 

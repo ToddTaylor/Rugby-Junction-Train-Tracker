@@ -62,14 +62,16 @@ namespace Web.Server.Services
             }
 
             var telemetryBeaconRailroad = telemetry.Beacon.BeaconRailroads.First();
+            var direction = string.Empty;
 
-            // Match the current telemetry beacon railroad with the previous telemetry beacon railroad to get the geo coordinates.
-            var previousTelemetryBeaconRailroad = previousTelemetry?.Beacon.BeaconRailroads.Where(beaconRailroad => beaconRailroad.RailroadID == telemetryBeaconRailroad.RailroadID).First();
+            if (previousTelemetry != null)
+            {
+                var previousTelemetryBeaconRailroad = previousTelemetry?.Beacon.BeaconRailroads.Where(beaconRailroad => beaconRailroad.RailroadID == telemetryBeaconRailroad.RailroadID).First();
+                var fromGeoCoordinate = new GeoCoordinate(previousTelemetryBeaconRailroad.Latitude, previousTelemetryBeaconRailroad.Longitude);
+                var toGeoCoordinate = new GeoCoordinate(telemetryBeaconRailroad.Latitude, telemetryBeaconRailroad.Longitude);
 
-            // Prepare and send the map alert
-            var fromGeoCoordinate = new GeoCoordinate(previousTelemetryBeaconRailroad.Latitude, previousTelemetryBeaconRailroad.Longitude);
-            var toGeoCoordinate = new GeoCoordinate(telemetryBeaconRailroad.Latitude, telemetryBeaconRailroad.Longitude);
-            var direction = GetDirection(fromGeoCoordinate, toGeoCoordinate);
+                direction = GetDirection(fromGeoCoordinate, toGeoCoordinate);
+            }
 
             var mapAlert = _mapper.Map<MapAlert>(telemetry);
             mapAlert.Direction = direction;

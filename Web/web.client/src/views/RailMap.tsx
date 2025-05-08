@@ -12,7 +12,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import DirectionIcon from '../components/DirectionIcon';
 import { useSignalR } from '../hooks/useSignalR';
-import { Alert } from '../types/types';
+import { MapAlert } from '../types/types';
 import hash from 'object-hash';
 import axios from 'axios';
 import osm2geojson from 'osm2geojson-lite';
@@ -35,13 +35,13 @@ const RailMap: React.FC = () => {
     out skel qt;`;
 
     const [milepostsData, setMilepostsData] = useState<GeoJSON.GeoJsonObject | null>(null);
-    const [alerts, setAlerts] = useState<Alert[]>([]);
+    const [mapAlerts, setMapAlerts] = useState<MapAlert[]>([]);
 
-    useSignalR((alert: Alert) => {
-        setAlerts(prev => updateAlerts(prev, alert));
+    useSignalR((alert: MapAlert) => {
+        setMapAlerts(prev => updateAlerts(prev, alert));
     });
 
-    const sortedData: Alert[] = Array.from(alerts.values())
+    const sortedData: MapAlert[] = Array.from(mapAlerts.values())
         .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
         .map((alert, index) => ({
             ...alert,
@@ -175,7 +175,7 @@ const RailMap: React.FC = () => {
                 />
             )}
 
-            {sortedData && sortedData.map((alert: Alert) => (
+            {sortedData && sortedData.map((alert: MapAlert) => (
                 <Marker
                     key={alert.id}
                     position={[alert.latitude, alert.longitude]}
@@ -195,7 +195,7 @@ const RailMap: React.FC = () => {
     );
 };
 
-function updateAlerts(alerts: Alert[], newAlert: Alert): Alert[] {
+function updateAlerts(alerts: MapAlert[], newAlert: MapAlert): MapAlert[] {
     const existingIndex = alerts.findIndex(
         (alert) =>
             //alert.addressID === newAlert.addressID &&

@@ -8,8 +8,6 @@ namespace ConsoleApp.Subscribers.APILogger
     {
         private readonly IConfiguration configuration;
 
-        private RailroadTelemetryApiClient apiClient = new RailroadTelemetryApiClient();
-
         public DpuPacketSubscriber()
         {
             configuration = LoadConfiguration();
@@ -32,7 +30,7 @@ namespace ConsoleApp.Subscribers.APILogger
             };
 
             var apiClient = new RailroadTelemetryApiClient();
-            apiClient.SendAlertAsync(alert).GetAwaiter().GetResult();
+            apiClient.SendTelemetryAsync(alert).GetAwaiter().GetResult();
 
             // Let web page respond to previous request before sending the next one.
             Thread.Sleep(100);

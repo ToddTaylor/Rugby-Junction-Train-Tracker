@@ -1,6 +1,6 @@
 export type Direction = 'N' | 'NE' | 'E' | 'SE' | 'S' | 'SW' | 'W' | 'NW';
 
-export type Alert = {
+export type MapAlert = {
     id: string;
     addressID: number;
     latitude: number;

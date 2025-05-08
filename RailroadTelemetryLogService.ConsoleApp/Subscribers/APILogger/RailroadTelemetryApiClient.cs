@@ -2,17 +2,15 @@
 {
     public class RailroadTelemetryApiClient : ApiClient
     {
-        public RailroadTelemetryApiClient() : base(new HttpClient())
+        public RailroadTelemetryApiClient() : base()
         {
         }
 
-        public async Task SendAlertAsync(Telemetry alert)
+        public async Task SendTelemetryAsync(Telemetry telemetry)
         {
-            var apiUrl = "https://localhost:44331/api/v1/Telemetry/Alert";
-
             try
             {
-                await PostAsync<Telemetry>(apiUrl, alert);
+                await PostAsync<Telemetry>(telemetry);
             }
             catch (Exception ex)
             {
