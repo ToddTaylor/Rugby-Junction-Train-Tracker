@@ -407,7 +407,7 @@ namespace Web.Server.Services.Tests
                 Longitude = beacon1Longitude,
                 Source = train1Source,
                 Timestamp = _currentDateTime,
-                Direction = "W"
+                Direction = "S"
             };
 
             var expectedMapAlertObjects = new object[]
@@ -557,7 +557,7 @@ namespace Web.Server.Services.Tests
                 Longitude = beacon1Longitude,
                 Source = train1Source,
                 Timestamp = _currentDateTime,
-                Direction = "W"
+                Direction = "S"
             };
 
             var expectedMapAlertObjects = new object[]
@@ -716,7 +716,7 @@ namespace Web.Server.Services.Tests
                 Longitude = beacon1Longitude,
                 Source = train1Source,
                 Timestamp = _currentDateTime,
-                Direction = "W"
+                Direction = "S"
             };
 
             var expectedMapAlertObjects = new object[]
