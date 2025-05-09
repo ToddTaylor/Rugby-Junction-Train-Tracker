@@ -107,6 +107,11 @@ namespace Web.Server.Services
             double latDiff = to.Latitude - from.Latitude;
             double lonDiff = to.Longitude - from.Longitude;
 
+            if (latDiff == 0 && lonDiff == 0)
+            {
+                return string.Empty;
+            }
+
             if (Math.Abs(latDiff) > Math.Abs(lonDiff))
             {
                 return latDiff > 0 ? "N" : "S";
