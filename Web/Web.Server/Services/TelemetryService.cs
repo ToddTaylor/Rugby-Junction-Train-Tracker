@@ -93,33 +93,13 @@ namespace Web.Server.Services
                 var fromGeoCoordinate = new GeoCoordinate(previousTelemetryBeaconRailroad.Latitude, previousTelemetryBeaconRailroad.Longitude);
                 var toGeoCoordinate = new GeoCoordinate(telemetryBeaconRailroad.Latitude, telemetryBeaconRailroad.Longitude);
 
-                direction = GetDirection(fromGeoCoordinate, toGeoCoordinate);
+                direction = DirectionService.GetDirection(fromGeoCoordinate, toGeoCoordinate, telemetryBeaconRailroad.Direction);
             }
 
             var mapAlert = _mapper.Map<MapAlert>(telemetry);
             mapAlert.Direction = direction;
 
             await _hubContext.Clients.All.SendAsync(NotificationMethods.MapAlert, mapAlert);
-        }
-
-        private static string GetDirection(GeoCoordinate from, GeoCoordinate to)
-        {
-            double latDiff = to.Latitude - from.Latitude;
-            double lonDiff = to.Longitude - from.Longitude;
-
-            if (latDiff == 0 && lonDiff == 0)
-            {
-                return string.Empty;
-            }
-
-            if (Math.Abs(latDiff) > Math.Abs(lonDiff))
-            {
-                return latDiff > 0 ? "N" : "S";
-            }
-            else
-            {
-                return lonDiff > 0 ? "E" : "W";
-            }
         }
     }
 }

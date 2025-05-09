@@ -19,7 +19,11 @@ namespace Web.Server.Services
 
             _context.Telemetries.Add(telemetry);
             await _context.SaveChangesAsync();
-            return telemetry;
+            return await _context.Telemetries
+                .Include(t => t.Beacon)
+                .ThenInclude(b => b.BeaconRailroads)
+                .ThenInclude(br => br.Railroad)
+                .FirstAsync(t => t.ID == telemetry.ID);
         }
 
         public async Task<IEnumerable<Telemetry>> GetAllAsync()
