@@ -195,28 +195,21 @@ const RailMap: React.FC = () => {
     );
 };
 
+/**
+ * TODO: Unit test this function.
+ */
 function updateAlerts(alerts: MapAlert[], newAlert: MapAlert): MapAlert[] {
     const existingIndex = alerts.findIndex(
-        (alert) =>
-            //alert.addressID === newAlert.addressID &&
-            alert.latitude === newAlert.latitude &&
-            alert.longitude === newAlert.longitude
+        (alert) => alert.addressID === newAlert.addressID
     );
 
-    if (existingIndex === -1) {
-        // No existing alert with the same addressID, just add it
-        return [...alerts, newAlert];
+    if (existingIndex !== -1) {
+        // Remove the existing alert with the same addressID
+        alerts.splice(existingIndex, 1);
     }
 
-    // Replace only if the new alert is more recent
-    if (newAlert.timestamp > alerts[existingIndex].timestamp) {
-        const updatedAlerts = [...alerts];
-        updatedAlerts[existingIndex] = newAlert;
-        return updatedAlerts;
-    }
-
-    // Otherwise, keep the current alerts unchanged
-    return alerts;
+    // Add the new alert to the array
+    return [...alerts, newAlert];
 }
 
 export default RailMap;
