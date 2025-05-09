@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 using Web.Server.Data;
 using Web.Server.Hubs;
 using Web.Server.Mappers;
+using Web.Server.Providers;
 using Web.Server.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -96,6 +97,8 @@ builder.Services.AddScoped<IBeaconRailroadService, BeaconRailroadService>();
 builder.Services.AddScoped<IOwnerService, OwnerService>();
 builder.Services.AddScoped<IRailroadService, RailroadService>();
 builder.Services.AddScoped<ITelemetryService, TelemetryService>();
+
+builder.Services.AddScoped<ITimeProvider, SystemTimeProvider>();
 
 var app = builder.Build();
 
