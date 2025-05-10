@@ -15,6 +15,7 @@ namespace Web.Server.Mappers
             // TODO: Added [Required] to entity properties as alternative to having to add dummy values here.
             CreateMap<Beacon, BeaconDTO>();
 
+            CreateMap<CreateBeaconRailroadDTO, BeaconRailroad>();
             CreateMap<BeaconRailroad, BeaconRailroadDTO>();
 
             CreateMap<CreateOwnerDTO, Owner>()
