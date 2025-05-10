@@ -6,6 +6,7 @@ using Web.Server.Data;
 using Web.Server.Hubs;
 using Web.Server.Mappers;
 using Web.Server.Providers;
+using Web.Server.Repositories;
 using Web.Server.Services;
 
 var builder = WebApplication.CreateBuilder(args);

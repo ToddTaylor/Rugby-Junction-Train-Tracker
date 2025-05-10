@@ -6,6 +6,7 @@ using Web.Server.Entities;
 using Web.Server.Hubs;
 using Web.Server.Mappers;
 using Web.Server.Providers;
+using Web.Server.Repositories;
 
 namespace Web.Server.Services.Tests
 {

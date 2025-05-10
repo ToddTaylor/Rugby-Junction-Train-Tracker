@@ -1,4 +1,5 @@
 using Web.Server.Entities;
+using Web.Server.Repositories;
 
 namespace Web.Server.Services
 {

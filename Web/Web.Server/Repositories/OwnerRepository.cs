@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Web.Server.Data;
 using Web.Server.Entities;
 
-namespace Web.Server.Services
+namespace Web.Server.Repositories
 {
     public class OwnerRepository : IOwnerRepository
     {
@@ -22,12 +22,20 @@ namespace Web.Server.Services
 
         public async Task<IEnumerable<Owner>> GetAllAsync()
         {
-            return await _context.Owners.Include(o => o.Beacons).ToListAsync();
+            return await _context.Owners
+                .Include(o => o.Beacons)
+                .ThenInclude(o => o.BeaconRailroads)
+                .ThenInclude(o => o.Railroad)
+                .ToListAsync();
         }
 
         public async Task<Owner?> GetByIdAsync(int id)
         {
-            return await _context.Owners.Include(o => o.Beacons).FirstOrDefaultAsync(o => o.ID == id);
+            return await _context.Owners
+                .Include(o => o.Beacons)
+                .ThenInclude(o => o.BeaconRailroads)
+                .ThenInclude(o => o.Railroad)
+                .FirstOrDefaultAsync(o => o.ID == id);
         }
 
         public async Task<Owner> UpdateAsync(Owner owner)

@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Web.Server.Entities;
 
-namespace Web.Server.Services
+namespace Web.Server.Repositories
 {
     public class BeaconRailroadRepository : IBeaconRailroadRepository
     {
