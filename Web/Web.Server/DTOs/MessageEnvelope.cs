@@ -1,4 +1,4 @@
-namespace Web.Server.Models
+namespace Web.Server.DTOs
 {
     public class MessageEnvelope<T>
     {

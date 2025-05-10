@@ -1,7 +1,6 @@
 using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using Web.Server.DTOs;
-using Web.Server.Models;
 using Web.Server.Services;
 
 namespace Web.Server.Controllers.v1
