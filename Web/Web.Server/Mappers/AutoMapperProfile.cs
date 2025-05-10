@@ -8,7 +8,6 @@ namespace Web.Server.Mappers
     {
         public AutoMapperProfile()
         {
-            // Beacon mappings
             CreateMap<CreateBeaconDTO, Beacon>()
                 .ForPath(dest => dest.Owner.ID, opt => opt.MapFrom(src => src.OwnerID))
                 .ForMember(dest => dest.Owner, opt => opt.Ignore())
@@ -16,7 +15,8 @@ namespace Web.Server.Mappers
             // TODO: Added [Required] to entity properties as alternative to having to add dummy values here.
             CreateMap<Beacon, BeaconDTO>();
 
-            // Owner mappings
+            CreateMap<BeaconRailroad, BeaconRailroadDTO>();
+
             CreateMap<CreateOwnerDTO, Owner>()
                 .ForMember(dest => dest.ID, opt => opt.Ignore())
                 .ForMember(dest => dest.Beacons, opt => opt.Ignore());
@@ -25,13 +25,11 @@ namespace Web.Server.Mappers
 
             CreateMap<Owner, UpdateOwnerDTO>();
 
-            // Railroad mappings
             CreateMap<CreateRailroadDTO, Railroad>()
                 .ForMember(dest => dest.ID, opt => opt.Ignore());
 
             CreateMap<Railroad, RailroadDTO>();
 
-            // Telemetry mappings
             CreateMap<CreateTelemetryDTO, Telemetry>()
                 .ForPath(dest => dest.Beacon.ID, opt => opt.MapFrom(src => src.BeaconID))
                 .ReverseMap()

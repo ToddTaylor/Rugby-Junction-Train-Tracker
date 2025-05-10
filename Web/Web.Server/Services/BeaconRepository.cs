@@ -30,12 +30,18 @@ namespace Web.Server.Services
 
         public async Task<IEnumerable<Beacon>> GetAllAsync()
         {
-            return await _context.Beacons.Include(b => b.Owner).Include(b => b.BeaconRailroads).ToListAsync();
+            return await _context.Beacons
+                .Include(b => b.Owner)
+                .Include(b => b.BeaconRailroads)
+                .ToListAsync();
         }
 
         public async Task<Beacon?> GetByIdAsync(int id)
         {
-            return await _context.Beacons.Include(b => b.Owner).Include(b => b.BeaconRailroads).FirstOrDefaultAsync(b => b.ID == id);
+            return await _context.Beacons
+                .Include(b => b.Owner)
+                .Include(b => b.BeaconRailroads)
+                .FirstOrDefaultAsync(b => b.ID == id);
         }
 
         public async Task<Beacon> UpdateAsync(Beacon beacon)

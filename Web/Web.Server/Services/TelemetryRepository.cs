@@ -30,6 +30,8 @@ namespace Web.Server.Services
         {
             return await _context.Telemetries
                 .Include(t => t.Beacon)
+                .ThenInclude(b => b.BeaconRailroads)
+                .ThenInclude(br => br.Railroad)
                 .ToListAsync();
         }
 
@@ -37,6 +39,8 @@ namespace Web.Server.Services
         {
             return await _context.Telemetries
                 .Include(t => t.Beacon)
+                .ThenInclude(b => b.BeaconRailroads)
+                .ThenInclude(br => br.Railroad)
                 .FirstOrDefaultAsync(t => t.ID == id);
         }
 
