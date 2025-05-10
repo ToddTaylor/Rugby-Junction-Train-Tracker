@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Web.Server.DTOs;
 using Web.Server.Entities;
+using Web.Server.Models;
 using Web.Server.Services;
 
 namespace Web.Server.Controllers.v1
@@ -26,31 +27,39 @@ namespace Web.Server.Controllers.v1
 
         // GET: api/v1/Telemetries
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<TelemetryDTO>>> GetTelemetries()
+        public async Task<ActionResult> GetTelemetries()
         {
-            var telemetries = await _telemetryService.GetTelemetries();
-
-            var telemetryDTOs = _mapper.Map<IEnumerable<TelemetryDTO>>(telemetries);
-
-            return Ok(telemetryDTOs);
+            var response = new MessageEnvelope<IEnumerable<TelemetryDTO>>(null, []);
+            try
+            {
+                var telemetries = await _telemetryService.GetTelemetries();
+                response.Data = _mapper.Map<IEnumerable<TelemetryDTO>>(telemetries);
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while fetching telemetries.");
+                response.Errors.Add(ex.Message);
+                return StatusCode(StatusCodes.Status500InternalServerError, response);
+            }
         }
 
         // POST: api/v1/Telemetries
         [HttpPost]
         public IActionResult Post([FromBody] CreateTelemetryDTO telemetryDTO)
         {
-            var telemetry = this._mapper.Map<Telemetry>(telemetryDTO);
-
+            var response = new MessageEnvelope<object>(null, []);
             try
             {
+                var telemetry = _mapper.Map<Telemetry>(telemetryDTO);
                 _telemetryService.CreateTelemetry(telemetry);
-
-                return Ok();
+                return Ok(response);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while processing telemetry data.");
-                return StatusCode(StatusCodes.Status500InternalServerError, "An recoverable error has occurred.  Please try again later.");
+                response.Errors.Add(ex.Message);
+                return StatusCode(StatusCodes.Status500InternalServerError, response);
             }
         }
     }

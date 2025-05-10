@@ -2,6 +2,7 @@ using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using Web.Server.DTOs;
 using Web.Server.Entities;
+using Web.Server.Models;
 using Web.Server.Services;
 
 namespace Web.Server.Controllers.v1
@@ -21,29 +22,52 @@ namespace Web.Server.Controllers.v1
             _mapper = mapper;
         }
 
-        // GET: api/Railroads
+        // ...existing code...
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<RailroadDTO>>> GetRailroads()
+        public async Task<ActionResult> GetRailroads()
         {
-            var railroads = await _railroadService.GetRailroads();
-            var railroadDTOs = _mapper.Map<IEnumerable<RailroadDTO>>(railroads);
-            return Ok(railroadDTOs);
+            var response = new MessageEnvelope<IEnumerable<RailroadDTO>>(null, []);
+            try
+            {
+                var railroads = await _railroadService.GetRailroads();
+                response.Data = _mapper.Map<IEnumerable<RailroadDTO>>(railroads);
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while fetching railroads.");
+                response.Errors.Add(ex.Message);
+                return StatusCode(StatusCodes.Status500InternalServerError, response);
+            }
         }
 
         // GET: api/Railroads/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<RailroadDTO>> GetRailroad(int id)
+        public async Task<ActionResult> GetRailroad(int id)
         {
-            var railroad = await _railroadService.GetRailroad(id);
-
-            if (railroad == null)
+            var response = new MessageEnvelope<RailroadDTO>(null, []);
+            try
             {
-                return NotFound();
+                var railroad = await _railroadService.GetRailroad(id);
+
+                if (railroad == null)
+                {
+                    response.Errors.Add("Railroad not found.");
+                    return NotFound(response);
+                }
+
+                var railroadDTO = _mapper.Map<RailroadDTO>(railroad);
+
+                response.Data = railroadDTO;
+
+                return Ok(response);
             }
-
-            var railroadDTO = _mapper.Map<RailroadDTO>(railroad);
-
-            return Ok(railroadDTO);
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while fetching the railroad.");
+                response.Errors.Add(ex.Message);
+                return StatusCode(StatusCodes.Status500InternalServerError, response);
+            }
         }
 
         // PUT: api/Railroads/5
@@ -60,25 +84,32 @@ namespace Web.Server.Controllers.v1
             try
             {
                 await _railroadService.UpdateRailroad(railroad);
+                return NoContent();
             }
             catch (KeyNotFoundException)
             {
                 return NotFound();
             }
-
-            return NoContent();
         }
 
         // POST: api/Railroads
         [HttpPost]
-        public async Task<ActionResult<RailroadDTO>> PostRailroad(CreateRailroadDTO createRailroadDTO)
+        public async Task<ActionResult> PostRailroad(CreateRailroadDTO createRailroadDTO)
         {
-            var railroad = _mapper.Map<Railroad>(createRailroadDTO);
-            var createdRailroad = await _railroadService.CreateRailroad(railroad);
-
-            var railroadDTO = _mapper.Map<RailroadDTO>(createdRailroad);
-
-            return CreatedAtAction("GetRailroad", new { id = createdRailroad.ID }, railroadDTO);
+            var response = new MessageEnvelope<RailroadDTO>(null, []);
+            try
+            {
+                var railroad = _mapper.Map<Railroad>(createRailroadDTO);
+                var createdRailroad = await _railroadService.CreateRailroad(railroad);
+                response.Data = _mapper.Map<RailroadDTO>(createdRailroad);
+                return CreatedAtAction("GetRailroad", new { id = response.Data.ID }, response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while creating the railroad.");
+                response.Errors.Add(ex.Message);
+                return StatusCode(StatusCodes.Status500InternalServerError, response);
+            }
         }
 
         // DELETE: api/Railroads/5
@@ -91,7 +122,7 @@ namespace Web.Server.Controllers.v1
             }
             catch (KeyNotFoundException)
             {
-                return NotFound();
+                // Do nothing as item already doesn't exist.
             }
 
             return NoContent();

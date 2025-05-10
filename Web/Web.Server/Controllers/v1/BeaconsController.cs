@@ -2,6 +2,7 @@ using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using Web.Server.DTOs;
 using Web.Server.Entities;
+using Web.Server.Models;
 using Web.Server.Services;
 
 namespace Web.Server.Controllers.v1
@@ -23,66 +24,104 @@ namespace Web.Server.Controllers.v1
 
         // GET: api/v1/Beacons
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<BeaconDTO>>> GetBeacons()
+        public async Task<ActionResult> GetBeacons()
         {
-            var beacons = await _beaconService.GetBeaconsAsync();
-            var beaconDTOs = _mapper.Map<IEnumerable<BeaconDTO>>(beacons);
-
-            return Ok(beaconDTOs);
+            var response = new MessageEnvelope<IEnumerable<BeaconDTO>>(null, []);
+            try
+            {
+                var beacons = await _beaconService.GetBeaconsAsync();
+                response.Data = _mapper.Map<IEnumerable<BeaconDTO>>(beacons);
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while fetching beacons.");
+                response.Errors.Add(ex.Message);
+                return StatusCode(StatusCodes.Status500InternalServerError, response);
+            }
         }
 
         // GET: api/v1/Beacons/5
         [HttpGet("{id}")]
         public async Task<ActionResult<BeaconDTO>> GetBeacon(int id)
         {
-            var beacon = await _beaconService.GetBeaconByIdAsync(id);
-
-            if (beacon == null)
+            var response = new MessageEnvelope<RailroadDTO>(null, []);
+            try
             {
-                return NotFound();
+                var beacon = await _beaconService.GetBeaconByIdAsync(id);
+
+                if (beacon == null)
+                {
+                    return NotFound();
+                }
+
+                var beaconDTO = _mapper.Map<BeaconDTO>(beacon);
+
+                return Ok(beaconDTO);
             }
-
-            var beaconDTO = _mapper.Map<BeaconDTO>(beacon);
-
-            return Ok(beaconDTO);
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while fetching the beacon.");
+                response.Errors.Add(ex.Message);
+                return StatusCode(StatusCodes.Status500InternalServerError, response);
+            }
         }
 
         // PUT: api/v1/Beacons/5
         [HttpPut("{id}")]
         public async Task<IActionResult> PutBeacon(int id, UpdateBeaconDTO updateBeaconDTO)
         {
-            if (id != updateBeaconDTO.ID)
-            {
-                return BadRequest();
-            }
-
-            var beacon = _mapper.Map<Beacon>(updateBeaconDTO);
+            var response = new MessageEnvelope<BeaconRailroadDTO>(null, []);
 
             try
             {
-                await _beaconService.UpdateBeaconAsync(updateBeaconDTO.ID, beacon);
-            }
-            catch (KeyNotFoundException)
-            {
-                return NotFound();
-            }
+                if (id != updateBeaconDTO.ID)
+                {
+                    return BadRequest();
+                }
 
-            return NoContent();
+                var beacon = _mapper.Map<Beacon>(updateBeaconDTO);
+
+                try
+                {
+                    await _beaconService.UpdateBeaconAsync(updateBeaconDTO.ID, beacon);
+                }
+                catch (KeyNotFoundException)
+                {
+                    return NotFound();
+                }
+
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while updating the beacon.");
+                response.Errors.Add(ex.Message);
+                return StatusCode(StatusCodes.Status500InternalServerError, response);
+            }
         }
 
         // POST: api/v1/Beacons
         [HttpPost]
-        public async Task<ActionResult<BeaconDTO>> PostBeacon(CreateBeaconDTO createBeaconDTO)
+        public async Task<ActionResult> PostBeacon(CreateBeaconDTO createBeaconDTO)
         {
-            var beacon = _mapper.Map<Beacon>(createBeaconDTO);
-            var createdBeacon = await _beaconService.CreateBeaconAsync(beacon);
-
-            var beaconDTO = _mapper.Map<BeaconDTO>(createdBeacon);
-
-            return CreatedAtAction("GetBeacon", new { id = createdBeacon.ID }, beaconDTO);
+            var response = new MessageEnvelope<BeaconDTO>(null, []);
+            try
+            {
+                var beacon = _mapper.Map<Beacon>(createBeaconDTO);
+                var createdBeacon = await _beaconService.CreateBeaconAsync(beacon);
+                response.Data = _mapper.Map<BeaconDTO>(createdBeacon);
+                return CreatedAtAction("GetBeacon", new { id = response.Data.ID }, response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while creating the beacon.");
+                response.Errors.Add(ex.Message);
+                return StatusCode(StatusCodes.Status500InternalServerError, response);
+            }
         }
 
-        // POST: api/v1/Beacons/Health
+        // POST: api/v1/Beacons/Health/{id}
         [HttpPost("Health/{id}")]
         public async Task<IActionResult> CheckHealth(int beaconId)
         {
