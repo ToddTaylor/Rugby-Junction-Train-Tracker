@@ -14,6 +14,8 @@ namespace Web.Server.DTOs
         /// </summary>
         public int RailroadID { get; set; }
 
+        public RailroadDTO? Railroad { get; set; }
+
         /// <summary>
         /// The latitude coordinate of the beacon.
         /// </summary>
