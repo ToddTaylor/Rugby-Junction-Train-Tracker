@@ -102,6 +102,13 @@ builder.Services.AddScoped<ITimeProvider, SystemTimeProvider>();
 
 var app = builder.Build();
 
+// Automatically creates DB and applies migrations.
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<TelemetryDbContext>();
+    dbContext.Database.Migrate();
+}
+
 // Use the API Key Middleware
 app.UseMiddleware<Web.Server.Middleware.ApiKeyMiddleware>();
 
