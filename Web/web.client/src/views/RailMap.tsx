@@ -109,8 +109,8 @@ const RailMap: React.FC = () => {
         L.divIcon({
             html: ReactDOMServer.renderToString(<DirectionIcon direction={direction as any} />),
             className: '',
-            iconSize: [40, 40],
-            iconAnchor: [20, 0],
+            iconSize: [20, 20],
+            iconAnchor: [10, 0],
         });
 
     const onMilepostFeature = (feature: any, layer: L.Layer) => {

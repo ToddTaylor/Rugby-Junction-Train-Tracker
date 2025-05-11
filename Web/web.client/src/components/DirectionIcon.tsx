@@ -24,7 +24,7 @@ const DirectionIcon: React.FC<DirectionIconProps> = ({ direction, useRotation = 
                 <img
                     src="/icons/unknown.svg" // Use a neutral fallback icon
                     alt="No direction"
-                    style={{ width: '40px', height: '40px', opacity: 0.5 }}
+                    style={{ width: '20px', height: '20px', opacity: 0.5 }}
                 />
                 <div style={{ fontSize: '0.75rem', color: '#FFF' }}>Unknown</div>
             </div>
@@ -39,8 +39,8 @@ const DirectionIcon: React.FC<DirectionIconProps> = ({ direction, useRotation = 
                 src={useRotation ? '/icons/arrow.svg' : `/icons/arrow-${direction.toLowerCase()}.svg`}
                 alt={`Direction ${direction}`}
                 style={{
-                    width: '40px',
-                    height: '40px',
+                    width: '20px',
+                    height: '20px',
                     transform: useRotation ? `rotate(${angle}deg)` : 'none',
                 }}
             />
