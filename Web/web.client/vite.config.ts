@@ -1,4 +1,5 @@
 import { fileURLToPath, URL } from 'node:url';
+import dotenv from 'dotenv';
 
 import { defineConfig } from 'vite';
 import plugin from '@vitejs/plugin-react';
@@ -6,6 +7,8 @@ import fs from 'fs';
 import path from 'path';
 import child_process from 'child_process';
 import { env } from 'process';
+
+dotenv.config();
 
 const baseFolder =
     env.APPDATA !== undefined && env.APPDATA !== ''
@@ -58,5 +61,8 @@ export default defineConfig({
             key: fs.readFileSync(keyFilePath),
             cert: fs.readFileSync(certFilePath),
         }
+    },
+    define: {
+        'import.meta.env.VITE_SIGNALR_URL': JSON.stringify(process.env.VITE_SIGNALR_URL || "https://localhost:44331/hubs/notificationHub")
     }
 })

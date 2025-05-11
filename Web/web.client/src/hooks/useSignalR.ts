@@ -4,8 +4,11 @@ import { MapAlert } from "../types/types";
 
 export function useSignalR(onItemCreated: (alert: MapAlert) => void) {
     useEffect(() => {
+        // Read the SignalR URL from environment variables
+        const signalRUrl = import.meta.env.VITE_SIGNALR_URL || "https://localhost:44331/hubs/notificationHub";
+
         const connection = new signalR.HubConnectionBuilder()
-            .withUrl("https://localhost:44331/hubs/notificationHub") // Adjust to your backend URL
+            .withUrl(signalRUrl)
             .withAutomaticReconnect()
             .build();
 

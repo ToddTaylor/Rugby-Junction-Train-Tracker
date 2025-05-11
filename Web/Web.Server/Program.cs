@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using System.Reflection;
@@ -24,7 +25,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy(name: corsPolicyName, policy =>
     {
-        policy.WithOrigins("https://localhost:53848", "https://rugbyjunction.us") // Frontend origin
+        policy.WithOrigins("https://localhost:53848", "https://rugbyjunction.us", "https://traintelemetry20250416082903-h9f5efhzf0hzbcda.centralus-01.azurewebsites.net") // Frontend origin
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials(); // needed if you're using SignalR or cookies
@@ -117,7 +118,15 @@ app.UseMiddleware<Web.Server.Middleware.ApiKeyMiddleware>();
 app.UseCors(corsPolicyName);
 
 app.UseDefaultFiles();
-app.UseStaticFiles();
+
+// Enable .geojson file serving
+var provider = new FileExtensionContentTypeProvider();
+provider.Mappings[".geojson"] = "application/json";
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    ContentTypeProvider = provider
+});
 
 // Configure the HTTP request pipeline.
 
