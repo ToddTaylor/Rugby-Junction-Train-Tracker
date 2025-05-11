@@ -61,8 +61,5 @@ export default defineConfig({
             key: fs.readFileSync(keyFilePath),
             cert: fs.readFileSync(certFilePath),
         }
-    },
-    define: {
-        'import.meta.env.VITE_SIGNALR_URL': JSON.stringify(process.env.VITE_SIGNALR_URL || "https://localhost:44331/hubs/notificationHub")
     }
 })
