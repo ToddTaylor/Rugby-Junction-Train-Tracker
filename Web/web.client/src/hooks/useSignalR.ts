@@ -7,8 +7,6 @@ export function useSignalR(onItemCreated: (alert: MapAlert) => void) {
         // Read the SignalR URL from environment variables
         const signalRUrl = import.meta.env.VITE_API_URL + "/hubs/notificationHub";
 
-        console.log("SignalR URL:", signalRUrl);
-
         const connection = new signalR.HubConnectionBuilder()
             .withUrl(signalRUrl)
             .withAutomaticReconnect()
