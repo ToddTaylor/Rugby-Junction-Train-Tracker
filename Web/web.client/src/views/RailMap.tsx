@@ -14,8 +14,7 @@ import DirectionIcon from '../components/DirectionIcon';
 import { useSignalR } from '../hooks/useSignalR';
 import { MapAlert } from '../types/types';
 import hash from 'object-hash';
-import axios from 'axios';
-import osm2geojson from 'osm2geojson-lite';
+import { openDB } from 'idb';
 
 // Source of railroad data: https://geodata.bts.gov/datasets/usdot::north-american-rail-network-lines-class-i-freight-railroads-view/about
 //const RAILROAD_URL = 'https://services.arcgis.com/xOi1kZaI0eWDREZv/arcgis/rest/services/NTAD_North_American_Rail_Network_Lines_Class_I_Railroads/FeatureServer/0/query?outFields=*&where=1%3D1&f=geojson';
@@ -26,14 +25,6 @@ const RailMap: React.FC = () => {
     const [userLocation, setUserLocation] = useState<LatLngTuple | null>(null);
 
     const [trackData, setTracksData] = useState<GeoJSON.GeoJsonObject | null>(null);
-    const overpassQuery = `[out:json][timeout:25];
-    (
-      way["railway"="rail"](42.49,-92.89,47.31,-86.25);
-    );
-    out body;
-    >;
-    out skel qt;`;
-
     const [milepostsData, setMilepostsData] = useState<GeoJSON.GeoJsonObject | null>(null);
     const [mapAlerts, setMapAlerts] = useState<MapAlert[]>([]);
 
@@ -60,24 +51,34 @@ const RailMap: React.FC = () => {
                 setUserLocation(fallbackCenter);
             }
         );
-        // End browser location
 
         // Get railroad data from OpenStreetMap
         const fetchRailways = async () => {
-            try {
-                const response = await axios.get(
-                    'https://overpass-api.de/api/interpreter',
-                    {
-                        params: { data: overpassQuery },
-                    }
-                );
+            const STORE_NAME = 'geojson';
 
-                // Convert Overpass JSON to GeoJSON
-                const geojson = osm2geojson(response.data);
-                setTracksData(geojson);
-            } catch (error) {
-                console.error('Error fetching railway data:', error);
+            const db = await openDB('railways-db', 1, {
+                upgrade(db) {
+                    db.createObjectStore(STORE_NAME);
+                }
+            });
+
+            const cached = await db.get(STORE_NAME, 'railways');
+            if (cached) {
+                console.log('Railway map loaded from IndexedDB');
+                setTracksData(cached);
+                return;
             }
+
+            const response = await fetch('/data/overpass-wi-railways.geojson');
+
+            if (!response.ok) throw new Error('Failed to fetch railways');
+
+            const data = await response.json();
+            await db.put(STORE_NAME, data, 'railways');
+
+            console.log('Railway map stored in IndexedDB');
+
+            setTracksData(data);
         };
 
         fetchRailways();
