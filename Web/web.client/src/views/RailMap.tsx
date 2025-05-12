@@ -11,6 +11,7 @@ import { LatLngTuple } from 'leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import DirectionIcon from '../components/DirectionIcon';
+import HoverPopupMarker from '../components/HoverPopupMarker';
 import { useSignalR } from '../hooks/useSignalR';
 import { MapAlert } from '../types/types';
 import hash from 'object-hash';
@@ -114,22 +115,22 @@ const RailMap: React.FC = () => {
             iconAnchor: [10, 0],
         });
 
-    const onMilepostFeature = (feature: any, layer: L.Layer) => {
-        if (feature.properties) {
-            layer.bindPopup(`Milepost: ${feature.properties.milepost}`);
-        }
-    };
+    //const onMilepostFeature = (feature: any, layer: L.Layer) => {
+    //    if (feature.properties) {
+    //        layer.bindPopup(`Milepost: ${feature.properties.milepost}`);
+    //    }
+    //};
 
-    const getMilepostStyle = () => {
-        return {
-            radius: 6,
-            fillColor: 'white',
-            color: 'white',
-            weight: 1,
-            opacity: 1,
-            fillOpacity: 0.9,
-        };
-    };
+    //const getMilepostStyle = () => {
+    //    return {
+    //        radius: 6,
+    //        fillColor: 'white',
+    //        color: 'white',
+    //        weight: 1,
+    //        opacity: 1,
+    //        fillOpacity: 0.9,
+    //    };
+    //};
 
     if (!userLocation) {
         return <p>📍 Getting your location...</p>;
@@ -160,33 +161,21 @@ const RailMap: React.FC = () => {
             {/* Display railroad tracks using local GeoJSON file.  Is quite slow... */}
             {/*{trackData && <GeoJSON data={trackData} />}*/}
 
-            {milepostsData && (
-                <GeoJSON
-                    key={hash(milepostsData)}
-                    data={milepostsData}
-                    onEachFeature={onMilepostFeature}
-                    pointToLayer={(_, latlng) => {
-                        // Assign a stable index per point
-                        const style = getMilepostStyle();
-                        return L.circleMarker(latlng, style);
-                    }}
-                />
-            )}
+            {/*{milepostsData && (*/}
+            {/*    <GeoJSON*/}
+            {/*        key={hash(milepostsData)}*/}
+            {/*        data={milepostsData}*/}
+            {/*        onEachFeature={onMilepostFeature}*/}
+            {/*        pointToLayer={(_, latlng) => {*/}
+            {/*            // Assign a stable index per point*/}
+            {/*            const style = getMilepostStyle();*/}
+            {/*            return L.circleMarker(latlng, style);*/}
+            {/*        }}*/}
+            {/*    />*/}
+            {/*)}*/}
 
             {sortedData && sortedData.map((alert: MapAlert) => (
-                <Marker
-                    key={alert.id}
-                    position={[alert.latitude, alert.longitude]}
-                    icon={createCustomIcon(alert.direction)}
-                >
-                    <Popup>
-                        <strong>Train ID:</strong> {alert.addressID}<br />
-                        <strong>Direction:</strong> {alert.direction || 'Unknown'}<br />
-                        <strong>Source:</strong> {alert.source}<br />
-                        <strong>Moving:</strong> {alert.moving || 'Unknown'}<br />
-                        <strong>Timestamp:</strong> {new Date(alert.timestamp as string).toLocaleString()}
-                    </Popup>
-                </Marker>
+                <HoverPopupMarker alert={alert} />
             ))}
 
         </MapContainer>
