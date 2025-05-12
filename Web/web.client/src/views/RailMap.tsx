@@ -147,11 +147,8 @@ const RailMap: React.FC = () => {
                 attribution='&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>, &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a>'
             />
 
-            {/* Display railroad tracks using Overpass Query of just WI and then generate GeoJSON file.  
-                Ask ChatGPT how to export the GeoJSON file to make it local as online loading takes time.
-                This approach avoids the OpenRailwayMap alert when using too many queries, but map is 
-                less detailed. */}
-            {trackData && <GeoJSON data={trackData} style={{ color: 'white', weight: 2 }} />}
+            {/* Display railroad tracks using locally cached Overpass query of just WI and then generate GeoJSON file. */}
+            {trackData && <GeoJSON data={trackData} style={{ color: '#005aa9', weight: 2 }} />}
 
             {/* Display railroad tracks using OpenRailwayMap. Quite fast, but occasionally shows warning from too many queries... */}
             {/*<TileLayer*/}
