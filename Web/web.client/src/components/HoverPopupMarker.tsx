@@ -1,4 +1,4 @@
-import { Marker, useMap } from 'react-leaflet';
+import { Marker } from 'react-leaflet';
 import L from 'leaflet';
 import { useEffect, useRef } from 'react';
 import DirectionIcon from './DirectionIcon';
@@ -7,7 +7,6 @@ import { MapAlert } from '../types/types';
 
 function HoverPopupMarker({ alert }: { alert: MapAlert }) {
     const markerRef = useRef<L.Marker>(null);
-    const map = useMap(); // Needed for leaflet context
 
     useEffect(() => {
         const marker = markerRef.current;

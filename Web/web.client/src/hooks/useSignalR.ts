@@ -14,7 +14,11 @@ export function useSignalR(onItemCreated: (alert: MapAlert) => void) {
         const signalRUrl = import.meta.env.VITE_API_URL + "/hubs/notificationHub";
 
         const connection = new signalR.HubConnectionBuilder()
-            .withUrl(signalRUrl)
+            .withUrl(signalRUrl, {
+                // Azure SignalR Service uses WebSockets by default which is not supported
+                // in the free tier, only on the Basic and Standard tiers.
+                transport: signalR.HttpTransportType.LongPolling
+            })
             .withAutomaticReconnect()
             .build();
 

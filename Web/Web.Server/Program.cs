@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
@@ -38,7 +39,12 @@ builder.Services.AddControllers().AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
-builder.Services.AddSignalR();
+builder.Services.AddSignalR(options =>
+{
+    // Azure free tier web app does not support WebSockets, so we need to use Server-Sent Events
+    options.SupportedProtocols.Add(HttpTransportType.LongPolling.ToString());
+    options.EnableDetailedErrors = true;
+});
 
 // Add DbContext with SQLite connection string
 builder.Services.AddDbContext<TelemetryDbContext>(options =>

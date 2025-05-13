@@ -1,20 +1,14 @@
 ﻿import React, { useEffect, useState } from 'react';
-import ReactDOMServer from 'react-dom/server';
 import {
     MapContainer,
-    Marker,
-    Popup,
     TileLayer,
     GeoJSON,
 } from 'react-leaflet';
 import { LatLngTuple } from 'leaflet';
-import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import DirectionIcon from '../components/DirectionIcon';
 import HoverPopupMarker from '../components/HoverPopupMarker';
 import { useSignalR } from '../hooks/useSignalR';
 import { MapAlert } from '../types/types';
-import hash from 'object-hash';
 import { openDB } from 'idb';
 
 // Source of railroad data: https://geodata.bts.gov/datasets/usdot::north-american-rail-network-lines-class-i-freight-railroads-view/about
@@ -26,7 +20,6 @@ const RailMap: React.FC = () => {
     const [userLocation, setUserLocation] = useState<LatLngTuple | null>(null);
 
     const [trackData, setTracksData] = useState<GeoJSON.GeoJsonObject | null>(null);
-    const [milepostsData, setMilepostsData] = useState<GeoJSON.GeoJsonObject | null>(null);
     const [mapAlerts, setMapAlerts] = useState<MapAlert[]>([]);
 
     useSignalR((alert: MapAlert) => {
@@ -83,54 +76,7 @@ const RailMap: React.FC = () => {
         };
 
         fetchRailways();
-
-        // End railroad data from OpenStreetMap
-
-        //fetch("/data/railroads.geojson")
-        //    .then((res) => res.json())
-        //    .then((geojson) => {
-        //        const filtered = {
-        //            ...geojson,
-        //            features: geojson.features.filter(
-        //                (feature: any) => feature.properties.STATEAB === 'WI'
-        //            ),
-        //        };
-        //        setTracksData(filtered);
-        //    })
-        //    .catch((err) => console.error('Failed to load railroads:', err));
-
-        fetch("/data/mileposts.geojson")
-            .then((res) => res.json())
-            .then((geojson) => {
-                setMilepostsData(geojson);
-            })
-            .catch((err) => console.error('Failed to load mileposts:', err));
     }, []);
-
-    const createCustomIcon = (direction?: string) =>
-        L.divIcon({
-            html: ReactDOMServer.renderToString(<DirectionIcon direction={direction as any} />),
-            className: '',
-            iconSize: [20, 20],
-            iconAnchor: [10, 0],
-        });
-
-    //const onMilepostFeature = (feature: any, layer: L.Layer) => {
-    //    if (feature.properties) {
-    //        layer.bindPopup(`Milepost: ${feature.properties.milepost}`);
-    //    }
-    //};
-
-    //const getMilepostStyle = () => {
-    //    return {
-    //        radius: 6,
-    //        fillColor: 'white',
-    //        color: 'white',
-    //        weight: 1,
-    //        opacity: 1,
-    //        fillOpacity: 0.9,
-    //    };
-    //};
 
     if (!userLocation) {
         return <p>📍 Getting your location...</p>;

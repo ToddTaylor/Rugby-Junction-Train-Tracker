@@ -13,6 +13,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="AutoMapper" Version="14.0.0" />
+		<PackageReference Include="Microsoft.AspNetCore.Http.Connections" Version="1.2.0" />
 		<PackageReference Include="Microsoft.AspNetCore.SignalR" Version="1.2.0" />
 		<PackageReference Include="Microsoft.AspNetCore.SpaProxy">
 			<Version>9.0.4</Version>
@@ -74,8 +75,7 @@
 
 		<ItemGroup>
 			<!-- Exclude 'en' folder (keep it), delete others -->
-			<FilesToDelete Include="@(AllHumanizerResources)"
-						   Condition="'%(RecursiveDir)' != 'en\\'" />
+			<FilesToDelete Include="@(AllHumanizerResources)" Condition="'%(RecursiveDir)' != 'en\\'" />
 		</ItemGroup>
 
 		<Delete Files="@(FilesToDelete)" />
