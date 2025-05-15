@@ -108,6 +108,8 @@ builder.Services.AddScoped<ITelemetryService, TelemetryService>();
 
 builder.Services.AddScoped<ITimeProvider, SystemTimeProvider>();
 
+builder.Services.AddHostedService<RecordCleanupService>();
+
 var app = builder.Build();
 
 // Automatically creates DB and applies migrations.

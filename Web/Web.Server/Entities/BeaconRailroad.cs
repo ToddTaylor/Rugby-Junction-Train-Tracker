@@ -2,7 +2,7 @@
 
 namespace Web.Server.Entities
 {
-    public class BeaconRailroad : IEquatable<BeaconRailroad?>
+    public class BeaconRailroad : EntityBase, IEquatable<BeaconRailroad?>
     {
         public int BeaconID { get; set; }
         public Beacon Beacon { get; set; }
@@ -24,6 +24,7 @@ namespace Web.Server.Entities
         public bool Equals(BeaconRailroad? other)
         {
             return other is not null &&
+                   CreatedAt == other.CreatedAt &&
                    BeaconID == other.BeaconID &&
                    EqualityComparer<Beacon>.Default.Equals(Beacon, other.Beacon) &&
                    RailroadID == other.RailroadID &&
@@ -35,7 +36,7 @@ namespace Web.Server.Entities
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(BeaconID, Beacon, RailroadID, Railroad, Latitude, Longitude, Direction);
+            return HashCode.Combine(CreatedAt, BeaconID, Beacon, RailroadID, Railroad, Latitude, Longitude, Direction);
         }
 
         public static bool operator ==(BeaconRailroad? left, BeaconRailroad? right)

@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Web.Server.Entities
 {
-    public class Beacon : IEquatable<Beacon?>
+    public class Beacon : EntityBase, IEquatable<Beacon?>
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -12,8 +12,6 @@ namespace Web.Server.Entities
         public int OwnerID { get; set; }
 
         public Owner Owner { get; set; }
-
-        public required DateTime Timestamp { get; set; } = DateTime.UtcNow;
 
         public ICollection<BeaconRailroad> BeaconRailroads { get; set; }
 
@@ -28,13 +26,13 @@ namespace Web.Server.Entities
                    ID == other.ID &&
                    OwnerID == other.OwnerID &&
                    EqualityComparer<Owner>.Default.Equals(Owner, other.Owner) &&
-                   Timestamp == other.Timestamp &&
+                   CreatedAt == other.CreatedAt &&
                    EqualityComparer<ICollection<BeaconRailroad>>.Default.Equals(BeaconRailroads, other.BeaconRailroads);
         }
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(ID, OwnerID, Owner, Timestamp, BeaconRailroads);
+            return HashCode.Combine(ID, OwnerID, Owner, CreatedAt, BeaconRailroads);
         }
 
         public static bool operator ==(Beacon? left, Beacon? right)

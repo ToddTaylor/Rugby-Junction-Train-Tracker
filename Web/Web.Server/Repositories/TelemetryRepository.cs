@@ -57,7 +57,7 @@ namespace Web.Server.Repositories
             existingTelemetry.TrainID = telemetry.TrainID;
             existingTelemetry.Moving = telemetry.Moving;
             existingTelemetry.Source = telemetry.Source;
-            existingTelemetry.Timestamp = telemetry.Timestamp;
+            existingTelemetry.CreatedAt = telemetry.CreatedAt;
 
             await _context.SaveChangesAsync();
             return existingTelemetry;

@@ -76,7 +76,7 @@ namespace Web.Server.Services.Tests
                 AddressID = 100,
                 Source = "HOT",
                 Timestamp = DateTime.UtcNow,
-                Beacon = new Beacon { ID = 1, Timestamp = DateTime.UtcNow }
+                Beacon = new Beacon { ID = 1, CreatedAt = DateTime.UtcNow }
             };
 
             _mockBeaconRepository.Setup(repo => repo.GetByIdAsync(telemetry.Beacon.ID))
@@ -120,7 +120,7 @@ namespace Web.Server.Services.Tests
                 Beacon = new Beacon
                 {
                     ID = beaconId,
-                    Timestamp = _currentDateTime.AddMilliseconds(-300), // Simulate beacon's timestamp
+                    CreatedAt = _currentDateTime.AddMilliseconds(-300), // Simulate beacon's timestamp
                 }
             };
 
@@ -136,7 +136,7 @@ namespace Web.Server.Services.Tests
                 Beacon = new Beacon
                 {
                     ID = beaconId,
-                    Timestamp = _currentDateTime.AddMilliseconds(-300), // Simulate last beacon check-in timestamp
+                    CreatedAt = _currentDateTime.AddMilliseconds(-300), // Simulate last beacon check-in timestamp
                     BeaconRailroads = new List<BeaconRailroad> {
                         new BeaconRailroad {
                             RailroadID = railroadId,
@@ -155,7 +155,7 @@ namespace Web.Server.Services.Tests
             {
                 ID = beaconId,
                 OwnerID = ownerId,
-                Timestamp = _currentDateTime // Should get new timestamp from API
+                CreatedAt = _currentDateTime // Should get new timestamp from API
             };
 
             var beaconAfterUpdate = beaconBeforeUpdate.GetClone();
@@ -231,7 +231,7 @@ namespace Web.Server.Services.Tests
                 Beacon = new Beacon
                 {
                     ID = beaconId,
-                    Timestamp = _currentDateTime.AddMilliseconds(-300), // Simulate beacon's timestamp
+                    CreatedAt = _currentDateTime.AddMilliseconds(-300), // Simulate beacon's timestamp
                 }
             };
 
@@ -248,7 +248,7 @@ namespace Web.Server.Services.Tests
                 {
                     ID = beaconId,
                     OwnerID = ownerId,
-                    Timestamp = _currentDateTime.AddMilliseconds(-300), // Simulate last beacon check-in timestamp
+                    CreatedAt = _currentDateTime.AddMilliseconds(-300), // Simulate last beacon check-in timestamp
                     BeaconRailroads = new List<BeaconRailroad> {
                         new BeaconRailroad {
                             RailroadID = railroadId1,
@@ -274,7 +274,7 @@ namespace Web.Server.Services.Tests
             {
                 ID = beaconId,
                 OwnerID = ownerId,
-                Timestamp = _currentDateTime // Should get new timestamp from API
+                CreatedAt = _currentDateTime // Should get new timestamp from API
             };
 
             var beaconAfterUpdate = beaconBeforeUpdate.GetClone();
@@ -335,7 +335,7 @@ namespace Web.Server.Services.Tests
                 {
                     ID = beacon1Id,
                     OwnerID = owner1Id,
-                    Timestamp = _currentDateTime.AddMilliseconds(-300), // Simulate beacon's timestamp
+                    CreatedAt = _currentDateTime.AddMilliseconds(-300), // Simulate beacon's timestamp
                 }
             };
 
@@ -352,7 +352,7 @@ namespace Web.Server.Services.Tests
                 {
                     ID = beacon1Id,
                     OwnerID = owner1Id,
-                    Timestamp = _currentDateTime.AddMilliseconds(-300), // Simulate last beacon check-in timestamp
+                    CreatedAt = _currentDateTime.AddMilliseconds(-300), // Simulate last beacon check-in timestamp
                     BeaconRailroads = [
                         new BeaconRailroad {
                             RailroadID = railroad1Id,
@@ -369,7 +369,7 @@ namespace Web.Server.Services.Tests
             {
                 ID = beacon2Id,
                 OwnerID = owner2Id,
-                Timestamp = _currentDateTime.AddMilliseconds(-500),
+                CreatedAt = _currentDateTime.AddMilliseconds(-500),
                 BeaconRailroads = [
                             new BeaconRailroad {
                                 RailroadID = railroad1Id,
@@ -396,7 +396,7 @@ namespace Web.Server.Services.Tests
             {
                 ID = beacon1Id,
                 OwnerID = owner1Id,
-                Timestamp = _currentDateTime // Should get new timestamp from API
+                CreatedAt = _currentDateTime // Should get new timestamp from API
             };
 
             var beaconAfterUpdate = beaconBeforeUpdate.GetClone();
@@ -478,7 +478,7 @@ namespace Web.Server.Services.Tests
                 {
                     ID = beacon1Id,
                     OwnerID = owner1Id,
-                    Timestamp = _currentDateTime.AddMilliseconds(-300), // Simulate beacon's timestamp
+                    CreatedAt = _currentDateTime.AddMilliseconds(-300), // Simulate beacon's timestamp
                 }
             };
 
@@ -495,7 +495,7 @@ namespace Web.Server.Services.Tests
                 {
                     ID = beacon1Id,
                     OwnerID = owner1Id,
-                    Timestamp = _currentDateTime.AddMilliseconds(-300), // Simulate last beacon check-in timestamp
+                    CreatedAt = _currentDateTime.AddMilliseconds(-300), // Simulate last beacon check-in timestamp
                     BeaconRailroads = [
                         new BeaconRailroad {
                             RailroadID = railroad1Id,
@@ -519,7 +519,7 @@ namespace Web.Server.Services.Tests
             {
                 ID = beacon2Id,
                 OwnerID = owner2Id,
-                Timestamp = _currentDateTime.AddMilliseconds(-500),
+                CreatedAt = _currentDateTime.AddMilliseconds(-500),
                 BeaconRailroads = [
                             new BeaconRailroad {
                                 RailroadID = railroad1Id,
@@ -546,7 +546,7 @@ namespace Web.Server.Services.Tests
             {
                 ID = beacon1Id,
                 OwnerID = owner1Id,
-                Timestamp = _currentDateTime // Should get new timestamp from API
+                CreatedAt = _currentDateTime // Should get new timestamp from API
             };
 
             var beaconAfterUpdate = beaconBeforeUpdate.GetClone();
@@ -630,7 +630,7 @@ namespace Web.Server.Services.Tests
                 {
                     ID = beacon1Id,
                     OwnerID = owner1Id,
-                    Timestamp = _currentDateTime.AddMilliseconds(-300), // Simulate beacon's timestamp
+                    CreatedAt = _currentDateTime.AddMilliseconds(-300), // Simulate beacon's timestamp
                 }
             };
 
@@ -647,7 +647,7 @@ namespace Web.Server.Services.Tests
                 {
                     ID = beacon1Id,
                     OwnerID = owner1Id,
-                    Timestamp = _currentDateTime.AddMilliseconds(-300), // Simulate last beacon check-in timestamp
+                    CreatedAt = _currentDateTime.AddMilliseconds(-300), // Simulate last beacon check-in timestamp
                     BeaconRailroads = [
                         new BeaconRailroad {
                             RailroadID = railroad1Id,
@@ -671,7 +671,7 @@ namespace Web.Server.Services.Tests
             {
                 ID = beacon2Id,
                 OwnerID = owner2Id,
-                Timestamp = _currentDateTime.AddMilliseconds(-500),
+                CreatedAt = _currentDateTime.AddMilliseconds(-500),
                 BeaconRailroads = [
                             new BeaconRailroad {
                                 RailroadID = railroad1Id,
@@ -705,7 +705,7 @@ namespace Web.Server.Services.Tests
             {
                 ID = beacon1Id,
                 OwnerID = owner1Id,
-                Timestamp = _currentDateTime // Should get new timestamp from API
+                CreatedAt = _currentDateTime // Should get new timestamp from API
             };
 
             var beaconAfterUpdate = beaconBeforeUpdate.GetClone();

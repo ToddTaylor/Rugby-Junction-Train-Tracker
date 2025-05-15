@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Web.Server.Entities
 {
-    public class Railroad : IEquatable<Railroad?>
+    public class Railroad : EntityBase, IEquatable<Railroad?>
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -23,6 +23,7 @@ namespace Web.Server.Entities
         public bool Equals(Railroad? other)
         {
             return other is not null &&
+                   CreatedAt == other.CreatedAt &&
                    ID == other.ID &&
                    Name == other.Name &&
                    Subdivision == other.Subdivision &&
@@ -31,7 +32,7 @@ namespace Web.Server.Entities
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(ID, Name, Subdivision, BeaconRailroads);
+            return HashCode.Combine(CreatedAt, ID, Name, Subdivision, BeaconRailroads);
         }
 
         public static bool operator ==(Railroad? left, Railroad? right)

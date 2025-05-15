@@ -8,5 +8,5 @@ export type MapAlert = {
     direction: string;
     moving: boolean;
     source: string;
-    timestamp: string;
+    createdAt: string;
 }

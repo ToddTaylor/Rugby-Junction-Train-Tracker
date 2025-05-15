@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Web.Server.Entities
 {
-    public class Telemetry : IEquatable<Telemetry?>
+    public class Telemetry : EntityBase, IEquatable<Telemetry?>
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -23,8 +23,6 @@ namespace Web.Server.Entities
         /// </summary>
         public required string Source { get; set; }
 
-        public required DateTime Timestamp { get; set; }
-
         public override bool Equals(object? obj)
         {
             return Equals(obj as Telemetry);
@@ -33,18 +31,18 @@ namespace Web.Server.Entities
         public bool Equals(Telemetry? other)
         {
             return other is not null &&
+                   CreatedAt == other.CreatedAt &&
                    ID == other.ID &&
                    EqualityComparer<Beacon>.Default.Equals(Beacon, other.Beacon) &&
                    AddressID == other.AddressID &&
                    TrainID == other.TrainID &&
                    Moving == other.Moving &&
-                   Source == other.Source &&
-                   Timestamp == other.Timestamp;
+                   Source == other.Source;
         }
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(ID, Beacon, AddressID, TrainID, Moving, Source, Timestamp);
+            return HashCode.Combine(CreatedAt, ID, Beacon, AddressID, TrainID, Moving, Source);
         }
 
         public static bool operator ==(Telemetry? left, Telemetry? right)

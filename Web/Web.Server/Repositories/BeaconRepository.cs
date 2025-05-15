@@ -52,7 +52,7 @@ namespace Web.Server.Repositories
                 throw new KeyNotFoundException("Beacon not found.");
             }
 
-            existingBeacon.Timestamp = beacon.Timestamp;
+            existingBeacon.CreatedAt = beacon.CreatedAt;
             existingBeacon.Owner = beacon.Owner;
             existingBeacon.BeaconRailroads = beacon.BeaconRailroads;
 

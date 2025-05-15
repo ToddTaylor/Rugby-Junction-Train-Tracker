@@ -2,7 +2,7 @@
 
 namespace Web.Server.Entities
 {
-    public class MapAlert : IEquatable<MapAlert?>
+    public class MapAlert : EntityBase, IEquatable<MapAlert?>
     {
         [JsonRequired]
         [JsonPropertyName("addressID")]
@@ -32,10 +32,6 @@ namespace Web.Server.Entities
         [JsonPropertyName("source")]
         public required string Source { get; set; }
 
-        [JsonRequired]
-        [JsonPropertyName("timestamp")]
-        public required DateTime Timestamp { get; set; }
-
         public override bool Equals(object? obj)
         {
             return Equals(obj as MapAlert);
@@ -44,18 +40,18 @@ namespace Web.Server.Entities
         public bool Equals(MapAlert? other)
         {
             return other is not null &&
+                   CreatedAt == other.CreatedAt &&
                    AddressID == other.AddressID &&
                    Direction == other.Direction &&
                    Latitude == other.Latitude &&
                    Longitude == other.Longitude &&
                    Moving == other.Moving &&
-                   Source == other.Source &&
-                   Timestamp == other.Timestamp;
+                   Source == other.Source;
         }
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(AddressID, Direction, Latitude, Longitude, Moving, Source, Timestamp);
+            return HashCode.Combine(CreatedAt, AddressID, Direction, Latitude, Longitude, Moving, Source);
         }
 
         public static bool operator ==(MapAlert? left, MapAlert? right)

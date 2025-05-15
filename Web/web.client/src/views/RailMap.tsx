@@ -27,7 +27,7 @@ const RailMap: React.FC = () => {
     });
 
     const sortedData: MapAlert[] = Array.from(mapAlerts.values())
-        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
         .map((alert, index) => ({
             ...alert,
             id: `row-${index + 1}`,
@@ -121,7 +121,7 @@ const RailMap: React.FC = () => {
             {/*)}*/}
 
             {sortedData && sortedData.map((alert: MapAlert) => (
-                <HoverPopupMarker alert={alert} />
+                <HoverPopupMarker key={alert.id} alert={alert} />
             ))}
 
         </MapContainer>

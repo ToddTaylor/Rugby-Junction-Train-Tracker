@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Web.Server.Entities
 {
-    public class Owner : IEquatable<Owner?>
+    public class Owner : EntityBase, IEquatable<Owner?>
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -34,6 +34,7 @@ namespace Web.Server.Entities
         public bool Equals(Owner? other)
         {
             return other is not null &&
+                   CreatedAt == other.CreatedAt &&
                    ID == other.ID &&
                    FirstName == other.FirstName &&
                    LastName == other.LastName &&
@@ -45,7 +46,7 @@ namespace Web.Server.Entities
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(ID, FirstName, LastName, Email, City, State, Beacons);
+            return HashCode.Combine(CreatedAt, ID, FirstName, LastName, Email, City, State, Beacons);
         }
 
         public static bool operator ==(Owner? left, Owner? right)

@@ -13,7 +13,7 @@ function TelemetryLog() {
     });
 
     const sortedData: MapAlert[] = Array.from(alerts.values())
-        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
         .map((alert, index) => ({
             ...alert,
             id: `row-${index + 1}`,
@@ -28,7 +28,7 @@ function TelemetryLog() {
         { field: 'direction', headerName: 'Direction', width: 100 },
         { field: 'moving', headerName: 'Moving', width: 100 },
         {
-            field: 'Timestamp',
+            field: 'createdAt',
             headerName: 'Timestamp',
             width: 200,
             valueFormatter: (params) =>
