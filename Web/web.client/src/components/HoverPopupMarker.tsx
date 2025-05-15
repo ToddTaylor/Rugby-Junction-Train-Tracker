@@ -17,7 +17,7 @@ function HoverPopupMarker({ alert }: { alert: MapAlert }) {
       <strong>Direction:</strong> ${alert.direction || 'Unknown'}<br/>
       <strong>Source:</strong> ${alert.source}<br/>
       <strong>Moving:</strong> ${alert.moving || 'Unknown'}<br/>
-      <strong>Timestamp:</strong> ${new Date(alert.timestamp).toLocaleString()}
+      <strong>Timestamp:</strong> ${new Date(alert.createdAt).toLocaleString()}
     `;
 
         marker.bindPopup(popupContent);

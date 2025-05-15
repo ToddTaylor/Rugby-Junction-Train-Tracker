@@ -29,7 +29,7 @@ function TelemetryLog() {
         { field: 'moving', headerName: 'Moving', width: 100 },
         {
             field: 'createdAt',
-            headerName: 'Timestamp',
+            headerName: 'Created At',
             width: 200,
             valueFormatter: (params) =>
                 new Date(params as string).toLocaleString(),
