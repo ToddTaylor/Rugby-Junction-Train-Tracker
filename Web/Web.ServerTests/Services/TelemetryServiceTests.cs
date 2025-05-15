@@ -50,8 +50,8 @@ namespace Web.Server.Services.Tests
             // Arrange
             var telemetries = new List<Telemetry>
             {
-                new Telemetry { ID = 1, AddressID = 100, Source = "HOT", Timestamp = DateTime.UtcNow },
-                new Telemetry { ID = 2, AddressID = 200, Source = "EOT", Timestamp = DateTime.UtcNow }
+                new Telemetry { ID = 1, AddressID = 100, Source = "HOT", CreatedAt = DateTime.UtcNow },
+                new Telemetry { ID = 2, AddressID = 200, Source = "EOT", CreatedAt = DateTime.UtcNow }
             };
 
             _mockTelemetryRepository.Setup(repo => repo.GetAllAsync())
@@ -75,7 +75,7 @@ namespace Web.Server.Services.Tests
                 ID = 1,
                 AddressID = 100,
                 Source = "HOT",
-                Timestamp = DateTime.UtcNow,
+                CreatedAt = DateTime.UtcNow,
                 Beacon = new Beacon { ID = 1, CreatedAt = DateTime.UtcNow }
             };
 
@@ -116,7 +116,7 @@ namespace Web.Server.Services.Tests
                 ID = telemetryId,
                 AddressID = trainAddressId,
                 Source = trainSource,
-                Timestamp = _currentDateTime.AddMicroseconds(-234), // Simulate beacon's timestamp that will be ignored
+                CreatedAt = _currentDateTime.AddMicroseconds(-234), // Simulate beacon's timestamp that will be ignored
                 Beacon = new Beacon
                 {
                     ID = beaconId,
@@ -125,14 +125,14 @@ namespace Web.Server.Services.Tests
             };
 
             var telemetryBeforeAdd = telemetry.GetClone();
-            telemetryBeforeAdd.Timestamp = _currentDateTime; // Timestamp set by APi
+            telemetryBeforeAdd.CreatedAt = _currentDateTime; // Timestamp set by APi
 
             var telemetryAfterAdd = new Telemetry
             {
                 ID = telemetryId,
                 AddressID = trainAddressId,
                 Source = trainSource,
-                Timestamp = _currentDateTime,
+                CreatedAt = _currentDateTime,
                 Beacon = new Beacon
                 {
                     ID = beaconId,
@@ -166,7 +166,7 @@ namespace Web.Server.Services.Tests
                 Latitude = beaconLatitude,
                 Longitude = beaconLongitude,
                 Source = trainSource,
-                Timestamp = _currentDateTime,
+                CreatedAt = _currentDateTime,
                 Direction = "" // Direction should not / cannot be calculated
             };
 
@@ -227,7 +227,7 @@ namespace Web.Server.Services.Tests
                 ID = telemetryId,
                 AddressID = trainAddressId,
                 Source = trainSource,
-                Timestamp = _currentDateTime.AddMicroseconds(-234), // Simulate beacon's timestamp that will be ignored
+                CreatedAt = _currentDateTime.AddMicroseconds(-234), // Simulate beacon's timestamp that will be ignored
                 Beacon = new Beacon
                 {
                     ID = beaconId,
@@ -236,14 +236,14 @@ namespace Web.Server.Services.Tests
             };
 
             var telemetryBeforeAdd = telemetry.GetClone();
-            telemetryBeforeAdd.Timestamp = _currentDateTime; // Timestamp set by APi
+            telemetryBeforeAdd.CreatedAt = _currentDateTime; // Timestamp set by APi
 
             var telemetryAfterAdd = new Telemetry
             {
                 ID = telemetryId,
                 AddressID = trainAddressId,
                 Source = trainSource,
-                Timestamp = _currentDateTime,
+                CreatedAt = _currentDateTime,
                 Beacon = new Beacon
                 {
                     ID = beaconId,
@@ -330,7 +330,7 @@ namespace Web.Server.Services.Tests
                 ID = telemetry1Id,
                 AddressID = trainAddressId,
                 Source = train1Source,
-                Timestamp = _currentDateTime.AddMicroseconds(-234), // Simulate beacon's timestamp that will be ignored
+                CreatedAt = _currentDateTime.AddMicroseconds(-234), // Simulate beacon's timestamp that will be ignored
                 Beacon = new Beacon
                 {
                     ID = beacon1Id,
@@ -340,14 +340,14 @@ namespace Web.Server.Services.Tests
             };
 
             var telemetryBeforeAdd = telemetry.GetClone();
-            telemetryBeforeAdd.Timestamp = _currentDateTime; // Timestamp set by APi
+            telemetryBeforeAdd.CreatedAt = _currentDateTime; // Timestamp set by APi
 
             var telemetryAfterAdd = new Telemetry
             {
                 ID = telemetry1Id,
                 AddressID = trainAddressId,
                 Source = train1Source,
-                Timestamp = _currentDateTime,
+                CreatedAt = _currentDateTime,
                 Beacon = new Beacon
                 {
                     ID = beacon1Id,
@@ -387,7 +387,7 @@ namespace Web.Server.Services.Tests
                     ID = telemetry2Id,
                     AddressID = trainAddressId,
                     Source = train2Source,
-                    Timestamp = _currentDateTime.AddMilliseconds(-500),
+                    CreatedAt = _currentDateTime.AddMilliseconds(-500),
                     Beacon = singleRailroadBeacon
                 }
             };
@@ -407,7 +407,7 @@ namespace Web.Server.Services.Tests
                 Latitude = beacon1Latitude,
                 Longitude = beacon1Longitude,
                 Source = train1Source,
-                Timestamp = _currentDateTime,
+                CreatedAt = _currentDateTime,
                 Direction = "S"
             };
 
@@ -473,7 +473,7 @@ namespace Web.Server.Services.Tests
                 ID = telemetry1Id,
                 AddressID = trainAddressId,
                 Source = train1Source,
-                Timestamp = _currentDateTime.AddMicroseconds(-234), // Simulate beacon's timestamp that will be ignored
+                CreatedAt = _currentDateTime.AddMicroseconds(-234), // Simulate beacon's timestamp that will be ignored
                 Beacon = new Beacon
                 {
                     ID = beacon1Id,
@@ -483,14 +483,14 @@ namespace Web.Server.Services.Tests
             };
 
             var telemetryBeforeAdd = telemetry.GetClone();
-            telemetryBeforeAdd.Timestamp = _currentDateTime; // Timestamp set by APi
+            telemetryBeforeAdd.CreatedAt = _currentDateTime; // Timestamp set by APi
 
             var telemetryAfterAdd = new Telemetry
             {
                 ID = telemetry1Id,
                 AddressID = trainAddressId,
                 Source = train1Source,
-                Timestamp = _currentDateTime,
+                CreatedAt = _currentDateTime,
                 Beacon = new Beacon
                 {
                     ID = beacon1Id,
@@ -537,7 +537,7 @@ namespace Web.Server.Services.Tests
                     ID = telemetry2Id,
                     AddressID = trainAddressId,
                     Source = train2Source,
-                    Timestamp = _currentDateTime.AddMilliseconds(-500),
+                    CreatedAt = _currentDateTime.AddMilliseconds(-500),
                     Beacon = singleRailroadBeacon
                 }
             };
@@ -557,7 +557,7 @@ namespace Web.Server.Services.Tests
                 Latitude = beacon1Latitude,
                 Longitude = beacon1Longitude,
                 Source = train1Source,
-                Timestamp = _currentDateTime,
+                CreatedAt = _currentDateTime,
                 Direction = "S"
             };
 
@@ -625,7 +625,7 @@ namespace Web.Server.Services.Tests
                 ID = telemetry1Id,
                 AddressID = trainAddressId,
                 Source = train1Source,
-                Timestamp = _currentDateTime.AddMicroseconds(-234), // Simulate beacon's timestamp that will be ignored
+                CreatedAt = _currentDateTime.AddMicroseconds(-234), // Simulate beacon's timestamp that will be ignored
                 Beacon = new Beacon
                 {
                     ID = beacon1Id,
@@ -635,14 +635,14 @@ namespace Web.Server.Services.Tests
             };
 
             var telemetryBeforeAdd = telemetry.GetClone();
-            telemetryBeforeAdd.Timestamp = _currentDateTime; // Timestamp set by APi
+            telemetryBeforeAdd.CreatedAt = _currentDateTime; // Timestamp set by APi
 
             var telemetryAfterAdd = new Telemetry
             {
                 ID = telemetry1Id,
                 AddressID = trainAddressId,
                 Source = train1Source,
-                Timestamp = _currentDateTime,
+                CreatedAt = _currentDateTime,
                 Beacon = new Beacon
                 {
                     ID = beacon1Id,
@@ -696,7 +696,7 @@ namespace Web.Server.Services.Tests
                     ID = telemetry2Id,
                     AddressID = trainAddressId,
                     Source = train2Source,
-                    Timestamp = _currentDateTime.AddMilliseconds(-500),
+                    CreatedAt = _currentDateTime.AddMilliseconds(-500),
                     Beacon = multipleRailroadBeacon
                 }
             };
@@ -716,7 +716,7 @@ namespace Web.Server.Services.Tests
                 Latitude = beacon1Latitude,
                 Longitude = beacon1Longitude,
                 Source = train1Source,
-                Timestamp = _currentDateTime,
+                CreatedAt = _currentDateTime,
                 Direction = "S"
             };
 
