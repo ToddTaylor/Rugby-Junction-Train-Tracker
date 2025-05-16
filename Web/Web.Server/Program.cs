@@ -26,7 +26,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy(name: corsPolicyName, policy =>
     {
-        policy.WithOrigins("https://localhost:53848", "https://traintelemetry20250416082903-h9f5efhzf0hzbcda.centralus-01.azurewebsites.net") // Frontend origin
+        policy.WithOrigins("https://localhost:53848", "https://dev.rugbyjunction.us") // Frontend origin
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials(); // needed if you're using SignalR or cookies

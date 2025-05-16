@@ -18,7 +18,7 @@
         /// </summary>
         public required string Source { get; set; }
 
-        public required DateTime Timestamp { get; set; }
+        public required DateTime CreatedAt { get; set; }
 
         public override bool Equals(object? obj)
         {
@@ -34,12 +34,12 @@
                    TrainID == other.TrainID &&
                    Moving == other.Moving &&
                    Source == other.Source &&
-                   Timestamp == other.Timestamp;
+                   CreatedAt == other.CreatedAt;
         }
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(ID, Beacon, AddressID, TrainID, Moving, Source, Timestamp);
+            return HashCode.Combine(ID, Beacon, AddressID, TrainID, Moving, Source, CreatedAt);
         }
 
         public static bool operator ==(TelemetryDTO? left, TelemetryDTO? right)
