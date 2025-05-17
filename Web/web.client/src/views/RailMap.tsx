@@ -13,8 +13,23 @@ import { openDB } from 'idb';
 
 const fallbackCenter: LatLngTuple = [37.5, -122]; // Default if location fails
 
+function metersToLongitudeDegrees(meters: number, latitude: number): number {
+    // 1 deg longitude = 111320*cos(latitude)
+    return meters / (111320 * Math.cos(latitude * Math.PI / 180));
+}
+
+// Helper: convert pixels to meters at a given latitude and zoom
+function pixelsToMeters(pixels: number, latitude: number, zoom: number): number {
+    // Earth's circumference at equator: 40075016.686 meters
+    // 256 px = 40075016.686 meters at zoom 0
+    // metersPerPixel = circumference * cos(latitude) / (2 ^ (zoom + 8))
+    const metersPerPixel = (40075016.686 * Math.cos(latitude * Math.PI / 180)) / Math.pow(2, zoom + 8);
+    return pixels * metersPerPixel;
+}
+
 const RailMap: React.FC = () => {
     const [userLocation, setUserLocation] = useState<LatLngTuple | null>(null);
+    const [mapZoom, setMapZoom] = useState<number>(11);
 
     const [trackData, setTracksData] = useState<GeoJSON.GeoJsonObject | null>(null);
     const [mapPins, setMapPins] = useState<MapPin[]>([]);
@@ -29,6 +44,38 @@ const RailMap: React.FC = () => {
             ...pin,
             id: `row-${index + 1}`,
         }));
+
+    // Group pins by their lat/lng to handle overlapping markers
+    const groupedPins: { [key: string]: MapPin[] } = {};
+    sortedData.forEach(pin => {
+        const key = `${pin.latitude},${pin.longitude}`;
+        if (!groupedPins[key]) groupedPins[key] = [];
+        groupedPins[key].push(pin);
+    });
+
+    // Marker icon size in pixels
+    const MARKER_SIZE_PX = 20;
+
+    // Offset markers so that pins with the same lat/lng are side by side (east-west)
+    const offsetMarkers: MapPin[] = [];
+    Object.values(groupedPins).forEach(group => {
+        const n = group.length;
+        group.forEach((pin, idx) => {
+            if (n === 1) {
+                offsetMarkers.push(pin);
+            } else {
+                // Center the group around the original longitude
+                const offsetIndex = idx - (n - 1) / 2;
+                // Convert marker width in pixels to meters, then to longitude degrees
+                const offsetMeters = pixelsToMeters(MARKER_SIZE_PX, pin.latitude, mapZoom);
+                const offsetDeg = metersToLongitudeDegrees(offsetMeters * offsetIndex, pin.latitude);
+                offsetMarkers.push({
+                    ...pin,
+                    longitude: pin.longitude + offsetDeg
+                });
+            }
+        });
+    });
 
     useEffect(() => {
         // Get browser location
@@ -102,9 +149,13 @@ const RailMap: React.FC = () => {
     return (
         <MapContainer
             center={userLocation}
-            zoom={11}
+            zoom={mapZoom}
             style={{ height: '100%', width: '100%' }}
             scrollWheelZoom={true}
+            whenReady={event => {
+                setMapZoom(event.target.getZoom());
+                event.target.on('zoomend', () => setMapZoom(event.target.getZoom()));
+            }}
         >
             <TileLayer
                 url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
@@ -121,7 +172,7 @@ const RailMap: React.FC = () => {
             {/*    opacity={0.8}*/}
             {/*/>*/}
 
-            {sortedData && sortedData.map((pin: MapPin) => (
+            {offsetMarkers && offsetMarkers.map((pin: MapPin) => (
                 <HoverPopupMarker key={pin.id} pin={pin} />
             ))}
 
