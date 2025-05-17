@@ -5,6 +5,8 @@ namespace Web.Server.DTOs
     {
         public required int AddressID { get; set; }
 
+        public required DateTime CreatedAt { get; set; }
+
         public required string Direction { get; set; }
 
         public required double Latitude { get; set; }

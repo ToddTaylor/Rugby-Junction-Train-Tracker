@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using System.Reflection;
 using Web.Server.Entities;
 using Web.Server.Enums;
 
@@ -21,10 +22,25 @@ namespace Web.Server.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            // Ensure all DateTime properties named "CreatedAt" are stored in UTC ISO 8601 format
+            foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+            {
+                var properties = entityType.ClrType
+                    .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                    .Where(p => p.PropertyType == typeof(DateTime) && p.Name == "CreatedAt");
+
+                foreach (var prop in properties)
+                {
+                    modelBuilder.Entity(entityType.Name)
+                        .Property(prop.Name)
+                        .HasConversion(Converters.UtcDateTimeConverter);
+                }
+            }
+
             // Converts the Direction enum to text in the database instead of an int
             modelBuilder.Entity<BeaconRailroad>()
-                .Property(t => t.Direction)
-                .HasConversion(new EnumToStringConverter<Direction>());
+                    .Property(t => t.Direction)
+                    .HasConversion(new EnumToStringConverter<Direction>());
 
             modelBuilder.Entity<BeaconRailroad>()
                 .HasKey(br => new { br.BeaconID, br.RailroadID }); // composite key

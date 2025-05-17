@@ -1,9 +1,9 @@
 ﻿import React from 'react';
 import { Direction } from '../types/types';
 
-interface DirectionIconProps {
+interface ArrowMapPinProps {
     direction?: Direction;
-    useRotation?: boolean;
+    moving?: boolean;
 }
 
 const angleMap: Record<Direction, number> = {
@@ -17,36 +17,40 @@ const angleMap: Record<Direction, number> = {
     NW: 315,
 };
 
-const DirectionIcon: React.FC<DirectionIconProps> = ({ direction, useRotation = false }) => {
+const ArrowMapPin: React.FC<ArrowMapPinProps> = ({ direction, moving }) => {
     if (!direction) {
         return (
             <div style={{ textAlign: 'center' }}>
                 <img
                     src="/icons/unknown.svg" // Use a neutral fallback icon
                     alt="No direction"
-                    style={{ width: '20px', height: '20px', opacity: 0.5 }}
+                    style={{ width: '20px', height: '20px' }}
                 />
-                <div style={{ fontSize: '0.75rem', color: '#FFF' }}>Unknown</div>
             </div>
         );
     }
 
     const angle = angleMap[direction];
 
+    const imageSrc = moving === true
+        ? "/icons/arrow-green.svg" // Moving
+        : moving === false
+            ? "/icons/arrow-red.svg" // Stopped
+            : "/icons/arrow.svg"; // Unknown state
+
     return (
         <div style={{ textAlign: 'center' }}>
             <img
-                src={useRotation ? '/icons/arrow.svg' : `/icons/arrow-${direction.toLowerCase()}.svg`}
+                src={ imageSrc }
                 alt={`Direction ${direction}`}
                 style={{
                     width: '20px',
                     height: '20px',
-                    transform: useRotation ? `rotate(${angle}deg)` : 'none',
+                    transform: `rotate(${angle}deg)`,
                 }}
             />
-            <div style={{ fontSize: '0.75rem', color: '#FFF' }}>{direction}</div>
         </div>
     );
 };
 
-export default DirectionIcon;
+export default ArrowMapPin;

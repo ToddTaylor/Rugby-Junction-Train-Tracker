@@ -1,10 +1,11 @@
 import { Marker } from 'react-leaflet';
 import L from 'leaflet';
 import { useEffect, useRef } from 'react';
-import DirectionIcon from './DirectionIcon';
+import ArrowMapPin from './ArrowMapPin';
 import ReactDOMServer from 'react-dom/server';
 import { MapPin } from '../types/types';
-
+import { parseISO } from 'date-fns/parseISO';
+import { format } from 'date-fns';  
 function HoverPopupMarker({ pin }: { pin: MapPin }) {
     const markerRef = useRef<L.Marker>(null);
 
@@ -17,7 +18,7 @@ function HoverPopupMarker({ pin }: { pin: MapPin }) {
       <strong>Direction:</strong> ${pin.direction || 'Unknown'}<br/>
       <strong>Source:</strong> ${pin.source}<br/>
       <strong>Moving:</strong> ${pin.moving || 'Unknown'}<br/>
-      <strong>Timestamp:</strong> ${new Date(pin.createdAt).toLocaleString()}
+      <strong>Timestamp:</strong> ${format(parseISO(pin.createdAt), 'k:mm aa')}
     `;
 
         marker.bindPopup(popupContent);
@@ -36,9 +37,9 @@ function HoverPopupMarker({ pin }: { pin: MapPin }) {
         };
     }, [pin]);
 
-    const createCustomIcon = (direction?: string) =>
+    const createCustomIcon = (direction?: string, moving?: boolean) =>
         L.divIcon({
-            html: ReactDOMServer.renderToString(<DirectionIcon direction={direction as any} />),
+            html: ReactDOMServer.renderToString(<ArrowMapPin direction={direction as any} moving={moving as any} />),
             className: '',
             iconSize: [20, 20],
             iconAnchor: [10, 0],
@@ -48,7 +49,7 @@ function HoverPopupMarker({ pin }: { pin: MapPin }) {
         <Marker
             ref={markerRef}
             position={[pin.latitude, pin.longitude]}
-            icon={createCustomIcon(pin.direction)}
+            icon={createCustomIcon(pin.direction, pin.moving)}
         />
     );
 }
