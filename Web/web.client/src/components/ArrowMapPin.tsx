@@ -24,7 +24,6 @@ const ArrowMapPin: React.FC<ArrowMapPinProps> = ({ direction, moving }) => {
                 <img
                     src="/icons/unknown.svg" // Use a neutral fallback icon
                     alt="No direction"
-                    style={{ width: '20px', height: '20px' }}
                 />
             </div>
         );
@@ -43,11 +42,7 @@ const ArrowMapPin: React.FC<ArrowMapPinProps> = ({ direction, moving }) => {
             <img
                 src={ imageSrc }
                 alt={`Direction ${direction}`}
-                style={{
-                    width: '20px',
-                    height: '20px',
-                    transform: `rotate(${angle}deg)`,
-                }}
+                style={{ transform: `rotate(${angle}deg)` }}
             />
         </div>
     );
