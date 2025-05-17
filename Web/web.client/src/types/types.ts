@@ -6,7 +6,7 @@ export type MapPin = {
     latitude: number;
     longitude: number;
     direction: string;
-    moving: boolean;
+    moving: Boolean;
     source: string;
     createdAt: string;
 }

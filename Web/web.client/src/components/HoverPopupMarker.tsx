@@ -17,7 +17,7 @@ function HoverPopupMarker({ pin }: { pin: MapPin }) {
       <strong>Train ID:</strong> ${pin.addressID}<br/>
       <strong>Direction:</strong> ${pin.direction || 'Unknown'}<br/>
       <strong>Source:</strong> ${pin.source}<br/>
-      <strong>Moving:</strong> ${pin.moving || 'Unknown'}<br/>
+      <strong>Moving:</strong> ${pin.moving === true ? "Yes" : pin.moving === false ? "No" : "Unknown"}<br/>
       <strong>Timestamp:</strong> ${format(parseISO(pin.createdAt), 'h:mm aa')}
     `;
 
