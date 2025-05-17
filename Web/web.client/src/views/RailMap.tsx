@@ -11,22 +11,19 @@ import { useSignalR } from '../hooks/useSignalR';
 import { MapPin as MapPin } from '../types/types';
 import { openDB } from 'idb';
 
-// Source of railroad data: https://geodata.bts.gov/datasets/usdot::north-american-rail-network-lines-class-i-freight-railroads-view/about
-//const RAILROAD_URL = 'https://services.arcgis.com/xOi1kZaI0eWDREZv/arcgis/rest/services/NTAD_North_American_Rail_Network_Lines_Class_I_Railroads/FeatureServer/0/query?outFields=*&where=1%3D1&f=geojson';
-
 const fallbackCenter: LatLngTuple = [37.5, -122]; // Default if location fails
 
 const RailMap: React.FC = () => {
     const [userLocation, setUserLocation] = useState<LatLngTuple | null>(null);
 
     const [trackData, setTracksData] = useState<GeoJSON.GeoJsonObject | null>(null);
-    const [mapAlerts, setMapAlerts] = useState<MapPin[]>([]);
+    const [mapPins, setMapPins] = useState<MapPin[]>([]);
 
-    useSignalR((alert: MapPin) => {
-        setMapAlerts(prev => updateAlerts(prev, alert));
+    useSignalR((pin: MapPin) => {
+        setMapPins(prev => updateAlerts(prev, pin));
     });
 
-    const sortedData: MapPin[] = Array.from(mapAlerts.values())
+    const sortedData: MapPin[] = Array.from(mapPins.values())
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
         .map((pin, index) => ({
             ...pin,
@@ -58,7 +55,7 @@ const RailMap: React.FC = () => {
 
             const cached = await db.get(STORE_NAME, 'railways');
             if (cached) {
-                console.log('Railway map loaded from IndexedDB');
+                console.log('Railway map loaded from IndexedDB cache');
                 setTracksData(cached);
                 return;
             }
@@ -75,7 +72,27 @@ const RailMap: React.FC = () => {
             setTracksData(data);
         };
 
+        // Fetch initial map alerts from the API
+        const fetchInitialAlerts = async () => {
+            try {
+                const apiUrl = import.meta.env.VITE_API_URL + "/api/v1/MapPins";
+                const response = await fetch(apiUrl, {
+                    headers: {
+                        'X-Api-Key': import.meta.env.VITE_API_KEY,  
+                        'Content-Type': 'application/json' 
+                    }
+                });
+                if (!response.ok) throw new Error('Failed to fetch map pins');
+
+                const { data: pins } = await response.json();
+                setMapPins(pins);
+            } catch (error) {
+                console.error('Error fetching map pins:', error);
+            }
+        };
+
         fetchRailways();
+        fetchInitialAlerts();
     }, []);
 
     if (!userLocation) {
@@ -115,18 +132,18 @@ const RailMap: React.FC = () => {
 /**
  * TODO: Unit test this function.
  */
-function updateAlerts(alerts: MapPin[], newAlert: MapPin): MapPin[] {
-    const existingIndex = alerts.findIndex(
-        (alert) => alert.addressID === newAlert.addressID
+function updateAlerts(pins: MapPin[], newPin: MapPin): MapPin[] {
+    const existingIndex = pins.findIndex(
+        (alert) => alert.addressID === newPin.addressID
     );
 
     if (existingIndex !== -1) {
         // Remove the existing alert with the same addressID
-        alerts.splice(existingIndex, 1);
+        pins.splice(existingIndex, 1);
     }
 
-    // Add the new alert to the array
-    return [...alerts, newAlert];
+    // Add the new pin to the array
+    return [...pins, newPin];
 }
 
 export default RailMap;

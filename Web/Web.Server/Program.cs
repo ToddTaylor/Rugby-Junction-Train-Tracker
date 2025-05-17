@@ -117,6 +117,9 @@ builder.Services.AddHostedService<RecordCleanupService>();
 
 var app = builder.Build();
 
+// CORS must come early in the pipeline
+app.UseCors(corsPolicyName);
+
 // Automatically creates DB and applies migrations.
 using (var scope = app.Services.CreateScope())
 {
@@ -126,9 +129,6 @@ using (var scope = app.Services.CreateScope())
 
 // Use the API Key Middleware
 app.UseMiddleware<Web.Server.Middleware.ApiKeyMiddleware>();
-
-// CORS must come early in the pipeline
-app.UseCors(corsPolicyName);
 
 app.UseDefaultFiles();
 
