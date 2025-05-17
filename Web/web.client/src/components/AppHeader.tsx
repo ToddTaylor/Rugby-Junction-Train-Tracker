@@ -3,7 +3,7 @@ import React from 'react'
 const AppHeader: React.FC = () => (
   <header className="app-header">
     <img src="/rugbyjunction.svg" alt="Rugby Junction Logo" className="app-logo" />
-    <span className="app-title">Railroad Telemetry Log Service</span>
+    <span className="app-title">Rugby Junction Train Tracker</span>
   </header>
 )
 
