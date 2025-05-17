@@ -22,7 +22,9 @@ namespace Web.Server.Repositories
 
         public async Task<IEnumerable<Railroad>> GetAllAsync()
         {
-            return await _context.Railroads.ToListAsync();
+            return await _context.Railroads
+                .OrderByDescending(r => r.CreatedAt)
+                .ToListAsync();
         }
 
         public async Task<Railroad?> GetByIdAsync(int id)

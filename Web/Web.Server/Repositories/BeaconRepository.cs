@@ -33,6 +33,7 @@ namespace Web.Server.Repositories
             return await _context.Beacons
                 .Include(b => b.Owner)
                 .Include(b => b.BeaconRailroads)
+                .OrderByDescending(b => b.CreatedAt)
                 .ToListAsync();
         }
 

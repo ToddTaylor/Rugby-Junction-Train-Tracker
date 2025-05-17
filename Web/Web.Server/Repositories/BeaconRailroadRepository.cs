@@ -24,6 +24,7 @@ namespace Web.Server.Repositories
             return await _context.BeaconRailroads
                 .Include(br => br.Beacon)
                 .Include(br => br.Railroad)
+                .OrderByDescending(br => br.CreatedAt)
                 .ToListAsync();
         }
 

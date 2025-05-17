@@ -32,6 +32,7 @@ namespace Web.Server.Repositories
                 .Include(t => t.Beacon)
                 .ThenInclude(b => b.BeaconRailroads)
                 .ThenInclude(br => br.Railroad)
+                .OrderByDescending(t => t.CreatedAt)
                 .ToListAsync();
         }
 

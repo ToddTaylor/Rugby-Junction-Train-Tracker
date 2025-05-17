@@ -27,7 +27,9 @@ namespace Web.Server.Repositories
             if (minutes.HasValue)
             {
                 return await _context.MapPins
-                    .Where(mp => mp.CreatedAt >= _timeProvider.UtcNow.AddMinutes(-minutes.Value)).ToListAsync();
+                    .Where(mp => mp.CreatedAt >= _timeProvider.UtcNow.AddMinutes(-minutes.Value))
+                    .OrderByDescending(mp => mp.CreatedAt)
+                    .ToListAsync();
             }
             else
             {
