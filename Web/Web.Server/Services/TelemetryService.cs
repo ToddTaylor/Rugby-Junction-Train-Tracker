@@ -73,6 +73,15 @@ namespace Web.Server.Services
 
                 // Telemetry is from previous telemetry beacon.
                 telemetry = previousTelemetry;
+
+                // Upsert map pin for previous telemetry to update it's timestamp.
+                var existingMapPin = await _mapPinsService.GetMapPinByIdAsync(telemetry.AddressID);
+                _ = await _mapPinsService.UpsertMapPin(existingMapPin);
+
+                // Send map alert for previous telemetry to update it's timestamp.
+                await _hubContext.Clients.All.SendAsync(NotificationMethods.MapAlert, existingMapPin);
+
+                return;
             }
 
             // Check if telemetry beacon is multi-railroad. 
@@ -100,12 +109,12 @@ namespace Web.Server.Services
                 direction = DirectionService.GetDirection(fromGeoCoordinate, toGeoCoordinate, telemetryBeaconRailroad.Direction);
             }
 
-            var mapAlert = _mapper.Map<MapPin>(telemetry);
-            mapAlert.Direction = direction;
+            var mapPin = _mapper.Map<MapPin>(telemetry);
+            mapPin.Direction = direction;
 
-            await _mapPinsService.UpsertMapPin(mapAlert);
+            await _mapPinsService.UpsertMapPin(mapPin);
 
-            await _hubContext.Clients.All.SendAsync(NotificationMethods.MapAlert, mapAlert);
+            await _hubContext.Clients.All.SendAsync(NotificationMethods.MapAlert, mapPin);
         }
     }
 }

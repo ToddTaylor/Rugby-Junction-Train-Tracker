@@ -16,6 +16,25 @@ namespace Web.Server.Repositories
             _timeProvider = timeProvider;
         }
 
+        public async Task<MapPin?> GetByIdAsync(int addressID)
+        {
+            return await _context.MapPins
+                .FirstOrDefaultAsync(mp => mp.AddressID == addressID);
+        }
+
+        public async Task<IEnumerable<MapPin>> GetAllAsync(int? minutes)
+        {
+            if (minutes.HasValue)
+            {
+                return await _context.MapPins
+                    .Where(mp => mp.CreatedAt >= _timeProvider.UtcNow.AddMinutes(-minutes.Value)).ToListAsync();
+            }
+            else
+            {
+                return await _context.MapPins.ToListAsync();
+            }
+        }
+
         public async Task<MapPin> UpsertAsync(MapPin mapPin)
         {
             var existingMapPin = await _context.MapPins.FindAsync(mapPin.AddressID);
@@ -41,19 +60,6 @@ namespace Web.Server.Repositories
             await _context.SaveChangesAsync();
 
             return mapPin;
-        }
-
-        public async Task<IEnumerable<MapPin>> GetAllAsync(int? minutes)
-        {
-            if (minutes.HasValue)
-            {
-                return await _context.MapPins
-                    .Where(mp => mp.CreatedAt >= _timeProvider.UtcNow.AddMinutes(-minutes.Value)).ToListAsync();
-            }
-            else
-            {
-                return await _context.MapPins.ToListAsync();
-            }
         }
     }
 }
