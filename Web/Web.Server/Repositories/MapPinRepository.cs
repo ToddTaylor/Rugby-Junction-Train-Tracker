@@ -43,9 +43,17 @@ namespace Web.Server.Repositories
             return mapPin;
         }
 
-        public async Task<IEnumerable<MapPin>> GetAllAsync()
+        public async Task<IEnumerable<MapPin>> GetAllAsync(int? minutes)
         {
-            return await _context.MapPins.ToListAsync();
+            if (minutes.HasValue)
+            {
+                return await _context.MapPins
+                    .Where(mp => mp.CreatedAt >= _timeProvider.UtcNow.AddMinutes(-minutes.Value)).ToListAsync();
+            }
+            else
+            {
+                return await _context.MapPins.ToListAsync();
+            }
         }
     }
 }

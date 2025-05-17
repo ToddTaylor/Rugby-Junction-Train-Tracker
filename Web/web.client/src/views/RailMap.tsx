@@ -122,7 +122,8 @@ const RailMap: React.FC = () => {
         // Fetch initial map alerts from the API
         const fetchInitialAlerts = async () => {
             try {
-                const apiUrl = import.meta.env.VITE_API_URL + "/api/v1/MapPins";
+                const minutesOldFilter = 15; // Fetch alerts from the last 15 minutes so old alerts are not shown
+                const apiUrl = import.meta.env.VITE_API_URL + "/api/v1/MapPins?minutes=" + minutesOldFilter;
                 const response = await fetch(apiUrl, {
                     headers: {
                         'X-Api-Key': import.meta.env.VITE_API_KEY,  

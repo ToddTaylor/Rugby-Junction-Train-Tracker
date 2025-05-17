@@ -21,12 +21,12 @@ namespace Web.Server.Controllers.v1
         }
 
         [HttpGet]
-        public async Task<ActionResult> Get()
+        public async Task<ActionResult> Get([FromQuery] int? minutes)
         {
             var response = new MessageEnvelope<IEnumerable<MapPinDTO>>(null, []);
             try
             {
-                var mapPins = await _mapPinsService.GetMapPinsAsync();
+                var mapPins = await _mapPinsService.GetMapPinsAsync(minutes);
                 response.Data = _mapper.Map<IEnumerable<MapPinDTO>>(mapPins);
                 return Ok(response);
             }

@@ -16,9 +16,9 @@ namespace Web.Server.Services
             return await _mapPinRepository.UpsertAsync(mapPin);
         }
 
-        public async Task<IEnumerable<MapPin>> GetMapPinsAsync()
+        public async Task<IEnumerable<MapPin>> GetMapPinsAsync(int? minutes)
         {
-            return await _mapPinRepository.GetAllAsync();
+            return await _mapPinRepository.GetAllAsync(minutes);
         }
     }
 }
