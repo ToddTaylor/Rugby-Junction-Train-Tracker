@@ -3,6 +3,7 @@ import {
     MapContainer,
     TileLayer,
     GeoJSON,
+    useMapEvents,
 } from 'react-leaflet';
 import { LatLngTuple } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -143,6 +144,13 @@ const RailMap: React.FC = () => {
         fetchInitialAlerts();
     }, []);
 
+    function MapZoomListener() {
+        useMapEvents({
+            zoomend: (e) => setMapZoom(e.target.getZoom()),
+        });
+        return null;
+    }
+
     if (!userLocation) {
         return <p>📍 Getting your location...</p>;
     }
@@ -153,11 +161,8 @@ const RailMap: React.FC = () => {
             zoom={mapZoom}
             style={{ height: '100%', width: '100%' }}
             scrollWheelZoom={true}
-            whenReady={event => {
-                setMapZoom(event.target.getZoom());
-                event.target.on('zoomend', () => setMapZoom(event.target.getZoom()));
-            }}
         >
+            <MapZoomListener />
             <TileLayer
                 url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
                 attribution='&copy; <a href="https://carto.com/">CARTO</a>'
