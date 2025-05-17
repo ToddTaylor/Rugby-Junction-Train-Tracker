@@ -4,10 +4,10 @@ namespace Web.Server.Services
 {
     public interface IRailroadService
     {
-        Task<Railroad> CreateRailroad(Railroad railroad);
-        Task DeleteRailroad(int ID);
-        Task<Railroad> GetRailroad(int ID);
-        Task<IEnumerable<Railroad>> GetRailroads();
-        Task UpdateRailroad(Railroad railroad);
+        Task<Railroad> CreateRailroadAsync(Railroad railroad);
+        Task DeleteRailroadAsync(int ID);
+        Task<Railroad> GetRailroadAsync(int ID);
+        Task<IEnumerable<Railroad>> GetRailroadsAsync();
+        Task UpdateRailroadAsync(Railroad railroad);
     }
 }

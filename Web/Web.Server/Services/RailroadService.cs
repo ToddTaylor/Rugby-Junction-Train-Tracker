@@ -12,27 +12,27 @@ namespace Web.Server.Services
             _railroadRepository = railroadRepository;
         }
 
-        public async Task<Railroad> GetRailroad(int id)
+        public async Task<Railroad> GetRailroadAsync(int id)
         {
             return await _railroadRepository.GetByIdAsync(id);
         }
 
-        public async Task<IEnumerable<Railroad>> GetRailroads()
+        public async Task<IEnumerable<Railroad>> GetRailroadsAsync()
         {
             return await _railroadRepository.GetAllAsync();
         }
 
-        public async Task<Railroad> CreateRailroad(Railroad railroad)
+        public async Task<Railroad> CreateRailroadAsync(Railroad railroad)
         {
             return await _railroadRepository.AddAsync(railroad);
         }
 
-        public async Task UpdateRailroad(Railroad railroad)
+        public async Task UpdateRailroadAsync(Railroad railroad)
         {
             await _railroadRepository.UpdateAsync(railroad);
         }
 
-        public async Task DeleteRailroad(int id)
+        public async Task DeleteRailroadAsync(int id)
         {
             await _railroadRepository.DeleteAsync(id);
         }

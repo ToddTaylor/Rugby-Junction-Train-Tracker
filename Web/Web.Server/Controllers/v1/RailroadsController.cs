@@ -28,7 +28,7 @@ namespace Web.Server.Controllers.v1
             var response = new MessageEnvelope<IEnumerable<RailroadDTO>>(null, []);
             try
             {
-                var railroads = await _railroadService.GetRailroads();
+                var railroads = await _railroadService.GetRailroadsAsync();
                 response.Data = _mapper.Map<IEnumerable<RailroadDTO>>(railroads);
                 return Ok(response);
             }
@@ -47,7 +47,7 @@ namespace Web.Server.Controllers.v1
             var response = new MessageEnvelope<RailroadDTO>(null, []);
             try
             {
-                var railroad = await _railroadService.GetRailroad(id);
+                var railroad = await _railroadService.GetRailroadAsync(id);
 
                 if (railroad == null)
                 {
@@ -82,7 +82,7 @@ namespace Web.Server.Controllers.v1
 
             try
             {
-                await _railroadService.UpdateRailroad(railroad);
+                await _railroadService.UpdateRailroadAsync(railroad);
                 return NoContent();
             }
             catch (KeyNotFoundException)
@@ -99,7 +99,7 @@ namespace Web.Server.Controllers.v1
             try
             {
                 var railroad = _mapper.Map<Railroad>(createRailroadDTO);
-                var createdRailroad = await _railroadService.CreateRailroad(railroad);
+                var createdRailroad = await _railroadService.CreateRailroadAsync(railroad);
                 response.Data = _mapper.Map<RailroadDTO>(createdRailroad);
                 return CreatedAtAction("GetRailroad", new { id = response.Data.ID }, response);
             }
@@ -117,7 +117,7 @@ namespace Web.Server.Controllers.v1
         {
             try
             {
-                await _railroadService.DeleteRailroad(id);
+                await _railroadService.DeleteRailroadAsync(id);
             }
             catch (KeyNotFoundException)
             {

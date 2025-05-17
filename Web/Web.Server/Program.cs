@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using System.Reflection;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using Web.Server.Data;
 using Web.Server.Hubs;
@@ -35,8 +36,10 @@ builder.Services.AddCors(options =>
 
 // Add services to the container.
 builder.Services.AddAutoMapper(typeof(AutoMapperProfile));
-builder.Services.AddControllers().AddJsonOptions(options =>
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
     {
+        options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
 builder.Services.AddSignalR(options =>
@@ -95,6 +98,7 @@ builder.Services.AddSwaggerGen(options =>
 // Custom repositories
 builder.Services.AddScoped<IBeaconRepository, BeaconRepository>();
 builder.Services.AddScoped<IBeaconRailroadRepository, BeaconRailroadRepository>();
+builder.Services.AddScoped<IMapPinRepository, MapPinRepository>();
 builder.Services.AddScoped<IOwnerRepository, OwnerRepository>();
 builder.Services.AddScoped<IRailroadRepository, RailroadRepository>();
 builder.Services.AddScoped<ITelemetryRepository, TelemetryRepository>();
@@ -102,6 +106,7 @@ builder.Services.AddScoped<ITelemetryRepository, TelemetryRepository>();
 // Custom services
 builder.Services.AddScoped<IBeaconService, BeaconService>();
 builder.Services.AddScoped<IBeaconRailroadService, BeaconRailroadService>();
+builder.Services.AddScoped<IMapPinsService, MapPinService>();
 builder.Services.AddScoped<IOwnerService, OwnerService>();
 builder.Services.AddScoped<IRailroadService, RailroadService>();
 builder.Services.AddScoped<ITelemetryService, TelemetryService>();

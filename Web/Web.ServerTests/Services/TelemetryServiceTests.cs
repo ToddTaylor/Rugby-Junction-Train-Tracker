@@ -20,6 +20,7 @@ namespace Web.Server.Services.Tests
         private readonly Mock<IHubContext<NotificationHub>> _mockHubContext = new();
         private readonly Mock<IHubClients> _mockHubClients = new();
         private readonly Mock<IClientProxy>? _mockClientProxy = new();
+        private readonly Mock<IMapPinsService> _mockMapPinService = new();
         private readonly Mock<ITimeProvider> _mockTimeProvider = new();
         private IMapper? _mapper;
         private DateTime _currentDateTime;
@@ -41,6 +42,7 @@ namespace Web.Server.Services.Tests
                 _mockTelemetryRepository.Object,
                 _mockBeaconRepository.Object,
                 _mapper,
+                _mockMapPinService.Object,
                 _mockTimeProvider.Object);
         }
 
@@ -160,7 +162,7 @@ namespace Web.Server.Services.Tests
 
             var beaconAfterUpdate = beaconBeforeUpdate.GetClone();
 
-            var expectedMapAlert = new MapAlert
+            var expectedMapAlert = new MapPin
             {
                 AddressID = trainAddressId,
                 Latitude = beaconLatitude,
@@ -401,7 +403,7 @@ namespace Web.Server.Services.Tests
 
             var beaconAfterUpdate = beaconBeforeUpdate.GetClone();
 
-            var expectedMapAlert = new MapAlert
+            var expectedMapAlert = new MapPin
             {
                 AddressID = 90234,
                 Latitude = beacon1Latitude,
@@ -551,7 +553,7 @@ namespace Web.Server.Services.Tests
 
             var beaconAfterUpdate = beaconBeforeUpdate.GetClone();
 
-            var expectedMapAlert = new MapAlert
+            var expectedMapAlert = new MapPin
             {
                 AddressID = 90234,
                 Latitude = beacon1Latitude,
@@ -710,7 +712,7 @@ namespace Web.Server.Services.Tests
 
             var beaconAfterUpdate = beaconBeforeUpdate.GetClone();
 
-            var expectedMapAlert = new MapAlert
+            var expectedMapAlert = new MapPin
             {
                 AddressID = 90234,
                 Latitude = beacon1Latitude,

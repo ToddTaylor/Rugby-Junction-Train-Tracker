@@ -1,43 +1,32 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace Web.Server.Entities
 {
-    public class MapAlert : EntityBase, IEquatable<MapAlert?>
+    public class MapPin : EntityBase, IEquatable<MapPin?>
     {
-        [JsonRequired]
-        [JsonPropertyName("addressID")]
+        [Key]
         public required int AddressID { get; set; }
 
-        [JsonRequired]
-        [JsonPropertyName("direction")]
         public required string Direction { get; set; }
 
-        [JsonRequired]
-        [JsonPropertyName("latitude")]
         public required double Latitude { get; set; }
 
-        [JsonRequired]
-        [JsonPropertyName("longitude")]
         public required double Longitude { get; set; }
 
-        [JsonRequired]
-        [JsonPropertyName("moving")]
         public bool? Moving { get; set; }
 
         /// <summary>
         /// The source of the alert.
         /// HOT, EOT, DPU, HBD
         /// </summary>
-        [JsonRequired]
-        [JsonPropertyName("source")]
         public required string Source { get; set; }
 
         public override bool Equals(object? obj)
         {
-            return Equals(obj as MapAlert);
+            return Equals(obj as MapPin);
         }
 
-        public bool Equals(MapAlert? other)
+        public bool Equals(MapPin? other)
         {
             return other is not null &&
                    CreatedAt == other.CreatedAt &&
@@ -54,12 +43,12 @@ namespace Web.Server.Entities
             return HashCode.Combine(CreatedAt, AddressID, Direction, Latitude, Longitude, Moving, Source);
         }
 
-        public static bool operator ==(MapAlert? left, MapAlert? right)
+        public static bool operator ==(MapPin? left, MapPin? right)
         {
-            return EqualityComparer<MapAlert>.Default.Equals(left, right);
+            return EqualityComparer<MapPin>.Default.Equals(left, right);
         }
 
-        public static bool operator !=(MapAlert? left, MapAlert? right)
+        public static bool operator !=(MapPin? left, MapPin? right)
         {
             return !(left == right);
         }

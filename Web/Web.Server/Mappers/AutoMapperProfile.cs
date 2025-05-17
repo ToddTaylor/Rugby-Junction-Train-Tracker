@@ -23,6 +23,8 @@ namespace Web.Server.Mappers
             CreateMap<UpdateBeaconRailroadDTO, BeaconRailroad>();
             CreateMap<BeaconRailroad, BeaconRailroadDTO>();
 
+            CreateMap<MapPin, MapPinDTO>();
+
             CreateMap<CreateOwnerDTO, Owner>()
                 .ForMember(dest => dest.ID, opt => opt.Ignore())
                 .ForMember(dest => dest.Beacons, opt => opt.Ignore());
@@ -45,7 +47,7 @@ namespace Web.Server.Mappers
             CreateMap<Telemetry, TelemetryDTO>()
                 .ForPath(dest => dest.Beacon.ID, opt => opt.MapFrom(src => src.Beacon.ID));
 
-            CreateMap<Telemetry, MapAlert>()
+            CreateMap<Telemetry, MapPin>()
                 .ForMember(dest => dest.Latitude, opt => opt.MapFrom(src => src.Beacon.BeaconRailroads.First().Latitude))
                 .ForMember(dest => dest.Longitude, opt => opt.MapFrom(src => src.Beacon.BeaconRailroads.First().Longitude));
         }

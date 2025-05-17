@@ -13,6 +13,7 @@ namespace Web.Server.Services
         private readonly IBeaconRepository _beaconRepository;
         private readonly IHubContext<NotificationHub> _hubContext;
         private readonly IMapper _mapper;
+        private readonly IMapPinsService _mapPinsService;
         private readonly ITimeProvider _timeProvider;
 
         public TelemetryService(
@@ -20,12 +21,14 @@ namespace Web.Server.Services
             ITelemetryRepository telemetryRepository,
             IBeaconRepository beaconRepository,
             IMapper mapper,
+            IMapPinsService mapPinsService,
             ITimeProvider timeProvider)
         {
             _telemetryRepository = telemetryRepository;
             _beaconRepository = beaconRepository;
             _hubContext = hubContext;
             _mapper = mapper;
+            _mapPinsService = mapPinsService;
             _timeProvider = timeProvider;
         }
 
@@ -97,8 +100,10 @@ namespace Web.Server.Services
                 direction = DirectionService.GetDirection(fromGeoCoordinate, toGeoCoordinate, telemetryBeaconRailroad.Direction);
             }
 
-            var mapAlert = _mapper.Map<MapAlert>(telemetry);
+            var mapAlert = _mapper.Map<MapPin>(telemetry);
             mapAlert.Direction = direction;
+
+            await _mapPinsService.UpsertMapPin(mapAlert);
 
             await _hubContext.Clients.All.SendAsync(NotificationMethods.MapAlert, mapAlert);
         }

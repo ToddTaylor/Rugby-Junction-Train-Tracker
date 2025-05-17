@@ -14,6 +14,7 @@ namespace Web.Server.Data
 
         public DbSet<Beacon> Beacons { get; set; }
         public DbSet<BeaconRailroad> BeaconRailroads { get; set; }
+        public DbSet<MapPin> MapPins { get; set; }
         public DbSet<Owner> Owners { get; set; }
         public DbSet<Railroad> Railroads { get; set; }
         public DbSet<Telemetry> Telemetries { get; set; }
