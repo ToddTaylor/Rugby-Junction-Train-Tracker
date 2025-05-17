@@ -3,9 +3,9 @@ import L from 'leaflet';
 import { useEffect, useRef } from 'react';
 import DirectionIcon from './DirectionIcon';
 import ReactDOMServer from 'react-dom/server';
-import { MapAlert } from '../types/types';
+import { MapPin } from '../types/types';
 
-function HoverPopupMarker({ alert }: { alert: MapAlert }) {
+function HoverPopupMarker({ pin }: { pin: MapPin }) {
     const markerRef = useRef<L.Marker>(null);
 
     useEffect(() => {
@@ -13,11 +13,11 @@ function HoverPopupMarker({ alert }: { alert: MapAlert }) {
         if (!marker) return;
 
         const popupContent = `
-      <strong>Train ID:</strong> ${alert.addressID}<br/>
-      <strong>Direction:</strong> ${alert.direction || 'Unknown'}<br/>
-      <strong>Source:</strong> ${alert.source}<br/>
-      <strong>Moving:</strong> ${alert.moving || 'Unknown'}<br/>
-      <strong>Timestamp:</strong> ${new Date(alert.createdAt).toLocaleString()}
+      <strong>Train ID:</strong> ${pin.addressID}<br/>
+      <strong>Direction:</strong> ${pin.direction || 'Unknown'}<br/>
+      <strong>Source:</strong> ${pin.source}<br/>
+      <strong>Moving:</strong> ${pin.moving || 'Unknown'}<br/>
+      <strong>Timestamp:</strong> ${new Date(pin.createdAt).toLocaleString()}
     `;
 
         marker.bindPopup(popupContent);
@@ -34,7 +34,7 @@ function HoverPopupMarker({ alert }: { alert: MapAlert }) {
             marker.off('mouseover');
             marker.off('mouseout');
         };
-    }, [alert]);
+    }, [pin]);
 
     const createCustomIcon = (direction?: string) =>
         L.divIcon({
@@ -47,8 +47,8 @@ function HoverPopupMarker({ alert }: { alert: MapAlert }) {
     return (
         <Marker
             ref={markerRef}
-            position={[alert.latitude, alert.longitude]}
-            icon={createCustomIcon(alert.direction)}
+            position={[pin.latitude, pin.longitude]}
+            icon={createCustomIcon(pin.direction)}
         />
     );
 }

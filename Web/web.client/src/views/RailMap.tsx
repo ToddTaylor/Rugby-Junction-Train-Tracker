@@ -8,7 +8,7 @@ import { LatLngTuple } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import HoverPopupMarker from '../components/HoverPopupMarker';
 import { useSignalR } from '../hooks/useSignalR';
-import { MapAlert } from '../types/types';
+import { MapPin as MapPin } from '../types/types';
 import { openDB } from 'idb';
 
 // Source of railroad data: https://geodata.bts.gov/datasets/usdot::north-american-rail-network-lines-class-i-freight-railroads-view/about
@@ -20,16 +20,16 @@ const RailMap: React.FC = () => {
     const [userLocation, setUserLocation] = useState<LatLngTuple | null>(null);
 
     const [trackData, setTracksData] = useState<GeoJSON.GeoJsonObject | null>(null);
-    const [mapAlerts, setMapAlerts] = useState<MapAlert[]>([]);
+    const [mapAlerts, setMapAlerts] = useState<MapPin[]>([]);
 
-    useSignalR((alert: MapAlert) => {
+    useSignalR((alert: MapPin) => {
         setMapAlerts(prev => updateAlerts(prev, alert));
     });
 
-    const sortedData: MapAlert[] = Array.from(mapAlerts.values())
+    const sortedData: MapPin[] = Array.from(mapAlerts.values())
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-        .map((alert, index) => ({
-            ...alert,
+        .map((pin, index) => ({
+            ...pin,
             id: `row-${index + 1}`,
         }));
 
@@ -104,24 +104,8 @@ const RailMap: React.FC = () => {
             {/*    opacity={0.8}*/}
             {/*/>*/}
 
-            {/* Display railroad tracks using local GeoJSON file.  Is quite slow... */}
-            {/*{trackData && <GeoJSON data={trackData} />}*/}
-
-            {/*{milepostsData && (*/}
-            {/*    <GeoJSON*/}
-            {/*        key={hash(milepostsData)}*/}
-            {/*        data={milepostsData}*/}
-            {/*        onEachFeature={onMilepostFeature}*/}
-            {/*        pointToLayer={(_, latlng) => {*/}
-            {/*            // Assign a stable index per point*/}
-            {/*            const style = getMilepostStyle();*/}
-            {/*            return L.circleMarker(latlng, style);*/}
-            {/*        }}*/}
-            {/*    />*/}
-            {/*)}*/}
-
-            {sortedData && sortedData.map((alert: MapAlert) => (
-                <HoverPopupMarker key={alert.id} alert={alert} />
+            {sortedData && sortedData.map((pin: MapPin) => (
+                <HoverPopupMarker key={pin.id} pin={pin} />
             ))}
 
         </MapContainer>
@@ -131,7 +115,7 @@ const RailMap: React.FC = () => {
 /**
  * TODO: Unit test this function.
  */
-function updateAlerts(alerts: MapAlert[], newAlert: MapAlert): MapAlert[] {
+function updateAlerts(alerts: MapPin[], newAlert: MapPin): MapPin[] {
     const existingIndex = alerts.findIndex(
         (alert) => alert.addressID === newAlert.addressID
     );

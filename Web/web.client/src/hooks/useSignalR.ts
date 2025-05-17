@@ -1,8 +1,8 @@
 import { useEffect, useRef } from "react";
 import * as signalR from "@microsoft/signalr";
-import { MapAlert } from "../types/types";
+import { MapPin } from "../types/types";
 
-export function useSignalR(onItemCreated: (alert: MapAlert) => void) {
+export function useSignalR(onItemCreated: (alert: MapPin) => void) {
     const onItemCreatedRef = useRef(onItemCreated);
 
     // Keep ref updated
@@ -22,7 +22,7 @@ export function useSignalR(onItemCreated: (alert: MapAlert) => void) {
             .withAutomaticReconnect()
             .build();
 
-        const handleMapAlert = (alert: MapAlert) => {
+        const handleMapAlert = (alert: MapPin) => {
             console.log("New Map Alert:", alert);
             onItemCreatedRef.current(alert);
         };
