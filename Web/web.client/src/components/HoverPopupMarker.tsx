@@ -18,7 +18,7 @@ function HoverPopupMarker({ pin }: { pin: MapPin }) {
       <strong>Direction:</strong> ${pin.direction || 'Unknown'}<br/>
       <strong>Source:</strong> ${pin.source}<br/>
       <strong>Moving:</strong> ${pin.moving || 'Unknown'}<br/>
-      <strong>Timestamp:</strong> ${format(parseISO(pin.createdAt), 'k:mm aa')}
+      <strong>Timestamp:</strong> ${format(parseISO(pin.createdAt), 'h:mm aa')}
     `;
 
         marker.bindPopup(popupContent);
