@@ -19,10 +19,16 @@ const angleMap: Record<Direction, number> = {
 
 const ArrowMapPin: React.FC<ArrowMapPinProps> = ({ direction, moving }) => {
     if (!direction) {
+        const unknownImageSrc = moving === true
+            ? "/icons/unknown.svg" // Moving
+            : moving === false
+                ? "/icons/unknown-red.svg" // Stopped
+                : "/icons/unknown.svg"; // Unknown state
+
         return (
             <div style={{ textAlign: 'center' }}>
                 <img
-                    src="/icons/unknown.svg" // Use a neutral fallback icon
+                    src={unknownImageSrc}
                     alt="No direction"
                 />
             </div>
@@ -31,7 +37,7 @@ const ArrowMapPin: React.FC<ArrowMapPinProps> = ({ direction, moving }) => {
 
     const angle = angleMap[direction];
 
-    const imageSrc = moving === true
+    const arrowImageSrc = moving === true
         ? "/icons/arrow-green.svg" // Moving
         : moving === false
             ? "/icons/arrow-red.svg" // Stopped
@@ -40,7 +46,7 @@ const ArrowMapPin: React.FC<ArrowMapPinProps> = ({ direction, moving }) => {
     return (
         <div style={{ textAlign: 'center' }}>
             <img
-                src={ imageSrc }
+                src={ arrowImageSrc }
                 alt={`Direction ${direction}`}
                 style={{ transform: `rotate(${angle}deg)` }}
             />

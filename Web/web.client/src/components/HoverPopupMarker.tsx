@@ -37,7 +37,7 @@ function HoverPopupMarker({ pin }: { pin: MapPin }) {
         };
     }, [pin]);
 
-    const createCustomIcon = (direction?: string, moving?: boolean) =>
+    const createCustomIcon = (direction?: string, moving?: Boolean) =>
         L.divIcon({
             html: ReactDOMServer.renderToString(<ArrowMapPin direction={direction as any} moving={moving as any} />),
             className: '',
