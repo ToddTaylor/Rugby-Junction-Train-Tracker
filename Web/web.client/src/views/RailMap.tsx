@@ -5,7 +5,7 @@ import {
     GeoJSON,
     useMapEvents
 } from 'react-leaflet';
-import L, { LatLngTuple } from 'leaflet';
+import { LatLngTuple } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useSignalR } from '../hooks/useSignalR';
 import { Beacon, MapPin as MapPin } from '../types/types';
@@ -37,6 +37,9 @@ const RailMap: React.FC = () => {
     const [beaconPins, setBeacons] = useState<Beacon[]>([]);
     const [mapPins, setMapPins] = useState<MapPin[]>([]);
 
+    // Track loading state for each data set
+    const [trackDataLoaded, setTrackDataLoaded] = useState(false);
+    const [beaconsLoaded, setBeaconsLoaded] = useState(false);
 
     useSignalR((pin: MapPin) => {
         setMapPins(prev => updateAlerts(prev, pin));
@@ -114,6 +117,7 @@ const RailMap: React.FC = () => {
             if (cached) {
                 console.log('Railway map loaded from IndexedDB cache');
                 setTracksData(cached);
+                setTrackDataLoaded(true);
                 return;
             }
 
@@ -127,6 +131,7 @@ const RailMap: React.FC = () => {
             console.log('Railway map stored in IndexedDB');
 
             setTracksData(data);
+            setTrackDataLoaded(true);
         };
 
         // Get beacons from the API or cache
@@ -143,6 +148,7 @@ const RailMap: React.FC = () => {
 
                 const { data: beacons } = await response.json();
                 setBeacons(beacons);
+                setBeaconsLoaded(true);
             } catch (error) {
                 console.error('Error fetching map pins:', error);
             }
@@ -168,9 +174,10 @@ const RailMap: React.FC = () => {
             }
         };
 
-        fetchRailways();
-        fetchBeacons();
-        fetchInitialAlerts();
+        // Chain loading: tracks -> beacons -> telemetry
+        fetchRailways()
+            .then(() => fetchBeacons())
+            .then(() => fetchInitialAlerts());
     }, []);
 
     function MapZoomListener() {
@@ -201,10 +208,10 @@ const RailMap: React.FC = () => {
             {trackData && <GeoJSON data={trackData} style={{ color: '#005aa9', weight: 2 }} />}
 
             {/* Beacon markers */}
-            <BeaconMarkers pins={beaconPins} zoom={mapZoom} />
+            {trackDataLoaded && <BeaconMarkers pins={beaconPins} zoom={mapZoom} />}
 
             {/* Telemetry markers */}
-            <TelemetryMarkers pins={telemetryPins} zoom={mapZoom} />
+            {trackDataLoaded && beaconsLoaded && <TelemetryMarkers pins={telemetryPins} zoom={mapZoom} />}
 
         </MapContainer>
     );
