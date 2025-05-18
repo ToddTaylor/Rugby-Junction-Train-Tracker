@@ -4,7 +4,7 @@ import L from 'leaflet';
 import { Beacon } from '../types/types';
 
 interface BeaconMarkersProps {
-    beacons: Beacon[];
+    pins: Beacon[];
     zoom: number;
 }
 
@@ -14,14 +14,14 @@ function getMarkerSize(zoom: number): number {
     return Math.max(6, Math.min(30, 10 + (zoom - 11) * 2));
 }
 
-const BeaconMarkers: React.FC<BeaconMarkersProps> = ({ beacons, zoom }) => {
+const BeaconMarkers: React.FC<BeaconMarkersProps> = ({ pins: beaconPins, zoom }) => {
     const size = getMarkerSize(zoom);
     return (
         <>
-            {beacons.map((beacon, idx) => (
+            {beaconPins.map((beaconPin, idx) => (
                 <Marker
-                    key={`beacon-${beacon.beaconID || idx}`}
-                    position={[beacon.latitude, beacon.longitude]}
+                    key={`beacon-${beaconPin.beaconID || idx}`}
+                    position={[beaconPin.latitude, beaconPin.longitude]}
                     icon={L.divIcon({
                         className: '',
                         html: `<div style="

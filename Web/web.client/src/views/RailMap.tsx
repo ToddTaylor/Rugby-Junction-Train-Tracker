@@ -7,11 +7,11 @@ import {
 } from 'react-leaflet';
 import L, { LatLngTuple } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import TelemetryMarker from '../components/TelemetryMarker';
 import { useSignalR } from '../hooks/useSignalR';
 import { Beacon, MapPin as MapPin } from '../types/types';
 import { openDB } from 'idb';
 import BeaconMarkers from '../components/BeaconMarkers';
+import TelemetryMarkers from '../components/TelemetryMarkers';
 
 const fallbackCenter: LatLngTuple = [37.5, -122]; // Default if location fails
 
@@ -34,7 +34,7 @@ const RailMap: React.FC = () => {
     const [mapZoom, setMapZoom] = useState<number>(11);
 
     const [trackData, setTracksData] = useState<GeoJSON.GeoJsonObject | null>(null);
-    const [beacons, setBeacons] = useState<Beacon[]>([]);
+    const [beaconPins, setBeacons] = useState<Beacon[]>([]);
     const [mapPins, setMapPins] = useState<MapPin[]>([]);
 
 
@@ -79,6 +79,12 @@ const RailMap: React.FC = () => {
                 });
             }
         });
+    });
+
+    // Build a map of pins by id for TelemetryMarkers
+    const telemetryPins: { [id: string]: MapPin } = {};
+    offsetMarkers.forEach(pin => {
+        telemetryPins[pin.id] = pin;
     });
 
     useEffect(() => {
@@ -195,18 +201,10 @@ const RailMap: React.FC = () => {
             {trackData && <GeoJSON data={trackData} style={{ color: '#005aa9', weight: 2 }} />}
 
             {/* Beacon markers */}
-            <BeaconMarkers beacons={beacons} zoom={mapZoom} />
+            <BeaconMarkers pins={beaconPins} zoom={mapZoom} />
 
-            {/* Display railroad tracks using OpenRailwayMap. Quite fast, but occasionally shows warning from too many queries... */}
-            {/*<TileLayer*/}
-            {/*    url="https://{s}.tiles.openrailwaymap.org/standard/{z}/{x}/{y}.png"*/}
-            {/*    attribution='&copy; <a href="https://www.openrailwaymap.org/">OpenRailwayMap</a> contributors'*/}
-            {/*    opacity={0.8}*/}
-            {/*/>*/}
-
-            {offsetMarkers && offsetMarkers.map((pin: MapPin) => (
-                <TelemetryMarker key={pin.id} pin={pin} />
-            ))}
+            {/* Telemetry markers */}
+            <TelemetryMarkers pins={telemetryPins} />
 
         </MapContainer>
     );
