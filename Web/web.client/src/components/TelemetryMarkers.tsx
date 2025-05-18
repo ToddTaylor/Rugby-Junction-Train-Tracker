@@ -67,6 +67,7 @@ function TelemetryMarkers({ pins: telemetryPins }: TelemetryMarkersProps) {
                     };
                 }, [telemetryPin, opacity]);
 
+                const size = 20; // Size of the marker in pixels
                 const createCustomIcon = (direction?: string, moving?: Boolean) =>
                     L.divIcon({
                         html: ReactDOMServer.renderToString(
@@ -75,8 +76,8 @@ function TelemetryMarkers({ pins: telemetryPins }: TelemetryMarkersProps) {
                             </div>
                         ),
                         className: '',
-                        iconSize: [20, 20],
-                        iconAnchor: [10, 0],
+                        iconSize: [size, size],
+                        iconAnchor: [size / 2, size / 2],
                     });
 
                 return (
