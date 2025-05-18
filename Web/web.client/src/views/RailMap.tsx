@@ -103,13 +103,21 @@ const RailMap: React.FC = () => {
             }
         );
 
+        // Always use the highest version for openDB to avoid VersionError
+        const DB_VERSION = 2;
+
         // Get railroad data from OpenStreetMap
         const fetchRailways = async () => {
             const STORE_NAME = 'geojson';
 
-            const db = await openDB('railways-db', 1, {
+            const db = await openDB('railways-db', DB_VERSION, {
                 upgrade(db) {
-                    db.createObjectStore(STORE_NAME);
+                    if (!db.objectStoreNames.contains('geojson')) {
+                        db.createObjectStore('geojson');
+                    }
+                    if (!db.objectStoreNames.contains('beacons')) {
+                        db.createObjectStore('beacons');
+                    }
                 }
             });
 
@@ -136,6 +144,45 @@ const RailMap: React.FC = () => {
 
         // Get beacons from the API or cache
         const fetchBeacons = async () => {
+            const STORE_NAME = 'beacons';
+            const db = await openDB('railways-db', DB_VERSION, {
+                upgrade(db) {
+                    if (!db.objectStoreNames.contains('geojson')) {
+                        db.createObjectStore('geojson');
+                    }
+                    if (!db.objectStoreNames.contains(STORE_NAME)) {
+                        db.createObjectStore(STORE_NAME);
+                    }
+                }
+            });
+
+            let cached;
+            try {
+                cached = await db.get(STORE_NAME, 'beacons');
+            } catch (e) {
+                // If the store still doesn't exist, forcibly recreate DB
+                await db.close();
+                await indexedDB.deleteDatabase('railways-db');
+                const db2 = await openDB('railways-db', DB_VERSION, {
+                    upgrade(db) {
+                        if (!db.objectStoreNames.contains('geojson')) {
+                            db.createObjectStore('geojson');
+                        }
+                        if (!db.objectStoreNames.contains(STORE_NAME)) {
+                            db.createObjectStore(STORE_NAME);
+                        }
+                    }
+                });
+                cached = await db2.get(STORE_NAME, 'beacons');
+            }
+
+            if (cached) {
+                console.log('Beacons loaded from IndexedDB cache');
+                setBeacons(cached);
+                setBeaconsLoaded(true);
+                return;
+            }
+
             try {
                 const apiUrl = import.meta.env.VITE_API_URL + "/api/v1/BeaconRailroads";
                 const response = await fetch(apiUrl, {
@@ -147,17 +194,19 @@ const RailMap: React.FC = () => {
                 if (!response.ok) throw new Error('Failed to fetch map pins');
 
                 const { data: beacons } = await response.json();
+                await db.put(STORE_NAME, beacons, 'beacons');
                 setBeacons(beacons);
                 setBeaconsLoaded(true);
+                console.log('Beacons stored in IndexedDB');
             } catch (error) {
                 console.error('Error fetching map pins:', error);
             }
         };
 
-        // Fetch initial map alerts from the API
-        const fetchInitialAlerts = async () => {
+        // Fetch initial map telemtry pin data from the API
+        const fetchInitialTelemetryPins = async () => {
             try {
-                const minutesOldFilter = 15; // Fetch alerts from the last 15 minutes so old alerts are not shown
+                const minutesOldFilter = 15; // Fetch map pins from the last 15 minutes so old alerts are not shown
                 const apiUrl = import.meta.env.VITE_API_URL + "/api/v1/MapPins?minutes=" + minutesOldFilter;
                 const response = await fetch(apiUrl, {
                     headers: {
@@ -177,7 +226,7 @@ const RailMap: React.FC = () => {
         // Chain loading: tracks -> beacons -> telemetry
         fetchRailways()
             .then(() => fetchBeacons())
-            .then(() => fetchInitialAlerts());
+            .then(() => fetchInitialTelemetryPins());
     }, []);
 
     function MapZoomListener() {
