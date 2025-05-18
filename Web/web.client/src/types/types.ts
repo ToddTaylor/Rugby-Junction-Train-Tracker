@@ -1,5 +1,11 @@
 export type Direction = 'N' | 'NE' | 'E' | 'SE' | 'S' | 'SW' | 'W' | 'NW';
 
+export type Beacon = {
+    beaconID: string;
+    latitude: number;
+    longitude: number;
+}
+
 export type MapPin = {
     id: string;
     addressID: number;

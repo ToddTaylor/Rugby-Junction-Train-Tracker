@@ -3,14 +3,15 @@ import {
     MapContainer,
     TileLayer,
     GeoJSON,
-    useMapEvents,
+    useMapEvents
 } from 'react-leaflet';
-import { LatLngTuple } from 'leaflet';
+import L, { LatLngTuple } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import HoverPopupMarker from '../components/HoverPopupMarker';
 import { useSignalR } from '../hooks/useSignalR';
-import { MapPin as MapPin } from '../types/types';
+import { Beacon, MapPin as MapPin } from '../types/types';
 import { openDB } from 'idb';
+import BeaconMarkers from '../components/BeaconMarkers';
 
 const fallbackCenter: LatLngTuple = [37.5, -122]; // Default if location fails
 
@@ -33,7 +34,9 @@ const RailMap: React.FC = () => {
     const [mapZoom, setMapZoom] = useState<number>(11);
 
     const [trackData, setTracksData] = useState<GeoJSON.GeoJsonObject | null>(null);
+    const [beacons, setBeacons] = useState<Beacon[]>([]);
     const [mapPins, setMapPins] = useState<MapPin[]>([]);
+
 
     useSignalR((pin: MapPin) => {
         setMapPins(prev => updateAlerts(prev, pin));
@@ -120,6 +123,25 @@ const RailMap: React.FC = () => {
             setTracksData(data);
         };
 
+        // Get beacons from the API or cache
+        const fetchBeacons = async () => {
+            try {
+                const apiUrl = import.meta.env.VITE_API_URL + "/api/v1/BeaconRailroads";
+                const response = await fetch(apiUrl, {
+                    headers: {
+                        'X-Api-Key': import.meta.env.VITE_API_KEY,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                if (!response.ok) throw new Error('Failed to fetch map pins');
+
+                const { data: beacons } = await response.json();
+                setBeacons(beacons);
+            } catch (error) {
+                console.error('Error fetching map pins:', error);
+            }
+        };
+
         // Fetch initial map alerts from the API
         const fetchInitialAlerts = async () => {
             try {
@@ -141,6 +163,7 @@ const RailMap: React.FC = () => {
         };
 
         fetchRailways();
+        fetchBeacons();
         fetchInitialAlerts();
     }, []);
 
@@ -170,6 +193,9 @@ const RailMap: React.FC = () => {
 
             {/* Display railroad tracks using locally cached Overpass query of just WI and then generate GeoJSON file. */}
             {trackData && <GeoJSON data={trackData} style={{ color: '#005aa9', weight: 2 }} />}
+
+            {/* Beacon markers */}
+            <BeaconMarkers beacons={beacons} zoom={mapZoom} />
 
             {/* Display railroad tracks using OpenRailwayMap. Quite fast, but occasionally shows warning from too many queries... */}
             {/*<TileLayer*/}
