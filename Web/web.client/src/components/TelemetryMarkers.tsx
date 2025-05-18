@@ -7,14 +7,15 @@ import { MapPin } from '../types/types';
 import { parseISO } from 'date-fns/parseISO';
 import { format } from 'date-fns';
 
-function getPinOpacity(createdAt: string): number {
+// Replace getPinOpacity with getPinBrightness
+function getPinBrightness(createdAt: string): number {
     const now = new Date();
     const created = parseISO(createdAt);
     const minutes = (now.getTime() - created.getTime()) / 60000;
     if (minutes < 5) return 1.0;
-    if (minutes < 10) return 0.75;
-    if (minutes < 15) return 0.5;
-    return 0.5;
+    if (minutes < 10) return 0.8;
+    if (minutes < 15) return 0.6;
+    return 0.6
 }
 
 // Add dynamic marker sizing based on zoom
@@ -36,13 +37,13 @@ function TelemetryMarkers({ pins: telemetryPins, zoom }: TelemetryMarkersProps) 
         <>
             {Object.values(telemetryPins).map((telemetryPin) => {
                 const markerRef = useRef<L.Marker>(null);
-                const [opacity, setOpacity] = useState(() => getPinOpacity(telemetryPin.createdAt));
+                const [brightness, setBrightness] = useState(() => getPinBrightness(telemetryPin.createdAt));
 
                 useEffect(() => {
                     const interval = setInterval(() => {
-                        setOpacity(getPinOpacity(telemetryPin.createdAt));
+                        setBrightness(getPinBrightness(telemetryPin.createdAt));
                     }, 30000);
-                    setOpacity(getPinOpacity(telemetryPin.createdAt));
+                    setBrightness(getPinBrightness(telemetryPin.createdAt));
                     return () => clearInterval(interval);
                 }, [telemetryPin.createdAt]);
 
@@ -68,24 +69,29 @@ function TelemetryMarkers({ pins: telemetryPins, zoom }: TelemetryMarkersProps) 
                         marker.closePopup();
                     });
 
-                    marker.setOpacity(opacity);
+                    // No marker.setOpacity here, handled by CSS filter
 
                     return () => {
                         marker.off('mouseover');
                         marker.off('mouseout');
                     };
-                }, [telemetryPin, opacity]);
+                }, [telemetryPin, brightness]);
 
                 const createCustomIcon = (direction?: string, moving?: Boolean) =>
                     L.divIcon({
                         html: ReactDOMServer.renderToString(
-                            <div style={{ opacity, width: size, height: size }}>
+                            <div style={{
+                                filter: `brightness(${brightness})`,
+                                width: size,
+                                height: size
+                            }}>
                                 <ArrowMapPin direction={direction as any} moving={moving as any} />
                             </div>
                         ),
-                        className: '',
                         iconSize: [size, size],
                         iconAnchor: [size / 2, size / 2],
+                        // Ensure TelemetryMarkers have higher z-index than BeaconMarkers
+                        className: 'telemetry-marker-z',
                     });
 
                 return (
@@ -94,7 +100,6 @@ function TelemetryMarkers({ pins: telemetryPins, zoom }: TelemetryMarkersProps) 
                         ref={markerRef}
                         position={[telemetryPin.latitude, telemetryPin.longitude]}
                         icon={createCustomIcon(telemetryPin.direction, telemetryPin.moving)}
-                        opacity={opacity}
                     />
                 );
             })}

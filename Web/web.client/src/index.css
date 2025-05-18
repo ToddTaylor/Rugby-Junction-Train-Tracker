@@ -125,6 +125,13 @@ html, body, #root {
   background: #181818; /* match dark theme if needed */
 }
 
+.beacon-marker-z {
+  z-index: 400;
+}
+.telemetry-marker-z {
+  z-index: 500;
+}
+
 .app-footer {
   background: #222;
   color: #fff;
