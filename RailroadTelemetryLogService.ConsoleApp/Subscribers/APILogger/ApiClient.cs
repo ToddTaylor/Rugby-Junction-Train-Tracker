@@ -39,9 +39,7 @@ namespace ConsoleApp.Subscribers.APILogger
             }
             catch (Exception ex)
             {
-                // Handle/log exception as needed
                 Console.WriteLine($"Exception during API call: {ex.Message}");
-                throw;
             }
         }
 

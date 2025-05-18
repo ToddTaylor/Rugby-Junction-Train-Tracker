@@ -46,6 +46,8 @@ class Program
             return;
         }
 
+        DeleteOldLogFiles(logDirectoryPath);
+
         var lastPositions = new Dictionary<string, long>();
 
         Console.WriteLine($"Telemetry Log Service started.  Processing messages posted with then last {TIME_RECEIVED_OFFSET_MINUTES} minutes...");
@@ -65,6 +67,31 @@ class Program
             }
 
             Thread.Sleep(1000); // Wait before checking the files again.
+        }
+    }
+
+    private static void DeleteOldLogFiles(string directoryPath)
+    {
+        string today = DateTime.Now.ToString("yyyyMMdd");
+
+        var logFiles = Directory.GetFiles(directoryPath, "*.log");
+
+        foreach (var file in logFiles)
+        {
+            string fileName = Path.GetFileName(file);
+
+            if (!fileName.Contains(today))
+            {
+                try
+                {
+                    File.Delete(file);
+                    Console.WriteLine($"Deleted old file: {fileName}");
+                }
+                catch (Exception ex)
+                {
+                    LogError($"Error deleting {fileName}: {ex.Message}");
+                }
+            }
         }
     }
 
@@ -108,7 +135,7 @@ class Program
             {
                 var hotPacket = HotEotDeserializer.Deserialize(line);
 
-                if (hotPacket.TimeReceived <= DateTime.Now.AddMinutes(-TIME_RECEIVED_OFFSET_MINUTES))
+                if (hotPacket.TimeReceived.ToLocalTime() <= DateTime.Now.AddMinutes(-TIME_RECEIVED_OFFSET_MINUTES))
                 {
                     continue; // Ignore packets older than 5 minutes
                 }
@@ -122,7 +149,7 @@ class Program
             {
                 var dpuPacket = DpuDeserializer.Deserialize(line);
 
-                if (dpuPacket.TimeReceived <= DateTime.Now.AddMinutes(-TIME_RECEIVED_OFFSET_MINUTES))
+                if (dpuPacket.TimeReceived.ToLocalTime() <= DateTime.Now.AddMinutes(-TIME_RECEIVED_OFFSET_MINUTES))
                 {
                     continue; // Ignore packets older than 5 minutes
                 }
@@ -146,6 +173,15 @@ class Program
         var builder = new ConfigurationBuilder()
             .SetBasePath(Directory.GetCurrentDirectory())
             .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
+
+        // Read the environment variable
+        var environment = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT");
+
+        if (!string.IsNullOrEmpty(environment))
+        {
+            // Load environment-specific config only if the environment is set
+            builder.AddJsonFile($"appsettings.{environment}.json", optional: true, reloadOnChange: true);
+        }
 
         return builder.Build();
     }

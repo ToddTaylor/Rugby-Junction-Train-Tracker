@@ -14,7 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\RailroadTelemetryLogService.ConsoleApp\ConsoleApp.csproj" />
+    <ProjectReference Include="..\RailroadTelemetryLogService.ConsoleApp\RailroadTelemetry.ConsoleApp.csproj" />
   </ItemGroup>
 
   <ItemGroup>
