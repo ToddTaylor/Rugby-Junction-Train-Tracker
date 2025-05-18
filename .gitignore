@@ -370,3 +370,4 @@ FodyWeavers.xsd
 /Web/Web.Server/telemetry.db-wal
 /Web/web.client/.env.development
 /Web/web.client/.env.production
+/RailroadTelemetryLogService.ConsoleApp/appsettings.Production.json
