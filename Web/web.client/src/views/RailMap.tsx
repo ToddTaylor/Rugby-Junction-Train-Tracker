@@ -204,7 +204,7 @@ const RailMap: React.FC = () => {
             <BeaconMarkers pins={beaconPins} zoom={mapZoom} />
 
             {/* Telemetry markers */}
-            <TelemetryMarkers pins={telemetryPins} />
+            <TelemetryMarkers pins={telemetryPins} zoom={mapZoom} />
 
         </MapContainer>
     );

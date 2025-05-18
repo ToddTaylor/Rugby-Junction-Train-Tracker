@@ -17,12 +17,21 @@ function getPinOpacity(createdAt: string): number {
     return 0.5;
 }
 
-interface TelemetryMarkersProps {
-    pins: { [id: string]: MapPin };
+// Add dynamic marker sizing based on zoom
+function getMarkerSize(zoom: number): number {
+    // Base size at zoom 11 is 20px, scale up/down with zoom
+    // Clamp between 10px and 40px for usability
+    return Math.max(10, Math.min(40, 20 + (zoom - 11) * 2));
 }
 
-function TelemetryMarkers({ pins: telemetryPins }: TelemetryMarkersProps) {
-    // Render a Marker for each pin in the map
+interface TelemetryMarkersProps {
+    pins: { [id: string]: MapPin };
+    zoom: number;
+}
+
+function TelemetryMarkers({ pins: telemetryPins, zoom }: TelemetryMarkersProps) {
+    const size = getMarkerSize(zoom);
+
     return (
         <>
             {Object.values(telemetryPins).map((telemetryPin) => {
@@ -67,11 +76,10 @@ function TelemetryMarkers({ pins: telemetryPins }: TelemetryMarkersProps) {
                     };
                 }, [telemetryPin, opacity]);
 
-                const size = 20; // Size of the marker in pixels
                 const createCustomIcon = (direction?: string, moving?: Boolean) =>
                     L.divIcon({
                         html: ReactDOMServer.renderToString(
-                            <div style={{ opacity }}>
+                            <div style={{ opacity, width: size, height: size }}>
                                 <ArrowMapPin direction={direction as any} moving={moving as any} />
                             </div>
                         ),
