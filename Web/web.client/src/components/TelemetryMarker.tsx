@@ -17,7 +17,7 @@ function getPinOpacity(createdAt: string): number {
     return 0.5;
 }
 
-function HoverPopupMarker({ pin }: { pin: MapPin }) {
+function TelemetryMarker({ pin }: { pin: MapPin }) {
     const markerRef = useRef<L.Marker>(null);
     const [opacity, setOpacity] = useState(() => getPinOpacity(pin.createdAt));
 
@@ -86,4 +86,4 @@ function HoverPopupMarker({ pin }: { pin: MapPin }) {
     );
 }
 
-export default HoverPopupMarker;
+export default TelemetryMarker;

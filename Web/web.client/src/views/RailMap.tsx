@@ -7,7 +7,7 @@ import {
 } from 'react-leaflet';
 import L, { LatLngTuple } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import HoverPopupMarker from '../components/HoverPopupMarker';
+import TelemetryMarker from '../components/TelemetryMarker';
 import { useSignalR } from '../hooks/useSignalR';
 import { Beacon, MapPin as MapPin } from '../types/types';
 import { openDB } from 'idb';
@@ -205,7 +205,7 @@ const RailMap: React.FC = () => {
             {/*/>*/}
 
             {offsetMarkers && offsetMarkers.map((pin: MapPin) => (
-                <HoverPopupMarker key={pin.id} pin={pin} />
+                <TelemetryMarker key={pin.id} pin={pin} />
             ))}
 
         </MapContainer>
