@@ -1,4 +1,5 @@
-﻿using ConsoleApp.Deserializers;
+﻿using ConsoleApp;
+using ConsoleApp.Deserializers;
 using ConsoleApp.EventArgs;
 using Microsoft.Extensions.Configuration;
 using System.Reflection;
@@ -16,7 +17,7 @@ class Program
 
     static void Main()
     {
-        var configuration = LoadConfiguration();
+        var configuration = ConfigurationHelper.LoadConfiguration();
 
         // Add subscribers to the events
         var hotEotSubscriberTypes = configuration.GetSection("HotEotPacketSubscription:Subscribers").Get<string[]>();
@@ -166,24 +167,6 @@ class Program
     private static bool IsHeaderRow(string? line)
     {
         return line.StartsWith("#");
-    }
-
-    private static IConfiguration LoadConfiguration()
-    {
-        var builder = new ConfigurationBuilder()
-            .SetBasePath(Directory.GetCurrentDirectory())
-            .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
-
-        // Read the environment variable
-        var environment = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT");
-
-        if (!string.IsNullOrEmpty(environment))
-        {
-            // Load environment-specific config only if the environment is set
-            builder.AddJsonFile($"appsettings.{environment}.json", optional: true, reloadOnChange: true);
-        }
-
-        return builder.Build();
     }
 
     private static void SubscribeToPacketEvent(string subscriberTypeName, string eventName, string methodName)

@@ -10,7 +10,7 @@ namespace ConsoleApp.Subscribers.APILogger
 
         public DpuPacketSubscriber()
         {
-            configuration = LoadConfiguration();
+            configuration = ConfigurationHelper.LoadConfiguration();
         }
 
         private void OnDpuPacketReceived(object sender, DpuPacketEventArgs e)
@@ -34,15 +34,6 @@ namespace ConsoleApp.Subscribers.APILogger
 
             // Let web page respond to previous request before sending the next one.
             Thread.Sleep(100);
-        }
-
-        private static IConfiguration LoadConfiguration()
-        {
-            var builder = new ConfigurationBuilder()
-                .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
-
-            return builder.Build();
         }
 
         /// <summary>

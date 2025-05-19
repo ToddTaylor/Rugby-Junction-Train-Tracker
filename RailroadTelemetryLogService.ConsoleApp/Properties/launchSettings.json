@@ -1,7 +1,10 @@
 {
   "profiles": {
     "ConsoleApp": {
-      "commandName": "Project"
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Production"
+      }
     }
   }
 }

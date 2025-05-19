@@ -11,7 +11,7 @@ namespace ConsoleApp.Subscribers.APILogger
         public ApiClient()
         {
             _httpClient = new HttpClient();
-            _configuration = LoadConfiguration();
+            _configuration = ConfigurationHelper.LoadConfiguration();
         }
 
         public async Task PostAsync<TRequest>(TRequest data)
@@ -67,15 +67,6 @@ namespace ConsoleApp.Subscribers.APILogger
                 Console.WriteLine($"Exception during API URL retrieval: {ex.Message}");
                 throw;
             }
-        }
-
-        private static IConfiguration LoadConfiguration()
-        {
-            var builder = new ConfigurationBuilder()
-                .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
-
-            return builder.Build();
         }
     }
 }
