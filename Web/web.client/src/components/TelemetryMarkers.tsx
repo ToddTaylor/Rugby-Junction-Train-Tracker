@@ -6,6 +6,7 @@ import ReactDOMServer from 'react-dom/server';
 import { MapPin } from '../types/types';
 import { parseISO } from 'date-fns/parseISO';
 import { format } from 'date-fns';
+import TelemetryMarker from './TelemetryMarker';
 
 // Replace getPinOpacity with getPinBrightness
 function getPinBrightness(createdAt: string): number {
@@ -35,74 +36,9 @@ function TelemetryMarkers({ pins: telemetryPins, zoom }: TelemetryMarkersProps) 
 
     return (
         <>
-            {Object.values(telemetryPins).map((telemetryPin) => {
-                const markerRef = useRef<L.Marker>(null);
-                const [brightness, setBrightness] = useState(() => getPinBrightness(telemetryPin.createdAt));
-
-                useEffect(() => {
-                    const interval = setInterval(() => {
-                        setBrightness(getPinBrightness(telemetryPin.createdAt));
-                    }, 30000);
-                    setBrightness(getPinBrightness(telemetryPin.createdAt));
-                    return () => clearInterval(interval);
-                }, [telemetryPin.createdAt]);
-
-                useEffect(() => {
-                    const marker = markerRef.current;
-                    if (!marker) return;
-
-                    const popupContent = `
-                        <strong>Train ID:</strong> ${telemetryPin.addressID}<br/>
-                        <strong>Direction:</strong> ${telemetryPin.direction || 'Unknown'}<br/>
-                        <strong>Source:</strong> ${telemetryPin.source}<br/>
-                        <strong>Moving:</strong> ${telemetryPin.moving === true ? "Yes" : telemetryPin.moving === false ? "No" : "Unknown"}<br/>
-                        <strong>Timestamp:</strong> ${format(parseISO(telemetryPin.createdAt), 'h:mm aa')}
-                    `;
-
-                    marker.bindPopup(popupContent);
-
-                    marker.on('mouseover', function () {
-                        marker.openPopup();
-                    });
-
-                    marker.on('mouseout', function () {
-                        marker.closePopup();
-                    });
-
-                    // No marker.setOpacity here, handled by CSS filter
-
-                    return () => {
-                        marker.off('mouseover');
-                        marker.off('mouseout');
-                    };
-                }, [telemetryPin, brightness]);
-
-                const createCustomIcon = (direction?: string, moving?: Boolean) =>
-                    L.divIcon({
-                        html: ReactDOMServer.renderToString(
-                            <div style={{
-                                filter: `brightness(${brightness})`,
-                                width: size,
-                                height: size
-                            }}>
-                                <ArrowMapPin direction={direction as any} moving={moving as any} />
-                            </div>
-                        ),
-                        iconSize: [size, size],
-                        iconAnchor: [size / 2, size / 2],
-                        // Ensure TelemetryMarkers have higher z-index than BeaconMarkers
-                        className: 'telemetry-marker-z',
-                    });
-
-                return (
-                    <Marker
-                        key={telemetryPin.id}
-                        ref={markerRef}
-                        position={[telemetryPin.latitude, telemetryPin.longitude]}
-                        icon={createCustomIcon(telemetryPin.direction, telemetryPin.moving)}
-                    />
-                );
-            })}
+            {Object.values(telemetryPins).map((telemetryPin) => (
+                <TelemetryMarker key={telemetryPin.id} pin={telemetryPin} size={size} />
+            ))}
         </>
     );
 }
