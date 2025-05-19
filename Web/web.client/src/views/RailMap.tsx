@@ -84,29 +84,23 @@ const RailMap: React.FC = () => {
         });
     });
 
-    // Build a map of pins by id for TelemetryMarkers, filtering out pins older than 15 minutes
-    const [telemetryPins, setTelemetryPins] = useState<{ [id: string]: MapPin }>({});
-
-    // Update telemetryPins whenever offsetMarkers changes or time passes
+    // Prune pins older than 15 minutes on a timer so they disappear even if no new data arrives
+    const [pruneTick, setPruneTick] = useState(0);
     useEffect(() => {
-        const pruneOldPins = () => {
-            const now = Date.now();
-            const FIFTEEN_MINUTES = 15 * 60 * 1000;
-            const freshPins: { [id: string]: MapPin } = {};
-            offsetMarkers.forEach(pin => {
-                const createdAt = new Date(pin.createdAt).getTime();
-                if (now - createdAt <= FIFTEEN_MINUTES) {
-                    freshPins[pin.id] = pin;
-                }
-            });
-            setTelemetryPins(freshPins);
-        };
-
-        pruneOldPins();
-        const interval = setInterval(pruneOldPins, 30 * 1000); // Prune every 30 seconds
-
+        const interval = setInterval(() => setPruneTick(tick => tick + 1), 30 * 1000);
         return () => clearInterval(interval);
-    }, [offsetMarkers]);
+    }, []);
+
+    // Build a map of pins by id for TelemetryMarkers, filtering out pins older than 15 minutes
+    const FIFTEEN_MINUTES = 15 * 60 * 1000;
+    const now = Date.now();
+    const telemetryPins: { [id: string]: MapPin } = {};
+    offsetMarkers.forEach(pin => {
+        const createdAt = new Date(pin.createdAt).getTime();
+        if (now - createdAt <= FIFTEEN_MINUTES) {
+            telemetryPins[pin.id] = pin;
+        }
+    });
 
     useEffect(() => {
         // Get browser location
