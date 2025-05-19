@@ -371,3 +371,5 @@ FodyWeavers.xsd
 /Web/web.client/.env.development
 /Web/web.client/.env.production
 /RailroadTelemetryLogService.ConsoleApp/appsettings.Production.json
+/RailroadTelemetryLogService.ConsoleApp/appsettings.Development.json
+/RailroadTelemetryLogService.ConsoleApp/appsettings.Local.json
