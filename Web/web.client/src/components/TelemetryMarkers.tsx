@@ -16,11 +16,18 @@ interface TelemetryMarkersProps {
 function TelemetryMarkers({ pins: telemetryPins, zoom }: TelemetryMarkersProps) {
     const size = getMarkerSize(zoom);
 
+    // Fix: Only render if pins is an object and has values
+    if (!telemetryPins || typeof telemetryPins !== 'object') return null;
+
+    const pinsArray = Object.values(telemetryPins).filter(Boolean);
+
     return (
         <>
-            {Object.values(telemetryPins).map((telemetryPin) => (
-                <TelemetryMarker key={telemetryPin.id} pin={telemetryPin} size={size} />
-            ))}
+            {pinsArray.map((telemetryPin) =>
+                telemetryPin ? (
+                    <TelemetryMarker key={telemetryPin.id} pin={telemetryPin} size={size} />
+                ) : null
+            )}
         </>
     );
 }
