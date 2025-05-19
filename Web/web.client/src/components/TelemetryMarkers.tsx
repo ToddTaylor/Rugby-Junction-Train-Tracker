@@ -13,9 +13,9 @@ function getPinBrightness(createdAt: string): number {
     const created = parseISO(createdAt);
     const minutes = (now.getTime() - created.getTime()) / 60000;
     if (minutes < 5) return 1.0;
-    if (minutes < 10) return 0.8;
-    if (minutes < 15) return 0.6;
-    return 0.6
+    if (minutes < 10) return 0.6;
+    if (minutes < 15) return 0.2;
+    return 0.2
 }
 
 // Add dynamic marker sizing based on zoom

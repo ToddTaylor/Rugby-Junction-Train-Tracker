@@ -84,11 +84,29 @@ const RailMap: React.FC = () => {
         });
     });
 
-    // Build a map of pins by id for TelemetryMarkers
-    const telemetryPins: { [id: string]: MapPin } = {};
-    offsetMarkers.forEach(pin => {
-        telemetryPins[pin.id] = pin;
-    });
+    // Build a map of pins by id for TelemetryMarkers, filtering out pins older than 15 minutes
+    const [telemetryPins, setTelemetryPins] = useState<{ [id: string]: MapPin }>({});
+
+    // Update telemetryPins whenever offsetMarkers changes or time passes
+    useEffect(() => {
+        const pruneOldPins = () => {
+            const now = Date.now();
+            const FIFTEEN_MINUTES = 15 * 60 * 1000;
+            const freshPins: { [id: string]: MapPin } = {};
+            offsetMarkers.forEach(pin => {
+                const createdAt = new Date(pin.createdAt).getTime();
+                if (now - createdAt <= FIFTEEN_MINUTES) {
+                    freshPins[pin.id] = pin;
+                }
+            });
+            setTelemetryPins(freshPins);
+        };
+
+        pruneOldPins();
+        const interval = setInterval(pruneOldPins, 30 * 1000); // Prune every 30 seconds
+
+        return () => clearInterval(interval);
+    }, [offsetMarkers]);
 
     useEffect(() => {
         // Get browser location
