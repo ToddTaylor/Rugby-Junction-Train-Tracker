@@ -1,23 +1,5 @@
-import { Marker } from 'react-leaflet';
-import L from 'leaflet';
-import { useEffect, useRef, useState } from 'react';
-import ArrowMapPin from './ArrowMapPin';
-import ReactDOMServer from 'react-dom/server';
 import { MapPin } from '../types/types';
-import { parseISO } from 'date-fns/parseISO';
-import { format } from 'date-fns';
 import TelemetryMarker from './TelemetryMarker';
-
-// Replace getPinOpacity with getPinBrightness
-function getPinBrightness(createdAt: string): number {
-    const now = new Date();
-    const created = parseISO(createdAt);
-    const minutes = (now.getTime() - created.getTime()) / 60000;
-    if (minutes < 5) return 1.0;
-    if (minutes < 10) return 0.7;
-    if (minutes < 15) return 0.4;
-    return 0.4;
-}
 
 // Add dynamic marker sizing based on zoom
 function getMarkerSize(zoom: number): number {

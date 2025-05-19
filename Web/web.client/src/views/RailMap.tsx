@@ -85,6 +85,7 @@ const RailMap: React.FC = () => {
     });
 
     // Prune pins older than 15 minutes on a timer so they disappear even if no new data arrives
+    // @ts-expect-error
     const [pruneTick, setPruneTick] = useState(0);
     useEffect(() => {
         const interval = setInterval(() => setPruneTick(tick => tick + 1), 30 * 1000);
