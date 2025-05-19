@@ -75,33 +75,26 @@ class Program
     {
         var logFiles = Directory.GetFiles(directoryPath, "*.log");
 
-        // Filter files that start with "eot" or "dpu"
-        var targetFiles = logFiles
-            .Where(f =>
-            {
-                string fileName = Path.GetFileName(f).ToLower();
-                return fileName.StartsWith("eot") || fileName.StartsWith("dpu");
-            })
-            .ToList();
+        // Find the most recent eot*.log file
+        var latestEotFile = logFiles
+            .Where(f => Path.GetFileName(f).ToLower().StartsWith("eot"))
+            .OrderByDescending(f => File.GetLastWriteTime(f))
+            .FirstOrDefault();
 
-        if (targetFiles.Count == 0)
-        {
-            Console.ForegroundColor = ConsoleColor.Gray;
-            Console.WriteLine("No old log files found to delete.");
-            Console.ResetColor();
-            return;
-        }
-
-        // Find the most recent target file
-        var mostRecentFile = targetFiles
+        // Find the most recent dpu*.log file
+        var latestDpuFile = logFiles
+            .Where(f => Path.GetFileName(f).ToLower().StartsWith("dpu"))
             .OrderByDescending(f => File.GetLastWriteTime(f))
             .FirstOrDefault();
 
         foreach (var file in logFiles)
         {
-            // Skip deletion if it's the most recent target file
-            if (string.Equals(file, mostRecentFile, StringComparison.OrdinalIgnoreCase))
+            // Skip deletion if it's the most recent eot or dpu file
+            if (string.Equals(file, latestEotFile, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(file, latestDpuFile, StringComparison.OrdinalIgnoreCase))
+            {
                 continue;
+            }
 
             try
             {
@@ -114,7 +107,6 @@ class Program
             }
         }
     }
-
 
     private static void LogError(string message)
     {
