@@ -73,28 +73,48 @@ class Program
 
     private static void DeleteOldLogFiles(string directoryPath)
     {
-        string today = DateTime.Now.ToString("yyyyMMdd");
-
         var logFiles = Directory.GetFiles(directoryPath, "*.log");
+
+        // Filter files that start with "eot" or "dpu"
+        var targetFiles = logFiles
+            .Where(f =>
+            {
+                string fileName = Path.GetFileName(f).ToLower();
+                return fileName.StartsWith("eot") || fileName.StartsWith("dpu");
+            })
+            .ToList();
+
+        if (targetFiles.Count == 0)
+        {
+            Console.ForegroundColor = ConsoleColor.Gray;
+            Console.WriteLine("No old log files found to delete.");
+            Console.ResetColor();
+            return;
+        }
+
+        // Find the most recent target file
+        var mostRecentFile = targetFiles
+            .OrderByDescending(f => File.GetLastWriteTime(f))
+            .FirstOrDefault();
 
         foreach (var file in logFiles)
         {
-            string fileName = Path.GetFileName(file);
+            // Skip deletion if it's the most recent target file
+            if (string.Equals(file, mostRecentFile, StringComparison.OrdinalIgnoreCase))
+                continue;
 
-            if (!fileName.Contains(today))
+            try
             {
-                try
-                {
-                    File.Delete(file);
-                    Console.WriteLine($"Deleted old file: {fileName}");
-                }
-                catch (Exception ex)
-                {
-                    LogError($"Error deleting {fileName}: {ex.Message}");
-                }
+                File.Delete(file);
+                Console.WriteLine($"Deleted file: {Path.GetFileName(file)}");
+            }
+            catch (Exception ex)
+            {
+                LogError($"Error deleting {Path.GetFileName(file)}: {ex.Message}");
             }
         }
     }
+
 
     private static void LogError(string message)
     {
