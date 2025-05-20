@@ -1,16 +1,36 @@
+/* ---------- Root & Base Styles ---------- */
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-
   color-scheme: light dark;
   color: rgba(255, 255, 255, 0.87);
   background-color: #242424;
-
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  place-items: center;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+/* ---------- Typography ---------- */
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
 }
 
 a {
@@ -22,19 +42,7 @@ a:hover {
   color: #535bf2;
 }
 
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
+/* ---------- Button Styles ---------- */
 button {
   border-radius: 8px;
   border: 1px solid transparent;
@@ -54,13 +62,7 @@ button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
 
-html, body, #root {
-  height: 100%;
-  width: 100%;
-  margin: 0;
-  padding: 0;
-}
-
+/* ---------- App Layout ---------- */
 .app-layout {
   display: flex;
   flex-direction: column;
@@ -113,7 +115,15 @@ html, body, #root {
   border: none;
 }
 
-/* Ensure Leaflet map fills available space */
+.app-footer {
+  background: #222;
+  color: #fff;
+  text-align: center;
+  padding: 0.5rem 0;
+  font-size: 14px;
+}
+
+/* ---------- Leaflet Map Styles ---------- */
 .leaflet-container {
   flex: 1 1 auto;
   width: 100% !important;
@@ -125,6 +135,7 @@ html, body, #root {
   background: #181818; /* match dark theme if needed */
 }
 
+/* ---------- Marker Z-Index ---------- */
 .beacon-marker-z {
   z-index: 400;
 }
@@ -132,25 +143,21 @@ html, body, #root {
   z-index: 500;
 }
 
-.app-footer {
-  background: #222;
-  color: #fff;
-  text-align: center;
-  padding: 0.5rem 0;
-  font-size: 14px;
+/* ---------- Beacon Animation ---------- */
+.beacon-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+.beacon-core {
+  width: 100%;
+  height: 100%;
+  background: #005aa9;
+  border-radius: 50%;
+  position: absolute;
+  top: 0;
+  left: 0;
 }
 
 .beacon-ping {
@@ -174,5 +181,19 @@ html, body, #root {
   100% {
     transform: translate(-50%, -50%) scale(10);
     opacity: 0;
+  }
+}
+
+/* ---------- Light Theme Overrides ---------- */
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+  a:hover {
+    color: #747bff;
+  }
+  button {
+    background-color: #f9f9f9;
   }
 }
