@@ -57,8 +57,8 @@ class Program
         {
             try
             {
-                // Get EOT and DPU log files for today
-                var todaysLogFilePaths = Directory.GetFiles(logDirectoryPath, $"*{GetTodayDateString()}.log");
+                // Get log files that weren't deleted due to age
+                var todaysLogFilePaths = Directory.GetFiles(logDirectoryPath, "*.log");
 
                 ProcessLogFiles(lastPositions, todaysLogFilePaths);
             }
