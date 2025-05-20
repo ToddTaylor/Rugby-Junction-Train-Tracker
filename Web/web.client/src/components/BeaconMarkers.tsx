@@ -24,13 +24,20 @@ const BeaconMarkers: React.FC<BeaconMarkersProps> = ({ pins: beaconPins, zoom })
                     position={[beaconPin.latitude, beaconPin.longitude]}
                     icon={L.divIcon({
                         className: 'beacon-marker-z',
-                        html: `<div style="
-                            width:${size}px;
-                            height:${size}px;
-                            background:#005aa9;
-                            border-radius:50%;
-                            box-sizing:border-box;
-                        "></div>`,
+                        html: `
+                            <div class="beacon-container" style="position: relative; width: ${size}px; height: ${size}px;">
+                                <div class="beacon-core" style="
+                                width:${size}px;
+                                height:${size}px;
+                                background:#005aa9;
+                                border-radius:50%;
+                                position:absolute;
+                                top:0;
+                                left:0;
+                                "></div>
+                                <div class="beacon-ping"></div>
+                            </div>
+                            `,
                         iconSize: [size, size],
                         iconAnchor: [size / 2, size / 2],
                     })}
