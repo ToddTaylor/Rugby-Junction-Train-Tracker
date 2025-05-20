@@ -67,10 +67,11 @@ const RailMap: React.FC = () => {
     const offsetMarkers: MapPin[] = [];
     Object.values(groupedPins).forEach(group => {
         const n = group.length;
-        group.forEach((pin, idx) => {
-            if (n === 1) {
-                offsetMarkers.push(pin);
-            } else {
+        if (n === 1) {
+            // Only one marker at this location, do not offset
+            offsetMarkers.push(group[0]);
+        } else {
+            group.forEach((pin, idx) => {
                 // Center the group around the original longitude
                 const offsetIndex = idx - (n - 1) / 2;
                 // Convert marker width in pixels to meters, then to longitude degrees
@@ -80,8 +81,8 @@ const RailMap: React.FC = () => {
                     ...pin,
                     longitude: pin.longitude + offsetDeg
                 });
-            }
-        });
+            });
+        }
     });
 
     // Prune pins older than 15 minutes on a timer so they disappear even if no new data arrives
