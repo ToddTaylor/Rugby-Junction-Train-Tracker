@@ -94,12 +94,12 @@ const RailMap: React.FC = () => {
     }, []);
 
     // Build a map of pins by id for TelemetryMarkers, filtering out pins older than 15 minutes
-    const FIFTEEN_MINUTES = 15 * 60 * 1000;
+    const TEN_MINUTES = 10 * 60 * 1000;
     const now = Date.now();
     const telemetryPins: { [id: string]: MapPin } = {};
     offsetMarkers.forEach(pin => {
         const createdAt = new Date(pin.createdAt).getTime();
-        if (now - createdAt <= FIFTEEN_MINUTES) {
+        if (now - createdAt <= TEN_MINUTES) {
             telemetryPins[pin.id] = pin;
         }
     });

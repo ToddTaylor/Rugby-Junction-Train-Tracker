@@ -11,9 +11,9 @@ function getPinBrightness(createdAt: string): number {
     const now = new Date();
     const created = parseISO(createdAt);
     const minutes = (now.getTime() - created.getTime()) / 60000;
-    if (minutes < 5) return 1.0;
-    if (minutes < 10) return 0.7;
-    if (minutes < 15) return 0.4;
+    if (minutes < 2) return 1.0;
+    if (minutes < 4) return 0.7;
+    if (minutes < 6) return 0.4;
     return 0.4;
 }
 
