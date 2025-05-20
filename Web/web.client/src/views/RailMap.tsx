@@ -1,11 +1,11 @@
-﻿import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState, useRef } from 'react';
 import {
     MapContainer,
     TileLayer,
     GeoJSON,
     useMapEvents
 } from 'react-leaflet';
-import { LatLngTuple } from 'leaflet';
+import { LatLngTuple, Map as LeafletMap } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useSignalR } from '../hooks/useSignalR';
 import { Beacon, MapPin as MapPin } from '../types/types';
@@ -13,7 +13,7 @@ import { openDB } from 'idb';
 import BeaconMarkers from '../components/BeaconMarkers';
 import TelemetryMarkers from '../components/TelemetryMarkers';
 
-const fallbackCenter: LatLngTuple = [37.5, -122]; // Default if location fails
+const fallbackCenter: LatLngTuple = [44.524570, -89.567290]; // Default if location fails
 
 function metersToLongitudeDegrees(meters: number, latitude: number): number {
     // 1 deg longitude = 111320*cos(latitude)
@@ -31,7 +31,8 @@ function pixelsToMeters(pixels: number, latitude: number, zoom: number): number 
 
 const RailMap: React.FC = () => {
     const [userLocation, setUserLocation] = useState<LatLngTuple | null>(null);
-    const [mapZoom, setMapZoom] = useState<number>(11);
+    // Set fallback zoom to 7 until userLocation is found, then 11
+    const [mapZoom, setMapZoom] = useState<number>(7);
 
     const [trackData, setTracksData] = useState<GeoJSON.GeoJsonObject | null>(null);
     const [beaconPins, setBeacons] = useState<Beacon[]>([]);
@@ -145,6 +146,9 @@ const RailMap: React.FC = () => {
     offsetFilteredMarkers.forEach(pin => {
         telemetryPins[pin.id] = pin;
     });
+
+    // Use ref to get the map instance
+    const mapRef = useRef<LeafletMap | null>(null);
 
     useEffect(() => {
         // Get browser location
@@ -285,6 +289,15 @@ const RailMap: React.FC = () => {
             .then(() => fetchInitialTelemetryPins());
     }, []);
 
+    // Pan/zoom to userLocation when it changes and map is ready
+    useEffect(() => {
+        if (userLocation && mapRef.current) {
+            // Set zoom to 11 when user location is found
+            mapRef.current.setView(userLocation, 11);
+            setMapZoom(11);
+        }
+    }, [userLocation]);
+
     function MapZoomListener() {
         useMapEvents({
             zoomend: (e) => setMapZoom(e.target.getZoom()),
@@ -292,16 +305,13 @@ const RailMap: React.FC = () => {
         return null;
     }
 
-    if (!userLocation) {
-        return <p>📍 Getting your location...</p>;
-    }
-
     return (
         <MapContainer
-            center={userLocation}
+            center={fallbackCenter}
             zoom={mapZoom}
             style={{ height: '100%', width: '100%' }}
             scrollWheelZoom={true}
+            ref={mapRef}
         >
             <MapZoomListener />
             <TileLayer
