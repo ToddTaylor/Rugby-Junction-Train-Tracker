@@ -110,6 +110,7 @@ namespace Web.Server.Services.Tests
             var beaconId = 534;
             var beaconLatitude = 10.0;
             var beaconLongitude = 20.0;
+            var milepost = 123.45;
             var railroadId = 12;
 
             // Arrange
@@ -145,6 +146,7 @@ namespace Web.Server.Services.Tests
                             BeaconID = beaconId,
                             Latitude = beaconLatitude,
                             Longitude = beaconLongitude,
+                            Milepost = milepost,
                             Direction = Enums.Direction.NorthSouth
                         }
                     }
@@ -167,6 +169,7 @@ namespace Web.Server.Services.Tests
                 AddressID = trainAddressId,
                 Latitude = beaconLatitude,
                 Longitude = beaconLongitude,
+                Milepost = milepost,
                 Source = trainSource,
                 CreatedAt = _currentDateTime,
                 Direction = "" // Direction should not / cannot be calculated
@@ -220,6 +223,8 @@ namespace Web.Server.Services.Tests
             var beacon1Longitude = 11.0;
             var beacon2Latitude = 20.0;
             var beacon2Longitude = 21.0;
+            var milepost1 = 123.45;
+            var milepost2 = 234.56;
             var railroadId1 = 12;
             var railroadId2 = 41;
 
@@ -257,6 +262,7 @@ namespace Web.Server.Services.Tests
                             BeaconID = beaconId,
                             Latitude = beacon1Latitude,
                             Longitude = beacon1Longitude,
+                            Milepost = milepost1,
                             Direction = Enums.Direction.NorthSouth
                         },
                         new BeaconRailroad {
@@ -264,6 +270,7 @@ namespace Web.Server.Services.Tests
                             BeaconID = beaconId,
                             Latitude = beacon2Latitude,
                             Longitude = beacon2Longitude,
+                            Milepost = milepost2,
                             Direction = Enums.Direction.NorthwestSoutheast
                         }
                     }
@@ -324,6 +331,8 @@ namespace Web.Server.Services.Tests
             var beacon2Id = 234;
             var beacon2Latitude = 20.0;
             var beacon2Longitude = 21.0;
+            var milepost1 = 123.45;
+            var milepost2 = 234.56;
             var railroad1Id = 12;
 
             // Arrange
@@ -361,6 +370,7 @@ namespace Web.Server.Services.Tests
                             BeaconID = beacon1Id,
                             Latitude = beacon1Latitude,
                             Longitude = beacon1Longitude,
+                            Milepost = milepost1,
                             Direction = Enums.Direction.NorthSouth
                         }
                     ]
@@ -378,6 +388,7 @@ namespace Web.Server.Services.Tests
                                 BeaconID = beacon2Id,
                                 Latitude = beacon2Latitude,
                                 Longitude = beacon2Longitude,
+                                Milepost = milepost2,
                                 Direction = Enums.Direction.NorthSouth
                             }
                         ]
@@ -408,6 +419,7 @@ namespace Web.Server.Services.Tests
                 AddressID = 90234,
                 Latitude = beacon1Latitude,
                 Longitude = beacon1Longitude,
+                Milepost = milepost1,
                 Source = train1Source,
                 CreatedAt = _currentDateTime,
                 Direction = "S"
@@ -466,6 +478,8 @@ namespace Web.Server.Services.Tests
             var beacon2Id = 234;
             var beacon2Latitude = 20.0;
             var beacon2Longitude = 21.0;
+            var milepost1 = 123.45;
+            var milepost2 = 234.56;
             var railroad1Id = 12;
             var railroad2Id = 22;
 
@@ -504,6 +518,7 @@ namespace Web.Server.Services.Tests
                             BeaconID = beacon1Id,
                             Latitude = beacon1Latitude,
                             Longitude = beacon1Longitude,
+                            Milepost = milepost1,
                             Direction = Enums.Direction.NorthSouth
                         },
                         new BeaconRailroad {
@@ -511,6 +526,7 @@ namespace Web.Server.Services.Tests
                             BeaconID = beacon2Id,
                             Latitude = beacon2Latitude,
                             Longitude = beacon2Longitude,
+                            Milepost = milepost2,
                             Direction = Enums.Direction.NorthwestSoutheast
                         }
                     ]
@@ -528,6 +544,7 @@ namespace Web.Server.Services.Tests
                                 BeaconID = beacon2Id,
                                 Latitude = beacon2Latitude,
                                 Longitude = beacon2Longitude,
+                                Milepost = milepost2,
                                 Direction = Enums.Direction.NorthSouth
                             }
                         ]
@@ -558,6 +575,7 @@ namespace Web.Server.Services.Tests
                 AddressID = 90234,
                 Latitude = beacon1Latitude,
                 Longitude = beacon1Longitude,
+                Milepost = milepost1,
                 Source = train1Source,
                 CreatedAt = _currentDateTime,
                 Direction = "S"
@@ -617,6 +635,9 @@ namespace Web.Server.Services.Tests
             var beacon2Longitude = 21.0;
             var beacon3Latitude = 30.0;
             var beacon3Longitude = 31.0;
+            var milepost1 = 123.45;
+            var milepost2 = 234.56;
+            var milepost3 = 345.67;
             var railroad1Id = 12;
             var railroad2Id = 22;
             var railroad3Id = 32;
@@ -656,6 +677,7 @@ namespace Web.Server.Services.Tests
                             BeaconID = beacon1Id,
                             Latitude = beacon1Latitude,
                             Longitude = beacon1Longitude,
+                            Milepost = milepost1,
                             Direction = Enums.Direction.NorthSouth
                         },
                         new BeaconRailroad {
@@ -663,6 +685,7 @@ namespace Web.Server.Services.Tests
                             BeaconID = beacon2Id,
                             Latitude = beacon2Latitude,
                             Longitude = beacon2Longitude,
+                            Milepost = milepost2,
                             Direction = Enums.Direction.NorthwestSoutheast
                         }
                     ]
@@ -680,6 +703,7 @@ namespace Web.Server.Services.Tests
                                 BeaconID = beacon2Id,
                                 Latitude = beacon2Latitude,
                                 Longitude = beacon2Longitude,
+                                Milepost = milepost2,
                                 Direction = Enums.Direction.NorthSouth
                             },
                             new BeaconRailroad {
@@ -687,6 +711,7 @@ namespace Web.Server.Services.Tests
                                 BeaconID = beacon2Id,
                                 Latitude = beacon3Latitude,
                                 Longitude = beacon3Longitude,
+                                Milepost = milepost3,
                                 Direction = Enums.Direction.NorthwestSoutheast
                             }
                         ]
@@ -717,6 +742,7 @@ namespace Web.Server.Services.Tests
                 AddressID = 90234,
                 Latitude = beacon1Latitude,
                 Longitude = beacon1Longitude,
+                Milepost = milepost1,
                 Source = train1Source,
                 CreatedAt = _currentDateTime,
                 Direction = "S"

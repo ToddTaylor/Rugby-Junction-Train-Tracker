@@ -40,6 +40,7 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps> = ({ pin, size }) => {
 
         const popupContent = `
             <strong>Train ID:</strong> ${pin.addressID}<br/>
+            <strong>Milepost:</strong> ${pin.milepost}<br/>
             <strong>Direction:</strong> ${pin.direction || 'Unknown'}<br/>
             <strong>Source:</strong> ${pin.source}<br/>
             <strong>Moving:</strong> ${pin.moving === true ? "Yes" : pin.moving === false ? "No" : "Unknown"}<br/>

@@ -29,6 +29,14 @@ namespace Web.Server.DTOs
         public double Longitude { get; set; }
 
         /// <summary>
+        /// Approximate railroad milepost closest to the beacon
+        /// </summary>
+        /// <remarks>
+        /// One decimal place of precision for milepost values.
+        /// </remarks>
+        public double Milepost { get; set; }
+
+        /// <summary>
         /// The direction in which telemetry data is moving.
         /// </summary>
         /// <example>NorthSouth</example>

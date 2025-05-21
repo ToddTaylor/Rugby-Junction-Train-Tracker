@@ -11,6 +11,7 @@ export type MapPin = {
     addressID: number;
     latitude: number;
     longitude: number;
+    milepost: number;
     direction: string;
     moving: Boolean;
     source: string;

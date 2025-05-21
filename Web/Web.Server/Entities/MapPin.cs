@@ -13,6 +13,8 @@ namespace Web.Server.Entities
 
         public required double Longitude { get; set; }
 
+        public required double Milepost { get; set; }
+
         public bool? Moving { get; set; }
 
         /// <summary>
@@ -34,13 +36,14 @@ namespace Web.Server.Entities
                    Direction == other.Direction &&
                    Latitude == other.Latitude &&
                    Longitude == other.Longitude &&
+                   Milepost == other.Milepost &&
                    Moving == other.Moving &&
                    Source == other.Source;
         }
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(CreatedAt, AddressID, Direction, Latitude, Longitude, Moving, Source);
+            return HashCode.Combine(CreatedAt, AddressID, Direction, Latitude, Longitude, Milepost, Moving, Source);
         }
 
         public static bool operator ==(MapPin? left, MapPin? right)

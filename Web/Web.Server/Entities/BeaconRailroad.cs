@@ -6,15 +6,12 @@ namespace Web.Server.Entities
     {
         public int BeaconID { get; set; }
         public Beacon Beacon { get; set; }
+        public required Direction Direction { get; set; }
         public int RailroadID { get; set; }
         public Railroad Railroad { get; set; }
         public required double Latitude { get; set; }
         public required double Longitude { get; set; }
-
-        /// <summary>
-        /// The direction in which telemetry data is moving.
-        /// </summary>
-        public required Direction Direction { get; set; }
+        public required double Milepost { get; set; }
 
         public override bool Equals(object? obj)
         {
@@ -27,16 +24,27 @@ namespace Web.Server.Entities
                    CreatedAt == other.CreatedAt &&
                    BeaconID == other.BeaconID &&
                    EqualityComparer<Beacon>.Default.Equals(Beacon, other.Beacon) &&
+                   Direction == other.Direction &&
                    RailroadID == other.RailroadID &&
                    EqualityComparer<Railroad>.Default.Equals(Railroad, other.Railroad) &&
                    Latitude == other.Latitude &&
                    Longitude == other.Longitude &&
-                   Direction == other.Direction;
+                   Milepost == other.Milepost;
         }
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(CreatedAt, BeaconID, Beacon, RailroadID, Railroad, Latitude, Longitude, Direction);
+            HashCode hash = new HashCode();
+            hash.Add(CreatedAt);
+            hash.Add(BeaconID);
+            hash.Add(Beacon);
+            hash.Add(Direction);
+            hash.Add(RailroadID);
+            hash.Add(Railroad);
+            hash.Add(Latitude);
+            hash.Add(Longitude);
+            hash.Add(Milepost);
+            return hash.ToHashCode();
         }
 
         public static bool operator ==(BeaconRailroad? left, BeaconRailroad? right)

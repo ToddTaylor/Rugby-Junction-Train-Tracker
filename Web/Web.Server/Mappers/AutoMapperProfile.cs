@@ -49,7 +49,8 @@ namespace Web.Server.Mappers
 
             CreateMap<Telemetry, MapPin>()
                 .ForMember(dest => dest.Latitude, opt => opt.MapFrom(src => src.Beacon.BeaconRailroads.First().Latitude))
-                .ForMember(dest => dest.Longitude, opt => opt.MapFrom(src => src.Beacon.BeaconRailroads.First().Longitude));
+                .ForMember(dest => dest.Longitude, opt => opt.MapFrom(src => src.Beacon.BeaconRailroads.First().Longitude))
+                .ForMember(dest => dest.Milepost, opt => opt.MapFrom(src => src.Beacon.BeaconRailroads.First().Milepost));
         }
     }
 }

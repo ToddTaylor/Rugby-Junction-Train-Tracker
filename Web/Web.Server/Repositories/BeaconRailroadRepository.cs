@@ -48,6 +48,7 @@ namespace Web.Server.Repositories
 
             existing.Latitude = beaconRailroad.Latitude;
             existing.Longitude = beaconRailroad.Longitude;
+            existing.Milepost = beaconRailroad.Milepost;
 
             await _context.SaveChangesAsync();
             return existing;
