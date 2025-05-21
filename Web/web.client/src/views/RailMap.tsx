@@ -98,14 +98,17 @@ const RailMap: React.FC = () => {
         return () => clearInterval(interval);
     }, []);
 
-    // Build a filtered list of pins that are not older than 10 minutes
+    // Build a filtered list of pins that are not older than 10 minutes,
+    // but prune pins where pin.source == "EOT" in half the time (5 minutes)
     const TEN_MINUTES = 10 * 60 * 1000;
+    const FIVE_MINUTES = 5 * 60 * 1000;
     const now = Date.now();
     const filteredPins: MapPin[] = [];
     Object.values(groupedPins).forEach(group => {
         group.forEach(pin => {
             const createdAt = new Date(pin.createdAt).getTime();
-            if (now - createdAt <= TEN_MINUTES) {
+            const maxAge = pin.source === "EOT" ? FIVE_MINUTES : TEN_MINUTES;
+            if (now - createdAt <= maxAge) {
                 filteredPins.push(pin);
             }
         });
