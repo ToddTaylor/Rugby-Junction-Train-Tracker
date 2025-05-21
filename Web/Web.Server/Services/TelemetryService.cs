@@ -51,6 +51,10 @@ namespace Web.Server.Services
             beacon = await _beaconRepository.UpdateAsync(beacon);
 
             // Get previous telemetry for same train address before inserting new telemetry
+            // TODO: Create list of ID values instead of just AddressID to include HOT/EOT ID
+            // and DPU ADDR IDs. This would involve an assumption that multiple telemetry values
+            // at the same location and calculated to be heading in the same direction are 
+            // actually the same train.
             var previousTelemetry = (await _telemetryRepository.GetAllAsync())
                 .Where(x => x.AddressID == telemetry.AddressID)
                 .OrderByDescending(x => x.CreatedAt)
@@ -67,7 +71,9 @@ namespace Web.Server.Services
             }
             else
             {
-                // Update existing telemetry timestamp
+                // Update existing telemetry timestamp, source, and moving status
+                previousTelemetry.Moving = telemetry.Moving;
+                previousTelemetry.Source = telemetry.Source;
                 previousTelemetry.CreatedAt = now;
                 previousTelemetry = await _telemetryRepository.UpdateAsync(previousTelemetry);
 

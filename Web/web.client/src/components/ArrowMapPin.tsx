@@ -20,7 +20,7 @@ const angleMap: Record<Direction, number> = {
 const ArrowMapPin: React.FC<ArrowMapPinProps> = ({ direction, moving }) => {
     if (!direction) {
         const unknownImageSrc = moving === true
-            ? "/icons/unknown.svg" // Moving
+            ? "/icons/unknown-green.svg" // Moving
             : moving === false
                 ? "/icons/unknown-red.svg" // Stopped
                 : "/icons/unknown.svg"; // Unknown state
