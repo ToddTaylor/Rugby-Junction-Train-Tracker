@@ -60,7 +60,7 @@ namespace Web.Server.Services.Tests
                 .ReturnsAsync(telemetries);
 
             // Act
-            var result = await _telemetryService.GetTelemetries();
+            var result = await _telemetryService.GetTelemetriesAsync();
 
             // Assert
             Assert.IsNotNull(result);
@@ -87,7 +87,7 @@ namespace Web.Server.Services.Tests
             // Act
             var ex = await Assert.ThrowsExceptionAsync<InvalidOperationException>(async () =>
             {
-                await _telemetryService.CreateTelemetry(telemetry);
+                await _telemetryService.CreateTelemetryAsync(telemetry);
             });
 
             // Assert
@@ -194,7 +194,7 @@ namespace Web.Server.Services.Tests
             _mockHubClients.Setup(h => h.All).Returns(_mockClientProxy?.Object);
 
             // Act
-            _telemetryService?.CreateTelemetry(telemetry);
+            _telemetryService?.CreateTelemetryAsync(telemetry);
 
             // Assert
             _mockTelemetryRepository.Verify(repo => repo.AddAsync(It.Is<Telemetry>(t => t == telemetry)), Times.Once);
@@ -298,7 +298,7 @@ namespace Web.Server.Services.Tests
                 .ReturnsAsync(telemetryAfterAdd);
 
             // Act
-            _telemetryService?.CreateTelemetry(telemetry);
+            _telemetryService?.CreateTelemetryAsync(telemetry);
 
             // Assert
             _mockTelemetryRepository.Verify(repo => repo.AddAsync(It.Is<Telemetry>(t => t == telemetry)), Times.Once);
@@ -444,7 +444,7 @@ namespace Web.Server.Services.Tests
             _mockHubClients.Setup(h => h.All).Returns(_mockClientProxy?.Object);
 
             // Act
-            _telemetryService?.CreateTelemetry(telemetry);
+            _telemetryService?.CreateTelemetryAsync(telemetry);
 
             // Assert
             _mockTelemetryRepository.Verify(repo => repo.AddAsync(It.Is<Telemetry>(t => t == telemetry)), Times.Once);
@@ -600,7 +600,7 @@ namespace Web.Server.Services.Tests
             _mockHubClients.Setup(h => h.All).Returns(_mockClientProxy?.Object);
 
             // Act
-            _telemetryService?.CreateTelemetry(telemetry);
+            _telemetryService?.CreateTelemetryAsync(telemetry);
 
             // Assert
             _mockTelemetryRepository.Verify(repo => repo.AddAsync(It.Is<Telemetry>(t => t == telemetry)), Times.Once);
@@ -767,7 +767,7 @@ namespace Web.Server.Services.Tests
             _mockHubClients.Setup(h => h.All).Returns(_mockClientProxy?.Object);
 
             // Act
-            _telemetryService?.CreateTelemetry(telemetry);
+            _telemetryService?.CreateTelemetryAsync(telemetry);
 
             // Assert
             _mockTelemetryRepository.Verify(repo => repo.AddAsync(It.Is<Telemetry>(t => t == telemetry)), Times.Once);

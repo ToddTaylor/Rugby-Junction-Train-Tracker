@@ -32,12 +32,17 @@ namespace Web.Server.Services
             _timeProvider = timeProvider;
         }
 
-        public async Task<IEnumerable<Telemetry>> GetTelemetries()
+        public async Task<IEnumerable<Telemetry>> GetTelemetriesAsync()
         {
             return await _telemetryRepository.GetAllAsync();
         }
 
-        public async Task CreateTelemetry(Telemetry telemetry)
+        public async Task<Telemetry?> GetTelemetryByIdAsync(int id)
+        {
+            return await _telemetryRepository.GetByIdAsync(id);
+        }
+
+        public async Task<Telemetry> CreateTelemetryAsync(Telemetry telemetry)
         {
             // Update the beacon so it's known that the beacon is active
             var beacon = await _beaconRepository.GetByIdAsync(telemetry.Beacon.ID);
@@ -80,14 +85,16 @@ namespace Web.Server.Services
                 // Telemetry is from previous telemetry beacon.
                 telemetry = previousTelemetry;
 
-                // Upsert map pin for previous telemetry to update it's timestamp.
+                // Upsert map pin for previous telemetry to update it's timestamp, source and moving status.
                 var existingMapPin = await _mapPinsService.GetMapPinByIdAsync(telemetry.AddressID);
+                existingMapPin.Moving = telemetry.Moving;
+                existingMapPin.Source = telemetry.Source;
                 _ = await _mapPinsService.UpsertMapPin(existingMapPin);
 
                 // Send map alert for previous telemetry to update it's timestamp.
                 await _hubContext.Clients.All.SendAsync(NotificationMethods.MapAlert, existingMapPin);
 
-                return;
+                return telemetry;
             }
 
             // Check if telemetry beacon is multi-railroad. 
@@ -96,7 +103,7 @@ namespace Web.Server.Services
             if (isNoPreviousTelemetry && telemetryBeaconIsMultiRailroad)
             {
                 // There's no way to know which railroad the telemetry is on, so we can't send a map alert.
-                return;
+                return telemetry;
             }
 
             var direction = string.Empty;
@@ -121,6 +128,8 @@ namespace Web.Server.Services
             await _mapPinsService.UpsertMapPin(mapPin);
 
             await _hubContext.Clients.All.SendAsync(NotificationMethods.MapAlert, mapPin);
+
+            return telemetry;
         }
     }
 }
