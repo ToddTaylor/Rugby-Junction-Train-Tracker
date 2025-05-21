@@ -7,13 +7,20 @@ import { MapPin } from '../types/types';
 import { parseISO } from 'date-fns/parseISO';
 import { format } from 'date-fns';
 
-function getPinBrightness(createdAt: string): number {
+function getPinBrightness(createdAt: string, source?: string): number {
     const now = new Date();
     const created = parseISO(createdAt);
-    const minutes = (now.getTime() - created.getTime()) / 60000;
-    if (minutes < 2) return 1.0;
-    if (minutes < 4) return 0.7;
-    if (minutes < 6) return 0.4;
+    let minutes = (now.getTime() - created.getTime()) / 60000;
+
+    // If source is "EOT", halve the thresholds
+    const isEOT = source === "EOT";
+    const t2 = isEOT ? 1 : 2;
+    const t4 = isEOT ? 2 : 4;
+    const t6 = isEOT ? 3 : 6;
+
+    if (minutes < t2) return 1.0;
+    if (minutes < t4) return 0.7;
+    if (minutes < t6) return 0.4;
     return 0.4;
 }
 
@@ -24,15 +31,15 @@ interface TelemetryMarkerProps {
 
 const TelemetryMarker: React.FC<TelemetryMarkerProps> = ({ pin, size }) => {
     const markerRef = useRef<L.Marker>(null);
-    const [brightness, setBrightness] = useState(() => getPinBrightness(pin.createdAt));
+    const [brightness, setBrightness] = useState(() => getPinBrightness(pin.createdAt, pin.source));
 
     useEffect(() => {
         const interval = setInterval(() => {
-            setBrightness(getPinBrightness(pin.createdAt));
+            setBrightness(getPinBrightness(pin.createdAt, pin.source));
         }, 30000);
-        setBrightness(getPinBrightness(pin.createdAt));
+        setBrightness(getPinBrightness(pin.createdAt, pin.source));
         return () => clearInterval(interval);
-    }, [pin.createdAt]);
+    }, [pin.createdAt, pin.source]);
 
     useEffect(() => {
         const marker = markerRef.current;
