@@ -1,18 +1,37 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import '../App.css';
-import { useSignalR } from "../hooks/useSignalR";
+//import { useSignalR } from "../hooks/useSignalR";
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { Box, Typography } from '@mui/material';
 import { MapPin } from "../types/types";
+import { format, parseISO } from "date-fns";
 
 function TelemetryLog() {
-    const [alerts, setAlerts] = useState<MapPin[]>([]);
+    const [mapPins, setMapPins] = useState<MapPin[]>([]);
 
-    useSignalR((alert: MapPin) => {
-        setAlerts(prev => [...prev, alert]);
-    });
+    useEffect(() => {
+        const fetchInitialTelemetryPins = async () => {
+            try {
+                const apiUrl = import.meta.env.VITE_API_URL + "/api/v1/MapPins";
+                const response = await fetch(apiUrl, {
+                    headers: {
+                        'X-Api-Key': import.meta.env.VITE_API_KEY,  
+                        'Content-Type': 'application/json' 
+                    }
+                });
+                if (!response.ok) throw new Error('Failed to fetch map pins');
 
-    const sortedData: MapPin[] = Array.from(alerts.values())
+                const { data: pins } = await response.json();
+                setMapPins(pins);
+            } catch (error) {
+                console.error('Error fetching map pins:', error);
+            }
+        };
+        
+        fetchInitialTelemetryPins();
+    }, []);
+
+    const sortedData: MapPin[] = Array.from(mapPins.values())
         .sort((a, b) => new Date(b.lastUpdate).getTime() - new Date(a.lastUpdate).getTime())
         .map((alert, index) => ({
             ...alert,
@@ -23,6 +42,7 @@ function TelemetryLog() {
         { field: 'id', headerName: 'ID' },
         { field: 'source', headerName: 'Source', width: 100 },
         { field: 'addressID', headerName: 'Address ID', width: 100 },
+        { field: 'milepost', headerName: 'Milepost', width: 100 },
         { field: 'latitude', headerName: 'Latitude', width: 100 },
         { field: 'longitude', headerName: 'Longitude', width: 100 },
         { field: 'direction', headerName: 'Direction', width: 100 },
@@ -32,12 +52,12 @@ function TelemetryLog() {
             headerName: 'Last Update',
             width: 200,
             valueFormatter: (params) =>
-                new Date(params as string).toLocaleString(),
+                format(parseISO(params as string), 'h:mm aa'),
         },
     ];
 
     return (
-        <Box sx={{ height: 400, width: '100%', padding: 4 }}>
+        <Box sx={{ height: '100%', width: '100%', padding: 4 }}>
             <Typography variant="h5" gutterBottom>
                 Telemetry Alerts
             </Typography>

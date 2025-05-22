@@ -22,12 +22,12 @@ namespace Web.Server.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            // Ensure all DateTime properties named "CreatedAt" are stored in UTC ISO 8601 format
+            // Ensure all DateTime properties named "CreatedAt" or "LastUpdate" are stored in UTC ISO 8601 format
             foreach (var entityType in modelBuilder.Model.GetEntityTypes())
             {
                 var properties = entityType.ClrType
                     .GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                    .Where(p => p.PropertyType == typeof(DateTime) && p.Name == "CreatedAt");
+                    .Where(p => p.PropertyType == typeof(DateTime) && (p.Name == "CreatedAt" || p.Name == "LastUpdate"));
 
                 foreach (var prop in properties)
                 {
