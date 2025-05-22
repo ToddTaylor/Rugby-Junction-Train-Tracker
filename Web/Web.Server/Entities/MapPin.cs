@@ -32,6 +32,7 @@ namespace Web.Server.Entities
         {
             return other is not null &&
                    CreatedAt == other.CreatedAt &&
+                   LastUpdate == other.LastUpdate &&
                    AddressID == other.AddressID &&
                    Direction == other.Direction &&
                    Latitude == other.Latitude &&
@@ -43,7 +44,17 @@ namespace Web.Server.Entities
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(CreatedAt, AddressID, Direction, Latitude, Longitude, Milepost, Moving, Source);
+            HashCode hash = new HashCode();
+            hash.Add(CreatedAt);
+            hash.Add(LastUpdate);
+            hash.Add(AddressID);
+            hash.Add(Direction);
+            hash.Add(Latitude);
+            hash.Add(Longitude);
+            hash.Add(Milepost);
+            hash.Add(Moving);
+            hash.Add(Source);
+            return hash.ToHashCode();
         }
 
         public static bool operator ==(MapPin? left, MapPin? right)

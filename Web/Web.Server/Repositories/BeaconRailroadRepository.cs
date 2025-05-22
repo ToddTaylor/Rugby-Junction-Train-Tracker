@@ -1,19 +1,23 @@
 using Microsoft.EntityFrameworkCore;
 using Web.Server.Entities;
+using Web.Server.Providers;
 
 namespace Web.Server.Repositories
 {
     public class BeaconRailroadRepository : IBeaconRailroadRepository
     {
         private readonly Data.TelemetryDbContext _context;
+        private readonly ITimeProvider _timeProvider;
 
-        public BeaconRailroadRepository(Data.TelemetryDbContext context)
+        public BeaconRailroadRepository(Data.TelemetryDbContext context, ITimeProvider timeProvider)
         {
             _context = context;
+            _timeProvider = timeProvider;
         }
 
         public async Task<BeaconRailroad> AddAsync(BeaconRailroad beaconRailroad)
         {
+            beaconRailroad.CreatedAt = _timeProvider.UtcNow;
             _context.BeaconRailroads.Add(beaconRailroad);
             await _context.SaveChangesAsync();
             return beaconRailroad;
@@ -24,7 +28,7 @@ namespace Web.Server.Repositories
             return await _context.BeaconRailroads
                 .Include(br => br.Beacon)
                 .Include(br => br.Railroad)
-                .OrderByDescending(br => br.CreatedAt)
+                .OrderByDescending(br => br.LastUpdate)
                 .ToListAsync();
         }
 

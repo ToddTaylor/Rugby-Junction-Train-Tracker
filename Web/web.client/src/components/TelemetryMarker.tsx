@@ -7,9 +7,9 @@ import { MapPin } from '../types/types';
 import { parseISO } from 'date-fns/parseISO';
 import { format } from 'date-fns';
 
-function getPinBrightness(createdAt: string, source?: string): number {
+function getPinBrightness(lastUpate: string, source?: string): number {
     const now = new Date();
-    const created = parseISO(createdAt);
+    const created = parseISO(lastUpate);
     let minutes = (now.getTime() - created.getTime()) / 60000;
 
     // If source is "EOT", halve the thresholds
@@ -31,15 +31,15 @@ interface TelemetryMarkerProps {
 
 const TelemetryMarker: React.FC<TelemetryMarkerProps> = ({ pin, size }) => {
     const markerRef = useRef<L.Marker>(null);
-    const [brightness, setBrightness] = useState(() => getPinBrightness(pin.createdAt, pin.source));
+    const [brightness, setBrightness] = useState(() => getPinBrightness(pin.lastUpdate, pin.source));
 
     useEffect(() => {
         const interval = setInterval(() => {
-            setBrightness(getPinBrightness(pin.createdAt, pin.source));
+            setBrightness(getPinBrightness(pin.lastUpdate, pin.source));
         }, 30000);
-        setBrightness(getPinBrightness(pin.createdAt, pin.source));
+        setBrightness(getPinBrightness(pin.lastUpdate, pin.source));
         return () => clearInterval(interval);
-    }, [pin.createdAt, pin.source]);
+    }, [pin.lastUpdate, pin.source]);
 
     useEffect(() => {
         const marker = markerRef.current;
@@ -51,7 +51,7 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps> = ({ pin, size }) => {
             <strong>Direction:</strong> ${pin.direction || 'Unknown'}<br/>
             <strong>Source:</strong> ${pin.source}<br/>
             <strong>Moving:</strong> ${pin.moving === true ? "Yes" : pin.moving === false ? "No" : "Unknown"}<br/>
-            <strong>Timestamp:</strong> ${format(parseISO(pin.createdAt), 'h:mm aa')}
+            <strong>Timestamp:</strong> ${format(parseISO(pin.lastUpdate), 'h:mm aa')}
         `;
 
         marker.bindPopup(popupContent);

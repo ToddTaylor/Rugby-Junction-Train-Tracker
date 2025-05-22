@@ -1,5 +1,6 @@
 ﻿
 
+
 namespace Web.Server.DTOs
 {
     public class MapPinDTO : IEquatable<MapPinDTO?>
@@ -7,6 +8,8 @@ namespace Web.Server.DTOs
         public required int AddressID { get; set; }
 
         public required DateTime CreatedAt { get; set; }
+
+        public required DateTime LastUpdate { get; set; }
 
         public required string Direction { get; set; }
 
@@ -34,6 +37,7 @@ namespace Web.Server.DTOs
             return other is not null &&
                    AddressID == other.AddressID &&
                    CreatedAt == other.CreatedAt &&
+                   LastUpdate == other.LastUpdate &&
                    Direction == other.Direction &&
                    Latitude == other.Latitude &&
                    Longitude == other.Longitude &&
@@ -44,7 +48,17 @@ namespace Web.Server.DTOs
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(AddressID, CreatedAt, Direction, Latitude, Longitude, Milepost, Moving, Source);
+            HashCode hash = new HashCode();
+            hash.Add(AddressID);
+            hash.Add(CreatedAt);
+            hash.Add(LastUpdate);
+            hash.Add(Direction);
+            hash.Add(Latitude);
+            hash.Add(Longitude);
+            hash.Add(Milepost);
+            hash.Add(Moving);
+            hash.Add(Source);
+            return hash.ToHashCode();
         }
 
         public static bool operator ==(MapPinDTO? left, MapPinDTO? right)

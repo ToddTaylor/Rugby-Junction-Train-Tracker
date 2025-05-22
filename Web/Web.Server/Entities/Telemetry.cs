@@ -32,6 +32,7 @@ namespace Web.Server.Entities
         {
             return other is not null &&
                    CreatedAt == other.CreatedAt &&
+                   LastUpdate == other.LastUpdate &&
                    ID == other.ID &&
                    EqualityComparer<Beacon>.Default.Equals(Beacon, other.Beacon) &&
                    AddressID == other.AddressID &&
@@ -42,7 +43,7 @@ namespace Web.Server.Entities
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(CreatedAt, ID, Beacon, AddressID, TrainID, Moving, Source);
+            return HashCode.Combine(CreatedAt, LastUpdate, ID, Beacon, AddressID, TrainID, Moving, Source);
         }
 
         public static bool operator ==(Telemetry? left, Telemetry? right)

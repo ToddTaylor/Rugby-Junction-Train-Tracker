@@ -15,5 +15,5 @@ export type MapPin = {
     direction: string;
     moving: Boolean;
     source: string;
-    createdAt: string;
+    lastUpdate: string;
 }

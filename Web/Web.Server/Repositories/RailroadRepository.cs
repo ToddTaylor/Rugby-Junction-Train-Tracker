@@ -1,20 +1,24 @@
 using Microsoft.EntityFrameworkCore;
 using Web.Server.Data;
 using Web.Server.Entities;
+using Web.Server.Providers;
 
 namespace Web.Server.Repositories
 {
     public class RailroadRepository : IRailroadRepository
     {
         private readonly TelemetryDbContext _context;
+        private readonly ITimeProvider _timeProvider;
 
-        public RailroadRepository(TelemetryDbContext context)
+        public RailroadRepository(TelemetryDbContext context, ITimeProvider timeProvider)
         {
             _context = context;
+            _timeProvider = timeProvider;
         }
 
         public async Task<Railroad> AddAsync(Railroad railroad)
         {
+            railroad.LastUpdate = _timeProvider.UtcNow;
             _context.Railroads.Add(railroad);
             await _context.SaveChangesAsync();
             return railroad;
@@ -23,7 +27,7 @@ namespace Web.Server.Repositories
         public async Task<IEnumerable<Railroad>> GetAllAsync()
         {
             return await _context.Railroads
-                .OrderByDescending(r => r.CreatedAt)
+                .OrderByDescending(r => r.LastUpdate)
                 .ToListAsync();
         }
 
@@ -42,6 +46,7 @@ namespace Web.Server.Repositories
 
             existingRailroad.Name = railroad.Name;
             existingRailroad.Subdivision = railroad.Subdivision;
+            existingRailroad.LastUpdate = _timeProvider.UtcNow;
 
             await _context.SaveChangesAsync();
             return existingRailroad;

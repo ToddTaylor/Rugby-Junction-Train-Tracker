@@ -35,6 +35,7 @@ namespace Web.Server.Entities
         {
             return other is not null &&
                    CreatedAt == other.CreatedAt &&
+                   LastUpdate == other.LastUpdate &&
                    ID == other.ID &&
                    FirstName == other.FirstName &&
                    LastName == other.LastName &&
@@ -46,7 +47,17 @@ namespace Web.Server.Entities
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(CreatedAt, ID, FirstName, LastName, Email, City, State, Beacons);
+            HashCode hash = new HashCode();
+            hash.Add(CreatedAt);
+            hash.Add(LastUpdate);
+            hash.Add(ID);
+            hash.Add(FirstName);
+            hash.Add(LastName);
+            hash.Add(Email);
+            hash.Add(City);
+            hash.Add(State);
+            hash.Add(Beacons);
+            return hash.ToHashCode();
         }
 
         public static bool operator ==(Owner? left, Owner? right)

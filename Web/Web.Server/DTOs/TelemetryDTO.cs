@@ -1,4 +1,5 @@
-﻿namespace Web.Server.DTOs
+﻿
+namespace Web.Server.DTOs
 {
     public class TelemetryDTO : IEquatable<TelemetryDTO?>
     {
@@ -20,6 +21,8 @@
 
         public required DateTime CreatedAt { get; set; }
 
+        public required DateTime LastUpdate { get; set; }
+
         public override bool Equals(object? obj)
         {
             return Equals(obj as TelemetryDTO);
@@ -34,12 +37,13 @@
                    TrainID == other.TrainID &&
                    Moving == other.Moving &&
                    Source == other.Source &&
-                   CreatedAt == other.CreatedAt;
+                   CreatedAt == other.CreatedAt &&
+                   LastUpdate == other.LastUpdate;
         }
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(ID, Beacon, AddressID, TrainID, Moving, Source, CreatedAt);
+            return HashCode.Combine(ID, Beacon, AddressID, TrainID, Moving, Source, CreatedAt, LastUpdate);
         }
 
         public static bool operator ==(TelemetryDTO? left, TelemetryDTO? right)

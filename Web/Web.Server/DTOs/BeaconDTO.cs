@@ -1,5 +1,6 @@
 ﻿
 
+
 namespace Web.Server.DTOs
 {
     public class BeaconDTO : IEquatable<BeaconDTO?>
@@ -9,6 +10,8 @@ namespace Web.Server.DTOs
         public int OwnerID { get; set; }
 
         public DateTime CreatedAt { get; set; }
+
+        public DateTime LastUpdate { get; set; }
 
         public required ICollection<BeaconRailroadDTO> BeaconRailroads { get; set; }
 
@@ -23,12 +26,13 @@ namespace Web.Server.DTOs
                    ID == other.ID &&
                    OwnerID == other.OwnerID &&
                    CreatedAt == other.CreatedAt &&
+                   LastUpdate == other.LastUpdate &&
                    EqualityComparer<ICollection<BeaconRailroadDTO>>.Default.Equals(BeaconRailroads, other.BeaconRailroads);
         }
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(ID, OwnerID, CreatedAt, BeaconRailroads);
+            return HashCode.Combine(ID, OwnerID, CreatedAt, LastUpdate, BeaconRailroads);
         }
 
         public static bool operator ==(BeaconDTO? left, BeaconDTO? right)

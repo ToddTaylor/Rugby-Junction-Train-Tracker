@@ -47,7 +47,7 @@ const RailMap: React.FC = () => {
     });
 
     const sortedData: MapPin[] = Array.from(mapPins.values())
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .sort((a, b) => new Date(b.lastUpdate).getTime() - new Date(a.lastUpdate).getTime())
         .map((pin, index) => ({
             ...pin,
             id: `row-${index + 1}`,
@@ -106,9 +106,9 @@ const RailMap: React.FC = () => {
     const filteredPins: MapPin[] = [];
     Object.values(groupedPins).forEach(group => {
         group.forEach(pin => {
-            const createdAt = new Date(pin.createdAt).getTime();
+            const lastUpdate = new Date(pin.lastUpdate).getTime();
             const maxAge = pin.source === "EOT" ? FIVE_MINUTES : TEN_MINUTES;
-            if (now - createdAt <= maxAge) {
+            if (now - lastUpdate <= maxAge) {
                 filteredPins.push(pin);
             }
         });

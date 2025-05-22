@@ -13,7 +13,7 @@ function TelemetryLog() {
     });
 
     const sortedData: MapPin[] = Array.from(alerts.values())
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .sort((a, b) => new Date(b.lastUpdate).getTime() - new Date(a.lastUpdate).getTime())
         .map((alert, index) => ({
             ...alert,
             id: `row-${index + 1}`,
@@ -28,8 +28,8 @@ function TelemetryLog() {
         { field: 'direction', headerName: 'Direction', width: 100 },
         { field: 'moving', headerName: 'Moving', width: 100 },
         {
-            field: 'createdAt',
-            headerName: 'Created At',
+            field: 'lastUpdate',
+            headerName: 'Last Update',
             width: 200,
             valueFormatter: (params) =>
                 new Date(params as string).toLocaleString(),

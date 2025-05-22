@@ -122,21 +122,23 @@ namespace Web.Server.Controllers.v1
 
         // POST: api/v1/Beacons/Health/{id}
         [HttpPost("Health/{id}")]
-        public async Task<IActionResult> CheckHealth(int beaconId)
+        public async Task<IActionResult> CheckHealth(int id)
         {
-            if (beaconId == 0)
+            if (id == 0)
             {
                 return BadRequest("A beacon ID is required.");
             }
 
-            // Simulate health check logic
-            var beacon = await _beaconService.GetBeaconByIdAsync(beaconId);
+            var beacon = await _beaconService.GetBeaconByIdAsync(id);
+
             if (beacon == null)
             {
-                return NotFound(new { Status = "Unhealthy", ID = beaconId });
+                return NotFound();
             }
 
-            return Ok(new { Status = "Healthy", ID = beaconId });
+            await _beaconService.UpdateBeaconAsync(id, beacon);
+
+            return NoContent();
         }
 
         // DELETE: api/v1/Beacons/5

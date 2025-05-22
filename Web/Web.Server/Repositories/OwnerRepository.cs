@@ -1,20 +1,24 @@
 using Microsoft.EntityFrameworkCore;
 using Web.Server.Data;
 using Web.Server.Entities;
+using Web.Server.Providers;
 
 namespace Web.Server.Repositories
 {
     public class OwnerRepository : IOwnerRepository
     {
         private readonly TelemetryDbContext _context;
+        private readonly ITimeProvider _timeProvider;
 
-        public OwnerRepository(TelemetryDbContext context)
+        public OwnerRepository(TelemetryDbContext context, ITimeProvider timeProvider)
         {
             _context = context;
+            _timeProvider = timeProvider;
         }
 
         public async Task<Owner> AddAsync(Owner owner)
         {
+            owner.CreatedAt = _timeProvider.UtcNow;
             _context.Owners.Add(owner);
             await _context.SaveChangesAsync();
             return owner;
@@ -26,7 +30,7 @@ namespace Web.Server.Repositories
                 .Include(o => o.Beacons)
                 .ThenInclude(o => o.BeaconRailroads)
                 .ThenInclude(o => o.Railroad)
-                .OrderByDescending(o => o.CreatedAt)
+                .OrderByDescending(o => o.LastUpdate)
                 .ToListAsync();
         }
 
@@ -52,6 +56,7 @@ namespace Web.Server.Repositories
             existingOwner.Email = owner.Email;
             existingOwner.City = owner.City;
             existingOwner.State = owner.State;
+            existingOwner.LastUpdate = _timeProvider.UtcNow;
 
             await _context.SaveChangesAsync();
             return existingOwner;

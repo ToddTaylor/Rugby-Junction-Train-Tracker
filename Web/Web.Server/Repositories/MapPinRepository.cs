@@ -28,7 +28,7 @@ namespace Web.Server.Repositories
             {
                 return await _context.MapPins
                     .Where(mp => mp.CreatedAt >= _timeProvider.UtcNow.AddMinutes(-minutes.Value))
-                    .OrderByDescending(mp => mp.CreatedAt)
+                    .OrderByDescending(mp => mp.LastUpdate)
                     .ToListAsync();
             }
             else
@@ -43,6 +43,7 @@ namespace Web.Server.Repositories
 
             if (existingMapPin == null)
             {
+                mapPin.CreatedAt = _timeProvider.UtcNow;
                 _context.MapPins.Add(mapPin);
             }
             else
@@ -52,7 +53,7 @@ namespace Web.Server.Repositories
                 existingMapPin.Longitude = mapPin.Longitude;
                 existingMapPin.Moving = mapPin.Moving;
                 existingMapPin.Source = mapPin.Source;
-                existingMapPin.CreatedAt = _timeProvider.UtcNow;
+                existingMapPin.LastUpdate = _timeProvider.UtcNow;
 
                 _context.MapPins.Update(existingMapPin);
 

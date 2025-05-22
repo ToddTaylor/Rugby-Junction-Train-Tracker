@@ -23,16 +23,17 @@ namespace Web.Server.Entities
         public bool Equals(Beacon? other)
         {
             return other is not null &&
+                   CreatedAt == other.CreatedAt &&
+                   LastUpdate == other.LastUpdate &&
                    ID == other.ID &&
                    OwnerID == other.OwnerID &&
                    EqualityComparer<Owner>.Default.Equals(Owner, other.Owner) &&
-                   CreatedAt == other.CreatedAt &&
                    EqualityComparer<ICollection<BeaconRailroad>>.Default.Equals(BeaconRailroads, other.BeaconRailroads);
         }
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(ID, OwnerID, Owner, CreatedAt, BeaconRailroads);
+            return HashCode.Combine(CreatedAt, LastUpdate, ID, OwnerID, Owner, BeaconRailroads);
         }
 
         public static bool operator ==(Beacon? left, Beacon? right)

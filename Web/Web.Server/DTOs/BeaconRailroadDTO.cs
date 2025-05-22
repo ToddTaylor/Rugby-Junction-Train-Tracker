@@ -42,6 +42,16 @@ namespace Web.Server.DTOs
         /// <example>NorthSouth</example>
         public Direction Direction { get; set; }
 
+        /// <summary>
+        /// The date and time when the beacon was created.
+        /// </summary>
+        public DateTime CreatedAt { get; set; }
+
+        /// <summary>
+        /// The date and time when the beacon was last updated.
+        /// </summary>
+        public DateTime LastUpdate { get; set; }
+
         public override bool Equals(object? obj)
         {
             return Equals(obj as BeaconRailroadDTO);
@@ -52,14 +62,28 @@ namespace Web.Server.DTOs
             return other is not null &&
                    BeaconID == other.BeaconID &&
                    RailroadID == other.RailroadID &&
+                   EqualityComparer<RailroadDTO?>.Default.Equals(Railroad, other.Railroad) &&
                    Latitude == other.Latitude &&
                    Longitude == other.Longitude &&
-                   Direction == other.Direction;
+                   Milepost == other.Milepost &&
+                   Direction == other.Direction &&
+                   CreatedAt == other.CreatedAt &&
+                   LastUpdate == other.LastUpdate;
         }
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(BeaconID, RailroadID, Latitude, Longitude, Direction);
+            HashCode hash = new HashCode();
+            hash.Add(BeaconID);
+            hash.Add(RailroadID);
+            hash.Add(Railroad);
+            hash.Add(Latitude);
+            hash.Add(Longitude);
+            hash.Add(Milepost);
+            hash.Add(Direction);
+            hash.Add(CreatedAt);
+            hash.Add(LastUpdate);
+            return hash.ToHashCode();
         }
 
         public static bool operator ==(BeaconRailroadDTO? left, BeaconRailroadDTO? right)

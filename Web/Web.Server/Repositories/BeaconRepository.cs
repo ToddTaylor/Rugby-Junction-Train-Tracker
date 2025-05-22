@@ -1,16 +1,19 @@
 using Microsoft.EntityFrameworkCore;
 using Web.Server.Data;
 using Web.Server.Entities;
+using Web.Server.Providers;
 
 namespace Web.Server.Repositories
 {
     public class BeaconRepository : IBeaconRepository
     {
         private readonly TelemetryDbContext _context;
+        private readonly ITimeProvider _timeProvider;
 
-        public BeaconRepository(TelemetryDbContext context)
+        public BeaconRepository(TelemetryDbContext context, ITimeProvider timeProvider)
         {
             _context = context;
+            _timeProvider = timeProvider;
         }
 
         public async Task<Beacon> AddAsync(Beacon beacon)
@@ -23,6 +26,8 @@ namespace Web.Server.Repositories
                 }
             }
 
+            beacon.CreatedAt = _timeProvider.UtcNow;
+
             _context.Beacons.Add(beacon);
             await _context.SaveChangesAsync();
             return beacon;
@@ -33,7 +38,7 @@ namespace Web.Server.Repositories
             return await _context.Beacons
                 .Include(b => b.Owner)
                 .Include(b => b.BeaconRailroads)
-                .OrderByDescending(b => b.CreatedAt)
+                .OrderByDescending(b => b.LastUpdate)
                 .ToListAsync();
         }
 
@@ -53,7 +58,7 @@ namespace Web.Server.Repositories
                 throw new KeyNotFoundException("Beacon not found.");
             }
 
-            existingBeacon.CreatedAt = beacon.CreatedAt;
+            existingBeacon.LastUpdate = _timeProvider.UtcNow;
             existingBeacon.Owner = beacon.Owner;
             existingBeacon.BeaconRailroads = beacon.BeaconRailroads;
 

@@ -24,6 +24,7 @@ namespace Web.Server.Entities
         {
             return other is not null &&
                    CreatedAt == other.CreatedAt &&
+                   LastUpdate == other.LastUpdate &&
                    ID == other.ID &&
                    Name == other.Name &&
                    Subdivision == other.Subdivision &&
@@ -32,7 +33,7 @@ namespace Web.Server.Entities
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(CreatedAt, ID, Name, Subdivision, BeaconRailroads);
+            return HashCode.Combine(CreatedAt, LastUpdate, ID, Name, Subdivision, BeaconRailroads);
         }
 
         public static bool operator ==(Railroad? left, Railroad? right)

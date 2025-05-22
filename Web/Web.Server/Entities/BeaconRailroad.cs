@@ -22,6 +22,7 @@ namespace Web.Server.Entities
         {
             return other is not null &&
                    CreatedAt == other.CreatedAt &&
+                   LastUpdate == other.LastUpdate &&
                    BeaconID == other.BeaconID &&
                    EqualityComparer<Beacon>.Default.Equals(Beacon, other.Beacon) &&
                    Direction == other.Direction &&
@@ -36,6 +37,7 @@ namespace Web.Server.Entities
         {
             HashCode hash = new HashCode();
             hash.Add(CreatedAt);
+            hash.Add(LastUpdate);
             hash.Add(BeaconID);
             hash.Add(Beacon);
             hash.Add(Direction);
