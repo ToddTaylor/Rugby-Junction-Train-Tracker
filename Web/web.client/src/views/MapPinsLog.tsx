@@ -58,7 +58,7 @@ function MapPinsLog() {
     return (
         <Box sx={{ height: '100%', width: '100%', padding: 4 }}>
             <Typography variant="h5" gutterBottom>
-                Telemetry Alerts
+                Map Pins Log
             </Typography>
             <DataGrid
                 rows={sortedData}
