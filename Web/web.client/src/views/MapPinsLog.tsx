@@ -1,16 +1,15 @@
 import { useEffect, useState } from "react";
 import '../App.css';
-//import { useSignalR } from "../hooks/useSignalR";
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { Box, Typography } from '@mui/material';
 import { MapPin } from "../types/types";
 import { format, parseISO } from "date-fns";
 
-function TelemetryLog() {
+function MapPinsLog() {
     const [mapPins, setMapPins] = useState<MapPin[]>([]);
 
     useEffect(() => {
-        const fetchInitialTelemetryPins = async () => {
+        const fetchMapPins = async () => {
             try {
                 const apiUrl = import.meta.env.VITE_API_URL + "/api/v1/MapPins";
                 const response = await fetch(apiUrl, {
@@ -28,7 +27,7 @@ function TelemetryLog() {
             }
         };
         
-        fetchInitialTelemetryPins();
+        fetchMapPins();
     }, []);
 
     const sortedData: MapPin[] = Array.from(mapPins.values())
@@ -78,4 +77,4 @@ function TelemetryLog() {
     );
 }
 
-export default TelemetryLog;
+export default MapPinsLog;

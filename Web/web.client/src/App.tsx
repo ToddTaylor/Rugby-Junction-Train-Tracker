@@ -1,6 +1,6 @@
 ﻿import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import RailMap from "./views/RailMap";
-import Telemetry from "./views/Telemetry";
+import MapPinsLog from './views/MapPinsLog';
 
 function App() {
      return (
@@ -9,7 +9,7 @@ function App() {
                  <Routes>
                      <Route index element={<RailMap />} />
                      <Route path="railmap" element={<RailMap />} />
-                     <Route path="telemetry" element={<Telemetry />} />
+                     <Route path="mappinslog" element={<MapPinsLog />} />
                      <Route path="*" element={<RailMap />} />
                  </Routes>
              </BrowserRouter>
