@@ -323,7 +323,23 @@ const RailMap: React.FC = () => {
             />
 
             {/* Display railroad tracks using locally cached Overpass query of just WI and then generate GeoJSON file. */}
-            {trackData && <GeoJSON data={trackData} style={{ color: '#005aa9', weight: 2 }} />}
+            {trackData && <GeoJSON 
+                    data={trackData} 
+                    style={(feature) => {
+                        if (!feature || !feature.properties) return {};
+
+                        const name = feature.properties?.name || '';
+
+                        let color = 'gray';
+                        let weight = 1;
+                        if (name === 'CN Waukesha Subdivision') {
+                            color = '#005aa9';
+                            weight = 4;
+                        }
+
+                        return { color, weight };
+                    }}
+                />}
 
             {/* Beacon markers */}
             {trackDataLoaded && <BeaconMarkers pins={beaconPins} zoom={mapZoom} />}
