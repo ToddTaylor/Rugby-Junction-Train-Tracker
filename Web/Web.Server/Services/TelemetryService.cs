@@ -52,7 +52,7 @@ namespace Web.Server.Services
             }
 
             var now = _timeProvider.UtcNow;
-            beacon.CreatedAt = now;
+            beacon.LastUpdate = now;
             beacon = await _beaconRepository.UpdateAsync(beacon);
 
             // Get previous telemetry for same train address before inserting new telemetry
@@ -62,7 +62,7 @@ namespace Web.Server.Services
             // actually the same train.
             var previousTelemetry = (await _telemetryRepository.GetAllAsync())
                 .Where(x => x.AddressID == telemetry.AddressID)
-                .OrderByDescending(x => x.CreatedAt)
+                .OrderByDescending(x => x.LastUpdate)
                 .FirstOrDefault();
 
             var isNoPreviousTelemetry = previousTelemetry == null;
@@ -71,7 +71,7 @@ namespace Web.Server.Services
             if (isNoPreviousTelemetry || isNotSameBeacon)
             {
                 // Insert new telemetry
-                telemetry.CreatedAt = now;
+                telemetry.LastUpdate = now;
                 telemetry = await _telemetryRepository.AddAsync(telemetry);
             }
             else
@@ -79,7 +79,7 @@ namespace Web.Server.Services
                 // Update existing telemetry timestamp, source, and moving status
                 previousTelemetry.Moving = telemetry.Moving;
                 previousTelemetry.Source = telemetry.Source;
-                previousTelemetry.CreatedAt = now;
+                previousTelemetry.LastUpdate = now;
                 previousTelemetry = await _telemetryRepository.UpdateAsync(previousTelemetry);
 
                 // Telemetry is from previous telemetry beacon.

@@ -23,7 +23,7 @@ namespace Web.Server.Services
                 var dbContext = scope.ServiceProvider.GetRequiredService<TelemetryDbContext>();
 
                 var expirationTime = DateTime.UtcNow.AddHours(-24);
-                var oldRecords = dbContext.Telemetries.Where(r => r.CreatedAt < expirationTime);
+                var oldRecords = dbContext.Telemetries.Where(r => r.LastUpdate < expirationTime);
                 dbContext.Telemetries.RemoveRange(oldRecords);
                 await dbContext.SaveChangesAsync(stoppingToken);
 

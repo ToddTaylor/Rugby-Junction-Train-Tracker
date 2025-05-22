@@ -52,8 +52,8 @@ namespace Web.Server.Services.Tests
             // Arrange
             var telemetries = new List<Telemetry>
             {
-                new Telemetry { ID = 1, AddressID = 100, Source = "HOT", CreatedAt = DateTime.UtcNow },
-                new Telemetry { ID = 2, AddressID = 200, Source = "EOT", CreatedAt = DateTime.UtcNow }
+                new Telemetry { ID = 1, AddressID = 100, Source = "HOT", LastUpdate = DateTime.UtcNow },
+                new Telemetry { ID = 2, AddressID = 200, Source = "EOT", LastUpdate = DateTime.UtcNow }
             };
 
             _mockTelemetryRepository.Setup(repo => repo.GetAllAsync())
@@ -77,8 +77,8 @@ namespace Web.Server.Services.Tests
                 ID = 1,
                 AddressID = 100,
                 Source = "HOT",
-                CreatedAt = DateTime.UtcNow,
-                Beacon = new Beacon { ID = 1, CreatedAt = DateTime.UtcNow }
+                LastUpdate = DateTime.UtcNow,
+                Beacon = new Beacon { ID = 1, LastUpdate = DateTime.UtcNow }
             };
 
             _mockBeaconRepository.Setup(repo => repo.GetByIdAsync(telemetry.Beacon.ID))
@@ -119,27 +119,27 @@ namespace Web.Server.Services.Tests
                 ID = telemetryId,
                 AddressID = trainAddressId,
                 Source = trainSource,
-                CreatedAt = _currentDateTime.AddMicroseconds(-234), // Simulate beacon's timestamp that will be ignored
+                LastUpdate = _currentDateTime.AddMicroseconds(-234), // Simulate beacon's timestamp that will be ignored
                 Beacon = new Beacon
                 {
                     ID = beaconId,
-                    CreatedAt = _currentDateTime.AddMilliseconds(-300), // Simulate beacon's timestamp
+                    LastUpdate = _currentDateTime.AddMilliseconds(-300), // Simulate beacon's timestamp
                 }
             };
 
             var telemetryBeforeAdd = telemetry.GetClone();
-            telemetryBeforeAdd.CreatedAt = _currentDateTime; // Timestamp set by APi
+            telemetryBeforeAdd.LastUpdate = _currentDateTime; // Timestamp set by APi
 
             var telemetryAfterAdd = new Telemetry
             {
                 ID = telemetryId,
                 AddressID = trainAddressId,
                 Source = trainSource,
-                CreatedAt = _currentDateTime,
+                LastUpdate = _currentDateTime,
                 Beacon = new Beacon
                 {
                     ID = beaconId,
-                    CreatedAt = _currentDateTime.AddMilliseconds(-300), // Simulate last beacon check-in timestamp
+                    LastUpdate = _currentDateTime.AddMilliseconds(-300), // Simulate last beacon check-in timestamp
                     BeaconRailroads = new List<BeaconRailroad> {
                         new BeaconRailroad {
                             RailroadID = railroadId,
@@ -159,7 +159,7 @@ namespace Web.Server.Services.Tests
             {
                 ID = beaconId,
                 OwnerID = ownerId,
-                CreatedAt = _currentDateTime // Should get new timestamp from API
+                LastUpdate = _currentDateTime // Should get new timestamp from API
             };
 
             var beaconAfterUpdate = beaconBeforeUpdate.GetClone();
@@ -171,7 +171,7 @@ namespace Web.Server.Services.Tests
                 Longitude = beaconLongitude,
                 Milepost = milepost,
                 Source = trainSource,
-                CreatedAt = _currentDateTime,
+                LastUpdate = _currentDateTime,
                 Direction = "" // Direction should not / cannot be calculated
             };
 
@@ -234,28 +234,28 @@ namespace Web.Server.Services.Tests
                 ID = telemetryId,
                 AddressID = trainAddressId,
                 Source = trainSource,
-                CreatedAt = _currentDateTime.AddMicroseconds(-234), // Simulate beacon's timestamp that will be ignored
+                LastUpdate = _currentDateTime.AddMicroseconds(-234), // Simulate beacon's timestamp that will be ignored
                 Beacon = new Beacon
                 {
                     ID = beaconId,
-                    CreatedAt = _currentDateTime.AddMilliseconds(-300), // Simulate beacon's timestamp
+                    LastUpdate = _currentDateTime.AddMilliseconds(-300), // Simulate beacon's timestamp
                 }
             };
 
             var telemetryBeforeAdd = telemetry.GetClone();
-            telemetryBeforeAdd.CreatedAt = _currentDateTime; // Timestamp set by APi
+            telemetryBeforeAdd.LastUpdate = _currentDateTime; // Timestamp set by APi
 
             var telemetryAfterAdd = new Telemetry
             {
                 ID = telemetryId,
                 AddressID = trainAddressId,
                 Source = trainSource,
-                CreatedAt = _currentDateTime,
+                LastUpdate = _currentDateTime,
                 Beacon = new Beacon
                 {
                     ID = beaconId,
                     OwnerID = ownerId,
-                    CreatedAt = _currentDateTime.AddMilliseconds(-300), // Simulate last beacon check-in timestamp
+                    LastUpdate = _currentDateTime.AddMilliseconds(-300), // Simulate last beacon check-in timestamp
                     BeaconRailroads = new List<BeaconRailroad> {
                         new BeaconRailroad {
                             RailroadID = railroadId1,
@@ -283,7 +283,7 @@ namespace Web.Server.Services.Tests
             {
                 ID = beaconId,
                 OwnerID = ownerId,
-                CreatedAt = _currentDateTime // Should get new timestamp from API
+                LastUpdate = _currentDateTime // Should get new timestamp from API
             };
 
             var beaconAfterUpdate = beaconBeforeUpdate.GetClone();
@@ -341,29 +341,29 @@ namespace Web.Server.Services.Tests
                 ID = telemetry1Id,
                 AddressID = trainAddressId,
                 Source = train1Source,
-                CreatedAt = _currentDateTime.AddMicroseconds(-234), // Simulate beacon's timestamp that will be ignored
+                LastUpdate = _currentDateTime.AddMicroseconds(-234), // Simulate beacon's timestamp that will be ignored
                 Beacon = new Beacon
                 {
                     ID = beacon1Id,
                     OwnerID = owner1Id,
-                    CreatedAt = _currentDateTime.AddMilliseconds(-300), // Simulate beacon's timestamp
+                    LastUpdate = _currentDateTime.AddMilliseconds(-300), // Simulate beacon's timestamp
                 }
             };
 
             var telemetryBeforeAdd = telemetry.GetClone();
-            telemetryBeforeAdd.CreatedAt = _currentDateTime; // Timestamp set by APi
+            telemetryBeforeAdd.LastUpdate = _currentDateTime; // Timestamp set by APi
 
             var telemetryAfterAdd = new Telemetry
             {
                 ID = telemetry1Id,
                 AddressID = trainAddressId,
                 Source = train1Source,
-                CreatedAt = _currentDateTime,
+                LastUpdate = _currentDateTime,
                 Beacon = new Beacon
                 {
                     ID = beacon1Id,
                     OwnerID = owner1Id,
-                    CreatedAt = _currentDateTime.AddMilliseconds(-300), // Simulate last beacon check-in timestamp
+                    LastUpdate = _currentDateTime.AddMilliseconds(-300), // Simulate last beacon check-in timestamp
                     BeaconRailroads = [
                         new BeaconRailroad {
                             RailroadID = railroad1Id,
@@ -381,7 +381,7 @@ namespace Web.Server.Services.Tests
             {
                 ID = beacon2Id,
                 OwnerID = owner2Id,
-                CreatedAt = _currentDateTime.AddMilliseconds(-500),
+                LastUpdate = _currentDateTime.AddMilliseconds(-500),
                 BeaconRailroads = [
                             new BeaconRailroad {
                                 RailroadID = railroad1Id,
@@ -400,7 +400,7 @@ namespace Web.Server.Services.Tests
                     ID = telemetry2Id,
                     AddressID = trainAddressId,
                     Source = train2Source,
-                    CreatedAt = _currentDateTime.AddMilliseconds(-500),
+                    LastUpdate = _currentDateTime.AddMilliseconds(-500),
                     Beacon = singleRailroadBeacon
                 }
             };
@@ -409,7 +409,7 @@ namespace Web.Server.Services.Tests
             {
                 ID = beacon1Id,
                 OwnerID = owner1Id,
-                CreatedAt = _currentDateTime // Should get new timestamp from API
+                LastUpdate = _currentDateTime // Should get new timestamp from API
             };
 
             var beaconAfterUpdate = beaconBeforeUpdate.GetClone();
@@ -421,7 +421,7 @@ namespace Web.Server.Services.Tests
                 Longitude = beacon1Longitude,
                 Milepost = milepost1,
                 Source = train1Source,
-                CreatedAt = _currentDateTime,
+                LastUpdate = _currentDateTime,
                 Direction = "S"
             };
 
@@ -489,29 +489,29 @@ namespace Web.Server.Services.Tests
                 ID = telemetry1Id,
                 AddressID = trainAddressId,
                 Source = train1Source,
-                CreatedAt = _currentDateTime.AddMicroseconds(-234), // Simulate beacon's timestamp that will be ignored
+                LastUpdate = _currentDateTime.AddMicroseconds(-234), // Simulate beacon's timestamp that will be ignored
                 Beacon = new Beacon
                 {
                     ID = beacon1Id,
                     OwnerID = owner1Id,
-                    CreatedAt = _currentDateTime.AddMilliseconds(-300), // Simulate beacon's timestamp
+                    LastUpdate = _currentDateTime.AddMilliseconds(-300), // Simulate beacon's timestamp
                 }
             };
 
             var telemetryBeforeAdd = telemetry.GetClone();
-            telemetryBeforeAdd.CreatedAt = _currentDateTime; // Timestamp set by APi
+            telemetryBeforeAdd.LastUpdate = _currentDateTime; // Timestamp set by APi
 
             var telemetryAfterAdd = new Telemetry
             {
                 ID = telemetry1Id,
                 AddressID = trainAddressId,
                 Source = train1Source,
-                CreatedAt = _currentDateTime,
+                LastUpdate = _currentDateTime,
                 Beacon = new Beacon
                 {
                     ID = beacon1Id,
                     OwnerID = owner1Id,
-                    CreatedAt = _currentDateTime.AddMilliseconds(-300), // Simulate last beacon check-in timestamp
+                    LastUpdate = _currentDateTime.AddMilliseconds(-300), // Simulate last beacon check-in timestamp
                     BeaconRailroads = [
                         new BeaconRailroad {
                             RailroadID = railroad1Id,
@@ -537,7 +537,7 @@ namespace Web.Server.Services.Tests
             {
                 ID = beacon2Id,
                 OwnerID = owner2Id,
-                CreatedAt = _currentDateTime.AddMilliseconds(-500),
+                LastUpdate = _currentDateTime.AddMilliseconds(-500),
                 BeaconRailroads = [
                             new BeaconRailroad {
                                 RailroadID = railroad1Id,
@@ -556,7 +556,7 @@ namespace Web.Server.Services.Tests
                     ID = telemetry2Id,
                     AddressID = trainAddressId,
                     Source = train2Source,
-                    CreatedAt = _currentDateTime.AddMilliseconds(-500),
+                    LastUpdate = _currentDateTime.AddMilliseconds(-500),
                     Beacon = singleRailroadBeacon
                 }
             };
@@ -565,7 +565,7 @@ namespace Web.Server.Services.Tests
             {
                 ID = beacon1Id,
                 OwnerID = owner1Id,
-                CreatedAt = _currentDateTime // Should get new timestamp from API
+                LastUpdate = _currentDateTime // Should get new timestamp from API
             };
 
             var beaconAfterUpdate = beaconBeforeUpdate.GetClone();
@@ -577,7 +577,7 @@ namespace Web.Server.Services.Tests
                 Longitude = beacon1Longitude,
                 Milepost = milepost1,
                 Source = train1Source,
-                CreatedAt = _currentDateTime,
+                LastUpdate = _currentDateTime,
                 Direction = "S"
             };
 
@@ -648,29 +648,29 @@ namespace Web.Server.Services.Tests
                 ID = telemetry1Id,
                 AddressID = trainAddressId,
                 Source = train1Source,
-                CreatedAt = _currentDateTime.AddMicroseconds(-234), // Simulate beacon's timestamp that will be ignored
+                LastUpdate = _currentDateTime.AddMicroseconds(-234), // Simulate beacon's timestamp that will be ignored
                 Beacon = new Beacon
                 {
                     ID = beacon1Id,
                     OwnerID = owner1Id,
-                    CreatedAt = _currentDateTime.AddMilliseconds(-300), // Simulate beacon's timestamp
+                    LastUpdate = _currentDateTime.AddMilliseconds(-300), // Simulate beacon's timestamp
                 }
             };
 
             var telemetryBeforeAdd = telemetry.GetClone();
-            telemetryBeforeAdd.CreatedAt = _currentDateTime; // Timestamp set by APi
+            telemetryBeforeAdd.LastUpdate = _currentDateTime; // Timestamp set by APi
 
             var telemetryAfterAdd = new Telemetry
             {
                 ID = telemetry1Id,
                 AddressID = trainAddressId,
                 Source = train1Source,
-                CreatedAt = _currentDateTime,
+                LastUpdate = _currentDateTime,
                 Beacon = new Beacon
                 {
                     ID = beacon1Id,
                     OwnerID = owner1Id,
-                    CreatedAt = _currentDateTime.AddMilliseconds(-300), // Simulate last beacon check-in timestamp
+                    LastUpdate = _currentDateTime.AddMilliseconds(-300), // Simulate last beacon check-in timestamp
                     BeaconRailroads = [
                         new BeaconRailroad {
                             RailroadID = railroad1Id,
@@ -696,7 +696,7 @@ namespace Web.Server.Services.Tests
             {
                 ID = beacon2Id,
                 OwnerID = owner2Id,
-                CreatedAt = _currentDateTime.AddMilliseconds(-500),
+                LastUpdate = _currentDateTime.AddMilliseconds(-500),
                 BeaconRailroads = [
                             new BeaconRailroad {
                                 RailroadID = railroad1Id,
@@ -723,7 +723,7 @@ namespace Web.Server.Services.Tests
                     ID = telemetry2Id,
                     AddressID = trainAddressId,
                     Source = train2Source,
-                    CreatedAt = _currentDateTime.AddMilliseconds(-500),
+                    LastUpdate = _currentDateTime.AddMilliseconds(-500),
                     Beacon = multipleRailroadBeacon
                 }
             };
@@ -732,7 +732,7 @@ namespace Web.Server.Services.Tests
             {
                 ID = beacon1Id,
                 OwnerID = owner1Id,
-                CreatedAt = _currentDateTime // Should get new timestamp from API
+                LastUpdate = _currentDateTime // Should get new timestamp from API
             };
 
             var beaconAfterUpdate = beaconBeforeUpdate.GetClone();
@@ -744,7 +744,7 @@ namespace Web.Server.Services.Tests
                 Longitude = beacon1Longitude,
                 Milepost = milepost1,
                 Source = train1Source,
-                CreatedAt = _currentDateTime,
+                LastUpdate = _currentDateTime,
                 Direction = "S"
             };
 
