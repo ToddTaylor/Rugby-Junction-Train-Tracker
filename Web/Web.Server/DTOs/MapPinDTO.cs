@@ -1,7 +1,4 @@
-﻿
-
-
-namespace Web.Server.DTOs
+﻿namespace Web.Server.DTOs
 {
     public class MapPinDTO : IEquatable<MapPinDTO?>
     {
@@ -21,11 +18,17 @@ namespace Web.Server.DTOs
 
         public bool? Moving { get; set; }
 
+        public string? Railroad { get; set; }
+
+        public int? RailroadID { get; set; }
+
         /// <summary>
         /// The source of the alert.
         /// HOT, EOT, DPU, HBD
         /// </summary>
         public required string Source { get; set; }
+
+        public string? Subdivision { get; set; }
 
         public override bool Equals(object? obj)
         {
@@ -43,7 +46,10 @@ namespace Web.Server.DTOs
                    Longitude == other.Longitude &&
                    Milepost == other.Milepost &&
                    Moving == other.Moving &&
-                   Source == other.Source;
+                   Railroad == other.Railroad &&
+                   RailroadID == other.RailroadID &&
+                   Source == other.Source &&
+                   Subdivision == other.Subdivision;
         }
 
         public override int GetHashCode()
@@ -57,7 +63,10 @@ namespace Web.Server.DTOs
             hash.Add(Longitude);
             hash.Add(Milepost);
             hash.Add(Moving);
+            hash.Add(Railroad);
+            hash.Add(RailroadID);
             hash.Add(Source);
+            hash.Add(Subdivision);
             return hash.ToHashCode();
         }
 

@@ -52,7 +52,9 @@ namespace Web.Server.Repositories
                 existingMapPin.Latitude = mapPin.Latitude;
                 existingMapPin.Longitude = mapPin.Longitude;
                 existingMapPin.Moving = mapPin.Moving;
+                existingMapPin.Railroad = mapPin.Railroad;
                 existingMapPin.Source = mapPin.Source;
+                existingMapPin.Subdivision = mapPin.Subdivision;
                 existingMapPin.LastUpdate = _timeProvider.UtcNow;
 
                 _context.MapPins.Update(existingMapPin);

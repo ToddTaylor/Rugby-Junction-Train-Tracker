@@ -14,6 +14,8 @@ export type MapPin = {
     milepost: number;
     direction: string;
     moving: Boolean;
+    railroad: string;
     source: string;
+    subdivision: string;
     lastUpdate: string;
 }

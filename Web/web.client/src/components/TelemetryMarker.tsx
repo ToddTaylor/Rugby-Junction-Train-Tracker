@@ -49,6 +49,8 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps> = ({ pin, size }) => {
             <strong>Train ID:</strong> ${pin.addressID}<br/>
             <strong>Milepost:</strong> ${pin.milepost}<br/>
             <strong>Direction:</strong> ${pin.direction || 'Unknown'}<br/>
+            <strong>Railroad:</strong> ${pin.railroad || 'Unknown'}<br/>
+            <strong>Subdivision:</strong> ${pin.subdivision || 'Unknown'}<br/>
             <strong>Source:</strong> ${pin.source}<br/>
             <strong>Moving:</strong> ${pin.moving === true ? "Yes" : pin.moving === false ? "No" : "Unknown"}<br/>
             <strong>Timestamp:</strong> ${format(parseISO(pin.lastUpdate), 'h:mm aa')}
