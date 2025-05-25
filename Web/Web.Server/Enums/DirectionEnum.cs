@@ -33,13 +33,4 @@ namespace Web.Server.Enums
         /// </summary>
         NorthwestSoutheast
     }
-
-    //public static class Directions
-    //{
-    //    public static readonly string[] NorthSouth = ["N", "S"];
-    //    public static readonly string[] EastWest = ["E", "W"];
-    //    public static readonly string[] NortheastSouthwest = ["NE", "SW"];
-    //    public static readonly string[] NorthwestSoutheast = ["NW", "SE"];
-    //    public static readonly string[] All = [.. NorthSouth, .. EastWest, .. NorthwestSoutheast, .. NorthwestSoutheast];
-    //}
 }

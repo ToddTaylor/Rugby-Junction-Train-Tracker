@@ -19,6 +19,8 @@ namespace Web.Server.Repositories
         public async Task<Owner> AddAsync(Owner owner)
         {
             owner.CreatedAt = _timeProvider.UtcNow;
+            owner.LastUpdate = owner.CreatedAt;
+
             _context.Owners.Add(owner);
             await _context.SaveChangesAsync();
             return owner;

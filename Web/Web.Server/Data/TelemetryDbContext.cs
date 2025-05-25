@@ -54,6 +54,23 @@ namespace Web.Server.Data
                 .HasOne(br => br.Railroad)
                 .WithMany(r => r.BeaconRailroads)
                 .HasForeignKey(br => br.RailroadID);
+
+            modelBuilder.Entity<MapPin>()
+                .HasOne(mp => mp.BeaconRailroad)
+                .WithMany() // <--- this is the key to preventing uniqueness
+                .HasForeignKey(mp => new { mp.BeaconID, mp.RailroadID })
+                .OnDelete(DeleteBehavior.Restrict); // or whatever behavior you want
+
+            modelBuilder.Entity<Telemetry>()
+                .HasOne(t => t.Beacon)
+                .WithMany(b => b.Telemetries)
+                .HasForeignKey(t => t.BeaconID);
+
+            modelBuilder.Entity<Telemetry>()
+                .HasOne(t => t.MapPin)
+                .WithMany(b => b.Telemetries)
+                .HasForeignKey(t => t.MapPinID);
+
         }
     }
 }

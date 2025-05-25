@@ -18,7 +18,9 @@ namespace Web.Server.Repositories
 
         public async Task<Railroad> AddAsync(Railroad railroad)
         {
-            railroad.LastUpdate = _timeProvider.UtcNow;
+            railroad.CreatedAt = _timeProvider.UtcNow;
+            railroad.LastUpdate = railroad.CreatedAt;
+
             _context.Railroads.Add(railroad);
             await _context.SaveChangesAsync();
             return railroad;

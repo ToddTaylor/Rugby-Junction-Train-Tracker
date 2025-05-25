@@ -23,7 +23,17 @@ namespace Web.Server.Mappers
             CreateMap<UpdateBeaconRailroadDTO, BeaconRailroad>();
             CreateMap<BeaconRailroad, BeaconRailroadDTO>();
 
-            CreateMap<MapPin, MapPinDTO>();
+            CreateMap<MapPin, MapPinDTO>()
+                .ForMember(dest => dest.Latitude,
+                           opt => opt.MapFrom(src => src.BeaconRailroad.Latitude))
+                .ForMember(dest => dest.Longitude,
+                           opt => opt.MapFrom(src => src.BeaconRailroad.Longitude))
+                .ForMember(dest => dest.Milepost,
+                           opt => opt.MapFrom(src => src.BeaconRailroad.Milepost))
+                .ForMember(dest => dest.Railroad,
+                           opt => opt.MapFrom(src => src.BeaconRailroad.Railroad.Name))
+                .ForMember(dest => dest.Subdivision,
+                           opt => opt.MapFrom(src => src.BeaconRailroad.Railroad.Subdivision));
 
             CreateMap<CreateOwnerDTO, Owner>()
                 .ForMember(dest => dest.ID, opt => opt.Ignore())
@@ -47,10 +57,7 @@ namespace Web.Server.Mappers
             CreateMap<Telemetry, TelemetryDTO>()
                 .ForPath(dest => dest.Beacon.ID, opt => opt.MapFrom(src => src.Beacon.ID));
 
-            CreateMap<Telemetry, MapPin>()
-                .ForMember(dest => dest.Latitude, opt => opt.MapFrom(src => src.Beacon.BeaconRailroads.First().Latitude))
-                .ForMember(dest => dest.Longitude, opt => opt.MapFrom(src => src.Beacon.BeaconRailroads.First().Longitude))
-                .ForMember(dest => dest.Milepost, opt => opt.MapFrom(src => src.Beacon.BeaconRailroads.First().Milepost));
+            CreateMap<Telemetry, MapPin>();
         }
     }
 }

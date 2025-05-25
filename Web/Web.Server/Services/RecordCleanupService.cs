@@ -13,7 +13,7 @@ namespace Web.Server.Services
         }
 
         /// <summary>
-        /// Executes the background service to clean up old telemetry records every 24 hours.
+        /// Executes the background service to clean up old telemetry and map pin records every 24 hours.
         /// </summary>
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
@@ -23,8 +23,13 @@ namespace Web.Server.Services
                 var dbContext = scope.ServiceProvider.GetRequiredService<TelemetryDbContext>();
 
                 var expirationTime = DateTime.UtcNow.AddHours(-24);
-                var oldRecords = dbContext.Telemetries.Where(r => r.LastUpdate < expirationTime);
+
+                var oldRecords = dbContext.Telemetries.Where(t => t.LastUpdate < expirationTime);
                 dbContext.Telemetries.RemoveRange(oldRecords);
+
+                var oldMapPins = dbContext.MapPins.Where(mp => mp.LastUpdate < expirationTime);
+                dbContext.MapPins.RemoveRange(oldMapPins);
+
                 await dbContext.SaveChangesAsync(stoppingToken);
 
                 await Task.Delay(_cleanupInterval, stoppingToken);

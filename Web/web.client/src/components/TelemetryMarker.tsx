@@ -29,6 +29,27 @@ interface TelemetryMarkerProps {
     size: number;
 }
 
+const formatDirection = (dir?: string): string => {
+    if (!dir) return 'Unknown Direction';
+
+    const map: Record<string, string> = {
+        N: 'Northbound',
+        S: 'Southbound',
+        E: 'Eastbound',
+        W: 'Westbound',
+        NE: 'Northeastbound',
+        NW: 'Northwestbound',
+        SE: 'Southeastbound',
+        SW: 'Southwestbound',
+        EN: 'Northeastbound',
+        ES: 'Southeastbound',
+        WN: 'Northwestbound',
+        WS: 'Southwestbound',
+    };
+
+    return map[dir.toUpperCase()] || 'Unknown Direction';
+};
+
 const TelemetryMarker: React.FC<TelemetryMarkerProps> = ({ pin, size }) => {
     const markerRef = useRef<L.Marker>(null);
     const [brightness, setBrightness] = useState(() => getPinBrightness(pin.lastUpdate, pin.source));
@@ -46,14 +67,12 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps> = ({ pin, size }) => {
         if (!marker) return;
 
         const popupContent = `
-            <strong>Train ID:</strong> ${pin.addressID}<br/>
-            <strong>Milepost:</strong> ${pin.milepost}<br/>
-            <strong>Direction:</strong> ${pin.direction || 'Unknown'}<br/>
-            <strong>Railroad:</strong> ${pin.railroad || 'Unknown'}<br/>
-            <strong>Subdivision:</strong> ${pin.subdivision || 'Unknown'}<br/>
-            <strong>Source:</strong> ${pin.source}<br/>
-            <strong>Moving:</strong> ${pin.moving === true ? "Yes" : pin.moving === false ? "No" : "Unknown"}<br/>
-            <strong>Timestamp:</strong> ${format(parseISO(pin.lastUpdate), 'h:mm aa')}
+            ${pin.railroad?.trim() ? `<strong>${pin.railroad} ${pin.subdivision + ' Sub' || ''}</strong><br/>` : ''}
+            MP ${pin.milepost}<br/>
+            ${formatDirection(pin.direction)}<br/>
+            ${pin.moving === true ? "Moving<br/>" : pin.moving === false ? "Not Moving<br/>" : ''}
+            ${format(parseISO(pin.lastUpdate), 'h:mm aa')}<br/>         
+            ${pin.source} ${pin.addressID}
         `;
 
         marker.bindPopup(popupContent);

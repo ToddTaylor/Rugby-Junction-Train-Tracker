@@ -1,25 +1,25 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Web.Server.Entities
 {
     public class MapPin : EntityBase, IEquatable<MapPin?>
     {
         [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int ID { get; set; }
+
         public required int AddressID { get; set; }
 
-        public required string Direction { get; set; }
+        public int BeaconID { get; set; }
 
-        public required double Latitude { get; set; }
+        public int RailroadID { get; set; }
 
-        public required double Longitude { get; set; }
+        public BeaconRailroad? BeaconRailroad { get; set; }
 
-        public required double Milepost { get; set; }
+        public string? Direction { get; set; }
 
         public bool? Moving { get; set; }
-
-        public string? Railroad { get; set; }
-
-        public int? RailroadID { get; set; }
 
         /// <summary>
         /// The source of the alert.
@@ -27,7 +27,7 @@ namespace Web.Server.Entities
         /// </summary>
         public required string Source { get; set; }
 
-        public string? Subdivision { get; set; }
+        public ICollection<Telemetry>? Telemetries { get; set; }
 
         public override bool Equals(object? obj)
         {
@@ -39,16 +39,15 @@ namespace Web.Server.Entities
             return other is not null &&
                    CreatedAt == other.CreatedAt &&
                    LastUpdate == other.LastUpdate &&
+                   ID == other.ID &&
                    AddressID == other.AddressID &&
-                   Direction == other.Direction &&
-                   Latitude == other.Latitude &&
-                   Longitude == other.Longitude &&
-                   Milepost == other.Milepost &&
-                   Moving == other.Moving &&
-                   Railroad == other.Railroad &&
+                   BeaconID == other.BeaconID &&
                    RailroadID == other.RailroadID &&
+                   EqualityComparer<BeaconRailroad?>.Default.Equals(BeaconRailroad, other.BeaconRailroad) &&
+                   Direction == other.Direction &&
+                   Moving == other.Moving &&
                    Source == other.Source &&
-                   Subdivision == other.Subdivision;
+                   EqualityComparer<ICollection<Telemetry>?>.Default.Equals(Telemetries, other.Telemetries);
         }
 
         public override int GetHashCode()
@@ -56,16 +55,15 @@ namespace Web.Server.Entities
             HashCode hash = new HashCode();
             hash.Add(CreatedAt);
             hash.Add(LastUpdate);
+            hash.Add(ID);
             hash.Add(AddressID);
-            hash.Add(Direction);
-            hash.Add(Latitude);
-            hash.Add(Longitude);
-            hash.Add(Milepost);
-            hash.Add(Moving);
-            hash.Add(Railroad);
+            hash.Add(BeaconID);
             hash.Add(RailroadID);
+            hash.Add(BeaconRailroad);
+            hash.Add(Direction);
+            hash.Add(Moving);
             hash.Add(Source);
-            hash.Add(Subdivision);
+            hash.Add(Telemetries);
             return hash.ToHashCode();
         }
 

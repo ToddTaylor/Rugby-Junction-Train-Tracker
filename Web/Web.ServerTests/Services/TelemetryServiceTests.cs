@@ -15,7 +15,7 @@ namespace Web.Server.Services.Tests
     {
         private TelemetryService? _telemetryService;
 
-        private readonly Mock<IBeaconRepository> _mockBeaconRepository = new();
+        private readonly Mock<IBeaconService> _mockBeaconService = new();
         private readonly Mock<ITelemetryRepository> _mockTelemetryRepository = new();
         private readonly Mock<IHubContext<NotificationHub>> _mockHubContext = new();
         private readonly Mock<IHubClients> _mockHubClients = new();
@@ -40,7 +40,7 @@ namespace Web.Server.Services.Tests
             _telemetryService = new TelemetryService(
                 _mockHubContext.Object,
                 _mockTelemetryRepository.Object,
-                _mockBeaconRepository.Object,
+                _mockBeaconService.Object,
                 _mapper,
                 _mockMapPinService.Object,
                 _mockTimeProvider.Object);
@@ -81,7 +81,7 @@ namespace Web.Server.Services.Tests
                 Beacon = new Beacon { ID = 1, LastUpdate = DateTime.UtcNow }
             };
 
-            _mockBeaconRepository.Setup(repo => repo.GetByIdAsync(telemetry.Beacon.ID))
+            _mockBeaconService.Setup(repo => repo.GetBeaconByIdAsync(telemetry.Beacon.ID))
                 .ReturnsAsync((Beacon?)null);
 
             // Act
@@ -92,8 +92,8 @@ namespace Web.Server.Services.Tests
 
             // Assert
             Assert.AreEqual(ex.Message, "Beacon not found.");
-            _mockBeaconRepository.Verify(repo => repo.GetByIdAsync(telemetry.Beacon.ID), Times.Once);
-            _mockBeaconRepository.Verify(repo => repo.UpdateAsync(It.IsAny<Beacon>()), Times.Never);
+            _mockBeaconService.Verify(repo => repo.GetBeaconByIdAsync(telemetry.Beacon.ID), Times.Once);
+            _mockBeaconService.Verify(repo => repo.UpdateBeaconAsync(It.IsAny<int>(), It.IsAny<Beacon>()), Times.Never);
         }
 
         /// <summary>
@@ -167,9 +167,7 @@ namespace Web.Server.Services.Tests
             var expectedMapAlert = new MapPin
             {
                 AddressID = trainAddressId,
-                Latitude = beaconLatitude,
-                Longitude = beaconLongitude,
-                Milepost = milepost,
+                BeaconID = beaconId,
                 Source = trainSource,
                 LastUpdate = _currentDateTime,
                 Direction = "" // Direction should not / cannot be calculated
@@ -180,9 +178,9 @@ namespace Web.Server.Services.Tests
                 expectedMapAlert
             };
 
-            _mockBeaconRepository.Setup(repo => repo.GetByIdAsync(telemetry.Beacon.ID))
+            _mockBeaconService.Setup(repo => repo.GetBeaconByIdAsync(telemetry.Beacon.ID))
                     .ReturnsAsync(beaconBeforeUpdate);
-            _mockBeaconRepository.Setup(repo => repo.UpdateAsync(beaconBeforeUpdate))
+            _mockBeaconService.Setup(repo => repo.UpdateBeaconAsync(beaconBeforeUpdate.ID, beaconBeforeUpdate))
                     .ReturnsAsync(beaconAfterUpdate);
             _mockTelemetryRepository.Setup(repo => repo.GetAllAsync())
                     .ReturnsAsync(existingTelemetry);
@@ -198,8 +196,8 @@ namespace Web.Server.Services.Tests
 
             // Assert
             _mockTelemetryRepository.Verify(repo => repo.AddAsync(It.Is<Telemetry>(t => t == telemetry)), Times.Once);
-            _mockBeaconRepository.Verify(repo => repo.GetByIdAsync(telemetry.Beacon.ID), Times.Once);
-            _mockBeaconRepository.Verify(repo => repo.UpdateAsync(It.Is<Beacon>(b => b.ID == telemetry.Beacon.ID)), Times.Once);
+            _mockBeaconService.Verify(repo => repo.GetBeaconByIdAsync(telemetry.Beacon.ID), Times.Once);
+            _mockBeaconService.Verify(repo => repo.UpdateBeaconAsync(It.IsAny<int>(), It.Is<Beacon>(b => b.ID == telemetry.Beacon.ID)), Times.Once);
 
             _mockClientProxy.Verify(proxy => proxy.SendCoreAsync(
                 NotificationMethods.MapAlert,
@@ -288,9 +286,9 @@ namespace Web.Server.Services.Tests
 
             var beaconAfterUpdate = beaconBeforeUpdate.GetClone();
 
-            _mockBeaconRepository.Setup(repo => repo.GetByIdAsync(telemetry.Beacon.ID))
+            _mockBeaconService.Setup(repo => repo.GetBeaconByIdAsync(telemetry.Beacon.ID))
                 .ReturnsAsync(beaconBeforeUpdate);
-            _mockBeaconRepository.Setup(repo => repo.UpdateAsync(beaconBeforeUpdate))
+            _mockBeaconService.Setup(repo => repo.UpdateBeaconAsync(beaconBeforeUpdate.ID, beaconBeforeUpdate))
                 .ReturnsAsync(beaconAfterUpdate);
             _mockTelemetryRepository.Setup(repo => repo.GetAllAsync())
                 .ReturnsAsync(existingTelemetry);
@@ -302,8 +300,8 @@ namespace Web.Server.Services.Tests
 
             // Assert
             _mockTelemetryRepository.Verify(repo => repo.AddAsync(It.Is<Telemetry>(t => t == telemetry)), Times.Once);
-            _mockBeaconRepository.Verify(repo => repo.GetByIdAsync(telemetry.Beacon.ID), Times.Once);
-            _mockBeaconRepository.Verify(repo => repo.UpdateAsync(It.Is<Beacon>(b => b.ID == telemetry.Beacon.ID)), Times.Once);
+            _mockBeaconService.Verify(repo => repo.GetBeaconByIdAsync(telemetry.Beacon.ID), Times.Once);
+            _mockBeaconService.Verify(repo => repo.UpdateBeaconAsync(It.IsAny<int>(), It.Is<Beacon>(b => b.ID == telemetry.Beacon.ID)), Times.Once);
 
             _mockClientProxy.Verify(proxy => proxy.SendCoreAsync(
                 NotificationMethods.MapAlert,
@@ -417,9 +415,7 @@ namespace Web.Server.Services.Tests
             var expectedMapAlert = new MapPin
             {
                 AddressID = 90234,
-                Latitude = beacon1Latitude,
-                Longitude = beacon1Longitude,
-                Milepost = milepost1,
+                BeaconID = beacon2Id,
                 Source = train1Source,
                 LastUpdate = _currentDateTime,
                 Direction = "S"
@@ -430,9 +426,9 @@ namespace Web.Server.Services.Tests
                 expectedMapAlert
             };
 
-            _mockBeaconRepository.Setup(repo => repo.GetByIdAsync(telemetry.Beacon.ID))
+            _mockBeaconService.Setup(repo => repo.GetBeaconByIdAsync(telemetry.Beacon.ID))
                     .ReturnsAsync(beaconBeforeUpdate);
-            _mockBeaconRepository.Setup(repo => repo.UpdateAsync(beaconBeforeUpdate))
+            _mockBeaconService.Setup(repo => repo.UpdateBeaconAsync(beaconBeforeUpdate.ID, beaconBeforeUpdate))
                     .ReturnsAsync(beaconAfterUpdate);
             _mockTelemetryRepository.Setup(repo => repo.GetAllAsync())
                     .ReturnsAsync(existingTelemetry);
@@ -448,8 +444,8 @@ namespace Web.Server.Services.Tests
 
             // Assert
             _mockTelemetryRepository.Verify(repo => repo.AddAsync(It.Is<Telemetry>(t => t == telemetry)), Times.Once);
-            _mockBeaconRepository.Verify(repo => repo.GetByIdAsync(telemetry.Beacon.ID), Times.Once);
-            _mockBeaconRepository.Verify(repo => repo.UpdateAsync(It.Is<Beacon>(b => b.ID == telemetry.Beacon.ID)), Times.Once);
+            _mockBeaconService.Verify(repo => repo.GetBeaconByIdAsync(telemetry.Beacon.ID), Times.Once);
+            _mockBeaconService.Verify(repo => repo.UpdateBeaconAsync(It.IsAny<int>(), It.Is<Beacon>(b => b.ID == telemetry.Beacon.ID)), Times.Once);
 
             _mockClientProxy.Verify(proxy => proxy.SendCoreAsync(
                 NotificationMethods.MapAlert,
@@ -573,9 +569,7 @@ namespace Web.Server.Services.Tests
             var expectedMapAlert = new MapPin
             {
                 AddressID = 90234,
-                Latitude = beacon1Latitude,
-                Longitude = beacon1Longitude,
-                Milepost = milepost1,
+                BeaconID = beacon2Id,
                 Source = train1Source,
                 LastUpdate = _currentDateTime,
                 Direction = "S"
@@ -586,9 +580,9 @@ namespace Web.Server.Services.Tests
                 expectedMapAlert
             };
 
-            _mockBeaconRepository.Setup(repo => repo.GetByIdAsync(telemetry.Beacon.ID))
+            _mockBeaconService.Setup(repo => repo.GetBeaconByIdAsync(telemetry.Beacon.ID))
                     .ReturnsAsync(beaconBeforeUpdate);
-            _mockBeaconRepository.Setup(repo => repo.UpdateAsync(beaconBeforeUpdate))
+            _mockBeaconService.Setup(repo => repo.UpdateBeaconAsync(beaconBeforeUpdate.ID, beaconBeforeUpdate))
                     .ReturnsAsync(beaconAfterUpdate);
             _mockTelemetryRepository.Setup(repo => repo.GetAllAsync())
                     .ReturnsAsync(existingTelemetry);
@@ -604,8 +598,8 @@ namespace Web.Server.Services.Tests
 
             // Assert
             _mockTelemetryRepository.Verify(repo => repo.AddAsync(It.Is<Telemetry>(t => t == telemetry)), Times.Once);
-            _mockBeaconRepository.Verify(repo => repo.GetByIdAsync(telemetry.Beacon.ID), Times.Once);
-            _mockBeaconRepository.Verify(repo => repo.UpdateAsync(It.Is<Beacon>(b => b.ID == telemetry.Beacon.ID)), Times.Once);
+            _mockBeaconService.Verify(repo => repo.GetBeaconByIdAsync(telemetry.Beacon.ID), Times.Once);
+            _mockBeaconService.Verify(repo => repo.UpdateBeaconAsync(It.IsAny<int>(), It.Is<Beacon>(b => b.ID == telemetry.Beacon.ID)), Times.Once);
 
             _mockClientProxy.Verify(proxy => proxy.SendCoreAsync(
                 NotificationMethods.MapAlert,
@@ -740,9 +734,7 @@ namespace Web.Server.Services.Tests
             var expectedMapAlert = new MapPin
             {
                 AddressID = 90234,
-                Latitude = beacon1Latitude,
-                Longitude = beacon1Longitude,
-                Milepost = milepost1,
+                BeaconID = beacon2Id,
                 Source = train1Source,
                 LastUpdate = _currentDateTime,
                 Direction = "S"
@@ -753,9 +745,9 @@ namespace Web.Server.Services.Tests
                 expectedMapAlert
             };
 
-            _mockBeaconRepository.Setup(repo => repo.GetByIdAsync(telemetry.Beacon.ID))
+            _mockBeaconService.Setup(repo => repo.GetBeaconByIdAsync(telemetry.Beacon.ID))
                     .ReturnsAsync(beaconBeforeUpdate);
-            _mockBeaconRepository.Setup(repo => repo.UpdateAsync(beaconBeforeUpdate))
+            _mockBeaconService.Setup(repo => repo.UpdateBeaconAsync(beaconBeforeUpdate.ID, beaconBeforeUpdate))
                     .ReturnsAsync(beaconAfterUpdate);
             _mockTelemetryRepository.Setup(repo => repo.GetAllAsync())
                     .ReturnsAsync(existingTelemetry);
@@ -771,8 +763,8 @@ namespace Web.Server.Services.Tests
 
             // Assert
             _mockTelemetryRepository.Verify(repo => repo.AddAsync(It.Is<Telemetry>(t => t == telemetry)), Times.Once);
-            _mockBeaconRepository.Verify(repo => repo.GetByIdAsync(telemetry.Beacon.ID), Times.Once);
-            _mockBeaconRepository.Verify(repo => repo.UpdateAsync(It.Is<Beacon>(b => b.ID == telemetry.Beacon.ID)), Times.Once);
+            _mockBeaconService.Verify(repo => repo.GetBeaconByIdAsync(telemetry.Beacon.ID), Times.Once);
+            _mockBeaconService.Verify(repo => repo.UpdateBeaconAsync(It.IsAny<int>(), It.Is<Beacon>(b => b.ID == telemetry.Beacon.ID)), Times.Once);
 
             _mockClientProxy.Verify(proxy => proxy.SendCoreAsync(
                 NotificationMethods.MapAlert,

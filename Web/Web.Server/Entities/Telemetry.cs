@@ -9,11 +9,17 @@ namespace Web.Server.Entities
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int ID { get; set; }
 
+        public int BeaconID { get; set; }
+
         public Beacon Beacon { get; set; }
 
         public required int AddressID { get; set; }
 
         public int? TrainID { get; set; }
+
+        public int? MapPinID { get; set; }
+
+        public MapPin? MapPin { get; set; }
 
         public bool? Moving { get; set; }
 
@@ -34,16 +40,31 @@ namespace Web.Server.Entities
                    CreatedAt == other.CreatedAt &&
                    LastUpdate == other.LastUpdate &&
                    ID == other.ID &&
+                   BeaconID == other.BeaconID &&
                    EqualityComparer<Beacon>.Default.Equals(Beacon, other.Beacon) &&
                    AddressID == other.AddressID &&
                    TrainID == other.TrainID &&
+                   MapPinID == other.MapPinID &&
+                   EqualityComparer<MapPin?>.Default.Equals(MapPin, other.MapPin) &&
                    Moving == other.Moving &&
                    Source == other.Source;
         }
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(CreatedAt, LastUpdate, ID, Beacon, AddressID, TrainID, Moving, Source);
+            HashCode hash = new HashCode();
+            hash.Add(CreatedAt);
+            hash.Add(LastUpdate);
+            hash.Add(ID);
+            hash.Add(BeaconID);
+            hash.Add(Beacon);
+            hash.Add(AddressID);
+            hash.Add(TrainID);
+            hash.Add(MapPinID);
+            hash.Add(MapPin);
+            hash.Add(Moving);
+            hash.Add(Source);
+            return hash.ToHashCode();
         }
 
         public static bool operator ==(Telemetry? left, Telemetry? right)

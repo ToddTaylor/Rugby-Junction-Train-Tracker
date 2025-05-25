@@ -13,7 +13,9 @@ namespace Web.Server.Entities
 
         public Owner Owner { get; set; }
 
-        public ICollection<BeaconRailroad> BeaconRailroads { get; set; }
+        public ICollection<BeaconRailroad> BeaconRailroads { get; set; } = [];
+
+        public ICollection<Telemetry> Telemetries { get; set; } = [];
 
         public override bool Equals(object? obj)
         {
@@ -28,12 +30,13 @@ namespace Web.Server.Entities
                    ID == other.ID &&
                    OwnerID == other.OwnerID &&
                    EqualityComparer<Owner>.Default.Equals(Owner, other.Owner) &&
-                   EqualityComparer<ICollection<BeaconRailroad>>.Default.Equals(BeaconRailroads, other.BeaconRailroads);
+                   EqualityComparer<ICollection<BeaconRailroad>>.Default.Equals(BeaconRailroads, other.BeaconRailroads) &&
+                   EqualityComparer<ICollection<Telemetry>>.Default.Equals(Telemetries, other.Telemetries);
         }
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(CreatedAt, LastUpdate, ID, OwnerID, Owner, BeaconRailroads);
+            return HashCode.Combine(CreatedAt, LastUpdate, ID, OwnerID, Owner, BeaconRailroads, Telemetries);
         }
 
         public static bool operator ==(Beacon? left, Beacon? right)

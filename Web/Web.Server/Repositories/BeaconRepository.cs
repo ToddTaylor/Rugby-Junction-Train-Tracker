@@ -27,6 +27,7 @@ namespace Web.Server.Repositories
             }
 
             beacon.CreatedAt = _timeProvider.UtcNow;
+            beacon.LastUpdate = beacon.CreatedAt;
 
             _context.Beacons.Add(beacon);
             await _context.SaveChangesAsync();
@@ -58,9 +59,8 @@ namespace Web.Server.Repositories
                 throw new KeyNotFoundException("Beacon not found.");
             }
 
-            existingBeacon.LastUpdate = _timeProvider.UtcNow;
             existingBeacon.Owner = beacon.Owner;
-            existingBeacon.BeaconRailroads = beacon.BeaconRailroads;
+            existingBeacon.LastUpdate = _timeProvider.UtcNow;
 
             await _context.SaveChangesAsync();
             return existingBeacon;

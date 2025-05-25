@@ -5,12 +5,13 @@ namespace Web.Server.Entities
     public class BeaconRailroad : EntityBase, IEquatable<BeaconRailroad?>
     {
         public int BeaconID { get; set; }
-        public Beacon Beacon { get; set; }
+        public Beacon? Beacon { get; set; }
         public required Direction Direction { get; set; }
         public int RailroadID { get; set; }
-        public Railroad Railroad { get; set; }
+        public Railroad? Railroad { get; set; }
         public required double Latitude { get; set; }
         public required double Longitude { get; set; }
+        public ICollection<MapPin> MapPins { get; set; } = [];
         public required double Milepost { get; set; }
 
         public override bool Equals(object? obj)
@@ -24,12 +25,13 @@ namespace Web.Server.Entities
                    CreatedAt == other.CreatedAt &&
                    LastUpdate == other.LastUpdate &&
                    BeaconID == other.BeaconID &&
-                   EqualityComparer<Beacon>.Default.Equals(Beacon, other.Beacon) &&
+                   EqualityComparer<Beacon?>.Default.Equals(Beacon, other.Beacon) &&
                    Direction == other.Direction &&
                    RailroadID == other.RailroadID &&
-                   EqualityComparer<Railroad>.Default.Equals(Railroad, other.Railroad) &&
+                   EqualityComparer<Railroad?>.Default.Equals(Railroad, other.Railroad) &&
                    Latitude == other.Latitude &&
                    Longitude == other.Longitude &&
+                   EqualityComparer<ICollection<MapPin>>.Default.Equals(MapPins, other.MapPins) &&
                    Milepost == other.Milepost;
         }
 
@@ -45,6 +47,7 @@ namespace Web.Server.Entities
             hash.Add(Railroad);
             hash.Add(Latitude);
             hash.Add(Longitude);
+            hash.Add(MapPins);
             hash.Add(Milepost);
             return hash.ToHashCode();
         }

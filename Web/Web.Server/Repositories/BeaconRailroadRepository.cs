@@ -18,6 +18,8 @@ namespace Web.Server.Repositories
         public async Task<BeaconRailroad> AddAsync(BeaconRailroad beaconRailroad)
         {
             beaconRailroad.CreatedAt = _timeProvider.UtcNow;
+            beaconRailroad.LastUpdate = beaconRailroad.CreatedAt;
+
             _context.BeaconRailroads.Add(beaconRailroad);
             await _context.SaveChangesAsync();
             return beaconRailroad;
@@ -53,6 +55,7 @@ namespace Web.Server.Repositories
             existing.Latitude = beaconRailroad.Latitude;
             existing.Longitude = beaconRailroad.Longitude;
             existing.Milepost = beaconRailroad.Milepost;
+            existing.LastUpdate = _timeProvider.UtcNow;
 
             await _context.SaveChangesAsync();
             return existing;

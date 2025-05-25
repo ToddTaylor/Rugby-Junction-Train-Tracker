@@ -19,10 +19,13 @@ namespace Web.Server.Repositories
         public async Task<Telemetry> AddAsync(Telemetry telemetry)
         {
             telemetry.CreatedAt = _timeProvider.UtcNow;
-            _context.Entry(telemetry).State = EntityState.Unchanged;
+            telemetry.LastUpdate = telemetry.CreatedAt;
+
+            telemetry.Beacon = null;
 
             _context.Telemetries.Add(telemetry);
             await _context.SaveChangesAsync();
+
             return await _context.Telemetries
                 .Include(t => t.Beacon)
                 .ThenInclude(b => b.BeaconRailroads)

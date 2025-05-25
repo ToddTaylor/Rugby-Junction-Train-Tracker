@@ -39,22 +39,23 @@ namespace Web.Server.Repositories
 
         public async Task<MapPin> UpsertAsync(MapPin mapPin)
         {
-            var existingMapPin = await _context.MapPins.FindAsync(mapPin.AddressID);
+            var existingMapPin = _context.MapPins
+                .Where(mp => mp.AddressID == mapPin.AddressID)
+                .FirstOrDefault();
 
             if (existingMapPin == null)
             {
                 mapPin.CreatedAt = _timeProvider.UtcNow;
+                mapPin.BeaconRailroad = null;
                 _context.MapPins.Add(mapPin);
             }
             else
             {
+                existingMapPin.BeaconID = mapPin.BeaconID;
+                existingMapPin.RailroadID = mapPin.RailroadID;
                 existingMapPin.Direction = mapPin.Direction;
-                existingMapPin.Latitude = mapPin.Latitude;
-                existingMapPin.Longitude = mapPin.Longitude;
                 existingMapPin.Moving = mapPin.Moving;
-                existingMapPin.Railroad = mapPin.Railroad;
                 existingMapPin.Source = mapPin.Source;
-                existingMapPin.Subdivision = mapPin.Subdivision;
                 existingMapPin.LastUpdate = _timeProvider.UtcNow;
 
                 _context.MapPins.Update(existingMapPin);
