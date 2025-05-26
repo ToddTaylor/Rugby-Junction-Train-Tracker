@@ -46,7 +46,7 @@ const RailMap: React.FC = () => {
         setMapPins(prev => updateAlerts(prev, pin));
     });
 
-    const sortedData: MapPin[] = Array.from(mapPins.values())
+    const sortedData: MapPin[] = mapPins
         .sort((a, b) => new Date(b.lastUpdate).getTime() - new Date(a.lastUpdate).getTime())
         .map((pin, index) => ({
             ...pin,

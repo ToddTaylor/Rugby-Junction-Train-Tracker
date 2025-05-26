@@ -1,8 +1,11 @@
-﻿namespace Web.Server.DTOs
+﻿
+namespace Web.Server.DTOs
 {
     public class MapPinDTO : IEquatable<MapPinDTO?>
     {
         public required int AddressID { get; set; }
+
+        public required int BeaconID { get; set; }
 
         public required DateTime CreatedAt { get; set; }
 
@@ -39,6 +42,7 @@
         {
             return other is not null &&
                    AddressID == other.AddressID &&
+                   BeaconID == other.BeaconID &&
                    CreatedAt == other.CreatedAt &&
                    LastUpdate == other.LastUpdate &&
                    Direction == other.Direction &&
@@ -56,6 +60,7 @@
         {
             HashCode hash = new HashCode();
             hash.Add(AddressID);
+            hash.Add(BeaconID);
             hash.Add(CreatedAt);
             hash.Add(LastUpdate);
             hash.Add(Direction);
