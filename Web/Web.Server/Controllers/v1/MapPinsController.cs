@@ -41,6 +41,8 @@ namespace Web.Server.Controllers.v1
                     mapPinDTO.Milepost = beaconRailroad.Milepost;
                     mapPinDTO.Latitude = beaconRailroad.Latitude;
                     mapPinDTO.Longitude = beaconRailroad.Longitude;
+                    mapPinDTO.Railroad = beaconRailroad.Railroad.Name;
+                    mapPinDTO.Subdivision = beaconRailroad.Railroad.Subdivision;
                 }
 
                 response.Data = mapPinDTOs;

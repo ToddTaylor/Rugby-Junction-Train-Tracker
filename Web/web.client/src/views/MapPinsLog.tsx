@@ -39,20 +39,22 @@ function MapPinsLog() {
 
     const columns: GridColDef[] = [
         { field: 'id', headerName: 'ID' },
-        { field: 'source', headerName: 'Source', width: 100 },
-        { field: 'addressID', headerName: 'Address ID', width: 100 },
+        {
+            field: 'lastUpdate',
+            headerName: 'Last Update',
+            width: 100,
+            valueFormatter: (params) =>
+                format(parseISO(params as string), 'h:mm aa'),
+        },
+        { field: 'railroad', headerName: 'Railroad', width: 75 },
+        { field: 'subdivision', headerName: 'Subdivision', width: 100 },
         { field: 'milepost', headerName: 'Milepost', width: 100 },
+        { field: 'source', headerName: 'Source', width: 75 },
+        { field: 'addressID', headerName: 'Train ID', width: 100 },
         { field: 'latitude', headerName: 'Latitude', width: 100 },
         { field: 'longitude', headerName: 'Longitude', width: 100 },
         { field: 'direction', headerName: 'Direction', width: 100 },
         { field: 'moving', headerName: 'Moving', width: 100 },
-        {
-            field: 'lastUpdate',
-            headerName: 'Last Update',
-            width: 200,
-            valueFormatter: (params) =>
-                format(parseISO(params as string), 'h:mm aa'),
-        },
     ];
 
     return (
