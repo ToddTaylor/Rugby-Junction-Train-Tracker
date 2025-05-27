@@ -1,12 +1,11 @@
-﻿namespace Web.Server.DTOs
+﻿
+namespace Web.Server.DTOs
 {
     public class BeaconDTO : IEquatable<BeaconDTO?>
     {
         public int ID { get; set; }
 
         public int OwnerID { get; set; }
-
-        public bool Online { get; set; }
 
         public DateTime CreatedAt { get; set; }
 

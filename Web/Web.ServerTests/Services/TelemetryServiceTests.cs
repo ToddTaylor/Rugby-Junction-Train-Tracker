@@ -16,6 +16,7 @@ namespace Web.Server.Services.Tests
         private TelemetryService? _telemetryService;
 
         private readonly Mock<IBeaconService> _mockBeaconService = new();
+        private readonly Mock<IBeaconRailroadService> _mockBeaconRailroadService = new();
         private readonly Mock<ITelemetryRepository> _mockTelemetryRepository = new();
         private readonly Mock<IHubContext<NotificationHub>> _mockHubContext = new();
         private readonly Mock<IHubClients> _mockHubClients = new();
@@ -38,9 +39,10 @@ namespace Web.Server.Services.Tests
             _mapper = config.CreateMapper();
 
             _telemetryService = new TelemetryService(
-                _mockHubContext.Object,
                 _mockTelemetryRepository.Object,
                 _mockBeaconService.Object,
+                _mockBeaconRailroadService.Object,
+                _mockHubContext.Object,
                 _mapper,
                 _mockMapPinService.Object,
                 _mockTimeProvider.Object);
