@@ -3,7 +3,7 @@
     "ConsoleApp": {
       "commandName": "Project",
       "environmentVariables": {
-        "DOTNET_ENVIRONMENT": "Production"
+        "DOTNET_ENVIRONMENT": "Local"
       }
     }
   }

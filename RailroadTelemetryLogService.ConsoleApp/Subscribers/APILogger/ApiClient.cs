@@ -1,12 +1,12 @@
 ﻿using Microsoft.Extensions.Configuration;
-using System.Net.Http.Json;
 
 namespace ConsoleApp.Subscribers.APILogger
 {
     public class ApiClient
     {
-        private readonly HttpClient _httpClient;
-        private readonly IConfiguration _configuration;
+        protected readonly HttpClient _httpClient;
+
+        protected readonly IConfiguration _configuration;
 
         public ApiClient()
         {
@@ -14,36 +14,7 @@ namespace ConsoleApp.Subscribers.APILogger
             _configuration = ConfigurationHelper.LoadConfiguration();
         }
 
-        public async Task PostAsync<TRequest>(TRequest data)
-        {
-            try
-            {
-                var url = $"{GetApUrl()}/Telemetries";
-
-                var request = new HttpRequestMessage(HttpMethod.Post, url)
-                {
-                    Content = JsonContent.Create(data)
-                };
-
-                // Add the API key to the headers
-                var _apiKey = GetApiKey();
-                request.Headers.Add("X-Api-Key", _apiKey);
-
-                HttpResponseMessage response = await _httpClient.SendAsync(request);
-
-                if (response.IsSuccessStatusCode == false)
-                {
-                    var errorContent = await response.Content.ReadAsStringAsync();
-                    throw new HttpRequestException($"API error: {response.StatusCode} - {errorContent}");
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Exception during API call: {ex.Message}");
-            }
-        }
-
-        private string? GetApiKey()
+        protected string? GetApiKey()
         {
             try
             {
@@ -51,12 +22,12 @@ namespace ConsoleApp.Subscribers.APILogger
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Exception during API key retrieval: {ex.Message}");
+                Console.WriteLine($"Exception during API key retrieval from configuration: {ex.Message}");
                 throw;
             }
         }
 
-        private string? GetApUrl()
+        protected string? GetApUrl()
         {
             try
             {
@@ -64,7 +35,7 @@ namespace ConsoleApp.Subscribers.APILogger
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Exception during API URL retrieval: {ex.Message}");
+                Console.WriteLine($"Exception during API URL retrieval from configuration: {ex.Message}");
                 throw;
             }
         }

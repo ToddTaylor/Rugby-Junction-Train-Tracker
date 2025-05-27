@@ -136,7 +136,7 @@ namespace Web.Server.Controllers.v1
                 return NotFound();
             }
 
-            await _beaconService.UpdateBeaconAsync(id, beacon);
+            await _beaconService.UpdateBeaconHealthAsync(id, beacon);
 
             return NoContent();
         }

@@ -113,6 +113,7 @@ builder.Services.AddScoped<ITelemetryService, TelemetryService>();
 
 builder.Services.AddScoped<ITimeProvider, SystemTimeProvider>();
 
+builder.Services.AddHostedService<BeaconRailroadHealthService>();
 builder.Services.AddHostedService<RecordCleanupService>();
 
 var app = builder.Build();

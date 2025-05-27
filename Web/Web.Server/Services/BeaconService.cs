@@ -32,6 +32,17 @@ namespace Web.Server.Services
             return await _beaconRepository.UpdateAsync(beacon);
         }
 
+        public async Task<Beacon> UpdateBeaconHealthAsync(int id, Beacon beacon)
+        {
+            // Update the timestamp on all beacon railroads the physical beacon is responbile for.
+            foreach (var beaconRailroad in beacon.BeaconRailroads)
+            {
+                beaconRailroad.LastUpdate = DateTime.UtcNow;
+            }
+
+            return await _beaconRepository.UpdateAsync(beacon);
+        }
+
         public async Task<bool> DeleteBeaconAsync(int id)
         {
             return await _beaconRepository.DeleteAsync(id);

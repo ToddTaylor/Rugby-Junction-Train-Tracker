@@ -37,6 +37,12 @@ namespace Web.Server.DTOs
         public double Milepost { get; set; }
 
         /// <summary>
+        /// Reports the online status of the beacon. If the beacon's last update
+        /// is older than 15 minutes, it is considered offline.
+        /// </summary>
+        public bool Online { get; set; }
+
+        /// <summary>
         /// The direction in which telemetry data is moving.
         /// </summary>
         /// <example>NorthSouth</example>
@@ -66,6 +72,7 @@ namespace Web.Server.DTOs
                    Latitude == other.Latitude &&
                    Longitude == other.Longitude &&
                    Milepost == other.Milepost &&
+                   Online == other.Online &&
                    Direction == other.Direction &&
                    CreatedAt == other.CreatedAt &&
                    LastUpdate == other.LastUpdate;
@@ -80,6 +87,7 @@ namespace Web.Server.DTOs
             hash.Add(Latitude);
             hash.Add(Longitude);
             hash.Add(Milepost);
+            hash.Add(Online);
             hash.Add(Direction);
             hash.Add(CreatedAt);
             hash.Add(LastUpdate);

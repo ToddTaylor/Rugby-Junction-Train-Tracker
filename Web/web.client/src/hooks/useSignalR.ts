@@ -1,33 +1,45 @@
 import { useEffect, useRef } from "react";
 import * as signalR from "@microsoft/signalr";
-import { MapPin } from "../types/types";
+import { MapPin, Beacon } from "../types/types";
 
-export function useSignalR(onItemCreated: (alert: MapPin) => void) {
-    const onItemCreatedRef = useRef(onItemCreated);
+const beaconUpdateMethodName = "BeaconUpdate";
+const mapPinUpdateMethodName = "MapPinUpdate";
+
+// Accept handlers for multiple events
+export function useSignalR(handlers: {
+    MapPinUpdate?: (mapPin: MapPin) => void;
+    BeaconUpdate?: (beacons: Beacon) => void;
+}) {
+    const handlersRef = useRef(handlers);
 
     // Keep ref updated
     useEffect(() => {
-        onItemCreatedRef.current = onItemCreated;
-    }, [onItemCreated]);
+        handlersRef.current = handlers;
+    }, [handlers]);
 
     useEffect(() => {
         const signalRUrl = import.meta.env.VITE_API_URL + "/hubs/notificationHub";
 
         const connection = new signalR.HubConnectionBuilder()
             .withUrl(signalRUrl, {
-                // Azure SignalR Service uses WebSockets by default which is not supported
-                // in the free tier, only on the Basic and Standard tiers.
                 transport: signalR.HttpTransportType.LongPolling
             })
             .withAutomaticReconnect()
             .build();
 
-        const handleMapAlert = (alert: MapPin) => {
-            console.log("New Map Alert:", alert);
-            onItemCreatedRef.current(alert);
-        };
-
-        connection.on("MapAlert", handleMapAlert);
+        // Register handlers if provided
+        if (handlersRef.current.MapPinUpdate) {
+            connection.on(mapPinUpdateMethodName, (mapPin: MapPin) => {
+                console.log("New Map Pin:", mapPin);
+                handlersRef.current.MapPinUpdate?.(mapPin);
+            });
+        }
+        if (handlersRef.current.BeaconUpdate) {
+            connection.on(beaconUpdateMethodName, (beacon: Beacon) => {
+                console.log("Beacon Updated:", beacon);
+                handlersRef.current.BeaconUpdate?.(beacon);
+            });
+        }
 
         connection.onclose(error => {
             if (error) {
@@ -50,7 +62,8 @@ export function useSignalR(onItemCreated: (alert: MapPin) => void) {
             .catch(err => console.error("SignalR Connection Error: ", err));
 
         return () => {
-            connection.off("MapAlert", handleMapAlert);
+            connection.off(mapPinUpdateMethodName);
+            connection.off(beaconUpdateMethodName);
             connection.stop();
         };
     }, []);

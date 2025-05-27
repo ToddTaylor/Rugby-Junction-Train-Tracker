@@ -1,6 +1,7 @@
 ﻿using ConsoleApp;
 using ConsoleApp.Deserializers;
 using ConsoleApp.EventArgs;
+using ConsoleApp.Subscribers.APILogger;
 using Microsoft.Extensions.Configuration;
 using System.Reflection;
 
@@ -53,6 +54,11 @@ class Program
 
         Console.WriteLine($"Telemetry Log Service started.  Processing messages posted with then last {TIME_RECEIVED_OFFSET_MINUTES} minutes...");
 
+        // Start beacon health service to update the API with the service health status.
+        var beaconApiClient = new BeaconApiClient();
+        using var beaconHealthService = new BeaconHealthService(beaconApiClient, configuration);
+        beaconHealthService.Start();
+
         while (true)
         {
             try
@@ -69,6 +75,9 @@ class Program
 
             Thread.Sleep(1000); // Wait before checking the files again.
         }
+
+        // Keep the app running...
+        Console.ReadLine();
     }
 
     private static void DeleteOldLogFiles(string directoryPath)

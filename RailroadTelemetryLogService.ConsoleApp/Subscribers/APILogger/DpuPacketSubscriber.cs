@@ -29,7 +29,7 @@ namespace ConsoleApp.Subscribers.APILogger
                 Timestamp = e.Packet.TimeReceived
             };
 
-            var apiClient = new RailroadTelemetryApiClient();
+            var apiClient = new TelemetryApiClient();
             apiClient.SendTelemetryAsync(alert).GetAwaiter().GetResult();
 
             // Let web page respond to previous request before sending the next one.

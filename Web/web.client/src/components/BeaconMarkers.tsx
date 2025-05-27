@@ -18,31 +18,37 @@ const BeaconMarkers: React.FC<BeaconMarkersProps> = ({ pins: beaconPins, zoom })
     const size = getMarkerSize(zoom);
     return (
         <>
-            {beaconPins.map((beaconPin, idx) => (
-                <Marker
-                    key={`beacon-${beaconPin.beaconID ?? idx}-${beaconPin.latitude}-${beaconPin.longitude}`}
-                    position={[beaconPin.latitude, beaconPin.longitude]}
-                    icon={L.divIcon({
-                        className: 'beacon-marker-z',
-                        html: `
-                            <div class="beacon-container" style="position: relative; width: ${size}px; height: ${size}px;">
-                                <div class="beacon-core" style="
-                                width:${size}px;
-                                height:${size}px;
-                                background:#005aa9;
-                                border-radius:50%;
-                                position:absolute;
-                                top:0;
-                                left:0;
-                                "></div>
-                                <div class="beacon-ping"></div>
-                            </div>
-                            `,
-                        iconSize: [size, size],
-                        iconAnchor: [size / 2, size / 2],
-                    })}
-                />
-            ))}
+            {beaconPins.map((beaconPin, idx) => {
+                const color = beaconPin.online === false ? '#888888' : '#005aa9';
+                const pingDiv = beaconPin.online !== false
+                    ? `<div class="beacon-ping" title="Beacon offline"></div>`
+                    : '';
+                return (
+                    <Marker
+                        key={`beacon-${beaconPin.beaconID ?? idx}-${beaconPin.latitude}-${beaconPin.longitude}`}
+                        position={[beaconPin.latitude, beaconPin.longitude]}
+                        icon={L.divIcon({
+                            className: 'beacon-marker-z',
+                            html: `
+                                <div class="beacon-container" style="position: relative; width: ${size}px; height: ${size}px;">
+                                    <div class="beacon-core" title="Beacon online" style="
+                                    width:${size}px;
+                                    height:${size}px;
+                                    background:${color};
+                                    border-radius:50%;
+                                    position:absolute;
+                                    top:0;
+                                    left:0;
+                                    "></div>
+                                    ${pingDiv}
+                                </div>
+                                `,
+                            iconSize: [size, size],
+                            iconAnchor: [size / 2, size / 2],
+                        })}
+                    />
+                );
+            })}
         </>
     );
 };

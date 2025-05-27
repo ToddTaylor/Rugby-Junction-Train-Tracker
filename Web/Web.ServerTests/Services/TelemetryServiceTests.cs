@@ -186,7 +186,7 @@ namespace Web.Server.Services.Tests
                     .ReturnsAsync(existingTelemetry);
             _mockTelemetryRepository.Setup(repo => repo.AddAsync(telemetryBeforeAdd))
                     .ReturnsAsync(telemetryAfterAdd);
-            _mockClientProxy?.Setup(proxy => proxy.SendCoreAsync(NotificationMethods.MapAlert, expectedMapAlertObjects, default))
+            _mockClientProxy?.Setup(proxy => proxy.SendCoreAsync(NotificationMethods.MapPinUpdate, expectedMapAlertObjects, default))
                     .Returns(Task.CompletedTask);
             _mockHubContext.Setup(h => h.Clients).Returns(_mockHubClients.Object);
             _mockHubClients.Setup(h => h.All).Returns(_mockClientProxy?.Object);
@@ -200,7 +200,7 @@ namespace Web.Server.Services.Tests
             _mockBeaconService.Verify(repo => repo.UpdateBeaconAsync(It.IsAny<int>(), It.Is<Beacon>(b => b.ID == telemetry.Beacon.ID)), Times.Once);
 
             _mockClientProxy.Verify(proxy => proxy.SendCoreAsync(
-                NotificationMethods.MapAlert,
+                NotificationMethods.MapPinUpdate,
                 It.Is<object[]>(args => args[0].Equals(expectedMapAlert)),
                 default), Times.Once);
         }
@@ -304,7 +304,7 @@ namespace Web.Server.Services.Tests
             _mockBeaconService.Verify(repo => repo.UpdateBeaconAsync(It.IsAny<int>(), It.Is<Beacon>(b => b.ID == telemetry.Beacon.ID)), Times.Once);
 
             _mockClientProxy.Verify(proxy => proxy.SendCoreAsync(
-                NotificationMethods.MapAlert,
+                NotificationMethods.MapPinUpdate,
                 It.IsAny<object[]>(),
                 default), Times.Never);
         }
@@ -434,7 +434,7 @@ namespace Web.Server.Services.Tests
                     .ReturnsAsync(existingTelemetry);
             _mockTelemetryRepository.Setup(repo => repo.AddAsync(telemetryBeforeAdd))
                     .ReturnsAsync(telemetryAfterAdd);
-            _mockClientProxy?.Setup(proxy => proxy.SendCoreAsync(NotificationMethods.MapAlert, expectedMapAlertObjects, default))
+            _mockClientProxy?.Setup(proxy => proxy.SendCoreAsync(NotificationMethods.MapPinUpdate, expectedMapAlertObjects, default))
                     .Returns(Task.CompletedTask);
             _mockHubContext.Setup(h => h.Clients).Returns(_mockHubClients.Object);
             _mockHubClients.Setup(h => h.All).Returns(_mockClientProxy?.Object);
@@ -448,7 +448,7 @@ namespace Web.Server.Services.Tests
             _mockBeaconService.Verify(repo => repo.UpdateBeaconAsync(It.IsAny<int>(), It.Is<Beacon>(b => b.ID == telemetry.Beacon.ID)), Times.Once);
 
             _mockClientProxy.Verify(proxy => proxy.SendCoreAsync(
-                NotificationMethods.MapAlert,
+                NotificationMethods.MapPinUpdate,
                 It.Is<object[]>(args => args[0].Equals(expectedMapAlert)),
                 default), Times.Once);
         }
@@ -588,7 +588,7 @@ namespace Web.Server.Services.Tests
                     .ReturnsAsync(existingTelemetry);
             _mockTelemetryRepository.Setup(repo => repo.AddAsync(telemetryBeforeAdd))
                     .ReturnsAsync(telemetryAfterAdd);
-            _mockClientProxy?.Setup(proxy => proxy.SendCoreAsync(NotificationMethods.MapAlert, expectedMapAlertObjects, default))
+            _mockClientProxy?.Setup(proxy => proxy.SendCoreAsync(NotificationMethods.MapPinUpdate, expectedMapAlertObjects, default))
                     .Returns(Task.CompletedTask);
             _mockHubContext.Setup(h => h.Clients).Returns(_mockHubClients.Object);
             _mockHubClients.Setup(h => h.All).Returns(_mockClientProxy?.Object);
@@ -602,7 +602,7 @@ namespace Web.Server.Services.Tests
             _mockBeaconService.Verify(repo => repo.UpdateBeaconAsync(It.IsAny<int>(), It.Is<Beacon>(b => b.ID == telemetry.Beacon.ID)), Times.Once);
 
             _mockClientProxy.Verify(proxy => proxy.SendCoreAsync(
-                NotificationMethods.MapAlert,
+                NotificationMethods.MapPinUpdate,
                 It.Is<object[]>(args => args[0].Equals(expectedMapAlert)),
                 default), Times.Once);
         }
@@ -753,7 +753,7 @@ namespace Web.Server.Services.Tests
                     .ReturnsAsync(existingTelemetry);
             _mockTelemetryRepository.Setup(repo => repo.AddAsync(telemetryBeforeAdd))
                     .ReturnsAsync(telemetryAfterAdd);
-            _mockClientProxy?.Setup(proxy => proxy.SendCoreAsync(NotificationMethods.MapAlert, expectedMapAlertObjects, default))
+            _mockClientProxy?.Setup(proxy => proxy.SendCoreAsync(NotificationMethods.MapPinUpdate, expectedMapAlertObjects, default))
                     .Returns(Task.CompletedTask);
             _mockHubContext.Setup(h => h.Clients).Returns(_mockHubClients.Object);
             _mockHubClients.Setup(h => h.All).Returns(_mockClientProxy?.Object);
@@ -767,7 +767,7 @@ namespace Web.Server.Services.Tests
             _mockBeaconService.Verify(repo => repo.UpdateBeaconAsync(It.IsAny<int>(), It.Is<Beacon>(b => b.ID == telemetry.Beacon.ID)), Times.Once);
 
             _mockClientProxy.Verify(proxy => proxy.SendCoreAsync(
-                NotificationMethods.MapAlert,
+                NotificationMethods.MapPinUpdate,
                 It.Is<object[]>(args => args[0].Equals(expectedMapAlert)),
                 default), Times.Once);
         }

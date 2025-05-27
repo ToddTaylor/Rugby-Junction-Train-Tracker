@@ -42,8 +42,13 @@ const RailMap: React.FC = () => {
     const [trackDataLoaded, setTrackDataLoaded] = useState(false);
     const [beaconsLoaded, setBeaconsLoaded] = useState(false);
 
-    useSignalR((pin: MapPin) => {
-        setMapPins(prev => updateAlerts(prev, pin));
+    useSignalR({
+        MapPinUpdate: (mapPin: MapPin) => {
+            setMapPins(mapPins => updateMapPins(mapPins, mapPin));
+        },
+        BeaconUpdate: (beacon: Beacon) => {
+            setBeacons(beacons => updateBeacon(beacons, beacon));  
+        }
     });
 
     const sortedData: MapPin[] = mapPins
@@ -269,7 +274,7 @@ const RailMap: React.FC = () => {
         // Fetch initial map telemtry pin data from the API
         const fetchInitialTelemetryPins = async () => {
             try {
-                const minutesOldFilter = 15; // Fetch map pins from the last 15 minutes so old alerts are not shown
+                const minutesOldFilter = 15; // Fetch map pins from the last 15 minutes so old map pins are not shown
                 const apiUrl = import.meta.env.VITE_API_URL + "/api/v1/MapPins?minutes=" + minutesOldFilter;
                 const response = await fetch(apiUrl, {
                     headers: {
@@ -354,18 +359,32 @@ const RailMap: React.FC = () => {
 /**
  * TODO: Unit test this function.
  */
-function updateAlerts(pins: MapPin[], newPin: MapPin): MapPin[] {
+function updateMapPins(pins: MapPin[], newPin: MapPin): MapPin[] {
     const existingIndex = pins.findIndex(
-        (alert) => alert.addressID === newPin.addressID
+        (mapPin) => mapPin.addressID === newPin.addressID
     );
 
     if (existingIndex !== -1) {
-        // Remove the existing alert with the same addressID
+        // Remove the existing map pin with the same addressID
         pins.splice(existingIndex, 1);
     }
 
     // Add the new pin to the array
     return [...pins, newPin];
+}
+
+function updateBeacon(beacons: Beacon[], updatedBeacon: Beacon): Beacon[] {
+    const existingIndex = beacons.findIndex(
+        (beacon) => beacon.beaconID === updatedBeacon.beaconID && beacon.railroadID === updatedBeacon.railroadID
+    );
+
+    if (existingIndex !== -1) {
+        // Remove the existing map pin with the same addressID
+        beacons.splice(existingIndex, 1);
+    }
+
+    // Add the new pin to the array
+    return [...beacons, updatedBeacon];
 }
 
 export default RailMap;

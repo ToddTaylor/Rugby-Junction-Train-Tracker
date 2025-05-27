@@ -8,6 +8,7 @@ namespace Web.Server.Services
         Task<Beacon?> GetBeaconByIdAsync(int id);
         Task<Beacon> CreateBeaconAsync(Beacon beacon);
         Task<Beacon> UpdateBeaconAsync(int id, Beacon beacon);
+        Task<Beacon> UpdateBeaconHealthAsync(int id, Beacon beacon);
         Task<bool> DeleteBeaconAsync(int id);
     }
 }

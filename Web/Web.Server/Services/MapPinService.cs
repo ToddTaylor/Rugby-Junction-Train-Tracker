@@ -55,6 +55,10 @@ namespace Web.Server.Services
                 {
                     var beaconRailroad = telemetryBeacon.BeaconRailroads.First();
 
+                    // Update the timestamp for beacon health calculations.
+                    beaconRailroad.LastUpdate = DateTime.UtcNow;
+                    await _beaconRailroadService.UpdateAsync(beaconRailroad);
+
                     newMapPin.BeaconRailroad = beaconRailroad;
                     newMapPin.BeaconID = beaconRailroad.BeaconID;
                     newMapPin.RailroadID = beaconRailroad.RailroadID;
@@ -66,6 +70,9 @@ namespace Web.Server.Services
                     // HACK: Use the first beacon railroad with no direction as a temporary solution.
                     var beaconRailroad = telemetryBeacon.BeaconRailroads.First();
 
+                    beaconRailroad.LastUpdate = DateTime.UtcNow;
+                    await _beaconRailroadService.UpdateAsync(beaconRailroad);
+
                     newMapPin.BeaconRailroad = beaconRailroad;
                     newMapPin.BeaconID = beaconRailroad.BeaconID;
                     newMapPin.RailroadID = beaconRailroad.RailroadID;
@@ -75,6 +82,15 @@ namespace Web.Server.Services
             }
             else
             {
+                var telemetryBeaconRailroad = telemetryBeacon.BeaconRailroads
+                    .Where(br => br.BeaconID == telemetry.Beacon.ID)
+                    .Where(br => br.RailroadID == previousMapPin.RailroadID)
+                    .First();
+
+                // Update the timestamp for beacon health calculations.
+                telemetryBeaconRailroad.LastUpdate = DateTime.UtcNow;
+                await _beaconRailroadService.UpdateAsync(telemetryBeaconRailroad);
+
                 var differentBeacon = telemetry.Beacon.ID != previousMapPin.BeaconID;
 
                 previousMapPin.Moving = telemetry.Moving;
@@ -82,7 +98,7 @@ namespace Web.Server.Services
 
                 if (differentBeacon || String.IsNullOrEmpty(previousMapPin.Direction))
                 {
-                    previousMapPin.Direction = await CalculateDirection(telemetry.Beacon.ID, telemetryBeacon.BeaconRailroads, previousMapPin);
+                    previousMapPin.Direction = await CalculateDirection(telemetry.Beacon.ID, telemetryBeaconRailroad, previousMapPin);
                 }
 
                 previousMapPin.BeaconID = telemetry.Beacon.ID;
@@ -95,22 +111,17 @@ namespace Web.Server.Services
 
             var mapPinDTO = _mapper.Map<MapPinDTO>(finalMapPin);
 
-            await _hubContext.Clients.All.SendAsync(NotificationMethods.MapAlert, mapPinDTO);
+            await _hubContext.Clients.All.SendAsync(NotificationMethods.MapPinUpdate, mapPinDTO);
         }
 
-        private async Task<string> CalculateDirection(int telemetryBeaconID, ICollection<BeaconRailroad> telemetryBeaconRailroads, MapPin previousMapPin)
+        private async Task<string> CalculateDirection(int telemetryBeaconID, BeaconRailroad telemetryBeaconRailroad, MapPin previousMapPin)
         {
-            var matchingBeaconRailroad = telemetryBeaconRailroads
-            .Where(br => br.BeaconID == telemetryBeaconID)
-            .Where(br => br.RailroadID == previousMapPin.RailroadID)
-            .First();
-
             var mapPinBeaconRailroad = await _beaconRailroadService.GetByIdAsync(previousMapPin.BeaconID, previousMapPin.RailroadID);
 
             var fromGeoCoordinate = new GeoCoordinate(mapPinBeaconRailroad.Latitude, mapPinBeaconRailroad.Longitude);
-            var toGeoCoordinate = new GeoCoordinate(matchingBeaconRailroad.Latitude, matchingBeaconRailroad.Longitude);
+            var toGeoCoordinate = new GeoCoordinate(telemetryBeaconRailroad.Latitude, telemetryBeaconRailroad.Longitude);
 
-            return DirectionService.GetDirection(fromGeoCoordinate, toGeoCoordinate, matchingBeaconRailroad.Direction).ToString();
+            return DirectionService.GetDirection(fromGeoCoordinate, toGeoCoordinate, telemetryBeaconRailroad.Direction).ToString();
         }
     }
 }

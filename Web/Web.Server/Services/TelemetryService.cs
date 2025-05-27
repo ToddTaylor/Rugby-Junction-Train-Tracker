@@ -1,5 +1,6 @@
 using AutoMapper;
 using Microsoft.AspNetCore.SignalR;
+using Web.Server.DTOs;
 using Web.Server.Entities;
 using Web.Server.Hubs;
 using Web.Server.Providers;
@@ -11,20 +12,25 @@ namespace Web.Server.Services
     {
         private readonly ITelemetryRepository _telemetryRepository;
         private readonly IBeaconService _beaconService;
+        private readonly IBeaconRailroadService _beaconRailroadService;
+        private readonly IHubContext<NotificationHub> _hubContext;
         private readonly IMapper _mapper;
         private readonly IMapPinsService _mapPinsService;
         private readonly ITimeProvider _timeProvider;
 
         public TelemetryService(
-            IHubContext<NotificationHub> hubContext,
             ITelemetryRepository telemetryRepository,
             IBeaconService beaconService,
+            IBeaconRailroadService beaconRailroadService,
+            IHubContext<NotificationHub> hubContext,
             IMapper mapper,
             IMapPinsService mapPinsService,
             ITimeProvider timeProvider)
         {
             _telemetryRepository = telemetryRepository;
             _beaconService = beaconService;
+            _beaconRailroadService = beaconRailroadService;
+            _hubContext = hubContext;
             _mapper = mapper;
             _mapPinsService = mapPinsService;
             _timeProvider = timeProvider;
@@ -47,7 +53,6 @@ namespace Web.Server.Services
                 throw new InvalidOperationException("Telemetry must have an AddressID.");
             }
 
-
             var telemetryBeacon = await _beaconService.GetBeaconByIdAsync(telemetry.Beacon.ID);
 
             if (telemetryBeacon == null)
@@ -57,8 +62,18 @@ namespace Web.Server.Services
 
             var now = _timeProvider.UtcNow;
 
-            // Update's the telemetry beacon with the current timestamp.
-            telemetryBeacon = await _beaconService.UpdateBeaconAsync(telemetryBeacon.ID, telemetryBeacon);
+            // Update's the telemetry beacon railroads with the current timestamp and notify clients that beacon railroads are online.
+            foreach (var beaconRailroad in telemetryBeacon.BeaconRailroads)
+            {
+                beaconRailroad.LastUpdate = now;
+
+                await _beaconRailroadService.UpdateAsync(beaconRailroad);
+
+                var beaconRailroadDTO = _mapper.Map<BeaconRailroadDTO>(beaconRailroad);
+                beaconRailroadDTO.Online = true; // Set online status to true since it's now updated.
+
+                await _hubContext.Clients.All.SendAsync(NotificationMethods.BeaconUpdate, beaconRailroadDTO);
+            }
 
             // Inserts new telemetry for historical logging purposes.
             telemetry = await _telemetryRepository.AddAsync(telemetry);
