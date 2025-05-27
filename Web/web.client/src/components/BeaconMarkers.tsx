@@ -21,8 +21,9 @@ const BeaconMarkers: React.FC<BeaconMarkersProps> = ({ pins: beaconPins, zoom })
             {beaconPins.map((beaconPin, idx) => {
                 const color = beaconPin.online === false ? '#888888' : '#005aa9';
                 const pingDiv = beaconPin.online !== false
-                    ? `<div class="beacon-ping" title="Beacon offline"></div>`
+                    ? `<div class="beacon-ping" title="Beacon online"></div>`
                     : '';
+                const title = beaconPin.online === true ? 'online' : 'offline';
                 return (
                     <Marker
                         key={`beacon-${beaconPin.beaconID ?? idx}-${beaconPin.latitude}-${beaconPin.longitude}`}
@@ -31,7 +32,7 @@ const BeaconMarkers: React.FC<BeaconMarkersProps> = ({ pins: beaconPins, zoom })
                             className: 'beacon-marker-z',
                             html: `
                                 <div class="beacon-container" style="position: relative; width: ${size}px; height: ${size}px;">
-                                    <div class="beacon-core" title="Beacon online" style="
+                                    <div class="beacon-core" title="Beacon ${title}" style="
                                     width:${size}px;
                                     height:${size}px;
                                     background:${color};
