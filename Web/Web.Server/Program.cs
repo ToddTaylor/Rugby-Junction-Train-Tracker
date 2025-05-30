@@ -45,7 +45,7 @@ builder.Services.AddControllers()
 builder.Services.AddSignalR(options =>
 {
     // Azure free tier web app does not support WebSockets, so we need to use Server-Sent Events
-    options.SupportedProtocols.Add(HttpTransportType.LongPolling.ToString());
+    options.SupportedProtocols.Add(HttpTransportType.WebSockets.ToString());
     options.EnableDetailedErrors = true;
 });
 

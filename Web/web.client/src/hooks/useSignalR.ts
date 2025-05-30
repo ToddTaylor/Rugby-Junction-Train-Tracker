@@ -22,7 +22,7 @@ export function useSignalR(handlers: {
 
         const connection = new signalR.HubConnectionBuilder()
             .withUrl(signalRUrl, {
-                transport: signalR.HttpTransportType.LongPolling
+                transport: signalR.HttpTransportType.WebSockets
             })
             .withAutomaticReconnect()
             .build();
