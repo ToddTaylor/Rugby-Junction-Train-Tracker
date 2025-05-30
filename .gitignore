@@ -373,3 +373,4 @@ FodyWeavers.xsd
 /RailroadTelemetryLogService.ConsoleApp/appsettings.Production.json
 /RailroadTelemetryLogService.ConsoleApp/appsettings.Development.json
 /RailroadTelemetryLogService.ConsoleApp/appsettings.Local.json
+/Web/Web.Server/telemetry - Copy.db
