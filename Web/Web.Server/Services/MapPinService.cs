@@ -133,7 +133,10 @@ namespace Web.Server.Services
                         Source = telemetry.Source
                     });
 
-                    previousMapPin.Moving = telemetry.Moving;
+                    if (telemetry.Moving.HasValue)
+                    {
+                        previousMapPin.Moving = telemetry.Moving;
+                    }
                 }
 
                 if (differentBeacon || String.IsNullOrEmpty(previousMapPin.Direction))
