@@ -19,7 +19,9 @@ namespace Web.Server.Repositories
         public async Task<MapPin?> GetByIdAsync(int addressID)
         {
             return await _context.MapPins
-                .FirstOrDefaultAsync(mp => mp.AddressID == addressID);
+                .Where(mp => mp.Addresses.Any(a => a.AddressID == addressID))
+                .Include(mp => mp.Addresses)
+                .FirstOrDefaultAsync();
         }
 
         public async Task<IEnumerable<MapPin>> GetAllAsync(int? minutes)
@@ -29,6 +31,7 @@ namespace Web.Server.Repositories
                 return await _context.MapPins
                     .Where(mp => mp.LastUpdate >= _timeProvider.UtcNow.AddMinutes(-minutes.Value))
                     .OrderByDescending(mp => mp.LastUpdate)
+                    .Include(mp => mp.Addresses)
                     .ToListAsync();
             }
             else
@@ -39,23 +42,30 @@ namespace Web.Server.Repositories
 
         public async Task<MapPin> UpsertAsync(MapPin mapPin)
         {
+            // Find existing map pin by matching address ID(s).
+            var mapPinBAddressIds = mapPin.Addresses
+                .Select(a => a.AddressID)
+                .ToList();
+
             var existingMapPin = _context.MapPins
-                .Where(mp => mp.AddressID == mapPin.AddressID)
+                .Where(pin => pin.Addresses.Any(a => mapPinBAddressIds.Contains(a.AddressID)))
                 .FirstOrDefault();
 
             if (existingMapPin == null)
             {
+                mapPin.Addresses = mapPin.Addresses;
+                mapPin.BeaconID = mapPin.BeaconID;
                 mapPin.CreatedAt = _timeProvider.UtcNow;
+                mapPin.RailroadID = mapPin.RailroadID;
+                mapPin.Direction = mapPin.Direction;
+                mapPin.LastUpdate = _timeProvider.UtcNow;
                 mapPin.BeaconRailroad = null;
+
                 _context.MapPins.Add(mapPin);
             }
             else
             {
-                existingMapPin.BeaconID = mapPin.BeaconID;
-                existingMapPin.RailroadID = mapPin.RailroadID;
-                existingMapPin.Direction = mapPin.Direction;
-                existingMapPin.Moving = mapPin.Moving;
-                existingMapPin.Source = mapPin.Source;
+                existingMapPin.CreatedAt = _timeProvider.UtcNow;
                 existingMapPin.LastUpdate = _timeProvider.UtcNow;
 
                 _context.MapPins.Update(existingMapPin);

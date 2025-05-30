@@ -356,16 +356,16 @@ const RailMap: React.FC = () => {
     );
 };
 
-/**
- * TODO: Unit test this function.
- */
 function updateMapPins(pins: MapPin[], newPin: MapPin): MapPin[] {
+    const newPinAddressValues = newPin.addresses ? Object.values(newPin.addresses) : [];
     const existingIndex = pins.findIndex(
-        (mapPin) => mapPin.addressID === newPin.addressID
+        (mapPin) =>
+            mapPin.addresses &&
+            Object.values(mapPin.addresses).some(value => newPinAddressValues.includes(value))
     );
 
     if (existingIndex !== -1) {
-        // Remove the existing map pin with the same addressID
+        // Remove the existing map pin with the same address value
         pins.splice(existingIndex, 1);
     }
 

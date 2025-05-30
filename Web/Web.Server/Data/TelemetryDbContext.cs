@@ -13,6 +13,7 @@ namespace Web.Server.Data
         {
         }
 
+        public DbSet<Address> Addresses { get; set; }
         public DbSet<Beacon> Beacons { get; set; }
         public DbSet<BeaconRailroad> BeaconRailroads { get; set; }
         public DbSet<MapPin> MapPins { get; set; }
@@ -60,6 +61,11 @@ namespace Web.Server.Data
                 .WithMany() // <--- this is the key to preventing uniqueness
                 .HasForeignKey(mp => new { mp.BeaconID, mp.RailroadID })
                 .OnDelete(DeleteBehavior.Restrict); // or whatever behavior you want
+
+            modelBuilder.Entity<Address>()
+                .HasOne(a => a.MapPin)
+                .WithMany(mp => mp.Addresses)
+                .HasForeignKey(a => a.MapPinID);
 
             modelBuilder.Entity<Telemetry>()
                 .HasOne(t => t.Beacon)

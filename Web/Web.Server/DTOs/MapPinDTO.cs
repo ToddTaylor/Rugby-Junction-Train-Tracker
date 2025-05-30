@@ -3,7 +3,7 @@ namespace Web.Server.DTOs
 {
     public class MapPinDTO : IEquatable<MapPinDTO?>
     {
-        public required int AddressID { get; set; }
+        public Dictionary<string, string> Addresses { get; set; }
 
         public required int BeaconID { get; set; }
 
@@ -41,7 +41,7 @@ namespace Web.Server.DTOs
         public bool Equals(MapPinDTO? other)
         {
             return other is not null &&
-                   AddressID == other.AddressID &&
+                   EqualityComparer<Dictionary<string, string>>.Default.Equals(Addresses, other.Addresses) &&
                    BeaconID == other.BeaconID &&
                    CreatedAt == other.CreatedAt &&
                    LastUpdate == other.LastUpdate &&
@@ -59,7 +59,7 @@ namespace Web.Server.DTOs
         public override int GetHashCode()
         {
             HashCode hash = new HashCode();
-            hash.Add(AddressID);
+            hash.Add(Addresses);
             hash.Add(BeaconID);
             hash.Add(CreatedAt);
             hash.Add(LastUpdate);

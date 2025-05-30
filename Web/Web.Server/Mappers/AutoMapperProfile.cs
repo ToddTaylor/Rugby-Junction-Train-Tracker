@@ -33,7 +33,11 @@ namespace Web.Server.Mappers
                 .ForMember(dest => dest.Railroad,
                            opt => opt.MapFrom(src => src.BeaconRailroad.Railroad.Name))
                 .ForMember(dest => dest.Subdivision,
-                           opt => opt.MapFrom(src => src.BeaconRailroad.Railroad.Subdivision));
+                           opt => opt.MapFrom(src => src.BeaconRailroad.Railroad.Subdivision))
+                .ForMember(dest => dest.Addresses,
+                           opt => opt.MapFrom(src => src.Addresses != null
+                               ? src.Addresses.ToDictionary(a => a.Source, a => a.AddressID)
+                               : new Dictionary<string, int>()));
 
             CreateMap<CreateOwnerDTO, Owner>()
                 .ForMember(dest => dest.ID, opt => opt.Ignore())

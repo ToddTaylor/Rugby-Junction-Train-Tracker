@@ -11,7 +11,7 @@ export type Beacon = {
 
 export type MapPin = {
     id: string;
-    addressID: number;
+    addresses: { [key: string]: string }; 
     latitude: number;
     longitude: number;
     milepost: number;

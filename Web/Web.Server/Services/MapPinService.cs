@@ -45,8 +45,15 @@ namespace Web.Server.Services
             if (previousMapPin == null)
             {
                 var newMapPin = _mapper.Map<MapPin>(telemetry);
+                newMapPin.Addresses =
+                [
+                    new Address {
+                        AddressID = telemetry.AddressID,
+                        Source = telemetry.Source
+                    }
+                ];
+
                 newMapPin.Moving = telemetry.Moving;
-                newMapPin.Source = telemetry.Source;
 
                 var oneRailroadBeacon = telemetryBeacon.BeaconRailroads.Count == 1;
 
@@ -93,8 +100,41 @@ namespace Web.Server.Services
 
                 var differentBeacon = telemetry.Beacon.ID != previousMapPin.BeaconID;
 
-                previousMapPin.Moving = telemetry.Moving;
-                previousMapPin.Source = telemetry.Source;
+                if (previousMapPin.Addresses != null
+                    && previousMapPin.Addresses.Any(a => a.AddressID == telemetry.AddressID))
+                {
+                    // The collection contains the provided AddressID
+                    var previousAddressSameSource = previousMapPin.Addresses
+                        .Where(a => a.AddressID == telemetry.AddressID && a.Source == telemetry.Source)
+                        .FirstOrDefault();
+
+                    if (previousAddressSameSource != null)
+                    {
+                        previousAddressSameSource.Source = telemetry.Source;
+                    }
+                    else
+                    {
+                        previousMapPin.Addresses.Add(new Address
+                        {
+                            AddressID = telemetry.AddressID,
+                            Source = telemetry.Source
+                        });
+                    }
+
+                    previousMapPin.Moving = telemetry.Moving;
+                }
+                else
+                {
+                    previousMapPin.Addresses ??= [];
+
+                    previousMapPin.Addresses.Add(new Address
+                    {
+                        AddressID = telemetry.AddressID,
+                        Source = telemetry.Source
+                    });
+
+                    previousMapPin.Moving = telemetry.Moving;
+                }
 
                 if (differentBeacon || String.IsNullOrEmpty(previousMapPin.Direction))
                 {

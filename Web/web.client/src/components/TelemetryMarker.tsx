@@ -66,13 +66,21 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps> = ({ pin, size }) => {
         const marker = markerRef.current;
         if (!marker) return;
 
+        // Build address lines
+        let addressLines = '';
+        if (pin.addresses && typeof pin.addresses === 'object') {
+            addressLines = Object.entries(pin.addresses)
+                .map(([key, value]) => `${value} ${key}<br/>`)
+                .join('');
+        }
+
         const popupContent = `
             ${pin.railroad?.trim() ? `<strong>${pin.railroad} ${pin.subdivision + ' Sub' || ''}</strong><br/>` : ''}
             MP ${pin.milepost}<br/>
             ${formatDirection(pin.direction)}<br/>
             ${pin.moving === true ? "Moving<br/>" : pin.moving === false ? "Not Moving<br/>" : ''}
-            ${format(parseISO(pin.lastUpdate), 'h:mm aa')}<br/>         
-            ${pin.source} ${pin.addressID}
+            ${format(parseISO(pin.lastUpdate), 'h:mm aa')}<br/>
+            ${addressLines}
         `;
 
         marker.bindPopup(popupContent);
