@@ -28,6 +28,7 @@ const BeaconMarkers: React.FC<BeaconMarkersProps> = ({ pins: beaconPins, zoom })
                     <Marker
                         key={`beacon-${beaconPin.beaconID ?? idx}-${beaconPin.latitude}-${beaconPin.longitude}`}
                         position={[beaconPin.latitude, beaconPin.longitude]}
+                        pane="beaconPane"
                         icon={L.divIcon({
                             className: 'beacon-marker-z',
                             html: `

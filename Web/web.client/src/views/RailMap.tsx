@@ -297,6 +297,24 @@ const RailMap: React.FC = () => {
             .then(() => fetchInitialTelemetryPins());
     }, []);
 
+    useEffect(() => {
+        if (!mapRef.current) return;
+        const map = mapRef.current;
+
+        // Remove existing panes if they exist
+        const beaconPane = map.getPane('beaconPane');
+        if (beaconPane && beaconPane.parentNode) beaconPane.parentNode.removeChild(beaconPane);
+
+        const telemetryPane = map.getPane('telemetryPane');
+        if (telemetryPane && telemetryPane.parentNode) telemetryPane.parentNode.removeChild(telemetryPane);
+
+        map.createPane('beaconPane');
+        map.getPane('beaconPane')!.style.zIndex = '400';
+
+        map.createPane('telemetryPane');
+        map.getPane('telemetryPane')!.style.zIndex = '500';
+    }, [mapRef.current]);
+
     // Pan/zoom to userLocation when it changes and map is ready
     useEffect(() => {
         if (userLocation && mapRef.current) {

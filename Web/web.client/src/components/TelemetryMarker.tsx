@@ -121,6 +121,7 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps> = ({ pin, size }) => {
             ref={markerRef}
             position={[pin.latitude, pin.longitude]}
             icon={createCustomIcon(pin.direction, pin.moving)}
+            pane="telemetryPane"
         />
     );
 };
