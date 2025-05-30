@@ -36,7 +36,10 @@ namespace Web.Server.Repositories
             }
             else
             {
-                return await _context.MapPins.ToListAsync();
+                return await _context.MapPins
+                    .OrderByDescending(mp => mp.LastUpdate)
+                    .Include(mp => mp.Addresses)
+                    .ToListAsync();
             }
         }
 

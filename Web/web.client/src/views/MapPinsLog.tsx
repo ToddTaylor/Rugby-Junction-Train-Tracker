@@ -30,7 +30,7 @@ function MapPinsLog() {
         fetchMapPins();
     }, []);
 
-    const sortedData: MapPin[] = Array.from(mapPins.values())
+    const sortedData: MapPin[] = mapPins
         .sort((a, b) => new Date(b.lastUpdate).getTime() - new Date(a.lastUpdate).getTime())
         .map((alert, index) => ({
             ...alert,
@@ -49,8 +49,18 @@ function MapPinsLog() {
         { field: 'railroad', headerName: 'Railroad', width: 75 },
         { field: 'subdivision', headerName: 'Subdivision', width: 100 },
         { field: 'milepost', headerName: 'Milepost', width: 100 },
-        { field: 'source', headerName: 'Source', width: 75 },
-        { field: 'addressID', headerName: 'Train ID', width: 100 },
+        {
+            field: 'addresses',
+            headerName: 'Addresses',
+            width: 250,
+            valueGetter: (params) => {
+                const addresses = params; 
+                if (!addresses || typeof addresses !== 'object') return '';
+                return Object.entries(addresses)
+                    .map(([key, value]) => `${key}: ${value}`)
+                    .join(', ');
+            },
+        },
         { field: 'latitude', headerName: 'Latitude', width: 100 },
         { field: 'longitude', headerName: 'Longitude', width: 100 },
         { field: 'direction', headerName: 'Direction', width: 100 },
