@@ -104,9 +104,7 @@ namespace Web.Server.Services
                 mapPin.Moving = telemetry.Moving;
             }
 
-            // Update the timestamp for beacon health calculations.
-            beaconRailroad.LastUpdate = _timeProvider.UtcNow;
-            await _beaconRailroadService.UpdateAsync(beaconRailroad);
+            await this.UpdateBeaconTimestamp(beaconRailroad);
 
             return mapPin;
         }
@@ -152,9 +150,7 @@ namespace Web.Server.Services
                 mapPin.Moving = telemetry.Moving;
             }
 
-            // Update the timestamp for beacon health calculations.
-            toBeaconRailroad.LastUpdate = _timeProvider.UtcNow;
-            await _beaconRailroadService.UpdateAsync(toBeaconRailroad);
+            await this.UpdateBeaconTimestamp(toBeaconRailroad);
 
             return mapPin;
         }
@@ -165,6 +161,13 @@ namespace Web.Server.Services
             var toGeoCoordinate = new GeoCoordinate(toBeaconRailroad.Latitude, toBeaconRailroad.Longitude);
 
             return DirectionService.GetDirection(fromGeoCoordinate, toGeoCoordinate, toBeaconRailroad.Direction).ToString();
+        }
+
+        private async Task UpdateBeaconTimestamp(BeaconRailroad beaconRailroad)
+        {
+            // Update the timestamp for beacon health calculations.
+            beaconRailroad.LastUpdate = _timeProvider.UtcNow;
+            await _beaconRailroadService.UpdateAsync(beaconRailroad);
         }
     }
 }
