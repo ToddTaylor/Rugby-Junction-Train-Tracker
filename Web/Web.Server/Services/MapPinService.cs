@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.SignalR;
 using Web.Server.DTOs;
 using Web.Server.Entities;
 using Web.Server.Hubs;
+using Web.Server.Providers;
 using Web.Server.Repositories;
 
 namespace Web.Server.Services
@@ -13,17 +14,20 @@ namespace Web.Server.Services
         private readonly IHubContext<NotificationHub> _hubContext;
         private readonly IMapper _mapper;
         private readonly IMapPinRepository _mapPinRepository;
+        private readonly ITimeProvider _timeProvider;
 
         public MapPinService(
             IBeaconRailroadService beaconRailroadService,
             IHubContext<NotificationHub> hubContext,
             IMapper mapper,
-            IMapPinRepository mapPinRepository)
+            IMapPinRepository mapPinRepository,
+            ITimeProvider timeProvider)
         {
             _beaconRailroadService = beaconRailroadService;
             _hubContext = hubContext;
             _mapper = mapper;
             _mapPinRepository = mapPinRepository;
+            _timeProvider = timeProvider;
         }
 
         public async Task<IEnumerable<MapPin>> GetMapPinsAsync(int? minutes)
@@ -63,7 +67,7 @@ namespace Web.Server.Services
                     var beaconRailroad = telemetryBeacon.BeaconRailroads.First();
 
                     // Update the timestamp for beacon health calculations.
-                    beaconRailroad.LastUpdate = DateTime.UtcNow;
+                    beaconRailroad.LastUpdate = _timeProvider.UtcNow;
                     await _beaconRailroadService.UpdateAsync(beaconRailroad);
 
                     newMapPin.BeaconRailroad = beaconRailroad;
@@ -77,7 +81,7 @@ namespace Web.Server.Services
                     // HACK: Use the first beacon railroad with no direction as a temporary solution.
                     var beaconRailroad = telemetryBeacon.BeaconRailroads.First();
 
-                    beaconRailroad.LastUpdate = DateTime.UtcNow;
+                    beaconRailroad.LastUpdate = _timeProvider.UtcNow;
                     await _beaconRailroadService.UpdateAsync(beaconRailroad);
 
                     newMapPin.BeaconRailroad = beaconRailroad;
@@ -95,7 +99,7 @@ namespace Web.Server.Services
                     .First();
 
                 // Update the timestamp for beacon health calculations.
-                telemetryBeaconRailroad.LastUpdate = DateTime.UtcNow;
+                telemetryBeaconRailroad.LastUpdate = _timeProvider.UtcNow;
                 await _beaconRailroadService.UpdateAsync(telemetryBeaconRailroad);
 
                 var differentBeacon = telemetry.Beacon.ID != previousMapPin.BeaconID;
