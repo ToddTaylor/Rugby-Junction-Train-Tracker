@@ -1,4 +1,5 @@
 using Web.Server.Entities;
+using Web.Server.Providers;
 using Web.Server.Repositories;
 
 namespace Web.Server.Services
@@ -6,10 +7,13 @@ namespace Web.Server.Services
     public class BeaconService : IBeaconService
     {
         private readonly IBeaconRepository _beaconRepository;
+        private readonly ITimeProvider _timeProvider;
 
-        public BeaconService(IBeaconRepository beaconRepository)
+        public BeaconService(IBeaconRepository beaconRepository,
+            ITimeProvider timeProvider)
         {
             _beaconRepository = beaconRepository;
+            _timeProvider = timeProvider;
         }
 
         public async Task<IEnumerable<Beacon>> GetBeaconsAsync()
@@ -37,7 +41,7 @@ namespace Web.Server.Services
             // Update the timestamp on all beacon railroads the physical beacon is responbile for.
             foreach (var beaconRailroad in beacon.BeaconRailroads)
             {
-                beaconRailroad.LastUpdate = DateTime.UtcNow;
+                beaconRailroad.LastUpdate = _timeProvider.UtcNow;
             }
 
             return await _beaconRepository.UpdateAsync(beacon);
