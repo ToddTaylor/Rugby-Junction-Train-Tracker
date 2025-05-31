@@ -79,7 +79,7 @@ namespace Web.Server.Services
             telemetry = await _telemetryRepository.AddAsync(telemetry);
 
             // Map Pin service to deal with map pin update.
-            await _mapPinsService.UpsertMapPin(telemetry, telemetryBeacon);
+            await _mapPinsService.UpsertMapPin(telemetry, telemetryBeacon.BeaconRailroads);
 
             // Notify clients about the new telemetry.
             return telemetry;

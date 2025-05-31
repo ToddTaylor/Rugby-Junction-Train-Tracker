@@ -40,7 +40,7 @@ namespace Web.Server.Services
             return await _mapPinRepository.GetByIdAsync(addressID);
         }
 
-        public async Task UpsertMapPin(Telemetry telemetry, Beacon telemetryBeacon)
+        public async Task UpsertMapPin(Telemetry telemetry, ICollection<BeaconRailroad> beaconRailroads)
         {
             MapPin? mapPin;
 
@@ -48,11 +48,11 @@ namespace Web.Server.Services
 
             if (previousMapPin != null)
             {
-                mapPin = await this.UpdateMapPin(previousMapPin, telemetry, telemetryBeacon);
+                mapPin = await this.UpdateMapPin(previousMapPin, telemetry, beaconRailroads);
             }
             else
             {
-                mapPin = await this.CreateMapPin(telemetry, telemetryBeacon);
+                mapPin = await this.CreateMapPin(telemetry, beaconRailroads);
             }
 
             await _mapPinRepository.UpsertAsync(mapPin!);
@@ -66,9 +66,9 @@ namespace Web.Server.Services
         /// Creates a new map pin.
         /// - Direction cannot be determined without a previous map pin.
         /// </summary>
-        private async Task<MapPin> CreateMapPin(Telemetry telemetry, Beacon beacon)
+        private async Task<MapPin> CreateMapPin(Telemetry telemetry, ICollection<BeaconRailroad> beaconRailroads)
         {
-            var beaconRailroad = beacon.BeaconRailroads.First();
+            var beaconRailroad = beaconRailroads.First();
 
             var mapPin = _mapper.Map<MapPin>(telemetry);
 
@@ -80,7 +80,7 @@ namespace Web.Server.Services
                     }
             ];
 
-            var singleRailroadBeacon = beacon.BeaconRailroads.Count == 1;
+            var singleRailroadBeacon = beaconRailroads.Count == 1;
 
             if (singleRailroadBeacon)
             {
@@ -111,9 +111,9 @@ namespace Web.Server.Services
             return mapPin;
         }
 
-        private async Task<MapPin> UpdateMapPin(MapPin mapPin, Telemetry telemetry, Beacon telemetryBeacon)
+        private async Task<MapPin> UpdateMapPin(MapPin mapPin, Telemetry telemetry, ICollection<BeaconRailroad> beaconRailroads)
         {
-            var toBeaconRailroad = telemetryBeacon.BeaconRailroads
+            var toBeaconRailroad = beaconRailroads
                 .Where(br => br.BeaconID == telemetry.Beacon.ID)
                 .Where(br => br.RailroadID == mapPin?.RailroadID)
                 .First();

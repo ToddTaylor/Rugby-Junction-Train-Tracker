@@ -6,6 +6,6 @@ namespace Web.Server.Services
     {
         Task<MapPin?> GetMapPinByIdAsync(int addressID);
         Task<IEnumerable<MapPin>> GetMapPinsAsync(int? minutes);
-        Task UpsertMapPin(Telemetry telemetry, Beacon telemetryBeacon);
+        Task UpsertMapPin(Telemetry telemetry, ICollection<BeaconRailroad> beaconRailroads);
     }
 }
