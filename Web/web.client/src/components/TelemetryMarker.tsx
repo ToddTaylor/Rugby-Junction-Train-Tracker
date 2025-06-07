@@ -68,9 +68,9 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps> = ({ pin, size }) => {
 
         // Build address lines
         let addressLines = '';
-        if (pin.addresses && typeof pin.addresses === 'object') {
-            addressLines = Object.entries(pin.addresses)
-                .map(([key, value]) => `${value} ${key}<br/>`)
+        if (Array.isArray(pin.addresses)) {
+            addressLines = pin.addresses
+                .map((a: { source: string; addressID: string }) => `${a.addressID} ${a.source}<br/>`)
                 .join('');
         }
 

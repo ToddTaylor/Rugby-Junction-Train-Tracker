@@ -24,7 +24,7 @@ namespace Web.Server.Entities
         [Required]
         public required string State { get; set; }
 
-        public required ICollection<Beacon> Beacons { get; set; }
+        public required ICollection<Beacon> Beacons { get; set; } = [];
 
         public override bool Equals(object? obj)
         {

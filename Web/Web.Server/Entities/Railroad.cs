@@ -13,7 +13,7 @@ namespace Web.Server.Entities
 
         public required string Subdivision { get; set; }
 
-        public ICollection<BeaconRailroad> BeaconRailroads { get; set; }
+        public ICollection<BeaconRailroad> BeaconRailroads { get; set; } = [];
 
         public override bool Equals(object? obj)
         {

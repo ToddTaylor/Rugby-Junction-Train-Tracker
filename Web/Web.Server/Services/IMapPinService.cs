@@ -2,7 +2,7 @@
 
 namespace Web.Server.Services
 {
-    public interface IMapPinsService
+    public interface IMapPinService
     {
         Task<MapPin?> GetMapPinByIdAsync(int addressID);
         Task<IEnumerable<MapPin>> GetMapPinsAsync(int? minutes);

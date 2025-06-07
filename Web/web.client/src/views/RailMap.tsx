@@ -104,7 +104,7 @@ const RailMap: React.FC = () => {
     }, []);
 
     // Build a filtered list of pins that are not older than 10 minutes,
-    // but prune pins where pin.source == "EOT" in half the time (5 minutes)
+    // but change pins where any address source == "EOT" to half the time (5 minutes)
     const TEN_MINUTES = 10 * 60 * 1000;
     const FIVE_MINUTES = 5 * 60 * 1000;
     const now = Date.now();
@@ -112,7 +112,9 @@ const RailMap: React.FC = () => {
     Object.values(groupedPins).forEach(group => {
         group.forEach(pin => {
             const lastUpdate = new Date(pin.lastUpdate).getTime();
-            const maxAge = pin.source === "EOT" ? FIVE_MINUTES : TEN_MINUTES;
+            // If any address has source "EOT", use FIVE_MINUTES
+            const hasEOT = Array.isArray(pin.addresses) && pin.addresses.some(addr => addr.source === "EOT");
+            const maxAge = hasEOT ? FIVE_MINUTES : TEN_MINUTES;
             if (now - lastUpdate <= maxAge) {
                 filteredPins.push(pin);
             }
@@ -375,11 +377,15 @@ const RailMap: React.FC = () => {
 };
 
 function updateMapPins(pins: MapPin[], newPin: MapPin): MapPin[] {
-    const newPinAddressValues = newPin.addresses ? Object.values(newPin.addresses) : [];
     const existingIndex = pins.findIndex(
         (mapPin) =>
-            mapPin.addresses &&
-            Object.values(mapPin.addresses).some(value => newPinAddressValues.includes(value))
+            Array.isArray(mapPin.addresses) &&
+            mapPin.addresses.some(addr1 =>
+                Array.isArray(newPin.addresses) &&
+                newPin.addresses.some(addr2 =>
+                    addr1.addressID === addr2.addressID && addr1.source === addr2.source
+                )
+            )
     );
 
     if (existingIndex !== -1) {

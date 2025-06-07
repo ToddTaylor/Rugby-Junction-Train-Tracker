@@ -24,6 +24,8 @@ namespace Web.Server.Mappers
             CreateMap<BeaconRailroad, BeaconRailroadDTO>();
 
             CreateMap<MapPin, MapPinDTO>()
+                .ForMember(dest => dest.Direction,
+                           opt => opt.MapFrom(src => src.Direction))
                 .ForMember(dest => dest.Latitude,
                            opt => opt.MapFrom(src => src.BeaconRailroad.Latitude))
                 .ForMember(dest => dest.Longitude,
@@ -36,8 +38,12 @@ namespace Web.Server.Mappers
                            opt => opt.MapFrom(src => src.BeaconRailroad.Railroad.Subdivision))
                 .ForMember(dest => dest.Addresses,
                            opt => opt.MapFrom(src => src.Addresses != null
-                               ? src.Addresses.ToDictionary(a => a.Source, a => a.AddressID)
-                               : new Dictionary<string, int>()));
+                               ? src.Addresses.Select(a => new AddressDTO
+                               {
+                                   Source = a.Source,
+                                   AddressID = a.AddressID
+                               }).ToList()
+                               : new List<AddressDTO>()));
 
             CreateMap<CreateOwnerDTO, Owner>()
                 .ForMember(dest => dest.ID, opt => opt.Ignore())

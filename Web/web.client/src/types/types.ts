@@ -9,16 +9,20 @@ export type Beacon = {
     online: Boolean;
 }
 
+export type Address = {
+    source: string;
+    addressID: string;
+};
+
 export type MapPin = {
     id: string;
-    addresses: { [key: string]: string }; 
+    addresses: Address[]; 
     latitude: number;
     longitude: number;
     milepost: number;
     direction: string;
     moving: Boolean;
     railroad: string;
-    source: string;
     subdivision: string;
     lastUpdate: string;
 }

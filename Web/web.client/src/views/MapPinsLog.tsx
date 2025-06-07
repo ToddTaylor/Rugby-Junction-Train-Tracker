@@ -53,11 +53,11 @@ function MapPinsLog() {
             field: 'addresses',
             headerName: 'Addresses',
             width: 250,
-            valueGetter: (params) => {
-                const addresses = params; 
-                if (!addresses || typeof addresses !== 'object') return '';
-                return Object.entries(addresses)
-                    .map(([key, value]) => `${key}: ${value}`)
+            valueGetter: (params: any) => {
+                const addresses = params.row?.addresses;
+                if (!Array.isArray(addresses)) return '';
+                return addresses
+                    .map((a: { source: string; addressID: string }) => `${a.addressID} ${a.source}`)
                     .join(', ');
             },
         },

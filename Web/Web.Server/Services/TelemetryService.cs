@@ -15,24 +15,24 @@ namespace Web.Server.Services
         private readonly IBeaconRailroadService _beaconRailroadService;
         private readonly IHubContext<NotificationHub> _hubContext;
         private readonly IMapper _mapper;
-        private readonly IMapPinsService _mapPinsService;
+        private readonly IMapPinService _mapPinsService;
         private readonly ITimeProvider _timeProvider;
 
         public TelemetryService(
-            ITelemetryRepository telemetryRepository,
-            IBeaconService beaconService,
             IBeaconRailroadService beaconRailroadService,
+            IBeaconService beaconService,
             IHubContext<NotificationHub> hubContext,
             IMapper mapper,
-            IMapPinsService mapPinsService,
+            IMapPinService mapPinsService,
+            ITelemetryRepository telemetryRepository,
             ITimeProvider timeProvider)
         {
-            _telemetryRepository = telemetryRepository;
-            _beaconService = beaconService;
             _beaconRailroadService = beaconRailroadService;
+            _beaconService = beaconService;
             _hubContext = hubContext;
             _mapper = mapper;
             _mapPinsService = mapPinsService;
+            _telemetryRepository = telemetryRepository;
             _timeProvider = timeProvider;
         }
 
