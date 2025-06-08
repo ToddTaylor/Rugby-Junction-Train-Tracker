@@ -1,7 +1,4 @@
-﻿
-
-
-namespace Web.Server.DTOs
+﻿namespace Web.Server.DTOs
 {
     public class UpdateRailroadDTO : CreateRailroadDTO, IEquatable<UpdateRailroadDTO?>
     {
@@ -16,6 +13,7 @@ namespace Web.Server.DTOs
         {
             return other is not null &&
                    base.Equals(other) &&
+                   DpuCapable == other.DpuCapable &&
                    Name == other.Name &&
                    Subdivision == other.Subdivision &&
                    ID == other.ID;
@@ -23,7 +21,7 @@ namespace Web.Server.DTOs
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(base.GetHashCode(), Name, Subdivision, ID);
+            return HashCode.Combine(base.GetHashCode(), DpuCapable, Name, Subdivision, ID);
         }
 
         public static bool operator ==(UpdateRailroadDTO? left, UpdateRailroadDTO? right)
