@@ -59,6 +59,8 @@ namespace Web.Server.Services
 
                 if (singleRailroadBeacon)
                 {
+                    // Single railroad beacon.
+
                     var beaconRailroad = beaconRailroads.First();
 
                     var previousMapPinByTimeThreshold = await _mapPinRepository.GetByTimeThreshold(beaconRailroad.BeaconID, beaconRailroad.RailroadID, minutesThreshold: 5);
@@ -77,6 +79,42 @@ namespace Web.Server.Services
 
                         mapPin = previousMapPinByTimeThreshold;
                     }
+                }
+                else
+                {
+                    // Multiple railroad beacon.
+
+                    if (telemetry.Source == "DPU")
+                    {
+                        // If source is DPU and only 1 beacon railroad is DPU capable,
+                        // then use that beacon railroad.
+                        var dpuCapableBeaconRailroads = beaconRailroads.Where(br => br.Railroad.DpuCapable == true);
+
+                        var singleDpuCapableRailroad = dpuCapableBeaconRailroads.Count() == 1;
+
+                        if (singleDpuCapableRailroad)
+                        {
+                            var dpuCapableBeaconRailroad = dpuCapableBeaconRailroads.First();
+
+                            var previousMapPinByTimeThreshold = await _mapPinRepository.GetByTimeThreshold(dpuCapableBeaconRailroad.BeaconID, dpuCapableBeaconRailroad.RailroadID, minutesThreshold: 5);
+
+                            // Same beacon, same railroad, within 5 minutes threshold.
+                            // Unless there are multiple tracks, it's likely the same train.
+                            if (previousMapPinByTimeThreshold != null)
+                            {
+                                previousMapPinByTimeThreshold.Addresses.Add(
+                                    new Address
+                                    {
+                                        AddressID = telemetry.AddressID,
+                                        Source = telemetry.Source,
+                                        LastUpdate = _timeProvider.UtcNow
+                                    });
+
+                                mapPin = previousMapPinByTimeThreshold;
+                            }
+                        }
+                    }
+
                 }
             }
 
