@@ -135,11 +135,15 @@ namespace Web.ServerTests.Services
                 ],
             };
 
-            var expectedMapPinDTO = new MapPinDTO
+            var expectedMapPinObjects = new object[]
+            {
+                new MapPinDTO
             {
                 Direction = null,
                 BeaconID = telemetry.BeaconID,
                 RailroadID = WSORRugbyJunctionBeacon.RailroadID,
+                Railroad = WSORRugbyJunctionBeacon.Railroad?.Name,
+                Subdivision = WSORRugbyJunctionBeacon.Railroad?.Subdivision,
                 Latitude = WSORRugbyJunctionBeacon.Latitude,
                 Longitude = WSORRugbyJunctionBeacon.Longitude,
                 Milepost = WSORRugbyJunctionBeacon.Milepost,
@@ -154,11 +158,7 @@ namespace Web.ServerTests.Services
                         Source = telemetry.Source
                     }
                 ],
-            };
-
-            var expectedMapPinObjects = new object[]
-            {
-                expectedMapPinDTO
+            }
             };
 
             _mapPinRepositoryMock.Setup(r => r.GetByAddressIdAsync(telemetry.AddressID))
@@ -180,7 +180,7 @@ namespace Web.ServerTests.Services
 
             _clientProxyMock?.Verify(proxy => proxy.SendCoreAsync(
                 NotificationMethods.MapPinUpdate,
-                It.Is<object[]>(args => args[0].Equals(expectedMapPinDTO)),
+                It.Is<object[]>(args => args[0].Equals(expectedMapPinObjects[0])),
                 default), Times.Once);
         }
 
@@ -225,30 +225,30 @@ namespace Web.ServerTests.Services
                 ],
             };
 
-            var expectedMapPinDTO = new MapPinDTO
-            {
-                Direction = null,
-                BeaconID = telemetry.BeaconID,
-                RailroadID = WSORRugbyJunctionBeacon.RailroadID,
-                Latitude = WSORRugbyJunctionBeacon.Latitude,
-                Longitude = WSORRugbyJunctionBeacon.Longitude,
-                Milepost = WSORRugbyJunctionBeacon.Milepost,
-                Moving = telemetry.Moving,
-                CreatedAt = _currentDateTime,
-                LastUpdate = _currentDateTime,
-                Addresses =
-                [
-                    new AddressDTO
-                    {
-                        AddressID = telemetry.AddressID,
-                        Source = telemetry.Source
-                    }
-                ],
-            };
-
             var expectedMapPinObjects = new object[]
             {
-                expectedMapPinDTO
+                new MapPinDTO
+                {
+                    Direction = null,
+                    BeaconID = telemetry.BeaconID,
+                    RailroadID = WSORRugbyJunctionBeacon.RailroadID,
+                    Railroad = WSORRugbyJunctionBeacon.Railroad?.Name,
+                    Subdivision = WSORRugbyJunctionBeacon.Railroad?.Subdivision,
+                    Latitude = WSORRugbyJunctionBeacon.Latitude,
+                    Longitude = WSORRugbyJunctionBeacon.Longitude,
+                    Milepost = WSORRugbyJunctionBeacon.Milepost,
+                    Moving = telemetry.Moving,
+                    CreatedAt = _currentDateTime,
+                    LastUpdate = _currentDateTime,
+                    Addresses =
+                    [
+                        new AddressDTO
+                        {
+                            AddressID = telemetry.AddressID,
+                            Source = telemetry.Source
+                        }
+                    ],
+                }
             };
 
             _mapPinRepositoryMock.Setup(r => r.GetByAddressIdAsync(telemetry.AddressID))
@@ -270,7 +270,7 @@ namespace Web.ServerTests.Services
 
             _clientProxyMock?.Verify(proxy => proxy.SendCoreAsync(
                 NotificationMethods.MapPinUpdate,
-                It.Is<object[]>(args => args[0].Equals(expectedMapPinDTO)),
+                It.Is<object[]>(args => args[0].Equals(expectedMapPinObjects[0])),
                 default), Times.Once);
         }
 
@@ -360,6 +360,8 @@ namespace Web.ServerTests.Services
                     Direction = calculatedDirection,
                     BeaconID = telemetry.BeaconID,
                     RailroadID = CNRugbyJunctionBeacon.RailroadID,
+                    Railroad = CNRugbyJunctionBeacon.Railroad?.Name,
+                    Subdivision = CNRugbyJunctionBeacon.Railroad?.Subdivision,
                     Latitude = CNRugbyJunctionBeacon.Latitude,
                     Longitude = CNRugbyJunctionBeacon.Longitude,
                     Milepost = CNRugbyJunctionBeacon.Milepost,
@@ -415,6 +417,8 @@ namespace Web.ServerTests.Services
             var WSORRugbyJunctionBeacon = TestData.WSOR_RugbyJunction_WI(_currentDateTime);
             var CNSussexBeacon = TestData.CN_Sussex_WI(_currentDateTime);
 
+            var calculatedDirection = "N";
+
             var telemetry = new Telemetry
             {
                 BeaconID = CNRugbyJunctionBeacon.BeaconID,
@@ -445,21 +449,21 @@ namespace Web.ServerTests.Services
                 BeaconRailroad = CNSussexBeacon,
                 Moving = telemetry.Moving,
                 Addresses =
-                    [
-                        new Address
-                        {
-                            AddressID = telemetry.AddressID,
-                            Source = telemetry.Source,
-                            LastUpdate = _currentDateTime
-                        }
-                    ],
+                [
+                    new Address
+                    {
+                        AddressID = telemetry.AddressID,
+                        Source = telemetry.Source,
+                        LastUpdate = _currentDateTime
+                    }
+                ],
             };
 
             var expectedMapPin = new MapPin
             {
                 BeaconID = CNRugbyJunctionBeacon.BeaconID,
                 RailroadID = CNRugbyJunctionBeacon.RailroadID,
-                Direction = "N",
+                Direction = calculatedDirection,
                 CreatedAt = _currentDateTime,
                 LastUpdate = _currentDateTime,
                 BeaconRailroad = CNRugbyJunctionBeacon,
@@ -479,9 +483,11 @@ namespace Web.ServerTests.Services
             {
                 new MapPinDTO
                 {
-                    Direction = "N",
+                    Direction = calculatedDirection,
                     BeaconID = telemetry.BeaconID,
                     RailroadID = CNRugbyJunctionBeacon.RailroadID,
+                    Railroad = CNRugbyJunctionBeacon.Railroad?.Name,
+                    Subdivision = CNRugbyJunctionBeacon.Railroad?.Subdivision,
                     Latitude = CNRugbyJunctionBeacon.Latitude,
                     Longitude = CNRugbyJunctionBeacon.Longitude,
                     Milepost = CNRugbyJunctionBeacon.Milepost,
@@ -606,6 +612,8 @@ namespace Web.ServerTests.Services
                     Direction = calculatedDirection,
                     BeaconID = telemetry.BeaconID,
                     RailroadID = CNSussexBeacon.RailroadID,
+                    Railroad = CNSussexBeacon.Railroad?.Name,
+                    Subdivision = CNSussexBeacon.Railroad?.Subdivision,
                     Latitude = CNSussexBeacon.Latitude,
                     Longitude = CNSussexBeacon.Longitude,
                     Milepost = CNSussexBeacon.Milepost,
