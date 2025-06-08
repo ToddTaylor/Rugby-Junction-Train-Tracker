@@ -11,7 +11,7 @@ export type Beacon = {
 
 export type Address = {
     source: string;
-    addressID: string;
+    addressID: number;
 };
 
 export type MapPin = {

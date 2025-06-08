@@ -34,8 +34,10 @@ function MapPinsLog() {
         .sort((a, b) => new Date(b.lastUpdate).getTime() - new Date(a.lastUpdate).getTime())
         .map((alert, index) => ({
             ...alert,
-            id: `row-${index + 1}`,
+            id: alert.id ?? `row-${index + 1}`,
         }));
+
+    console.log('sortedData', sortedData);
 
     const columns: GridColDef[] = [
         { field: 'id', headerName: 'ID' },
@@ -52,12 +54,12 @@ function MapPinsLog() {
         {
             field: 'addresses',
             headerName: 'Addresses',
-            width: 250,
-            valueGetter: (params: any) => {
+            width: 300,
+            renderCell: (params: any) => {
                 const addresses = params.row?.addresses;
                 if (!Array.isArray(addresses)) return '';
                 return addresses
-                    .map((a: { source: string; addressID: string }) => `${a.addressID} ${a.source}`)
+                    .map((a: { source: string; addressID: number }) => `${a.addressID} ${a.source}`)
                     .join(', ');
             },
         },
