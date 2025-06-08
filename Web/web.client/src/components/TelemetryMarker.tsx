@@ -7,13 +7,15 @@ import { MapPin } from '../types/types';
 import { parseISO } from 'date-fns/parseISO';
 import { format } from 'date-fns';
 
-function getPinBrightness(lastUpate: string, source?: string): number {
+// Replace all uses of pin.source with a check for any EOT in pin.addresses
+
+function getPinBrightness(lastUpdate: string, addresses?: { source: string }[]): number {
     const now = new Date();
-    const created = parseISO(lastUpate);
+    const created = parseISO(lastUpdate);
     let minutes = (now.getTime() - created.getTime()) / 60000;
 
-    // If source is "EOT", halve the thresholds
-    const isEOT = source === "EOT";
+    // Check if any address has source "EOT"
+    const isEOT = Array.isArray(addresses) && addresses.some(a => a.source === "EOT");
     const t2 = isEOT ? 1 : 2;
     const t4 = isEOT ? 2 : 4;
     const t6 = isEOT ? 3 : 6;
@@ -52,15 +54,15 @@ const formatDirection = (dir?: string): string => {
 
 const TelemetryMarker: React.FC<TelemetryMarkerProps> = ({ pin, size }) => {
     const markerRef = useRef<L.Marker>(null);
-    const [brightness, setBrightness] = useState(() => getPinBrightness(pin.lastUpdate, pin.source));
+    const [brightness, setBrightness] = useState(() => getPinBrightness(pin.lastUpdate, pin.addresses));
 
     useEffect(() => {
         const interval = setInterval(() => {
-            setBrightness(getPinBrightness(pin.lastUpdate, pin.source));
+            setBrightness(getPinBrightness(pin.lastUpdate, pin.addresses));
         }, 30000);
-        setBrightness(getPinBrightness(pin.lastUpdate, pin.source));
+        setBrightness(getPinBrightness(pin.lastUpdate, pin.addresses));
         return () => clearInterval(interval);
-    }, [pin.lastUpdate, pin.source]);
+    }, [pin.lastUpdate, pin.addresses]);
 
     useEffect(() => {
         const marker = markerRef.current;
@@ -70,7 +72,7 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps> = ({ pin, size }) => {
         let addressLines = '';
         if (Array.isArray(pin.addresses)) {
             addressLines = pin.addresses
-                .map((a: { source: string; addressID: string }) => `${a.addressID} ${a.source}<br/>`)
+                .map((a: { source: string; addressID: number }) => `${a.addressID} ${a.source}<br/>`)
                 .join('');
         }
 
