@@ -795,7 +795,7 @@ namespace Web.ServerTests.Services
         }
 
         [TestMethod]
-        public async Task UpsertMapPin_FOO()
+        public async Task UpsertMapPin_UpdateMapPin_SingleDpuCapableRailroad_TimeThreshold_PreviousHOTandEOT()
         {
             // Arrange
             var CNRugbyJunctionBeacon = TestData.CN_RugbyJunction_WI(_currentDateTime);
