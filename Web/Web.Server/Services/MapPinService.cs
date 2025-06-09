@@ -84,45 +84,39 @@ namespace Web.Server.Services
                 {
                     // Multiple railroad beacon.
 
-                    if (telemetry.Source == "DPU")
+                    var dpuCapableBeaconRailroads = beaconRailroads.Where(br => br.Railroad.DpuCapable == true);
+
+                    var singleDpuCapableRailroad = dpuCapableBeaconRailroads.Count() == 1;
+
+                    if (singleDpuCapableRailroad)
                     {
-                        // If source is DPU and only 1 beacon railroad is DPU capable,
-                        // then use that beacon railroad.
-                        var dpuCapableBeaconRailroads = beaconRailroads.Where(br => br.Railroad.DpuCapable == true);
+                        var dpuCapableBeaconRailroad = dpuCapableBeaconRailroads.First();
 
-                        var singleDpuCapableRailroad = dpuCapableBeaconRailroads.Count() == 1;
+                        var previousMapPinByTimeThreshold = await _mapPinRepository.GetByTimeThreshold(dpuCapableBeaconRailroad.BeaconID, dpuCapableBeaconRailroad.RailroadID, minutesThreshold: 5);
 
-                        if (singleDpuCapableRailroad)
+                        // Same beacon, same railroad, within 5 minutes threshold.
+                        // Unless there are multiple tracks, it's likely the same train.
+                        if (previousMapPinByTimeThreshold != null)
                         {
-                            var dpuCapableBeaconRailroad = dpuCapableBeaconRailroads.First();
-
-                            var previousMapPinByTimeThreshold = await _mapPinRepository.GetByTimeThreshold(dpuCapableBeaconRailroad.BeaconID, dpuCapableBeaconRailroad.RailroadID, minutesThreshold: 5);
-
-                            // Same beacon, same railroad, within 5 minutes threshold.
-                            // Unless there are multiple tracks, it's likely the same train.
-                            if (previousMapPinByTimeThreshold != null)
-                            {
-                                var newMapPin = previousMapPinByTimeThreshold;
-                                newMapPin.Addresses.Add(
-                                    new Address
-                                    {
-                                        AddressID = telemetry.AddressID,
-                                        Source = telemetry.Source,
-                                        LastUpdate = _timeProvider.UtcNow
-                                    });
-
-                                newMapPin.BeaconID = telemetry.BeaconID;
-                                newMapPin.BeaconRailroad = dpuCapableBeaconRailroad;
-                                if (telemetry.Moving.HasValue)
+                            var newMapPin = previousMapPinByTimeThreshold;
+                            newMapPin.Addresses.Add(
+                                new Address
                                 {
-                                    newMapPin.Moving = telemetry.Moving;
-                                }
+                                    AddressID = telemetry.AddressID,
+                                    Source = telemetry.Source,
+                                    LastUpdate = _timeProvider.UtcNow
+                                });
 
-                                mapPin = newMapPin;
+                            newMapPin.BeaconID = telemetry.BeaconID;
+                            newMapPin.BeaconRailroad = dpuCapableBeaconRailroad;
+                            if (telemetry.Moving.HasValue)
+                            {
+                                newMapPin.Moving = telemetry.Moving;
                             }
+
+                            mapPin = newMapPin;
                         }
                     }
-
                 }
             }
 

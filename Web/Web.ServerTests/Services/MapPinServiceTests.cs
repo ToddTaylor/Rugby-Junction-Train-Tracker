@@ -947,6 +947,140 @@ namespace Web.ServerTests.Services
                 default), Times.Once);
         }
 
+        [TestMethod]
+        public async Task UpsertMapPin_UpdateMapPin_SingleDpuCapableRailroad_TimeThreshold_PreviousDPU()
+        {
+            // Arrange
+            var CNRugbyJunctionBeacon = TestData.CN_RugbyJunction_WI(_currentDateTime);
+            var CNSussexBeacon = TestData.CN_Sussex_WI(_currentDateTime);
+            var WSORRugbyJunctionBeacon = TestData.WSOR_RugbyJunction_WI(_currentDateTime);
+
+            var calculatedDirection = "N";
+
+            var newDpuSource = "HOT";
+            var previousHotSource1 = "DPU";
+
+            var newAddressID = 46969;
+            var previousAddressID1 = 32591;
+
+            var telemetry = new Telemetry
+            {
+                BeaconID = CNRugbyJunctionBeacon.BeaconID,
+                AddressID = newAddressID,
+                Source = newDpuSource,
+                Moving = true,
+                CreatedAt = _currentDateTime,
+                LastUpdate = _currentDateTime
+            };
+
+            var beaconRailroads = new List<BeaconRailroad>
+            {
+                CNRugbyJunctionBeacon,
+                WSORRugbyJunctionBeacon
+            };
+
+            var previousMapPin = new MapPin
+            {
+                BeaconID = CNSussexBeacon.BeaconID,
+                RailroadID = CNSussexBeacon.RailroadID,
+                Direction = calculatedDirection,
+                CreatedAt = _currentDateTime,
+                LastUpdate = _currentDateTime,
+                BeaconRailroad = CNSussexBeacon,
+                Moving = null,
+                Addresses =
+                    [
+                        new Address
+                        {
+                            AddressID = previousAddressID1,
+                            Source = previousHotSource1,
+                            LastUpdate = _currentDateTime.AddMinutes(-2)
+                        }
+                    ],
+            };
+
+            var expectedMapPin = new MapPin
+            {
+                BeaconID = CNRugbyJunctionBeacon.BeaconID,
+                RailroadID = CNRugbyJunctionBeacon.RailroadID,
+                Direction = calculatedDirection,
+                CreatedAt = _currentDateTime,
+                LastUpdate = _currentDateTime,
+                BeaconRailroad = CNRugbyJunctionBeacon,
+                Moving = telemetry.Moving,
+                Addresses =
+                [
+                    new Address
+                    {
+                        AddressID = previousAddressID1,
+                        Source = previousHotSource1,
+                        LastUpdate = _currentDateTime.AddMinutes(-2)
+                    },
+                    new Address
+                    {
+                        AddressID = newAddressID,
+                        Source = newDpuSource,
+                        LastUpdate = _currentDateTime
+                    }
+                ],
+            };
+
+            var expectedMapPinObjects = new object[]
+            {
+                new MapPinDTO
+                {
+                    Direction = calculatedDirection,
+                    BeaconID = telemetry.BeaconID,
+                    RailroadID = CNRugbyJunctionBeacon.RailroadID,
+                    Railroad = CNRugbyJunctionBeacon.Railroad?.Name,
+                    Subdivision = CNRugbyJunctionBeacon.Railroad?.Subdivision,
+                    Latitude = CNRugbyJunctionBeacon.Latitude,
+                    Longitude = CNRugbyJunctionBeacon.Longitude,
+                    Milepost = CNRugbyJunctionBeacon.Milepost,
+                    Moving = telemetry.Moving,
+                    CreatedAt = _currentDateTime,
+                    LastUpdate = _currentDateTime,
+                    Addresses =
+                    [
+                        new AddressDTO
+                        {
+                            AddressID = previousAddressID1,
+                            Source = previousHotSource1
+                        },
+                        new AddressDTO
+                        {
+                            AddressID = newAddressID,
+                            Source = newDpuSource
+                        },
+                    ],
+                }
+            };
+
+            _mapPinRepositoryMock.Setup(r => r.GetByAddressIdAsync(telemetry.AddressID))
+                .ReturnsAsync((MapPin?)null);
+            _mapPinRepositoryMock.Setup(r => r.GetByTimeThreshold(telemetry.BeaconID, CNRugbyJunctionBeacon.RailroadID, 5))
+                .ReturnsAsync(previousMapPin);
+            _beaconRailroadServiceMock.Setup(s => s.GetByIdAsync(previousMapPin.BeaconID, previousMapPin.RailroadID))
+                .ReturnsAsync(beaconRailroads[0]);
+
+            _clientProxyMock.Setup(proxy => proxy.SendCoreAsync(
+                NotificationMethods.MapPinUpdate, expectedMapPinObjects, default))
+                    .Returns(Task.CompletedTask);
+            _hubContextMock.Setup(h => h.Clients).Returns(_hubClientsMock.Object);
+            _hubClientsMock.Setup(h => h.All).Returns(_clientProxyMock.Object);
+
+            // Act
+            await _service.UpsertMapPin(telemetry, beaconRailroads);
+
+            // Assert
+            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(expectedMapPin), Times.Once);
+
+            _clientProxyMock?.Verify(proxy => proxy.SendCoreAsync(
+                NotificationMethods.MapPinUpdate,
+                It.Is<object[]>(args => args[0].Equals(expectedMapPinObjects[0])),
+                default), Times.Once);
+        }
+
         private static class TestData
         {
             public static BeaconRailroad CN_RugbyJunction_WI(DateTime currentDateTime)
