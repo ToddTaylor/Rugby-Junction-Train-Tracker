@@ -102,7 +102,8 @@ namespace Web.Server.Services
                             // Unless there are multiple tracks, it's likely the same train.
                             if (previousMapPinByTimeThreshold != null)
                             {
-                                previousMapPinByTimeThreshold.Addresses.Add(
+                                var newMapPin = previousMapPinByTimeThreshold;
+                                newMapPin.Addresses.Add(
                                     new Address
                                     {
                                         AddressID = telemetry.AddressID,
@@ -110,7 +111,14 @@ namespace Web.Server.Services
                                         LastUpdate = _timeProvider.UtcNow
                                     });
 
-                                mapPin = previousMapPinByTimeThreshold;
+                                newMapPin.BeaconID = telemetry.BeaconID;
+                                newMapPin.BeaconRailroad = dpuCapableBeaconRailroad;
+                                if (telemetry.Moving.HasValue)
+                                {
+                                    newMapPin.Moving = telemetry.Moving;
+                                }
+
+                                mapPin = newMapPin;
                             }
                         }
                     }
