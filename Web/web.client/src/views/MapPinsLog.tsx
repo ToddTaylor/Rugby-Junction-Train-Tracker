@@ -85,7 +85,6 @@ function MapPinsLog() {
             <DataGrid
                 rows={sortedData}
                 columns={columns}
-                autoHeight
                 pageSizeOptions={[5, 10, 25]}
                 columnVisibilityModel={{
                     id: false,
@@ -96,7 +95,7 @@ function MapPinsLog() {
                     },
                 }}
                 sx={{
-                    maxHeight: '70vh',
+                    maxHeight: 600, // or height: 600,
                     minHeight: 400,
                 }}
             />
