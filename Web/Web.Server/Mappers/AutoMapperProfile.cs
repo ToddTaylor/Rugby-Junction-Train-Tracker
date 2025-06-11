@@ -65,7 +65,7 @@ namespace Web.Server.Mappers
                 .ForPath(dest => dest.BeaconID, opt => opt.MapFrom(src => src.Beacon.ID));
 
             CreateMap<Telemetry, TelemetryDTO>()
-                .ForPath(dest => dest.Beacon.ID, opt => opt.MapFrom(src => src.Beacon.ID));
+                .ForPath(dest => dest.BeaconID, opt => opt.MapFrom(src => src.Beacon.ID));
 
             CreateMap<Telemetry, MapPin>();
         }
