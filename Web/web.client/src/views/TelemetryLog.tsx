@@ -65,13 +65,22 @@ function TelemetryLog() {
     ];
 
     return (
-        <Box sx={{ height: '100%', width: '100%', padding: 4 }}>
+        <Box
+            sx={{
+                width: '100%',
+                maxWidth: 1200,
+                margin: '0 auto',
+                padding: 4,
+                boxSizing: 'border-box',
+            }}
+        >
             <Typography variant="h5" gutterBottom>
                 Telemetry Log
             </Typography>
             <DataGrid
                 rows={sortedData}
                 columns={columns}
+                autoHeight
                 pageSizeOptions={[5, 10, 25]}
                 columnVisibilityModel={{
                     id: false,
@@ -80,6 +89,10 @@ function TelemetryLog() {
                     pagination: {
                         paginationModel: { pageSize: 25, page: 0 },
                     },
+                }}
+                sx={{
+                    maxHeight: '70vh',
+                    minHeight: 400,
                 }}
             />
         </Box>
