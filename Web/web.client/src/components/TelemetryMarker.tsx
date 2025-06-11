@@ -12,13 +12,14 @@ import { format } from 'date-fns';
 function getPinBrightness(lastUpdate: string, addresses?: { source: string }[]): number {
     const now = new Date();
     const created = parseISO(lastUpdate);
+    const MAX_PIN_AGE_MINUTES = import.meta.env.VITE_MAX_PIN_AGE_MINUTES;
     let minutes = (now.getTime() - created.getTime()) / 60000;
 
     // Check if any address has source "EOT"
     const isEOT = Array.isArray(addresses) && addresses.some(a => a.source === "EOT");
-    const t2 = isEOT ? 1 : 2;
-    const t4 = isEOT ? 2 : 4;
-    const t6 = isEOT ? 3 : 6;
+    const t2 = isEOT ? MAX_PIN_AGE_MINUTES / 6 : MAX_PIN_AGE_MINUTES * 1/3;
+    const t4 = isEOT ? MAX_PIN_AGE_MINUTES / 3 : MAX_PIN_AGE_MINUTES * 2/3;
+    const t6 = isEOT ? MAX_PIN_AGE_MINUTES / 2 : MAX_PIN_AGE_MINUTES;
 
     if (minutes < t2) return 1.0;
     if (minutes < t4) return 0.7;

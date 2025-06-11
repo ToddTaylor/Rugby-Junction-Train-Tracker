@@ -36,7 +36,6 @@ export function useSignalR(handlers: {
         }
         if (handlersRef.current.BeaconUpdate) {
             connection.on(beaconUpdateMethodName, (beacon: Beacon) => {
-                console.log("Beacon Updated:", beacon);
                 handlersRef.current.BeaconUpdate?.(beacon);
             });
         }
