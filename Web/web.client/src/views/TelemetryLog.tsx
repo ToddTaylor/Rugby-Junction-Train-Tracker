@@ -45,15 +45,6 @@ function TelemetryLog() {
         { field: 'moving', headerName: 'Moving', width: 100, type: 'boolean' },
         { field: 'source', headerName: 'Source', width: 100 },
         {
-            field: 'createdAt',
-            headerName: 'Created At',
-            width: 200,
-            renderCell: (params: any) =>
-                params.row?.createdAt
-                    ? format(parseISO(params.row.createdAt), 'yyyy-MM-dd h:mm:ss aa')
-                    : '',
-        },
-        {
             field: 'lastUpdate',
             headerName: 'Last Update',
             width: 200,
