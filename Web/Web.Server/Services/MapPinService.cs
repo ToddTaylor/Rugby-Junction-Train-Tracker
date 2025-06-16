@@ -63,7 +63,7 @@ namespace Web.Server.Services
 
                     var beaconRailroad = beaconRailroads.First();
 
-                    var previousMapPinByTimeThreshold = await _mapPinRepository.GetByTimeThreshold(beaconRailroad.BeaconID, beaconRailroad.RailroadID, minutesThreshold: 5);
+                    var previousMapPinByTimeThreshold = await _mapPinRepository.GetByTimeThreshold(beaconRailroad.BeaconID, beaconRailroad.RailroadID, minutesThreshold: 1);
 
                     // Same beacon, same railroad, within 5 minutes threshold.
                     // Unless there are multiple tracks, it's likely the same train.
