@@ -638,7 +638,7 @@ namespace Web.ServerTests.Services
 
             _mapPinRepositoryMock.Setup(r => r.GetByAddressIdAsync(telemetry.AddressID))
                 .ReturnsAsync((MapPin?)null);
-            _mapPinRepositoryMock.Setup(r => r.GetByTimeThreshold(telemetry.BeaconID, CNSussexBeacon.RailroadID, 5))
+            _mapPinRepositoryMock.Setup(r => r.GetByTimeThreshold(telemetry.BeaconID, CNSussexBeacon.RailroadID, MapPinService.TIME_THRESHOLD_MINUTES))
                 .ReturnsAsync(previousMapPin);
             _beaconRailroadServiceMock.Setup(s => s.GetByIdAsync(previousMapPin.BeaconID, previousMapPin.RailroadID))
                 .ReturnsAsync(beaconRailroads[0]);
@@ -694,12 +694,12 @@ namespace Web.ServerTests.Services
 
             var previousMapPin = new MapPin
             {
-                BeaconID = CNRugbyJunctionBeacon.BeaconID,
-                RailroadID = CNRugbyJunctionBeacon.RailroadID,
+                BeaconID = WSORRugbyJunctionBeacon.BeaconID,
+                RailroadID = WSORRugbyJunctionBeacon.RailroadID,
                 Direction = calculatedDirection,
                 CreatedAt = _currentDateTime,
                 LastUpdate = _currentDateTime,
-                BeaconRailroad = CNRugbyJunctionBeacon,
+                BeaconRailroad = WSORRugbyJunctionBeacon,
                 Moving = telemetry.Moving,
                 Addresses =
                     [
@@ -714,12 +714,12 @@ namespace Web.ServerTests.Services
 
             var expectedMapPin = new MapPin
             {
-                BeaconID = CNRugbyJunctionBeacon.BeaconID,
-                RailroadID = CNRugbyJunctionBeacon.RailroadID,
+                BeaconID = WSORRugbyJunctionBeacon.BeaconID,
+                RailroadID = WSORRugbyJunctionBeacon.RailroadID,
                 Direction = calculatedDirection,
                 CreatedAt = _currentDateTime,
                 LastUpdate = _currentDateTime,
-                BeaconRailroad = CNRugbyJunctionBeacon,
+                BeaconRailroad = WSORRugbyJunctionBeacon,
                 Moving = telemetry.Moving,
                 Addresses =
                 [
@@ -744,12 +744,12 @@ namespace Web.ServerTests.Services
                 {
                     Direction = calculatedDirection,
                     BeaconID = telemetry.BeaconID,
-                    RailroadID = CNRugbyJunctionBeacon.RailroadID,
-                    Railroad = CNRugbyJunctionBeacon.Railroad?.Name,
-                    Subdivision = CNRugbyJunctionBeacon.Railroad?.Subdivision,
-                    Latitude = CNRugbyJunctionBeacon.Latitude,
-                    Longitude = CNRugbyJunctionBeacon.Longitude,
-                    Milepost = CNRugbyJunctionBeacon.Milepost,
+                    RailroadID = WSORRugbyJunctionBeacon.RailroadID,
+                    Railroad = WSORRugbyJunctionBeacon.Railroad?.Name,
+                    Subdivision = WSORRugbyJunctionBeacon.Railroad?.Subdivision,
+                    Latitude = WSORRugbyJunctionBeacon.Latitude,
+                    Longitude = WSORRugbyJunctionBeacon.Longitude,
+                    Milepost = WSORRugbyJunctionBeacon.Milepost,
                     Moving = telemetry.Moving,
                     CreatedAt = _currentDateTime,
                     LastUpdate = _currentDateTime,
@@ -771,7 +771,7 @@ namespace Web.ServerTests.Services
 
             _mapPinRepositoryMock.Setup(r => r.GetByAddressIdAsync(telemetry.AddressID))
                 .ReturnsAsync((MapPin?)null);
-            _mapPinRepositoryMock.Setup(r => r.GetByTimeThreshold(telemetry.BeaconID, CNRugbyJunctionBeacon.RailroadID, 5))
+            _mapPinRepositoryMock.Setup(r => r.GetByTimeThreshold(telemetry.BeaconID, WSORRugbyJunctionBeacon.RailroadID, 5))
                 .ReturnsAsync(previousMapPin);
             _beaconRailroadServiceMock.Setup(s => s.GetByIdAsync(previousMapPin.BeaconID, previousMapPin.RailroadID))
                 .ReturnsAsync(beaconRailroads[0]);
@@ -858,25 +858,13 @@ namespace Web.ServerTests.Services
             {
                 BeaconID = CNRugbyJunctionBeacon.BeaconID,
                 RailroadID = CNRugbyJunctionBeacon.RailroadID,
-                Direction = calculatedDirection,
+                Direction = null, // Can't predict direction because DPU group logic doesn't exist yet.
                 CreatedAt = _currentDateTime,
                 LastUpdate = _currentDateTime,
                 BeaconRailroad = CNRugbyJunctionBeacon,
                 Moving = telemetry.Moving,
                 Addresses =
                 [
-                    new Address
-                    {
-                        AddressID = previousAddressID1,
-                        Source = previousHotSource1,
-                        LastUpdate = _currentDateTime.AddMinutes(-2)
-                    },
-                    new Address
-                    {
-                        AddressID = previousAddressID2,
-                        Source = previousEotSource2,
-                        LastUpdate = _currentDateTime.AddMinutes(-1)
-                    },
                     new Address
                     {
                         AddressID = newAddressID,
@@ -890,7 +878,7 @@ namespace Web.ServerTests.Services
             {
                 new MapPinDTO
                 {
-                    Direction = calculatedDirection,
+                    Direction = null, // Can't predict direction because DPU group logic doesn't exist yet.
                     BeaconID = telemetry.BeaconID,
                     RailroadID = CNRugbyJunctionBeacon.RailroadID,
                     Railroad = CNRugbyJunctionBeacon.Railroad?.Name,
@@ -903,16 +891,6 @@ namespace Web.ServerTests.Services
                     LastUpdate = _currentDateTime,
                     Addresses =
                     [
-                        new AddressDTO
-                        {
-                            AddressID = previousAddressID1,
-                            Source = previousHotSource1
-                        },
-                        new AddressDTO
-                        {
-                            AddressID = previousAddressID2,
-                            Source = previousEotSource2
-                        },
                         new AddressDTO
                         {
                             AddressID = newAddressID,
@@ -1003,19 +981,13 @@ namespace Web.ServerTests.Services
             {
                 BeaconID = CNRugbyJunctionBeacon.BeaconID,
                 RailroadID = CNRugbyJunctionBeacon.RailroadID,
-                Direction = calculatedDirection,
+                Direction = null, // Can't predict direction because DPU group logic doesn't exist yet.
                 CreatedAt = _currentDateTime,
                 LastUpdate = _currentDateTime,
                 BeaconRailroad = CNRugbyJunctionBeacon,
                 Moving = telemetry.Moving,
                 Addresses =
                 [
-                    new Address
-                    {
-                        AddressID = previousAddressID1,
-                        Source = previousHotSource1,
-                        LastUpdate = _currentDateTime.AddMinutes(-2)
-                    },
                     new Address
                     {
                         AddressID = newAddressID,
@@ -1029,7 +1001,7 @@ namespace Web.ServerTests.Services
             {
                 new MapPinDTO
                 {
-                    Direction = calculatedDirection,
+                    Direction = null, // Can't predict direction because DPU group logic doesn't exist yet.
                     BeaconID = telemetry.BeaconID,
                     RailroadID = CNRugbyJunctionBeacon.RailroadID,
                     Railroad = CNRugbyJunctionBeacon.Railroad?.Name,
@@ -1042,11 +1014,6 @@ namespace Web.ServerTests.Services
                     LastUpdate = _currentDateTime,
                     Addresses =
                     [
-                        new AddressDTO
-                        {
-                            AddressID = previousAddressID1,
-                            Source = previousHotSource1
-                        },
                         new AddressDTO
                         {
                             AddressID = newAddressID,
@@ -1094,6 +1061,7 @@ namespace Web.ServerTests.Services
                     Latitude = 43.280958,
                     Longitude = -88.214682,
                     Milepost = 117.2,
+                    MultipleTracks = true,
                     LastUpdate = currentDateTime
                 };
             }
@@ -1109,6 +1077,7 @@ namespace Web.ServerTests.Services
                     Latitude = 43.159517,
                     Longitude = -88.200492,
                     Milepost = 108.6,
+                    MultipleTracks = false,
                     LastUpdate = currentDateTime
                 };
             }
@@ -1124,6 +1093,7 @@ namespace Web.ServerTests.Services
                     Latitude = 43.280958,
                     Longitude = -88.213966,
                     Milepost = 112.16,
+                    MultipleTracks = false,
                     LastUpdate = currentDateTime
                 };
             }

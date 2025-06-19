@@ -37,6 +37,12 @@ namespace Web.Server.DTOs
         public double Milepost { get; set; }
 
         /// <summary>
+        /// Indicates if the beacon is in proximity to multiple tracks at the same 
+        /// location for the same railroad.
+        /// </summary>
+        public bool MultipleTracks { get; set; }
+
+        /// <summary>
         /// Reports the online status of the beacon. If the beacon's last update
         /// is older than 15 minutes, it is considered offline.
         /// </summary>

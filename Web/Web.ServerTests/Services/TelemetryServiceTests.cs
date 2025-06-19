@@ -124,7 +124,8 @@ namespace Web.ServerTests.Services
                 RailroadID = 1,
                 Latitude = 0,
                 Longitude = 0,
-                Milepost = 0
+                Milepost = 0,
+                MultipleTracks = false
             };
             var beacon = new Beacon
             {

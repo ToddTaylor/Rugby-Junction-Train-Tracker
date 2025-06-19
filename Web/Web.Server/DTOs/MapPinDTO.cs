@@ -35,7 +35,7 @@
         public bool Equals(MapPinDTO? other)
         {
             return other is not null &&
-                   Addresses.SequenceEqual(other.Addresses) && // Customer comparer that works.
+                   Addresses.SequenceEqual(other.Addresses) && // Custom comparer that works.
                    BeaconID == other.BeaconID &&
                    CreatedAt == other.CreatedAt &&
                    LastUpdate == other.LastUpdate &&
