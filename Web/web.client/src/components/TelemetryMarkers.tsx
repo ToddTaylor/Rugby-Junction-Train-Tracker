@@ -1,19 +1,20 @@
+import L from 'leaflet';
 import { MapPin } from '../types/types';
 import TelemetryMarker from './TelemetryMarker';
 
 // Add dynamic marker sizing based on zoom
 function getMarkerSize(zoom: number): number {
-    // Base size at zoom 11 is 20px, scale up/down with zoom
-    // Clamp between 10px and 40px for usability
-    return Math.max(10, Math.min(40, 20 + (zoom - 11) * 2));
+    // Example: base size 28 at zoom 11, scales between 10 and 40
+    return Math.max(10, Math.min(40, 28 + (zoom - 11) * 2));
 }
 
 interface TelemetryMarkersProps {
     pins: { [id: string]: MapPin };
     zoom: number;
+    maxPinAgeMinutes: number;
 }
 
-function TelemetryMarkers({ pins: telemetryPins, zoom }: TelemetryMarkersProps) {
+function TelemetryMarkers({ pins: telemetryPins, zoom, maxPinAgeMinutes }: TelemetryMarkersProps) {
     const size = getMarkerSize(zoom);
 
     // Fix: Only render if pins is an object and has values
@@ -25,7 +26,12 @@ function TelemetryMarkers({ pins: telemetryPins, zoom }: TelemetryMarkersProps) 
         <>
             {pinsArray.map((telemetryPin) =>
                 telemetryPin ? (
-                    <TelemetryMarker key={telemetryPin.id} pin={telemetryPin} size={size} />
+                    <TelemetryMarker
+                        key={telemetryPin.id}
+                        pin={telemetryPin}
+                        size={size}
+                        maxPinAgeMinutes={maxPinAgeMinutes}
+                    />
                 ) : null
             )}
         </>

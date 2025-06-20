@@ -1,22 +1,22 @@
 import { Marker } from 'react-leaflet';
 import L from 'leaflet';
 import { useEffect, useRef, useState } from 'react';
-import ArrowMapPin from './ArrowMapPin';
-import ReactDOMServer from 'react-dom/server';
 import { MapPin } from '../types/types';
 import { parseISO } from 'date-fns/parseISO';
 import { format } from 'date-fns';
+import { getTrackedMapPins, addTrackedMapPin, removeTrackedMapPin, getTrackedColor } from './trackUtils';
 
-function getPinBrightness(lastUpate: string, source?: string): number {
+function getPinBrightness(lastUpdate: string, addresses?: { source: string }[], maxPinAgeMinutes?: number): number {
     const now = new Date();
-    const created = parseISO(lastUpate);
+    const created = parseISO(lastUpdate);
+    maxPinAgeMinutes = maxPinAgeMinutes || Number(import.meta.env.VITE_MAX_PIN_AGE_MINUTES);
     let minutes = (now.getTime() - created.getTime()) / 60000;
 
-    // If source is "EOT", halve the thresholds
-    const isEOT = source === "EOT";
-    const t2 = isEOT ? 1 : 2;
-    const t4 = isEOT ? 2 : 4;
-    const t6 = isEOT ? 3 : 6;
+    // Check if any address has source "EOT"
+    const isEOT = Array.isArray(addresses) && addresses.some(a => a.source === "EOT");
+    const t2 = isEOT ? maxPinAgeMinutes / 6 : maxPinAgeMinutes * 1/3;
+    const t4 = isEOT ? maxPinAgeMinutes / 3 : maxPinAgeMinutes * 2/3;
+    const t6 = isEOT ? maxPinAgeMinutes / 2 : maxPinAgeMinutes;
 
     if (minutes < t2) return 1.0;
     if (minutes < t4) return 0.7;
@@ -27,6 +27,7 @@ function getPinBrightness(lastUpate: string, source?: string): number {
 interface TelemetryMarkerProps {
     pin: MapPin;
     size: number;
+    maxPinAgeMinutes?: number;
 }
 
 const formatDirection = (dir?: string): string => {
@@ -50,29 +51,53 @@ const formatDirection = (dir?: string): string => {
     return map[dir.toUpperCase()] || 'Unknown Direction';
 };
 
-const TelemetryMarker: React.FC<TelemetryMarkerProps> = ({ pin, size }) => {
+const TelemetryMarker: React.FC<TelemetryMarkerProps> = ({ pin, size, maxPinAgeMinutes }) => {
     const markerRef = useRef<L.Marker>(null);
-    const [brightness, setBrightness] = useState(() => getPinBrightness(pin.lastUpdate, pin.source));
+    const [brightness, setBrightness] = useState(() =>
+        getPinBrightness(pin.lastUpdate, pin.addresses, maxPinAgeMinutes)
+    );
+    const [isTracked, setIsTracked] = useState(() =>
+        !!getTrackedMapPins().find(tp => tp.id === String(pin.id))
+    );
+    const [trackColor, setTrackColor] = useState<string | undefined>(() =>
+        getTrackedColor(String(pin.id))
+    );
+
+    useEffect(() => {
+        const checkTracked = () => {
+            const tracked = getTrackedMapPins().find(tp => tp.id === String(pin.id));
+            setIsTracked(!!tracked);
+            setTrackColor(tracked?.color);
+        };
+        window.addEventListener('storage', checkTracked);
+        const interval = setInterval(checkTracked, 60 * 1000);
+        checkTracked();
+        return () => {
+            window.removeEventListener('storage', checkTracked);
+            clearInterval(interval);
+        };
+    }, [pin.id]);
 
     useEffect(() => {
         const interval = setInterval(() => {
-            setBrightness(getPinBrightness(pin.lastUpdate, pin.source));
+            setBrightness(getPinBrightness(pin.lastUpdate, pin.addresses, maxPinAgeMinutes));
         }, 30000);
-        setBrightness(getPinBrightness(pin.lastUpdate, pin.source));
+        setBrightness(getPinBrightness(pin.lastUpdate, pin.addresses, maxPinAgeMinutes));
         return () => clearInterval(interval);
-    }, [pin.lastUpdate, pin.source]);
+    }, [pin.lastUpdate, pin.addresses, maxPinAgeMinutes]);
 
     useEffect(() => {
         const marker = markerRef.current;
         if (!marker) return;
 
-        // Build address lines
         let addressLines = '';
-        if (pin.addresses && typeof pin.addresses === 'object') {
-            addressLines = Object.entries(pin.addresses)
-                .map(([key, value]) => `${value} ${key}<br/>`)
+        if (Array.isArray(pin.addresses)) {
+            addressLines = pin.addresses
+                .map((a: { source: string; addressID: number }) => `${a.addressID} ${a.source}<br/>`)
                 .join('');
         }
+
+        const trackText = isTracked ? "Click to Untrack Train" : "Click to Track Train";
 
         const popupContent = `
             ${pin.railroad?.trim() ? `<strong>${pin.railroad} ${pin.subdivision + ' Sub' || ''}</strong><br/>` : ''}
@@ -81,6 +106,7 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps> = ({ pin, size }) => {
             ${pin.moving === true ? "Moving<br/>" : pin.moving === false ? "Not Moving<br/>" : ''}
             ${format(parseISO(pin.lastUpdate), 'h:mm aa')}<br/>
             ${addressLines}
+            <span style="color:#1976d2;font-weight:bold;">${trackText}</span>
         `;
 
         marker.bindPopup(popupContent);
@@ -88,7 +114,6 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps> = ({ pin, size }) => {
         marker.on('mouseover', function () {
             marker.openPopup();
         });
-
         marker.on('mouseout', function () {
             marker.closePopup();
         });
@@ -97,33 +122,96 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps> = ({ pin, size }) => {
             marker.off('mouseover');
             marker.off('mouseout');
         };
-    }, [pin, brightness]);
+    }, [pin, brightness, isTracked]);
 
-    const createCustomIcon = (direction?: string, moving?: Boolean) =>
-        L.divIcon({
-            html: ReactDOMServer.renderToString(
-                <div style={{
-                    filter: `brightness(${brightness})`,
-                    width: size,
-                    height: size
-                }}>
-                    <ArrowMapPin direction={direction as any} moving={moving as any} />
+    // Handle click on the marker to track/untrack
+    useEffect(() => {
+        const marker = markerRef.current;
+        if (!marker) return;
+
+        const handleClick = () => {
+            if (isTracked) {
+                removeTrackedMapPin(String(pin.id));
+                setIsTracked(false);
+                setTrackColor(undefined);
+            } else {
+                addTrackedMapPin(String(pin.id));
+                setIsTracked(true);
+                setTrackColor(getTrackedColor(String(pin.id)));
+            }
+        };
+
+        marker.on('click', handleClick);
+
+        return () => {
+            marker.off('click', handleClick);
+        };
+    }, [isTracked, pin.id]);
+
+    // Use ArrowMapPin as the icon, with rotation and border color
+    const createCustomIcon = () => {
+        const iconSrc = getArrowIconSrc(pin.direction, pin.moving != null ? !!pin.moving : undefined);
+        return L.divIcon({
+            html: `
+                <div style="
+                    filter: brightness(${brightness});
+                    width: ${size}px;
+                    height: ${size}px;
+                    border: 4px dotted ${trackColor ? trackColor : 'transparent'};
+                    border-radius: 50%;
+                    box-sizing: border-box;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: transparent;
+                ">
+                    <img 
+                        src="${iconSrc}" 
+                        style="width:100%;height:100%;display:block;transform: rotate(${getRotation(pin.direction)}deg);" 
+                        alt="Train direction"
+                    />
                 </div>
-            ),
+            `,
             iconSize: [size, size],
             iconAnchor: [size / 2, size / 2],
             className: 'telemetry-marker-z',
         });
+    };
 
     return (
         <Marker
             key={pin.id}
             ref={markerRef}
             position={[pin.latitude, pin.longitude]}
-            icon={createCustomIcon(pin.direction, pin.moving)}
+            icon={createCustomIcon()}
             pane="telemetryPane"
         />
     );
 };
+
+function getArrowIconSrc(direction?: string, moving?: boolean): string {
+    // You can expand this logic for more directions/colors if needed
+    if (moving === true) {
+        return '/icons/arrow-green.svg';
+    }
+    if (moving === false) {
+        return '/icons/arrow-red.svg';
+    }
+    return '/icons/arrow.svg'; // default/unknown
+}
+
+function getRotation(direction?: string): number {
+    switch ((direction || '').toUpperCase()) {
+        case 'N': return 0;
+        case 'NE': return 45;
+        case 'E': return 90;
+        case 'SE': return 135;
+        case 'S': return 180;
+        case 'SW': return 225;
+        case 'W': return 270;
+        case 'NW': return 315;
+        default: return 0;
+    }
+}
 
 export default TelemetryMarker;

@@ -1,9 +1,8 @@
-﻿
-namespace Web.Server.DTOs
+﻿namespace Web.Server.DTOs
 {
     public class MapPinDTO : IEquatable<MapPinDTO?>
     {
-        public Dictionary<string, string> Addresses { get; set; }
+        public required int ID { get; set; }
 
         public required int BeaconID { get; set; }
 
@@ -11,7 +10,7 @@ namespace Web.Server.DTOs
 
         public required DateTime LastUpdate { get; set; }
 
-        public required string Direction { get; set; }
+        public string? Direction { get; set; }
 
         public required double Latitude { get; set; }
 
@@ -25,13 +24,9 @@ namespace Web.Server.DTOs
 
         public int? RailroadID { get; set; }
 
-        /// <summary>
-        /// The source of the alert.
-        /// HOT, EOT, DPU, HBD
-        /// </summary>
-        public required string Source { get; set; }
-
         public string? Subdivision { get; set; }
+
+        public List<AddressDTO> Addresses { get; set; }
 
         public override bool Equals(object? obj)
         {
@@ -41,7 +36,7 @@ namespace Web.Server.DTOs
         public bool Equals(MapPinDTO? other)
         {
             return other is not null &&
-                   EqualityComparer<Dictionary<string, string>>.Default.Equals(Addresses, other.Addresses) &&
+                   ID == other.ID &&
                    BeaconID == other.BeaconID &&
                    CreatedAt == other.CreatedAt &&
                    LastUpdate == other.LastUpdate &&
@@ -52,14 +47,14 @@ namespace Web.Server.DTOs
                    Moving == other.Moving &&
                    Railroad == other.Railroad &&
                    RailroadID == other.RailroadID &&
-                   Source == other.Source &&
-                   Subdivision == other.Subdivision;
+                   Subdivision == other.Subdivision &&
+                   Addresses.SequenceEqual(other.Addresses); // Custom comparer that works.
         }
 
         public override int GetHashCode()
         {
             HashCode hash = new HashCode();
-            hash.Add(Addresses);
+            hash.Add(ID);
             hash.Add(BeaconID);
             hash.Add(CreatedAt);
             hash.Add(LastUpdate);
@@ -70,8 +65,8 @@ namespace Web.Server.DTOs
             hash.Add(Moving);
             hash.Add(Railroad);
             hash.Add(RailroadID);
-            hash.Add(Source);
             hash.Add(Subdivision);
+            hash.Add(Addresses);
             return hash.ToHashCode();
         }
 

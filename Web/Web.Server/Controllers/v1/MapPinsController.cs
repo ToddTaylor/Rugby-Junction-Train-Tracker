@@ -9,14 +9,14 @@ namespace Web.Server.Controllers.v1
     [ApiController]
     public class MapPinsController : ControllerBase
     {
-        private readonly IMapPinsService _mapPinsService;
+        private readonly IMapPinService _mapPinsService;
         private readonly IBeaconRailroadService _beaconRailroadService;
         private readonly ILogger<MapPinsController> _logger;
         private readonly IMapper _mapper;
 
         public MapPinsController(
             IBeaconRailroadService beaconRailroadService,
-            IMapPinsService mapPinsService,
+            IMapPinService mapPinsService,
             ILogger<MapPinsController> logger,
             IMapper mapper)
         {

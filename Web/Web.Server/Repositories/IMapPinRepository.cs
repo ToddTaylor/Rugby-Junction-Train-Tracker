@@ -4,9 +4,14 @@ namespace Web.Server.Repositories
 {
     public interface IMapPinRepository
     {
-        Task<MapPin?> GetByIdAsync(int addressID);
+        Task<MapPin?> GetByAddressIdAsync(int addressID);
+
+        Task<MapPin?> GetByTimeThreshold(int beaconID, int railroadID, int minutesThreshold);
+
+        Task<MapPin?> GetByTrainIdAsync(int dpuTrainID);
 
         Task<IEnumerable<MapPin>> GetAllAsync(int? minutes);
+
         Task<MapPin> UpsertAsync(MapPin mapPin);
     }
 }

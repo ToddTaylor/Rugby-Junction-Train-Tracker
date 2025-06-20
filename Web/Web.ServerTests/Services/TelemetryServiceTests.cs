@@ -1,777 +1,170 @@
 using AutoMapper;
-using CloneExtensions;
 using Microsoft.AspNetCore.SignalR;
 using Moq;
+using Web.Server.DTOs;
 using Web.Server.Entities;
+using Web.Server.Enums;
 using Web.Server.Hubs;
-using Web.Server.Mappers;
 using Web.Server.Providers;
 using Web.Server.Repositories;
+using Web.Server.Services;
 
-namespace Web.Server.Services.Tests
+namespace Web.ServerTests.Services
 {
     [TestClass]
     public class TelemetryServiceTests
     {
-        private TelemetryService? _telemetryService;
-
-        private readonly Mock<IBeaconService> _mockBeaconService = new();
-        private readonly Mock<IBeaconRailroadService> _mockBeaconRailroadService = new();
-        private readonly Mock<ITelemetryRepository> _mockTelemetryRepository = new();
-        private readonly Mock<IHubContext<NotificationHub>> _mockHubContext = new();
-        private readonly Mock<IHubClients> _mockHubClients = new();
-        private readonly Mock<IClientProxy>? _mockClientProxy = new();
-        private readonly Mock<IMapPinsService> _mockMapPinService = new();
-        private readonly Mock<ITimeProvider> _mockTimeProvider = new();
-        private IMapper? _mapper;
-        private DateTime _currentDateTime;
+        private Mock<ITelemetryRepository> _telemetryRepositoryMock;
+        private Mock<IBeaconService> _beaconServiceMock;
+        private Mock<IBeaconRailroadService> _beaconRailroadServiceMock;
+        private Mock<IHubContext<NotificationHub>> _hubContextMock;
+        private Mock<IMapper> _mapperMock;
+        private Mock<IMapPinService> _mapPinServiceMock;
+        private Mock<ITimeProvider> _timeProviderMock;
+        private TelemetryService _service;
 
         [TestInitialize]
-        public void Initialize()
+        public void Setup()
         {
-            _currentDateTime = DateTime.UtcNow;
-            _mockTimeProvider.Setup(tp => tp.UtcNow).Returns(_currentDateTime);
+            _telemetryRepositoryMock = new Mock<ITelemetryRepository>();
+            _beaconServiceMock = new Mock<IBeaconService>();
+            _beaconRailroadServiceMock = new Mock<IBeaconRailroadService>();
+            _hubContextMock = new Mock<IHubContext<NotificationHub>>();
+            _mapperMock = new Mock<IMapper>();
+            _mapPinServiceMock = new Mock<IMapPinService>();
+            _timeProviderMock = new Mock<ITimeProvider>();
 
-            var config = new MapperConfiguration(cfg =>
-            {
-                cfg.AddProfile<AutoMapperProfile>();
-            });
-            _mapper = config.CreateMapper();
+            // Setup SignalR Clients.All.SendAsync
+            var clientsMock = new Mock<IHubClients>();
+            var clientProxyMock = new Mock<IClientProxy>();
+            clientsMock.Setup(c => c.All).Returns(clientProxyMock.Object);
+            _hubContextMock.Setup(h => h.Clients).Returns(clientsMock.Object);
 
-            _telemetryService = new TelemetryService(
-                _mockTelemetryRepository.Object,
-                _mockBeaconService.Object,
-                _mockBeaconRailroadService.Object,
-                _mockHubContext.Object,
-                _mapper,
-                _mockMapPinService.Object,
-                _mockTimeProvider.Object);
+            _service = new TelemetryService(
+                _beaconRailroadServiceMock.Object,
+                _beaconServiceMock.Object,
+                _hubContextMock.Object,
+                _mapperMock.Object,
+                _mapPinServiceMock.Object,
+                _telemetryRepositoryMock.Object,
+                _timeProviderMock.Object
+            );
         }
 
         [TestMethod]
-        public async Task GetTelemetries_ReturnsAllTelemetries()
+        public async Task GetTelemetriesAsync_ReturnsAllTelemetries()
         {
             // Arrange
-            var telemetries = new List<Telemetry>
-            {
-                new Telemetry { ID = 1, AddressID = 100, Source = "HOT", LastUpdate = DateTime.UtcNow },
-                new Telemetry { ID = 2, AddressID = 200, Source = "EOT", LastUpdate = DateTime.UtcNow }
-            };
-
-            _mockTelemetryRepository.Setup(repo => repo.GetAllAsync())
-                .ReturnsAsync(telemetries);
+            var telemetries = new List<Telemetry> { new Telemetry { BeaconID = 1, AddressID = 1, Source = "HOT", CreatedAt = DateTime.UtcNow } };
+            _telemetryRepositoryMock.Setup(r => r.GetAllAsync()).ReturnsAsync(telemetries);
 
             // Act
-            var result = await _telemetryService.GetTelemetriesAsync();
+            var result = await _service.GetTelemetriesAsync();
 
             // Assert
-            Assert.IsNotNull(result);
-            Assert.AreEqual(2, result.Count());
-            _mockTelemetryRepository.Verify(repo => repo.GetAllAsync(), Times.Once);
+            Assert.AreEqual(telemetries, result);
         }
 
         [TestMethod]
-        public async Task CreateTelemetry_ThrowsException_WhenBeaconNotFound()
+        public async Task GetTelemetryByIdAsync_ReturnsTelemetry_WhenFound()
         {
             // Arrange
-            var telemetry = new Telemetry
+            var telemetry = new Telemetry { BeaconID = 1, AddressID = 1, Source = "HOT", CreatedAt = DateTime.UtcNow };
+            _telemetryRepositoryMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(telemetry);
+
+            // Act
+            var result = await _service.GetTelemetryByIdAsync(1);
+
+            // Assert
+            Assert.AreEqual(telemetry, result);
+        }
+
+        [TestMethod]
+        public async Task GetTelemetryByIdAsync_ReturnsNull_WhenNotFound()
+        {
+            // Arrange
+            _telemetryRepositoryMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync((Telemetry?)null);
+
+            // Act
+            var result = await _service.GetTelemetryByIdAsync(1);
+
+            // Assert
+            Assert.IsNull(result);
+        }
+
+        [TestMethod]
+        public async Task CreateTelemetryAsync_Throws_WhenAddressIdInvalid()
+        {
+            // Arrange
+            var telemetry = new Telemetry { BeaconID = 1, AddressID = 0, Source = "HOT", CreatedAt = DateTime.UtcNow };
+
+            // Act & Assert
+            await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => _service.CreateTelemetryAsync(telemetry));
+        }
+
+        [TestMethod]
+        public async Task CreateTelemetryAsync_Throws_WhenBeaconNotFound()
+        {
+            // Arrange
+            var telemetry = new Telemetry { BeaconID = 1, AddressID = 1, Source = "HOT", CreatedAt = DateTime.UtcNow };
+            _beaconServiceMock.Setup(s => s.GetBeaconByIdAsync(1)).ReturnsAsync((Beacon?)null);
+
+            // Act & Assert
+            await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => _service.CreateTelemetryAsync(telemetry));
+        }
+
+        [TestMethod]
+        public async Task CreateTelemetryAsync_Successful()
+        {
+            // Arrange
+            var beaconRailroad = new BeaconRailroad
+            {
+                BeaconID = 1,
+                Direction = Direction.NorthSouth,
+                RailroadID = 1,
+                Latitude = 0,
+                Longitude = 0,
+                Milepost = 0,
+                MultipleTracks = false
+            };
+            var beacon = new Beacon
             {
                 ID = 1,
-                AddressID = 100,
-                Source = "HOT",
-                LastUpdate = DateTime.UtcNow,
-                Beacon = new Beacon { ID = 1, LastUpdate = DateTime.UtcNow }
+                OwnerID = 1,
+                Owner = new Owner
+                {
+                    ID = 1,
+                    FirstName = "Test",
+                    LastName = "Owner",
+                    Email = "test@example.com",
+                    City = "City",
+                    State = "State",
+                    Beacons = new List<Beacon>()
+                },
+                BeaconRailroads = new List<BeaconRailroad> { beaconRailroad },
+                Telemetries = new List<Telemetry>()
             };
+            var telemetry = new Telemetry { BeaconID = 1, AddressID = 1, Source = "HOT", CreatedAt = DateTime.UtcNow };
+            var addedTelemetry = new Telemetry { BeaconID = 1, AddressID = 1, Source = "HOT", CreatedAt = DateTime.UtcNow };
 
-            _mockBeaconService.Setup(repo => repo.GetBeaconByIdAsync(telemetry.Beacon.ID))
-                .ReturnsAsync((Beacon?)null);
+            _beaconServiceMock.Setup(s => s.GetBeaconByIdAsync(1)).ReturnsAsync(beacon);
+            _telemetryRepositoryMock.Setup(r => r.AddAsync(telemetry)).ReturnsAsync(addedTelemetry);
+            _mapPinServiceMock.Setup(m => m.UpsertMapPin(It.IsAny<Telemetry>(), It.IsAny<ICollection<BeaconRailroad>>()))
+                .Returns(Task.CompletedTask);
+            _beaconRailroadServiceMock.Setup(b => b.UpdateAsync(It.IsAny<BeaconRailroad>()))
+                .ReturnsAsync(beaconRailroad);
+            _mapperMock.Setup(m => m.Map<BeaconRailroadDTO>(It.IsAny<BeaconRailroad>()))
+                .Returns(new BeaconRailroadDTO());
+            _timeProviderMock.Setup(t => t.UtcNow).Returns(DateTime.UtcNow);
 
             // Act
-            var ex = await Assert.ThrowsExceptionAsync<InvalidOperationException>(async () =>
-            {
-                await _telemetryService.CreateTelemetryAsync(telemetry);
-            });
+            var result = await _service.CreateTelemetryAsync(telemetry);
 
             // Assert
-            Assert.AreEqual(ex.Message, "Beacon not found.");
-            _mockBeaconService.Verify(repo => repo.GetBeaconByIdAsync(telemetry.Beacon.ID), Times.Once);
-            _mockBeaconService.Verify(repo => repo.UpdateBeaconAsync(It.IsAny<int>(), It.IsAny<Beacon>()), Times.Never);
-        }
-
-        /// <summary>
-        /// Test to ensure that a map alert is created if the telemetry is the first telemetry
-        /// for a train and the beacon is single-railroad.
-        /// </summary>
-        [TestMethod]
-        public void CreateTelemetry_FirstTelemetry_OneRailroadBeacon()
-        {
-            var trainAddressId = 90234;
-            var trainSource = "HOT";
-            var telemetryId = 432;
-            var ownerId = 19;
-            var beaconId = 534;
-            var beaconLatitude = 10.0;
-            var beaconLongitude = 20.0;
-            var milepost = 123.45;
-            var railroadId = 12;
-
-            // Arrange
-            var telemetry = new Telemetry
-            {
-                ID = telemetryId,
-                AddressID = trainAddressId,
-                Source = trainSource,
-                LastUpdate = _currentDateTime.AddMicroseconds(-234), // Simulate beacon's timestamp that will be ignored
-                Beacon = new Beacon
-                {
-                    ID = beaconId,
-                    LastUpdate = _currentDateTime.AddMilliseconds(-300), // Simulate beacon's timestamp
-                }
-            };
-
-            var telemetryBeforeAdd = telemetry.GetClone();
-            telemetryBeforeAdd.LastUpdate = _currentDateTime; // Timestamp set by APi
-
-            var telemetryAfterAdd = new Telemetry
-            {
-                ID = telemetryId,
-                AddressID = trainAddressId,
-                Source = trainSource,
-                LastUpdate = _currentDateTime,
-                Beacon = new Beacon
-                {
-                    ID = beaconId,
-                    LastUpdate = _currentDateTime.AddMilliseconds(-300), // Simulate last beacon check-in timestamp
-                    BeaconRailroads = new List<BeaconRailroad> {
-                        new BeaconRailroad {
-                            RailroadID = railroadId,
-                            BeaconID = beaconId,
-                            Latitude = beaconLatitude,
-                            Longitude = beaconLongitude,
-                            Milepost = milepost,
-                            Direction = Enums.Direction.NorthSouth
-                        }
-                    }
-                }
-            };
-
-            var existingTelemetry = new List<Telemetry>(); // No previous telemetry
-
-            var beaconBeforeUpdate = new Beacon
-            {
-                ID = beaconId,
-                OwnerID = ownerId,
-                LastUpdate = _currentDateTime // Should get new timestamp from API
-            };
-
-            var beaconAfterUpdate = beaconBeforeUpdate.GetClone();
-
-            var expectedMapAlert = new MapPin
-            {
-                AddressID = trainAddressId,
-                BeaconID = beaconId,
-                Source = trainSource,
-                LastUpdate = _currentDateTime,
-                Direction = "" // Direction should not / cannot be calculated
-            };
-
-            var expectedMapAlertObjects = new object[]
-            {
-                expectedMapAlert
-            };
-
-            _mockBeaconService.Setup(repo => repo.GetBeaconByIdAsync(telemetry.Beacon.ID))
-                    .ReturnsAsync(beaconBeforeUpdate);
-            _mockBeaconService.Setup(repo => repo.UpdateBeaconAsync(beaconBeforeUpdate.ID, beaconBeforeUpdate))
-                    .ReturnsAsync(beaconAfterUpdate);
-            _mockTelemetryRepository.Setup(repo => repo.GetAllAsync())
-                    .ReturnsAsync(existingTelemetry);
-            _mockTelemetryRepository.Setup(repo => repo.AddAsync(telemetryBeforeAdd))
-                    .ReturnsAsync(telemetryAfterAdd);
-            _mockClientProxy?.Setup(proxy => proxy.SendCoreAsync(NotificationMethods.MapPinUpdate, expectedMapAlertObjects, default))
-                    .Returns(Task.CompletedTask);
-            _mockHubContext.Setup(h => h.Clients).Returns(_mockHubClients.Object);
-            _mockHubClients.Setup(h => h.All).Returns(_mockClientProxy?.Object);
-
-            // Act
-            _telemetryService?.CreateTelemetryAsync(telemetry);
-
-            // Assert
-            _mockTelemetryRepository.Verify(repo => repo.AddAsync(It.Is<Telemetry>(t => t == telemetry)), Times.Once);
-            _mockBeaconService.Verify(repo => repo.GetBeaconByIdAsync(telemetry.Beacon.ID), Times.Once);
-            _mockBeaconService.Verify(repo => repo.UpdateBeaconAsync(It.IsAny<int>(), It.Is<Beacon>(b => b.ID == telemetry.Beacon.ID)), Times.Once);
-
-            _mockClientProxy.Verify(proxy => proxy.SendCoreAsync(
-                NotificationMethods.MapPinUpdate,
-                It.Is<object[]>(args => args[0].Equals(expectedMapAlert)),
-                default), Times.Once);
-        }
-
-        /// <summary>
-        /// Test to ensure that no map alert is created if the telemetry is the first telemetry
-        /// for a train and the beacon is multi-railroad.
-        /// </summary>
-        [TestMethod]
-        public void CreateTelemetry_FirstTelemetry_MultipleRailroadBeacon()
-        {
-            var trainAddressId = 90234;
-            var trainSource = "HOT";
-            var telemetryId = 432;
-            var ownerId = 19;
-            var beaconId = 534;
-            var beacon1Latitude = 10.0;
-            var beacon1Longitude = 11.0;
-            var beacon2Latitude = 20.0;
-            var beacon2Longitude = 21.0;
-            var milepost1 = 123.45;
-            var milepost2 = 234.56;
-            var railroadId1 = 12;
-            var railroadId2 = 41;
-
-            // Arrange
-            var telemetry = new Telemetry
-            {
-                ID = telemetryId,
-                AddressID = trainAddressId,
-                Source = trainSource,
-                LastUpdate = _currentDateTime.AddMicroseconds(-234), // Simulate beacon's timestamp that will be ignored
-                Beacon = new Beacon
-                {
-                    ID = beaconId,
-                    LastUpdate = _currentDateTime.AddMilliseconds(-300), // Simulate beacon's timestamp
-                }
-            };
-
-            var telemetryBeforeAdd = telemetry.GetClone();
-            telemetryBeforeAdd.LastUpdate = _currentDateTime; // Timestamp set by APi
-
-            var telemetryAfterAdd = new Telemetry
-            {
-                ID = telemetryId,
-                AddressID = trainAddressId,
-                Source = trainSource,
-                LastUpdate = _currentDateTime,
-                Beacon = new Beacon
-                {
-                    ID = beaconId,
-                    OwnerID = ownerId,
-                    LastUpdate = _currentDateTime.AddMilliseconds(-300), // Simulate last beacon check-in timestamp
-                    BeaconRailroads = new List<BeaconRailroad> {
-                        new BeaconRailroad {
-                            RailroadID = railroadId1,
-                            BeaconID = beaconId,
-                            Latitude = beacon1Latitude,
-                            Longitude = beacon1Longitude,
-                            Milepost = milepost1,
-                            Direction = Enums.Direction.NorthSouth
-                        },
-                        new BeaconRailroad {
-                            RailroadID = railroadId2,
-                            BeaconID = beaconId,
-                            Latitude = beacon2Latitude,
-                            Longitude = beacon2Longitude,
-                            Milepost = milepost2,
-                            Direction = Enums.Direction.NorthwestSoutheast
-                        }
-                    }
-                }
-            };
-
-            var existingTelemetry = new List<Telemetry>(); // No previous telemetry
-
-            var beaconBeforeUpdate = new Beacon
-            {
-                ID = beaconId,
-                OwnerID = ownerId,
-                LastUpdate = _currentDateTime // Should get new timestamp from API
-            };
-
-            var beaconAfterUpdate = beaconBeforeUpdate.GetClone();
-
-            _mockBeaconService.Setup(repo => repo.GetBeaconByIdAsync(telemetry.Beacon.ID))
-                .ReturnsAsync(beaconBeforeUpdate);
-            _mockBeaconService.Setup(repo => repo.UpdateBeaconAsync(beaconBeforeUpdate.ID, beaconBeforeUpdate))
-                .ReturnsAsync(beaconAfterUpdate);
-            _mockTelemetryRepository.Setup(repo => repo.GetAllAsync())
-                .ReturnsAsync(existingTelemetry);
-            _mockTelemetryRepository.Setup(repo => repo.AddAsync(telemetryBeforeAdd))
-                .ReturnsAsync(telemetryAfterAdd);
-
-            // Act
-            _telemetryService?.CreateTelemetryAsync(telemetry);
-
-            // Assert
-            _mockTelemetryRepository.Verify(repo => repo.AddAsync(It.Is<Telemetry>(t => t == telemetry)), Times.Once);
-            _mockBeaconService.Verify(repo => repo.GetBeaconByIdAsync(telemetry.Beacon.ID), Times.Once);
-            _mockBeaconService.Verify(repo => repo.UpdateBeaconAsync(It.IsAny<int>(), It.Is<Beacon>(b => b.ID == telemetry.Beacon.ID)), Times.Once);
-
-            _mockClientProxy.Verify(proxy => proxy.SendCoreAsync(
-                NotificationMethods.MapPinUpdate,
-                It.IsAny<object[]>(),
-                default), Times.Never);
-        }
-
-        /// <summary>
-        /// Test to ensure that a map alert is created if the telemetry is the second telemetry
-        /// for a train and both the new telemetry and existing telemetry beacons are single-railroad.
-        /// </summary>
-        [TestMethod]
-        public void CreateTelemetry_SecondTelemetry_OneRailroadBeacon_OneRailroadBeacon()
-        {
-            var trainAddressId = 90234;
-            var train1Source = "HOT";
-            var train2Source = "EOT";
-            var telemetry1Id = 432;
-            var telemetry2Id = 433;
-            var owner1Id = 19;
-            var owner2Id = 29;
-            var beacon1Id = 134;
-            var beacon1Latitude = 10.0;
-            var beacon1Longitude = 11.0;
-            var beacon2Id = 234;
-            var beacon2Latitude = 20.0;
-            var beacon2Longitude = 21.0;
-            var milepost1 = 123.45;
-            var milepost2 = 234.56;
-            var railroad1Id = 12;
-
-            // Arrange
-            var telemetry = new Telemetry
-            {
-                ID = telemetry1Id,
-                AddressID = trainAddressId,
-                Source = train1Source,
-                LastUpdate = _currentDateTime.AddMicroseconds(-234), // Simulate beacon's timestamp that will be ignored
-                Beacon = new Beacon
-                {
-                    ID = beacon1Id,
-                    OwnerID = owner1Id,
-                    LastUpdate = _currentDateTime.AddMilliseconds(-300), // Simulate beacon's timestamp
-                }
-            };
-
-            var telemetryBeforeAdd = telemetry.GetClone();
-            telemetryBeforeAdd.LastUpdate = _currentDateTime; // Timestamp set by APi
-
-            var telemetryAfterAdd = new Telemetry
-            {
-                ID = telemetry1Id,
-                AddressID = trainAddressId,
-                Source = train1Source,
-                LastUpdate = _currentDateTime,
-                Beacon = new Beacon
-                {
-                    ID = beacon1Id,
-                    OwnerID = owner1Id,
-                    LastUpdate = _currentDateTime.AddMilliseconds(-300), // Simulate last beacon check-in timestamp
-                    BeaconRailroads = [
-                        new BeaconRailroad {
-                            RailroadID = railroad1Id,
-                            BeaconID = beacon1Id,
-                            Latitude = beacon1Latitude,
-                            Longitude = beacon1Longitude,
-                            Milepost = milepost1,
-                            Direction = Enums.Direction.NorthSouth
-                        }
-                    ]
-                }
-            };
-
-            var singleRailroadBeacon = new Beacon
-            {
-                ID = beacon2Id,
-                OwnerID = owner2Id,
-                LastUpdate = _currentDateTime.AddMilliseconds(-500),
-                BeaconRailroads = [
-                            new BeaconRailroad {
-                                RailroadID = railroad1Id,
-                                BeaconID = beacon2Id,
-                                Latitude = beacon2Latitude,
-                                Longitude = beacon2Longitude,
-                                Milepost = milepost2,
-                                Direction = Enums.Direction.NorthSouth
-                            }
-                        ]
-            };
-
-            var existingTelemetry = new List<Telemetry>
-            {
-                new() {
-                    ID = telemetry2Id,
-                    AddressID = trainAddressId,
-                    Source = train2Source,
-                    LastUpdate = _currentDateTime.AddMilliseconds(-500),
-                    Beacon = singleRailroadBeacon
-                }
-            };
-
-            var beaconBeforeUpdate = new Beacon
-            {
-                ID = beacon1Id,
-                OwnerID = owner1Id,
-                LastUpdate = _currentDateTime // Should get new timestamp from API
-            };
-
-            var beaconAfterUpdate = beaconBeforeUpdate.GetClone();
-
-            var expectedMapAlert = new MapPin
-            {
-                AddressID = 90234,
-                BeaconID = beacon2Id,
-                Source = train1Source,
-                LastUpdate = _currentDateTime,
-                Direction = "S"
-            };
-
-            var expectedMapAlertObjects = new object[]
-            {
-                expectedMapAlert
-            };
-
-            _mockBeaconService.Setup(repo => repo.GetBeaconByIdAsync(telemetry.Beacon.ID))
-                    .ReturnsAsync(beaconBeforeUpdate);
-            _mockBeaconService.Setup(repo => repo.UpdateBeaconAsync(beaconBeforeUpdate.ID, beaconBeforeUpdate))
-                    .ReturnsAsync(beaconAfterUpdate);
-            _mockTelemetryRepository.Setup(repo => repo.GetAllAsync())
-                    .ReturnsAsync(existingTelemetry);
-            _mockTelemetryRepository.Setup(repo => repo.AddAsync(telemetryBeforeAdd))
-                    .ReturnsAsync(telemetryAfterAdd);
-            _mockClientProxy?.Setup(proxy => proxy.SendCoreAsync(NotificationMethods.MapPinUpdate, expectedMapAlertObjects, default))
-                    .Returns(Task.CompletedTask);
-            _mockHubContext.Setup(h => h.Clients).Returns(_mockHubClients.Object);
-            _mockHubClients.Setup(h => h.All).Returns(_mockClientProxy?.Object);
-
-            // Act
-            _telemetryService?.CreateTelemetryAsync(telemetry);
-
-            // Assert
-            _mockTelemetryRepository.Verify(repo => repo.AddAsync(It.Is<Telemetry>(t => t == telemetry)), Times.Once);
-            _mockBeaconService.Verify(repo => repo.GetBeaconByIdAsync(telemetry.Beacon.ID), Times.Once);
-            _mockBeaconService.Verify(repo => repo.UpdateBeaconAsync(It.IsAny<int>(), It.Is<Beacon>(b => b.ID == telemetry.Beacon.ID)), Times.Once);
-
-            _mockClientProxy.Verify(proxy => proxy.SendCoreAsync(
-                NotificationMethods.MapPinUpdate,
-                It.Is<object[]>(args => args[0].Equals(expectedMapAlert)),
-                default), Times.Once);
-        }
-
-        /// <summary>
-        /// Test to ensure that a map alert is created if the telemetry is the second telemetry
-        /// for a train and the new telemetry beacin is multi-railroad and existing telemetry beacon
-        /// is single-railroad.
-        /// </summary>
-        [TestMethod]
-        public void CreateTelemetry_SecondTelemetry_MultiRailroadBeacon_OneRailroadBeacon()
-        {
-            var trainAddressId = 90234;
-            var train1Source = "HOT";
-            var train2Source = "EOT";
-            var telemetry1Id = 432;
-            var telemetry2Id = 433;
-            var owner1Id = 19;
-            var owner2Id = 29;
-            var beacon1Id = 134;
-            var beacon1Latitude = 10.0;
-            var beacon1Longitude = 11.0;
-            var beacon2Id = 234;
-            var beacon2Latitude = 20.0;
-            var beacon2Longitude = 21.0;
-            var milepost1 = 123.45;
-            var milepost2 = 234.56;
-            var railroad1Id = 12;
-            var railroad2Id = 22;
-
-            // Arrange
-            var telemetry = new Telemetry
-            {
-                ID = telemetry1Id,
-                AddressID = trainAddressId,
-                Source = train1Source,
-                LastUpdate = _currentDateTime.AddMicroseconds(-234), // Simulate beacon's timestamp that will be ignored
-                Beacon = new Beacon
-                {
-                    ID = beacon1Id,
-                    OwnerID = owner1Id,
-                    LastUpdate = _currentDateTime.AddMilliseconds(-300), // Simulate beacon's timestamp
-                }
-            };
-
-            var telemetryBeforeAdd = telemetry.GetClone();
-            telemetryBeforeAdd.LastUpdate = _currentDateTime; // Timestamp set by APi
-
-            var telemetryAfterAdd = new Telemetry
-            {
-                ID = telemetry1Id,
-                AddressID = trainAddressId,
-                Source = train1Source,
-                LastUpdate = _currentDateTime,
-                Beacon = new Beacon
-                {
-                    ID = beacon1Id,
-                    OwnerID = owner1Id,
-                    LastUpdate = _currentDateTime.AddMilliseconds(-300), // Simulate last beacon check-in timestamp
-                    BeaconRailroads = [
-                        new BeaconRailroad {
-                            RailroadID = railroad1Id,
-                            BeaconID = beacon1Id,
-                            Latitude = beacon1Latitude,
-                            Longitude = beacon1Longitude,
-                            Milepost = milepost1,
-                            Direction = Enums.Direction.NorthSouth
-                        },
-                        new BeaconRailroad {
-                            RailroadID = railroad2Id, // Not the same railroad as the previous telemetry
-                            BeaconID = beacon2Id,
-                            Latitude = beacon2Latitude,
-                            Longitude = beacon2Longitude,
-                            Milepost = milepost2,
-                            Direction = Enums.Direction.NorthwestSoutheast
-                        }
-                    ]
-                }
-            };
-
-            var singleRailroadBeacon = new Beacon
-            {
-                ID = beacon2Id,
-                OwnerID = owner2Id,
-                LastUpdate = _currentDateTime.AddMilliseconds(-500),
-                BeaconRailroads = [
-                            new BeaconRailroad {
-                                RailroadID = railroad1Id,
-                                BeaconID = beacon2Id,
-                                Latitude = beacon2Latitude,
-                                Longitude = beacon2Longitude,
-                                Milepost = milepost2,
-                                Direction = Enums.Direction.NorthSouth
-                            }
-                        ]
-            };
-
-            var existingTelemetry = new List<Telemetry>
-            {
-                new() {
-                    ID = telemetry2Id,
-                    AddressID = trainAddressId,
-                    Source = train2Source,
-                    LastUpdate = _currentDateTime.AddMilliseconds(-500),
-                    Beacon = singleRailroadBeacon
-                }
-            };
-
-            var beaconBeforeUpdate = new Beacon
-            {
-                ID = beacon1Id,
-                OwnerID = owner1Id,
-                LastUpdate = _currentDateTime // Should get new timestamp from API
-            };
-
-            var beaconAfterUpdate = beaconBeforeUpdate.GetClone();
-
-            var expectedMapAlert = new MapPin
-            {
-                AddressID = 90234,
-                BeaconID = beacon2Id,
-                Source = train1Source,
-                LastUpdate = _currentDateTime,
-                Direction = "S"
-            };
-
-            var expectedMapAlertObjects = new object[]
-            {
-                expectedMapAlert
-            };
-
-            _mockBeaconService.Setup(repo => repo.GetBeaconByIdAsync(telemetry.Beacon.ID))
-                    .ReturnsAsync(beaconBeforeUpdate);
-            _mockBeaconService.Setup(repo => repo.UpdateBeaconAsync(beaconBeforeUpdate.ID, beaconBeforeUpdate))
-                    .ReturnsAsync(beaconAfterUpdate);
-            _mockTelemetryRepository.Setup(repo => repo.GetAllAsync())
-                    .ReturnsAsync(existingTelemetry);
-            _mockTelemetryRepository.Setup(repo => repo.AddAsync(telemetryBeforeAdd))
-                    .ReturnsAsync(telemetryAfterAdd);
-            _mockClientProxy?.Setup(proxy => proxy.SendCoreAsync(NotificationMethods.MapPinUpdate, expectedMapAlertObjects, default))
-                    .Returns(Task.CompletedTask);
-            _mockHubContext.Setup(h => h.Clients).Returns(_mockHubClients.Object);
-            _mockHubClients.Setup(h => h.All).Returns(_mockClientProxy?.Object);
-
-            // Act
-            _telemetryService?.CreateTelemetryAsync(telemetry);
-
-            // Assert
-            _mockTelemetryRepository.Verify(repo => repo.AddAsync(It.Is<Telemetry>(t => t == telemetry)), Times.Once);
-            _mockBeaconService.Verify(repo => repo.GetBeaconByIdAsync(telemetry.Beacon.ID), Times.Once);
-            _mockBeaconService.Verify(repo => repo.UpdateBeaconAsync(It.IsAny<int>(), It.Is<Beacon>(b => b.ID == telemetry.Beacon.ID)), Times.Once);
-
-            _mockClientProxy.Verify(proxy => proxy.SendCoreAsync(
-                NotificationMethods.MapPinUpdate,
-                It.Is<object[]>(args => args[0].Equals(expectedMapAlert)),
-                default), Times.Once);
-        }
-
-        /// <summary>
-        /// Test to ensure that a map alert is created if the telemetry is the second telemetry
-        /// for a train and both the new telemetry and existing telemetry beacons are multi-railroad.
-        /// </summary>
-        [TestMethod]
-        public void CreateTelemetry_SecondTelemetry_MultiRailroadBeacon_MultiRailroadBeacon()
-        {
-            var trainAddressId = 90234;
-            var train1Source = "HOT";
-            var train2Source = "EOT";
-            var telemetry1Id = 432;
-            var telemetry2Id = 433;
-            var owner1Id = 19;
-            var owner2Id = 29;
-            var beacon1Id = 134;
-            var beacon1Latitude = 10.0;
-            var beacon1Longitude = 11.0;
-            var beacon2Id = 234;
-            var beacon2Latitude = 20.0;
-            var beacon2Longitude = 21.0;
-            var beacon3Latitude = 30.0;
-            var beacon3Longitude = 31.0;
-            var milepost1 = 123.45;
-            var milepost2 = 234.56;
-            var milepost3 = 345.67;
-            var railroad1Id = 12;
-            var railroad2Id = 22;
-            var railroad3Id = 32;
-
-            // Arrange
-            var telemetry = new Telemetry
-            {
-                ID = telemetry1Id,
-                AddressID = trainAddressId,
-                Source = train1Source,
-                LastUpdate = _currentDateTime.AddMicroseconds(-234), // Simulate beacon's timestamp that will be ignored
-                Beacon = new Beacon
-                {
-                    ID = beacon1Id,
-                    OwnerID = owner1Id,
-                    LastUpdate = _currentDateTime.AddMilliseconds(-300), // Simulate beacon's timestamp
-                }
-            };
-
-            var telemetryBeforeAdd = telemetry.GetClone();
-            telemetryBeforeAdd.LastUpdate = _currentDateTime; // Timestamp set by APi
-
-            var telemetryAfterAdd = new Telemetry
-            {
-                ID = telemetry1Id,
-                AddressID = trainAddressId,
-                Source = train1Source,
-                LastUpdate = _currentDateTime,
-                Beacon = new Beacon
-                {
-                    ID = beacon1Id,
-                    OwnerID = owner1Id,
-                    LastUpdate = _currentDateTime.AddMilliseconds(-300), // Simulate last beacon check-in timestamp
-                    BeaconRailroads = [
-                        new BeaconRailroad {
-                            RailroadID = railroad1Id,
-                            BeaconID = beacon1Id,
-                            Latitude = beacon1Latitude,
-                            Longitude = beacon1Longitude,
-                            Milepost = milepost1,
-                            Direction = Enums.Direction.NorthSouth
-                        },
-                        new BeaconRailroad {
-                            RailroadID = railroad2Id, // Not the same railroad as the previous telemetry
-                            BeaconID = beacon2Id,
-                            Latitude = beacon2Latitude,
-                            Longitude = beacon2Longitude,
-                            Milepost = milepost2,
-                            Direction = Enums.Direction.NorthwestSoutheast
-                        }
-                    ]
-                }
-            };
-
-            var multipleRailroadBeacon = new Beacon
-            {
-                ID = beacon2Id,
-                OwnerID = owner2Id,
-                LastUpdate = _currentDateTime.AddMilliseconds(-500),
-                BeaconRailroads = [
-                            new BeaconRailroad {
-                                RailroadID = railroad1Id,
-                                BeaconID = beacon2Id,
-                                Latitude = beacon2Latitude,
-                                Longitude = beacon2Longitude,
-                                Milepost = milepost2,
-                                Direction = Enums.Direction.NorthSouth
-                            },
-                            new BeaconRailroad {
-                                RailroadID = railroad3Id, // Not the same railroad as the new telemetry
-                                BeaconID = beacon2Id,
-                                Latitude = beacon3Latitude,
-                                Longitude = beacon3Longitude,
-                                Milepost = milepost3,
-                                Direction = Enums.Direction.NorthwestSoutheast
-                            }
-                        ]
-            };
-
-            var existingTelemetry = new List<Telemetry>
-            {
-                new() {
-                    ID = telemetry2Id,
-                    AddressID = trainAddressId,
-                    Source = train2Source,
-                    LastUpdate = _currentDateTime.AddMilliseconds(-500),
-                    Beacon = multipleRailroadBeacon
-                }
-            };
-
-            var beaconBeforeUpdate = new Beacon
-            {
-                ID = beacon1Id,
-                OwnerID = owner1Id,
-                LastUpdate = _currentDateTime // Should get new timestamp from API
-            };
-
-            var beaconAfterUpdate = beaconBeforeUpdate.GetClone();
-
-            var expectedMapAlert = new MapPin
-            {
-                AddressID = 90234,
-                BeaconID = beacon2Id,
-                Source = train1Source,
-                LastUpdate = _currentDateTime,
-                Direction = "S"
-            };
-
-            var expectedMapAlertObjects = new object[]
-            {
-                expectedMapAlert
-            };
-
-            _mockBeaconService.Setup(repo => repo.GetBeaconByIdAsync(telemetry.Beacon.ID))
-                    .ReturnsAsync(beaconBeforeUpdate);
-            _mockBeaconService.Setup(repo => repo.UpdateBeaconAsync(beaconBeforeUpdate.ID, beaconBeforeUpdate))
-                    .ReturnsAsync(beaconAfterUpdate);
-            _mockTelemetryRepository.Setup(repo => repo.GetAllAsync())
-                    .ReturnsAsync(existingTelemetry);
-            _mockTelemetryRepository.Setup(repo => repo.AddAsync(telemetryBeforeAdd))
-                    .ReturnsAsync(telemetryAfterAdd);
-            _mockClientProxy?.Setup(proxy => proxy.SendCoreAsync(NotificationMethods.MapPinUpdate, expectedMapAlertObjects, default))
-                    .Returns(Task.CompletedTask);
-            _mockHubContext.Setup(h => h.Clients).Returns(_mockHubClients.Object);
-            _mockHubClients.Setup(h => h.All).Returns(_mockClientProxy?.Object);
-
-            // Act
-            _telemetryService?.CreateTelemetryAsync(telemetry);
-
-            // Assert
-            _mockTelemetryRepository.Verify(repo => repo.AddAsync(It.Is<Telemetry>(t => t == telemetry)), Times.Once);
-            _mockBeaconService.Verify(repo => repo.GetBeaconByIdAsync(telemetry.Beacon.ID), Times.Once);
-            _mockBeaconService.Verify(repo => repo.UpdateBeaconAsync(It.IsAny<int>(), It.Is<Beacon>(b => b.ID == telemetry.Beacon.ID)), Times.Once);
-
-            _mockClientProxy.Verify(proxy => proxy.SendCoreAsync(
-                NotificationMethods.MapPinUpdate,
-                It.Is<object[]>(args => args[0].Equals(expectedMapAlert)),
-                default), Times.Once);
+            Assert.AreEqual(addedTelemetry, result);
+            _beaconServiceMock.Verify(s => s.GetBeaconByIdAsync(1), Times.Once);
+            _telemetryRepositoryMock.Verify(r => r.AddAsync(telemetry), Times.Once);
+            _mapPinServiceMock.Verify(m => m.UpsertMapPin(addedTelemetry, beacon.BeaconRailroads), Times.Once);
         }
     }
 }

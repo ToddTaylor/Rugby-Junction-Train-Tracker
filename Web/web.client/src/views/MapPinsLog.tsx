@@ -32,10 +32,12 @@ function MapPinsLog() {
 
     const sortedData: MapPin[] = mapPins
         .sort((a, b) => new Date(b.lastUpdate).getTime() - new Date(a.lastUpdate).getTime())
-        .map((alert, index) => ({
-            ...alert,
-            id: `row-${index + 1}`,
+        .map((pin, index) => ({
+            ...pin,
+            id: pin.id ,
         }));
+
+    console.log('sortedData', sortedData);
 
     const columns: GridColDef[] = [
         { field: 'id', headerName: 'ID' },
@@ -52,12 +54,12 @@ function MapPinsLog() {
         {
             field: 'addresses',
             headerName: 'Addresses',
-            width: 250,
-            valueGetter: (params) => {
-                const addresses = params; 
-                if (!addresses || typeof addresses !== 'object') return '';
-                return Object.entries(addresses)
-                    .map(([key, value]) => `${key}: ${value}`)
+            width: 300,
+            renderCell: (params: any) => {
+                const addresses = params.row?.addresses;
+                if (!Array.isArray(addresses)) return '';
+                return addresses
+                    .map((a: { source: string; addressID: number }) => `${a.addressID} ${a.source}`)
                     .join(', ');
             },
         },
@@ -68,7 +70,15 @@ function MapPinsLog() {
     ];
 
     return (
-        <Box sx={{ height: '100%', width: '100%', padding: 4 }}>
+        <Box
+            sx={{
+                width: '100%',
+                maxWidth: 1200,
+                margin: '0 auto',
+                padding: 4,
+                boxSizing: 'border-box',
+            }}
+        >
             <Typography variant="h5" gutterBottom>
                 Map Pins Log
             </Typography>
@@ -83,6 +93,10 @@ function MapPinsLog() {
                     pagination: {
                         paginationModel: { pageSize: 25, page: 0 },
                     },
+                }}
+                sx={{
+                    maxHeight: 600, // or height: 600,
+                    minHeight: 400,
                 }}
             />
         </Box>

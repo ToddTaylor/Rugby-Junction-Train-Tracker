@@ -3,27 +3,33 @@ using Microsoft.AspNetCore.SignalR;
 using Web.Server.DTOs;
 using Web.Server.Entities;
 using Web.Server.Hubs;
+using Web.Server.Providers;
 using Web.Server.Repositories;
 
 namespace Web.Server.Services
 {
-    public class MapPinService : IMapPinsService
+    public class MapPinService : IMapPinService
     {
+        public const int TIME_THRESHOLD_MINUTES = 5;
+
         private readonly IBeaconRailroadService _beaconRailroadService;
         private readonly IHubContext<NotificationHub> _hubContext;
         private readonly IMapper _mapper;
         private readonly IMapPinRepository _mapPinRepository;
+        private readonly ITimeProvider _timeProvider;
 
         public MapPinService(
             IBeaconRailroadService beaconRailroadService,
             IHubContext<NotificationHub> hubContext,
             IMapper mapper,
-            IMapPinRepository mapPinRepository)
+            IMapPinRepository mapPinRepository,
+            ITimeProvider timeProvider)
         {
             _beaconRailroadService = beaconRailroadService;
             _hubContext = hubContext;
             _mapper = mapper;
             _mapPinRepository = mapPinRepository;
+            _timeProvider = timeProvider;
         }
 
         public async Task<IEnumerable<MapPin>> GetMapPinsAsync(int? minutes)
@@ -33,138 +39,292 @@ namespace Web.Server.Services
 
         public async Task<MapPin?> GetMapPinByIdAsync(int addressID)
         {
-            return await _mapPinRepository.GetByIdAsync(addressID);
+            return await _mapPinRepository.GetByAddressIdAsync(addressID);
         }
 
-        public async Task UpsertMapPin(Telemetry telemetry, Beacon telemetryBeacon)
+        public async Task UpsertMapPin(Telemetry telemetry, ICollection<BeaconRailroad> beaconRailroads)
         {
-            MapPin? finalMapPin;
+            MapPin? mapPin = null;
 
-            var previousMapPin = await _mapPinRepository.GetByIdAsync(telemetry.AddressID);
+            var previousMapPinByAddressID = await _mapPinRepository.GetByAddressIdAsync(telemetry.AddressID);
 
-            if (previousMapPin == null)
+            if (previousMapPinByAddressID != null)
             {
-                var newMapPin = _mapper.Map<MapPin>(telemetry);
-                newMapPin.Addresses =
-                [
-                    new Address {
-                        AddressID = telemetry.AddressID,
-                        Source = telemetry.Source
-                    }
-                ];
+                // Notes: With current logic, DPUs will never go here because their address ID is always unique.
+                mapPin = await this.UpdateMapPin(telemetry, previousMapPinByAddressID, beaconRailroads);
+            }
 
-                newMapPin.Moving = telemetry.Moving;
+            if (previousMapPinByAddressID == null)
+            {
+                var singleRailroadBeacon = beaconRailroads.Count == 1;
 
-                var oneRailroadBeacon = telemetryBeacon.BeaconRailroads.Count == 1;
-
-                // Note: Direction cannot be determined without a previous map pin.
-                if (oneRailroadBeacon)
+                if (singleRailroadBeacon)
                 {
-                    var beaconRailroad = telemetryBeacon.BeaconRailroads.First();
+                    // Single railroad beacon.
 
-                    // Update the timestamp for beacon health calculations.
-                    beaconRailroad.LastUpdate = DateTime.UtcNow;
-                    await _beaconRailroadService.UpdateAsync(beaconRailroad);
+                    var beaconRailroad = beaconRailroads.First();
 
-                    newMapPin.BeaconRailroad = beaconRailroad;
-                    newMapPin.BeaconID = beaconRailroad.BeaconID;
-                    newMapPin.RailroadID = beaconRailroad.RailroadID;
+                    var previousMapPinByTimeThreshold = await _mapPinRepository.GetByTimeThreshold(beaconRailroad.BeaconID, beaconRailroad.RailroadID, TIME_THRESHOLD_MINUTES);
+
+                    // Same beacon, same railroad, within 5 minutes threshold.
+                    // Unless there are multiple tracks, it's likely the same train.
+                    if (previousMapPinByTimeThreshold != null)
+                    {
+                        var previousPinHasEOT = previousMapPinByTimeThreshold.Addresses.Any(a => a.Source == "EOT");
+
+                        if (telemetry.Source == "EOT" && previousPinHasEOT)
+                        {
+                            // The previous map pin already has an EOT with a differet address ID, so it's not the same train.
+                            // Do nothing.
+                        }
+                        else
+                        {
+                            // NOTE: This logic may be problematic. Set breakpoint here
+                            // if too many addresses are being added to the same map pin.
+                            previousMapPinByTimeThreshold.Addresses.Add(
+                                new Address
+                                {
+                                    AddressID = telemetry.AddressID,
+                                    Source = telemetry.Source,
+                                    LastUpdate = _timeProvider.UtcNow
+                                });
+
+                            mapPin = previousMapPinByTimeThreshold;
+                        }
+                    }
                 }
                 else
                 {
-                    // Railroad cannot be determined without a previous map pin.
+                    // Multiple railroad beacon.
 
-                    // HACK: Use the first beacon railroad with no direction as a temporary solution.
-                    var beaconRailroad = telemetryBeacon.BeaconRailroads.First();
+                    var dpuCapableBeaconRailroads = beaconRailroads.Where(br => br.Railroad.DpuCapable == true);
 
-                    beaconRailroad.LastUpdate = DateTime.UtcNow;
-                    await _beaconRailroadService.UpdateAsync(beaconRailroad);
+                    var oneBeaconRailroadThatIsDpuCapable = dpuCapableBeaconRailroads.Count() == 1;
 
-                    newMapPin.BeaconRailroad = beaconRailroad;
-                    newMapPin.BeaconID = beaconRailroad.BeaconID;
-                    newMapPin.RailroadID = beaconRailroad.RailroadID;
+                    if (oneBeaconRailroadThatIsDpuCapable)
+                    {
+                        // Since there's only one DPU-capable beacon railroad, DPU logic can be applied with concern of grouping
+                        // two DPU equipped trains from different railroads together.
+
+                        var dpuCapableBeaconRailroad = dpuCapableBeaconRailroads.First();
+
+                        if (telemetry.TrainID.HasValue)
+                        {
+                            // This is a DPU.  See if it can be combined with the other DPU with the same Train ID.
+
+                            var previousMapPinByDpuTrainID = await _mapPinRepository.GetByTrainIdAsync(telemetry.TrainID.Value);
+
+                            if (previousMapPinByDpuTrainID != null)
+                            {
+                                var matchingAddressIDAndSourceNotFound = !(
+                                    previousMapPinByDpuTrainID.Addresses.Any(a =>
+                                            a.AddressID == telemetry.AddressID
+                                                && a.Source == telemetry.Source
+                                        )
+                                 );
+
+                                if (matchingAddressIDAndSourceNotFound)
+                                {
+                                    previousMapPinByDpuTrainID.Addresses.Add(
+                                    new Address
+                                    {
+                                        AddressID = telemetry.AddressID,
+                                        Source = telemetry.Source,
+                                        LastUpdate = _timeProvider.UtcNow
+                                    });
+                                } // Else: This is just a timestamp update to the map pin with an existing address ID and source
+
+                                mapPin = previousMapPinByDpuTrainID;
+                            }
+                        }
+                    }
+
+                    var singleTrackedBeaconRailroads = beaconRailroads.Where(br => br.MultipleTracks == false);
+
+                    var oneBeaconRailroadIsSingleTracked = singleTrackedBeaconRailroads.Count() == 1;
+
+                    if (oneBeaconRailroadIsSingleTracked)
+                    {
+                        // Since there's only one single-tracked beacon railroad, time threshold logic can be applied without concern
+                        // of grouping two trains from different tracks together.
+
+                        var singleTrackedBeaconRailroad = singleTrackedBeaconRailroads.First();
+
+                        var previousMapPinByTimeThreshold = await _mapPinRepository.GetByTimeThreshold(singleTrackedBeaconRailroad.BeaconID, singleTrackedBeaconRailroad.RailroadID, TIME_THRESHOLD_MINUTES);
+
+                        if (previousMapPinByTimeThreshold != null)
+                        {
+                            // Single beacon, same railroad, single track within 5 minutes threshold... it's likely the same train.
+
+                            var previousPinHasEOT = previousMapPinByTimeThreshold.Addresses.Any(a => a.Source == "EOT");
+
+                            if (telemetry.Source == "EOT" && previousPinHasEOT)
+                            {
+                                // The previous map pin already has an EOT with a differet address ID, so it's not the same train.
+                                // Do nothing.
+                            }
+                            else
+                            {
+                                var newMapPin = previousMapPinByTimeThreshold;
+
+                                newMapPin.Addresses.Add(
+                                    new Address
+                                    {
+                                        AddressID = telemetry.AddressID,
+                                        Source = telemetry.Source,
+                                        LastUpdate = _timeProvider.UtcNow
+                                    });
+
+                                newMapPin.BeaconID = telemetry.BeaconID;
+                                newMapPin.BeaconRailroad = singleTrackedBeaconRailroad;
+
+                                if (telemetry.TrainID.HasValue)
+                                {
+                                    newMapPin.DpuTrainID = telemetry.TrainID.Value;
+                                }
+
+                                if (telemetry.Moving.HasValue)
+                                {
+                                    newMapPin.Moving = telemetry.Moving;
+                                }
+
+                                mapPin = newMapPin;
+                            }
+                        }
+                    }
                 }
+            }
 
-                finalMapPin = newMapPin;
+            if (mapPin == null)
+            {
+                // Note: A new map pin will never have a direction as it
+                // can't be calculated without a previous map pin.
+                mapPin = await this.CreateMapPin(telemetry, beaconRailroads);
+            }
+
+            await _mapPinRepository.UpsertAsync(mapPin!);
+
+            var mapPinDTO = _mapper.Map<MapPinDTO>(mapPin);
+
+            await _hubContext.Clients.All.SendCoreAsync(NotificationMethods.MapPinUpdate, [mapPinDTO], default);
+        }
+
+        /// <summary>
+        /// Creates a new map pin.
+        /// - Direction cannot be determined without a previous map pin.
+        /// </summary>
+        private async Task<MapPin> CreateMapPin(Telemetry telemetry, ICollection<BeaconRailroad> beaconRailroads)
+        {
+            var mapPin = _mapper.Map<MapPin>(telemetry);
+
+            mapPin.Addresses =
+            [
+                new Address {
+                        AddressID = telemetry.AddressID,
+                        Source = telemetry.Source,
+                        LastUpdate = _timeProvider.UtcNow
+                    }
+            ];
+
+            var singleRailroadBeacon = beaconRailroads.Count == 1;
+
+            var beaconRailroad = beaconRailroads.First();
+
+            if (singleRailroadBeacon)
+            {
+                mapPin.BeaconRailroad = beaconRailroad;
+                mapPin.BeaconID = beaconRailroad.BeaconID;
+                mapPin.RailroadID = beaconRailroad.RailroadID;
             }
             else
             {
-                var telemetryBeaconRailroad = telemetryBeacon.BeaconRailroads
-                    .Where(br => br.BeaconID == telemetry.Beacon.ID)
-                    .Where(br => br.RailroadID == previousMapPin.RailroadID)
-                    .First();
+                // Railroad cannot be determined without a previous map pin.
 
-                // Update the timestamp for beacon health calculations.
-                telemetryBeaconRailroad.LastUpdate = DateTime.UtcNow;
-                await _beaconRailroadService.UpdateAsync(telemetryBeaconRailroad);
+                // HACK: Use the first beacon railroad with no direction as a temporary solution.
 
-                var differentBeacon = telemetry.Beacon.ID != previousMapPin.BeaconID;
-
-                if (previousMapPin.Addresses != null
-                    && previousMapPin.Addresses.Any(a => a.AddressID == telemetry.AddressID))
-                {
-                    // The collection contains the provided AddressID
-                    var previousAddressSameSource = previousMapPin.Addresses
-                        .Where(a => a.AddressID == telemetry.AddressID && a.Source == telemetry.Source)
-                        .FirstOrDefault();
-
-                    if (previousAddressSameSource != null)
-                    {
-                        previousAddressSameSource.Source = telemetry.Source;
-                    }
-                    else
-                    {
-                        previousMapPin.Addresses.Add(new Address
-                        {
-                            AddressID = telemetry.AddressID,
-                            Source = telemetry.Source
-                        });
-                    }
-
-                    previousMapPin.Moving = telemetry.Moving;
-                }
-                else
-                {
-                    previousMapPin.Addresses ??= [];
-
-                    previousMapPin.Addresses.Add(new Address
-                    {
-                        AddressID = telemetry.AddressID,
-                        Source = telemetry.Source
-                    });
-
-                    if (telemetry.Moving.HasValue)
-                    {
-                        previousMapPin.Moving = telemetry.Moving;
-                    }
-                }
-
-                if (differentBeacon || String.IsNullOrEmpty(previousMapPin.Direction))
-                {
-                    previousMapPin.Direction = await CalculateDirection(telemetry.Beacon.ID, telemetryBeaconRailroad, previousMapPin);
-                }
-
-                previousMapPin.BeaconID = telemetry.Beacon.ID;
-                previousMapPin.RailroadID = previousMapPin.RailroadID;
-
-                finalMapPin = previousMapPin;
+                mapPin.BeaconRailroad = beaconRailroad;
+                mapPin.BeaconID = beaconRailroad.BeaconID;
+                mapPin.RailroadID = beaconRailroad.RailroadID;
             }
 
-            await _mapPinRepository.UpsertAsync(finalMapPin!);
+            if (telemetry.TrainID.HasValue)
+            {
+                mapPin.DpuTrainID = telemetry.TrainID.Value;
+            }
 
-            var mapPinDTO = _mapper.Map<MapPinDTO>(finalMapPin);
+            if (telemetry.Moving.HasValue)
+            {
+                mapPin.Moving = telemetry.Moving;
+            }
 
-            await _hubContext.Clients.All.SendAsync(NotificationMethods.MapPinUpdate, mapPinDTO);
+            await this.UpdateBeaconTimestamp(beaconRailroad);
+
+            return mapPin;
         }
 
-        private async Task<string> CalculateDirection(int telemetryBeaconID, BeaconRailroad telemetryBeaconRailroad, MapPin previousMapPin)
+        private async Task<MapPin> UpdateMapPin(Telemetry telemetry, MapPin previousMapPin, ICollection<BeaconRailroad> beaconRailroads)
         {
-            var mapPinBeaconRailroad = await _beaconRailroadService.GetByIdAsync(previousMapPin.BeaconID, previousMapPin.RailroadID);
+            var matchingAddressIDAndSourceNotFound = !(
+                previousMapPin.Addresses.Any(a =>
+                        a.AddressID == telemetry.AddressID
+                            && a.Source == telemetry.Source
+                    )
+                 );
 
-            var fromGeoCoordinate = new GeoCoordinate(mapPinBeaconRailroad.Latitude, mapPinBeaconRailroad.Longitude);
-            var toGeoCoordinate = new GeoCoordinate(telemetryBeaconRailroad.Latitude, telemetryBeaconRailroad.Longitude);
+            if (matchingAddressIDAndSourceNotFound)
+            {
+                previousMapPin.Addresses.Add(new Address
+                {
+                    AddressID = telemetry.AddressID,
+                    Source = telemetry.Source,
+                    LastUpdate = _timeProvider.UtcNow
+                });
+            } // Else: This is just a timestamp update to the map pin with an existing address ID and source.
 
-            return DirectionService.GetDirection(fromGeoCoordinate, toGeoCoordinate, telemetryBeaconRailroad.Direction).ToString();
+            var toBeaconRailroad = beaconRailroads
+                .Where(br => br.BeaconID == telemetry.BeaconID)
+                .Where(br => br.RailroadID == previousMapPin.RailroadID)
+                .First();
+
+            var differentBeacon = telemetry.BeaconID != previousMapPin.BeaconID;
+
+            if (differentBeacon)
+            {
+                var fromBeaconRailroad = await _beaconRailroadService.GetByIdAsync(previousMapPin.BeaconID, previousMapPin.RailroadID);
+
+                previousMapPin.Direction = CalculateDirection(fromBeaconRailroad, toBeaconRailroad);
+
+                // Don't assume previous beacon's moving status.
+                previousMapPin.Moving = null;
+            }
+
+            previousMapPin.BeaconRailroad = toBeaconRailroad;
+            previousMapPin.BeaconID = telemetry.BeaconID;
+            previousMapPin.RailroadID = previousMapPin.RailroadID;
+
+            if (telemetry.Moving.HasValue)
+            {
+                previousMapPin.Moving = telemetry.Moving;
+            }
+
+            await this.UpdateBeaconTimestamp(toBeaconRailroad);
+
+            return previousMapPin;
+        }
+
+        private static string CalculateDirection(BeaconRailroad fromBeaconRailroad, BeaconRailroad toBeaconRailroad)
+        {
+            var fromGeoCoordinate = new GeoCoordinate(fromBeaconRailroad.Latitude, fromBeaconRailroad.Longitude);
+            var toGeoCoordinate = new GeoCoordinate(toBeaconRailroad.Latitude, toBeaconRailroad.Longitude);
+
+            return DirectionService.GetDirection(fromGeoCoordinate, toGeoCoordinate, toBeaconRailroad.Direction).ToString();
+        }
+
+        private async Task UpdateBeaconTimestamp(BeaconRailroad beaconRailroad)
+        {
+            // Update the timestamp for beacon health calculations.
+            beaconRailroad.LastUpdate = _timeProvider.UtcNow;
+            await _beaconRailroadService.UpdateAsync(beaconRailroad);
         }
     }
 }

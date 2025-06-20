@@ -15,11 +15,29 @@ namespace Web.Server.Repositories
             _context = context;
             _timeProvider = timeProvider;
         }
+        public async Task<MapPin?> GetByTimeThreshold(int beaconID, int railroadID, int minutesThreshold)
+        {
+            return await _context.MapPins
+                .Where(mp => mp.BeaconID == beaconID &&
+                             mp.RailroadID == railroadID &&
+                             mp.LastUpdate >= _timeProvider.UtcNow.AddMinutes(-minutesThreshold))
+                .OrderByDescending(mp => mp.LastUpdate)
+                .Include(mp => mp.Addresses)
+                .FirstOrDefaultAsync();
+        }
 
-        public async Task<MapPin?> GetByIdAsync(int addressID)
+        public async Task<MapPin?> GetByAddressIdAsync(int addressID)
         {
             return await _context.MapPins
                 .Where(mp => mp.Addresses.Any(a => a.AddressID == addressID))
+                .Include(mp => mp.Addresses)
+                .FirstOrDefaultAsync();
+        }
+
+        public async Task<MapPin?> GetByTrainIdAsync(int dpuTrainID)
+        {
+            return await _context.MapPins
+                .Where(mp => mp.DpuTrainID == dpuTrainID)
                 .Include(mp => mp.Addresses)
                 .FirstOrDefaultAsync();
         }
@@ -61,6 +79,7 @@ namespace Web.Server.Repositories
                 mapPin.CreatedAt = _timeProvider.UtcNow;
                 mapPin.RailroadID = mapPin.RailroadID;
                 mapPin.Direction = mapPin.Direction;
+                mapPin.DpuTrainID = mapPin.DpuTrainID;
                 mapPin.LastUpdate = _timeProvider.UtcNow;
                 mapPin.BeaconRailroad = null;
 

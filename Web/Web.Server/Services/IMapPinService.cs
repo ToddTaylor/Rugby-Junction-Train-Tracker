@@ -2,10 +2,10 @@
 
 namespace Web.Server.Services
 {
-    public interface IMapPinsService
+    public interface IMapPinService
     {
         Task<MapPin?> GetMapPinByIdAsync(int addressID);
         Task<IEnumerable<MapPin>> GetMapPinsAsync(int? minutes);
-        Task UpsertMapPin(Telemetry telemetry, Beacon telemetryBeacon);
+        Task UpsertMapPin(Telemetry telemetry, ICollection<BeaconRailroad> beaconRailroads);
     }
 }

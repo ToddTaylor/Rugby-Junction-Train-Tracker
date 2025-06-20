@@ -13,6 +13,7 @@ namespace Web.Server.Entities
         public required double Longitude { get; set; }
         public ICollection<MapPin> MapPins { get; set; } = [];
         public required double Milepost { get; set; }
+        public bool MultipleTracks { get; set; } = false;
 
         public override bool Equals(object? obj)
         {
@@ -32,7 +33,8 @@ namespace Web.Server.Entities
                    Latitude == other.Latitude &&
                    Longitude == other.Longitude &&
                    EqualityComparer<ICollection<MapPin>>.Default.Equals(MapPins, other.MapPins) &&
-                   Milepost == other.Milepost;
+                   Milepost == other.Milepost &&
+                   MultipleTracks == other.MultipleTracks;
         }
 
         public override int GetHashCode()
@@ -49,6 +51,7 @@ namespace Web.Server.Entities
             hash.Add(Longitude);
             hash.Add(MapPins);
             hash.Add(Milepost);
+            hash.Add(MultipleTracks);
             return hash.ToHashCode();
         }
 

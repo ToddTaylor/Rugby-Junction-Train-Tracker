@@ -14,6 +14,6 @@
         /// <summary>
         /// The date and time when the entity was last updated.
         /// </summary>
-        public DateTime LastUpdate { get; set; } = DateTime.UtcNow;
+        public DateTime LastUpdate { get; set; }
     }
 }

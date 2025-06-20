@@ -106,7 +106,7 @@ builder.Services.AddScoped<ITelemetryRepository, TelemetryRepository>();
 // Custom services
 builder.Services.AddScoped<IBeaconService, BeaconService>();
 builder.Services.AddScoped<IBeaconRailroadService, BeaconRailroadService>();
-builder.Services.AddScoped<IMapPinsService, MapPinService>();
+builder.Services.AddScoped<IMapPinService, MapPinService>();
 builder.Services.AddScoped<IOwnerService, OwnerService>();
 builder.Services.AddScoped<IRailroadService, RailroadService>();
 builder.Services.AddScoped<ITelemetryService, TelemetryService>();
