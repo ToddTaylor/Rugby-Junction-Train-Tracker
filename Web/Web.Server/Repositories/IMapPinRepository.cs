@@ -8,6 +8,8 @@ namespace Web.Server.Repositories
 
         Task<MapPin?> GetByTimeThreshold(int beaconID, int railroadID, int minutesThreshold);
 
+        Task<MapPin?> GetByTrainIdAsync(int dpuTrainID);
+
         Task<IEnumerable<MapPin>> GetAllAsync(int? minutes);
 
         Task<MapPin> UpsertAsync(MapPin mapPin);

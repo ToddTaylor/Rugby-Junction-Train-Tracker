@@ -17,6 +17,8 @@ namespace Web.Server.Entities
 
         public string? Direction { get; set; }
 
+        public int? DpuTrainID { get; set; }
+
         public bool? Moving { get; set; }
 
         public ICollection<Address> Addresses { get; set; } = [];
@@ -38,6 +40,7 @@ namespace Web.Server.Entities
                    RailroadID == other.RailroadID &&
                    EqualityComparer<BeaconRailroad?>.Default.Equals(BeaconRailroad, other.BeaconRailroad) &&
                    Direction == other.Direction &&
+                   DpuTrainID == other.DpuTrainID &&
                    Moving == other.Moving &&
                    Addresses.SequenceEqual(other.Addresses) &&      // Custom comparer that works.
                    Telemetries.SequenceEqual(other.Telemetries);    // Custom comparer that works.
@@ -53,6 +56,7 @@ namespace Web.Server.Entities
             hash.Add(RailroadID);
             hash.Add(BeaconRailroad);
             hash.Add(Direction);
+            hash.Add(DpuTrainID);
             hash.Add(Moving);
             hash.Add(Addresses);
             hash.Add(Telemetries);

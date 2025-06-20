@@ -108,8 +108,32 @@ namespace Web.Server.Services
 
                         if (telemetry.TrainID.HasValue)
                         {
-                            // TODO: Do some DPU-specific logic here, like combine map pins if the train ID matches... once there is a way
-                            // to get the previous map pin's train ID.
+                            // This is a DPU.  See if it can be combined with the other DPU with the same Train ID.
+
+                            var previousMapPinByDpuTrainID = await _mapPinRepository.GetByTrainIdAsync(telemetry.TrainID.Value);
+
+                            if (previousMapPinByDpuTrainID != null)
+                            {
+                                var matchingAddressIDAndSourceNotFound = !(
+                                    previousMapPinByDpuTrainID.Addresses.Any(a =>
+                                            a.AddressID == telemetry.AddressID
+                                                && a.Source == telemetry.Source
+                                        )
+                                 );
+
+                                if (matchingAddressIDAndSourceNotFound)
+                                {
+                                    previousMapPinByDpuTrainID.Addresses.Add(
+                                    new Address
+                                    {
+                                        AddressID = telemetry.AddressID,
+                                        Source = telemetry.Source,
+                                        LastUpdate = _timeProvider.UtcNow
+                                    });
+                                } // Else: This is just a timestamp update to the map pin with an existing address ID and source
+
+                                mapPin = previousMapPinByDpuTrainID;
+                            }
                         }
                     }
 
@@ -151,6 +175,11 @@ namespace Web.Server.Services
 
                                 newMapPin.BeaconID = telemetry.BeaconID;
                                 newMapPin.BeaconRailroad = singleTrackedBeaconRailroad;
+
+                                if (telemetry.TrainID.HasValue)
+                                {
+                                    newMapPin.DpuTrainID = telemetry.TrainID.Value;
+                                }
 
                                 if (telemetry.Moving.HasValue)
                                 {
@@ -214,6 +243,11 @@ namespace Web.Server.Services
                 mapPin.BeaconRailroad = beaconRailroad;
                 mapPin.BeaconID = beaconRailroad.BeaconID;
                 mapPin.RailroadID = beaconRailroad.RailroadID;
+            }
+
+            if (telemetry.TrainID.HasValue)
+            {
+                mapPin.DpuTrainID = telemetry.TrainID.Value;
             }
 
             if (telemetry.Moving.HasValue)

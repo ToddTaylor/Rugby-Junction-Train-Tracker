@@ -34,6 +34,14 @@ namespace Web.Server.Repositories
                 .FirstOrDefaultAsync();
         }
 
+        public async Task<MapPin?> GetByTrainIdAsync(int dpuTrainID)
+        {
+            return await _context.MapPins
+                .Where(mp => mp.DpuTrainID == dpuTrainID)
+                .Include(mp => mp.Addresses)
+                .FirstOrDefaultAsync();
+        }
+
         public async Task<IEnumerable<MapPin>> GetAllAsync(int? minutes)
         {
             if (minutes.HasValue)
@@ -53,7 +61,6 @@ namespace Web.Server.Repositories
             }
         }
 
-
         public async Task<MapPin> UpsertAsync(MapPin mapPin)
         {
             // Find existing map pin by matching address ID(s).
@@ -72,6 +79,7 @@ namespace Web.Server.Repositories
                 mapPin.CreatedAt = _timeProvider.UtcNow;
                 mapPin.RailroadID = mapPin.RailroadID;
                 mapPin.Direction = mapPin.Direction;
+                mapPin.DpuTrainID = mapPin.DpuTrainID;
                 mapPin.LastUpdate = _timeProvider.UtcNow;
                 mapPin.BeaconRailroad = null;
 
