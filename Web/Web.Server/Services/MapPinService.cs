@@ -79,6 +79,8 @@ namespace Web.Server.Services
                         }
                         else
                         {
+                            // NOTE: This logic may be problematic. Set breakpoint here
+                            // if too many addresses are being added to the same map pin.
                             previousMapPinByTimeThreshold.Addresses.Add(
                                 new Address
                                 {

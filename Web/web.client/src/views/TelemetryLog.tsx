@@ -35,7 +35,7 @@ function TelemetryLog() {
         .sort((a, b) => new Date(b.lastUpdate).getTime() - new Date(a.lastUpdate).getTime())
         .map((item, index) => ({
             ...item,
-            id: item.id ?? `row-${index + 1}`,
+            id: item.id,
         }));
 
     // Filter rows by addressID(s) if filter is set

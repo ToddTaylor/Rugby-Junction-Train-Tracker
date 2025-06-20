@@ -12,6 +12,7 @@ import { Beacon, MapPin as MapPin } from '../types/types';
 import { openDB } from 'idb';
 import BeaconMarkers from '../components/BeaconMarkers';
 import TelemetryMarkers from '../components/TelemetryMarkers';
+import { getTrackedMapPins } from '../components/trackUtils'; // adjust path as needed
 
 const fallbackCenter: LatLngTuple = [44.524570, -89.567290]; // Default if location fails
 
@@ -55,7 +56,7 @@ const RailMap: React.FC = () => {
         .sort((a, b) => new Date(b.lastUpdate).getTime() - new Date(a.lastUpdate).getTime())
         .map((pin, index) => ({
             ...pin,
-            id: `row-${index + 1}`,
+            id: pin.id,
         }));
 
     // Group pins by their lat/lng to handle overlapping markers
@@ -332,6 +333,11 @@ const RailMap: React.FC = () => {
         return null;
     }
 
+    // Load and clean up tracked pins on map load
+    useEffect(() => {
+        getTrackedMapPins();
+    }, []);
+
     return (
         <MapContainer
             center={fallbackCenter}
@@ -369,7 +375,11 @@ const RailMap: React.FC = () => {
             {trackDataLoaded && <BeaconMarkers pins={beaconPins} zoom={mapZoom} />}
 
             {/* Telemetry markers */}
-            {trackDataLoaded && beaconsLoaded && <TelemetryMarkers pins={telemetryPins} zoom={mapZoom} />}
+            {trackDataLoaded && beaconsLoaded && <TelemetryMarkers
+                pins={telemetryPins}
+                zoom={mapZoom} 
+                maxPinAgeMinutes={MAX_PIN_AGE_MINUTES}
+            />}
 
         </MapContainer>
     );

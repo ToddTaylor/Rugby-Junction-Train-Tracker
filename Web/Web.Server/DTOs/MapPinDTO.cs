@@ -2,8 +2,7 @@
 {
     public class MapPinDTO : IEquatable<MapPinDTO?>
     {
-        // Use a list of AddressDTO instead of Tuple
-        public List<AddressDTO> Addresses { get; set; }
+        public required int ID { get; set; }
 
         public required int BeaconID { get; set; }
 
@@ -27,6 +26,8 @@
 
         public string? Subdivision { get; set; }
 
+        public List<AddressDTO> Addresses { get; set; }
+
         public override bool Equals(object? obj)
         {
             return Equals(obj as MapPinDTO);
@@ -35,7 +36,7 @@
         public bool Equals(MapPinDTO? other)
         {
             return other is not null &&
-                   Addresses.SequenceEqual(other.Addresses) && // Custom comparer that works.
+                   ID == other.ID &&
                    BeaconID == other.BeaconID &&
                    CreatedAt == other.CreatedAt &&
                    LastUpdate == other.LastUpdate &&
@@ -46,13 +47,14 @@
                    Moving == other.Moving &&
                    Railroad == other.Railroad &&
                    RailroadID == other.RailroadID &&
-                   Subdivision == other.Subdivision;
+                   Subdivision == other.Subdivision &&
+                   Addresses.SequenceEqual(other.Addresses); // Custom comparer that works.
         }
 
         public override int GetHashCode()
         {
             HashCode hash = new HashCode();
-            hash.Add(Addresses);
+            hash.Add(ID);
             hash.Add(BeaconID);
             hash.Add(CreatedAt);
             hash.Add(LastUpdate);
@@ -64,6 +66,7 @@
             hash.Add(Railroad);
             hash.Add(RailroadID);
             hash.Add(Subdivision);
+            hash.Add(Addresses);
             return hash.ToHashCode();
         }
 
