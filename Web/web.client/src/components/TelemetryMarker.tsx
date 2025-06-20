@@ -150,14 +150,44 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps> = ({ pin, size, maxPinAgeM
 
     // Use ArrowMapPin as the icon, with rotation and border color
     const createCustomIcon = () => {
-        const iconSrc = getArrowIconSrc(pin.moving != null ? !!pin.moving : undefined);
+        const iconSrc = getArrowIconSrc(pin.direction, pin.moving != null ? !!pin.moving : undefined);
+
+        // If direction is missing, do not rotate and use unknown SVG
+        if (!pin.direction) {
+            return L.divIcon({
+                html: `
+                    <div style="
+                        width: ${size}px;
+                        height: ${size}px;
+                        border: 3px solid ${trackColor ? trackColor : 'transparent'};
+                        border-radius: 50%;
+                        box-sizing: border-box;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        background: transparent;
+                        text-align: center;
+                    ">
+                        <img
+                            src="${iconSrc}"
+                            alt="No direction"
+                            style="width:100%;height:100%;display:block;"
+                        />
+                    </div>
+                `,
+                iconSize: [size, size],
+                iconAnchor: [size / 2, size / 2],
+                className: 'telemetry-marker-z',
+            });
+        }
+
+        // Otherwise, use arrow SVG and rotate
         return L.divIcon({
             html: `
                 <div style="
-                    filter: brightness(${brightness});
                     width: ${size}px;
                     height: ${size}px;
-                    border: 4px dotted ${trackColor ? trackColor : 'transparent'};
+                    border: 3px solid ${trackColor ? trackColor : 'transparent'};
                     border-radius: 50%;
                     box-sizing: border-box;
                     display: flex;
@@ -165,10 +195,10 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps> = ({ pin, size, maxPinAgeM
                     justify-content: center;
                     background: transparent;
                 ">
-                    <img 
-                        src="${iconSrc}" 
-                        style="width:100%;height:100%;display:block;transform: rotate(${getRotation(pin.direction)}deg);" 
+                    <img
+                        src="${iconSrc}"
                         alt="Train direction"
+                        style="width:100%;height:100%;display:block;transform: rotate(${getRotation(pin.direction)}deg);"
                     />
                 </div>
             `,
@@ -189,15 +219,15 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps> = ({ pin, size, maxPinAgeM
     );
 };
 
-function getArrowIconSrc(moving?: boolean): string {
-    // You can expand this logic for more directions/colors if needed
-    if (moving === true) {
-        return '/icons/arrow-green.svg';
+function getArrowIconSrc(direction?: string, moving?: boolean): string {
+    if (!direction) {
+        if (moving === true) return '/icons/unknown-green.svg';
+        if (moving === false) return '/icons/unknown-red.svg';
+        return '/icons/unknown.svg';
     }
-    if (moving === false) {
-        return '/icons/arrow-red.svg';
-    }
-    return '/icons/arrow.svg'; // default/unknown
+    if (moving === true) return '/icons/arrow-green.svg';
+    if (moving === false) return '/icons/arrow-red.svg';
+    return '/icons/arrow.svg';
 }
 
 function getRotation(direction?: string): number {
