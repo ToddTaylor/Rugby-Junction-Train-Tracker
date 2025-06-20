@@ -1,4 +1,3 @@
-import L from 'leaflet';
 import { MapPin } from '../types/types';
 import TelemetryMarker from './TelemetryMarker';
 

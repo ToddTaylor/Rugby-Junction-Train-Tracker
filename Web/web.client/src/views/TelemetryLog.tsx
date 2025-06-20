@@ -33,7 +33,7 @@ function TelemetryLog() {
 
     const sortedData: Telemetry[] = telemetries
         .sort((a, b) => new Date(b.lastUpdate).getTime() - new Date(a.lastUpdate).getTime())
-        .map((item, index) => ({
+        .map((item) => ({
             ...item,
             id: item.id,
         }));

@@ -32,7 +32,7 @@ function MapPinsLog() {
 
     const sortedData: MapPin[] = mapPins
         .sort((a, b) => new Date(b.lastUpdate).getTime() - new Date(a.lastUpdate).getTime())
-        .map((pin, index) => ({
+        .map((pin) => ({
             ...pin,
             id: pin.id ,
         }));

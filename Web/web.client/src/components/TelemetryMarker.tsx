@@ -150,7 +150,7 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps> = ({ pin, size, maxPinAgeM
 
     // Use ArrowMapPin as the icon, with rotation and border color
     const createCustomIcon = () => {
-        const iconSrc = getArrowIconSrc(pin.direction, pin.moving != null ? !!pin.moving : undefined);
+        const iconSrc = getArrowIconSrc(pin.moving != null ? !!pin.moving : undefined);
         return L.divIcon({
             html: `
                 <div style="
@@ -189,7 +189,7 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps> = ({ pin, size, maxPinAgeM
     );
 };
 
-function getArrowIconSrc(direction?: string, moving?: boolean): string {
+function getArrowIconSrc(moving?: boolean): string {
     // You can expand this logic for more directions/colors if needed
     if (moving === true) {
         return '/icons/arrow-green.svg';
