@@ -30,7 +30,7 @@ export function useSignalR(handlers: {
         // Register handlers if provided
         if (handlersRef.current.MapPinUpdate) {
             connection.on(mapPinUpdateMethodName, (mapPin: MapPin) => {
-                console.log("New Map Pin:", mapPin);
+                //console.log("New Map Pin:", mapPin);
                 handlersRef.current.MapPinUpdate?.(mapPin);
             });
         }

@@ -106,7 +106,9 @@ const RailMap: React.FC = () => {
 
     // Build a filtered list of pins that are not older than 10 minutes,
     // but change pins where any address source == "EOT" to half the time (5 minutes)
-    const MAX_PIN_AGE_MINUTES = import.meta.env.VITE_MAX_PIN_AGE_MINUTES * 60 * 1000;
+    // For filtering (milliseconds)
+    const MAX_PIN_AGE_MINUTES = Number(import.meta.env.VITE_MAX_PIN_AGE_MINUTES);
+    const MAX_PIN_AGE_MS = MAX_PIN_AGE_MINUTES * 60 * 1000;
     const now = Date.now();
     const filteredPins: MapPin[] = [];
     Object.values(groupedPins).forEach(group => {
@@ -114,7 +116,7 @@ const RailMap: React.FC = () => {
             const lastUpdate = new Date(pin.lastUpdate).getTime();
             // If any address has source "EOT", use FIVE_MINUTES
             const hasEOT = Array.isArray(pin.addresses) && pin.addresses.some(addr => addr.source === "EOT");
-            const maxAge = hasEOT ? MAX_PIN_AGE_MINUTES / 2 : MAX_PIN_AGE_MINUTES;
+            const maxAge = hasEOT ? MAX_PIN_AGE_MS / 2 : MAX_PIN_AGE_MS;
             if (now - lastUpdate <= maxAge) {
                 filteredPins.push(pin);
             }
@@ -377,7 +379,7 @@ const RailMap: React.FC = () => {
             {/* Telemetry markers */}
             {trackDataLoaded && beaconsLoaded && <TelemetryMarkers
                 pins={telemetryPins}
-                zoom={mapZoom} 
+                zoom={mapZoom}
                 maxPinAgeMinutes={MAX_PIN_AGE_MINUTES}
             />}
 

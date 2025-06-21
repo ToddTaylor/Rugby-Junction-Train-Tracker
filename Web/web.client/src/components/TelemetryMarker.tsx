@@ -79,10 +79,12 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps> = ({ pin, size, maxPinAgeM
     }, [pin.id]);
 
     useEffect(() => {
-        const interval = setInterval(() => {
-            setBrightness(getPinBrightness(pin.lastUpdate, pin.addresses, maxPinAgeMinutes));
-        }, 30000);
-        setBrightness(getPinBrightness(pin.lastUpdate, pin.addresses, maxPinAgeMinutes));
+        const update = () => {
+            const newBrightness = getPinBrightness(pin.lastUpdate, pin.addresses, maxPinAgeMinutes);
+            setBrightness(newBrightness);
+        };
+        update();
+        const interval = setInterval(update, 30000);
         return () => clearInterval(interval);
     }, [pin.lastUpdate, pin.addresses, maxPinAgeMinutes]);
 
@@ -159,7 +161,8 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps> = ({ pin, size, maxPinAgeM
                     <div style="
                         width: ${size}px;
                         height: ${size}px;
-                        border: 3px solid ${trackColor ? trackColor : 'transparent'};
+                        filter: brightness(${brightness});
+                        border: 3px dotted ${trackColor ? trackColor : 'transparent'};
                         border-radius: 50%;
                         box-sizing: border-box;
                         display: flex;
@@ -187,7 +190,8 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps> = ({ pin, size, maxPinAgeM
                 <div style="
                     width: ${size}px;
                     height: ${size}px;
-                    border: 3px solid ${trackColor ? trackColor : 'transparent'};
+                    filter: brightness(${brightness});
+                    border: 3px dotted ${trackColor ? trackColor : 'transparent'};
                     border-radius: 50%;
                     box-sizing: border-box;
                     display: flex;
