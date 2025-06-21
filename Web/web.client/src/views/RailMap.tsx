@@ -16,6 +16,22 @@ import { getTrackedMapPins } from '../components/trackUtils'; // adjust path as 
 
 const fallbackCenter: LatLngTuple = [44.524570, -89.567290]; // Default if location fails
 
+// Helper to get cached location from localStorage
+function getCachedLocation(): LatLngTuple | null {
+    const cached = localStorage.getItem('cachedUserLocation');
+    if (cached) {
+        try {
+            const [lat, lng] = JSON.parse(cached);
+            if (typeof lat === 'number' && typeof lng === 'number') {
+                return [lat, lng];
+            }
+        } catch {
+            // Ignore parse errors
+        }
+    }
+    return null;
+}
+
 function metersToLongitudeDegrees(meters: number, latitude: number): number {
     // 1 deg longitude = 111320*cos(latitude)
     return meters / (111320 * Math.cos(latitude * Math.PI / 180));
@@ -31,7 +47,10 @@ function pixelsToMeters(pixels: number, latitude: number, zoom: number): number 
 }
 
 const RailMap: React.FC = () => {
-    const [userLocation, setUserLocation] = useState<LatLngTuple | null>(null);
+    // Use cached location if available, else fallbackCenter
+    const [userLocation, setUserLocation] = useState<LatLngTuple | null>(
+        getCachedLocation() || fallbackCenter
+    );
     // Set fallback zoom to 7 until userLocation is found, then 11
     const [mapZoom, setMapZoom] = useState<number>(7);
 
@@ -168,10 +187,15 @@ const RailMap: React.FC = () => {
             (position) => {
                 const coords: LatLngTuple = [position.coords.latitude, position.coords.longitude];
                 setUserLocation(coords);
+                // Cache the location in localStorage
+                localStorage.setItem('cachedUserLocation', JSON.stringify(coords));
             },
             (error) => {
                 console.warn('Geolocation error:', error);
-                setUserLocation(fallbackCenter);
+                // Only use fallbackCenter if there is no cached location
+                if (!getCachedLocation()) {
+                    setUserLocation(fallbackCenter);
+                }
             }
         );
 
@@ -373,6 +397,18 @@ const RailMap: React.FC = () => {
             if (wakeLock !== null) {
                 wakeLock.release();
             }
+        };
+    }, []);
+
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                window.location.reload();
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
     }, []);
 
