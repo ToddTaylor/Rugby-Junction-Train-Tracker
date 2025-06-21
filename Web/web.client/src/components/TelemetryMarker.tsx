@@ -102,7 +102,9 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps> = ({ pin, size, maxPinAgeM
                 .join('');
         }
 
-        const trackText = isTracked ? "Click to Untrack Train" : "Click to Track Train";
+        const trackText = isTracked
+            ? '▼ Click pin to untrack ▼'
+            : '▼ Click pin to track ▼';
 
         const popupContent = `
             ${pin.railroad?.trim() ? `<strong>${pin.railroad} ${pin.subdivision + ' Sub' || ''}</strong><br/>` : ''}
@@ -111,7 +113,7 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps> = ({ pin, size, maxPinAgeM
             ${pin.moving === true ? "Moving<br/>" : pin.moving === false ? "Not Moving<br/>" : ''}
             ${format(parseISO(pin.lastUpdate), 'h:mm aa')}<br/>
             ${addressLines}
-            <span style="color:#1976d2;font-weight:bold;">${trackText}</span>
+            <span>${trackText}</span>
         `;
 
         marker.bindPopup(popupContent);
