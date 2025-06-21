@@ -340,6 +340,42 @@ const RailMap: React.FC = () => {
         getTrackedMapPins();
     }, []);
 
+    useEffect(() => {
+        let wakeLock: any = null;
+
+        async function requestWakeLock() {
+            try {
+                if ('wakeLock' in navigator) {
+                    // @ts-ignore
+                    wakeLock = await navigator.wakeLock.request('screen');
+                    wakeLock.addEventListener('release', () => {
+                        console.log('Screen Wake Lock released');
+                    });
+                    console.log('Screen Wake Lock acquired');
+                }
+            } catch (err) {
+                console.error('Error acquiring wake lock:', err);
+            }
+        }
+
+        requestWakeLock();
+
+        // Re-acquire wake lock if the page becomes visible again
+        const handleVisibilityChange = () => {
+            if (wakeLock !== null && document.visibilityState === 'visible') {
+                requestWakeLock();
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            if (wakeLock !== null) {
+                wakeLock.release();
+            }
+        };
+    }, []);
+
     return (
         <MapContainer
             center={fallbackCenter}
