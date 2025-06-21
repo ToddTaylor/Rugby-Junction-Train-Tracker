@@ -170,7 +170,8 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps> = ({ pin, size, maxPinAgeM
                     />
                 ),
                 iconSize: [size, size],
-                iconAnchor: [size / 2, size / 2],
+                iconAnchor: [size / 2, size / 2], // <-- absolute center of marker
+                popupAnchor: [0, -size / 2],      // popup appears above the marker, scales with size
                 className: 'telemetry-marker-z',
             });
         }
@@ -186,7 +187,8 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps> = ({ pin, size, maxPinAgeM
                 />
             ),
             iconSize: [size, size],
-            iconAnchor: [size / 2, size / 2],
+            iconAnchor: [size / 2, size / 2], // <-- absolute center of marker
+            popupAnchor: [0, -size / 2],      // popup appears above the marker, scales with size
             className: 'telemetry-marker-z',
         });
     };
