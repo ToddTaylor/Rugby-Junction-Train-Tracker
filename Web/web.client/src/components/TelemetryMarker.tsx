@@ -5,6 +5,9 @@ import { MapPin } from '../types/types';
 import { parseISO } from 'date-fns/parseISO';
 import { format } from 'date-fns';
 import { getTrackedMapPins, addTrackedMapPin, removeTrackedMapPin, getTrackedColor } from './trackUtils';
+import ReactDOMServer from 'react-dom/server';
+import { ArrowIcon } from './ArrowIcon'; // adjust import as needed
+import { UnknownIcon } from './UnknownIcon'; 
 
 function getPinBrightness(lastUpdate: string, addresses?: { source: string }[], maxPinAgeMinutes?: number): number {
     const now = new Date();
@@ -154,58 +157,32 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps> = ({ pin, size, maxPinAgeM
     const createCustomIcon = () => {
         const iconSrc = getArrowIconSrc(pin.direction, pin.moving != null ? !!pin.moving : undefined);
 
-        // If direction is missing, do not rotate and use unknown SVG
         if (!pin.direction) {
             return L.divIcon({
-                html: `
-                    <div style="
-                        width: ${size}px;
-                        height: ${size}px;
-                        filter: brightness(${brightness});
-                        border: 3px dotted ${trackColor ? trackColor : 'transparent'};
-                        border-radius: 50%;
-                        box-sizing: border-box;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        background: transparent;
-                        text-align: center;
-                    ">
-                        <img
-                            src="${iconSrc}"
-                            alt="No direction"
-                            style="width:100%;height:100%;display:block;"
-                        />
-                    </div>
-                `,
+                html: ReactDOMServer.renderToString(
+                    <UnknownIcon
+                        iconSrc={iconSrc}
+                        brightness={brightness}
+                        trackColor={trackColor}
+                        size={size}
+                    />
+                ),
                 iconSize: [size, size],
                 iconAnchor: [size / 2, size / 2],
                 className: 'telemetry-marker-z',
             });
         }
 
-        // Otherwise, use arrow SVG and rotate
         return L.divIcon({
-            html: `
-                <div style="
-                    width: ${size}px;
-                    height: ${size}px;
-                    filter: brightness(${brightness});
-                    border: 3px dotted ${trackColor ? trackColor : 'transparent'};
-                    border-radius: 50%;
-                    box-sizing: border-box;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    background: transparent;
-                ">
-                    <img
-                        src="${iconSrc}"
-                        alt="Train direction"
-                        style="width:100%;height:100%;display:block;transform: rotate(${getRotation(pin.direction)}deg);"
-                    />
-                </div>
-            `,
+            html: ReactDOMServer.renderToString(
+                <ArrowIcon
+                    iconSrc={iconSrc}
+                    brightness={brightness}
+                    trackColor={trackColor}
+                    size={size}
+                    rotation={getRotation(pin.direction)}
+                />
+            ),
             iconSize: [size, size],
             iconAnchor: [size / 2, size / 2],
             className: 'telemetry-marker-z',
