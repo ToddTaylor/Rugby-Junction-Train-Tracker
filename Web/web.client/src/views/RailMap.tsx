@@ -46,13 +46,134 @@ function pixelsToMeters(pixels: number, latitude: number, zoom: number): number 
     return pixels * metersPerPixel;
 }
 
+// Always use the highest version for openDB to avoid VersionError
+const DB_VERSION = 2;
+
+// Get railroad data from OpenStreetMap
+const fetchRailways = async (setTracksData: any, setTrackDataLoaded: any) => {
+    const STORE_NAME = 'geojson';
+
+    const db = await openDB('railways-db', DB_VERSION, {
+        upgrade(db) {
+            if (!db.objectStoreNames.contains('geojson')) {
+                db.createObjectStore('geojson');
+            }
+            if (!db.objectStoreNames.contains('beacons')) {
+                db.createObjectStore('beacons');
+            }
+        }
+    });
+
+    const cached = await db.get(STORE_NAME, 'railways');
+    if (cached) {
+        console.log('Railway map loaded from IndexedDB cache');
+        setTracksData(cached);
+        setTrackDataLoaded(true);
+        return;
+    }
+
+    const response = await fetch('/data/overpass-wi-railways.geojson');
+
+    if (!response.ok) throw new Error('Failed to fetch railways');
+
+    const data = await response.json();
+    await db.put(STORE_NAME, data, 'railways');
+
+    console.log('Railway map stored in IndexedDB');
+
+    setTracksData(data);
+    setTrackDataLoaded(true);
+};
+
+// Get beacons from the API or cache
+const fetchBeacons = async (setBeacons: any, setBeaconsLoaded: any) => {
+    const STORE_NAME = 'beacons';
+    const db = await openDB('railways-db', DB_VERSION, {
+        upgrade(db) {
+            if (!db.objectStoreNames.contains('geojson')) {
+                db.createObjectStore('geojson');
+            }
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+                db.createObjectStore(STORE_NAME);
+            }
+        }
+    });
+
+    let cached;
+    try {
+        cached = await db.get(STORE_NAME, 'beacons');
+    } catch (e) {
+        // If the store still doesn't exist, forcibly recreate DB
+        await db.close();
+        await indexedDB.deleteDatabase('railways-db');
+        const db2 = await openDB('railways-db', DB_VERSION, {
+            upgrade(db) {
+                if (!db.objectStoreNames.contains('geojson')) {
+                    db.createObjectStore('geojson');
+                }
+                if (!db.objectStoreNames.contains(STORE_NAME)) {
+                    db.createObjectStore(STORE_NAME);
+                }
+            }
+        });
+        cached = await db2.get(STORE_NAME, 'beacons');
+    }
+
+    if (cached) {
+        console.log('Beacons loaded from IndexedDB cache');
+        setBeacons(cached);
+        setBeaconsLoaded(true);
+        return;
+    }
+
+    try {
+        const apiUrl = import.meta.env.VITE_API_URL + "/api/v1/BeaconRailroads";
+        const response = await fetch(apiUrl, {
+            headers: {
+                'X-Api-Key': import.meta.env.VITE_API_KEY,
+                'Content-Type': 'application/json'
+            }
+        });
+        if (!response.ok) throw new Error('Failed to fetch map pins');
+
+        const { data: beacons } = await response.json();
+        await db.put(STORE_NAME, beacons, 'beacons');
+        setBeacons(beacons);
+        setBeaconsLoaded(true);
+        console.log('Beacons stored in IndexedDB');
+    } catch (error) {
+        console.error('Error fetching map pins:', error);
+    }
+};
+
+// Fetch initial map telemetry pin data from the API
+const fetchInitialTelemetryPins = async (setMapPins: any) => {
+    try {
+        const minutesOldFilter = 15; // Fetch map pins from the last 15 minutes so old map pins are not shown
+        const apiUrl = import.meta.env.VITE_API_URL + "/api/v1/MapPins?minutes=" + minutesOldFilter;
+        const response = await fetch(apiUrl, {
+            headers: {
+                'X-Api-Key': import.meta.env.VITE_API_KEY,  
+                'Content-Type': 'application/json' 
+            }
+        });
+        if (!response.ok) throw new Error('Failed to fetch map pins');
+
+        const { data: pins } = await response.json();
+        setMapPins(pins);
+    } catch (error) {
+        console.error('Error fetching map pins:', error);
+    }
+};
+
 const RailMap: React.FC = () => {
     // Use cached location if available, else fallbackCenter
+    const cachedLocation = getCachedLocation();
     const [userLocation, setUserLocation] = useState<LatLngTuple | null>(
-        getCachedLocation() || fallbackCenter
+        cachedLocation || fallbackCenter
     );
-    // Set fallback zoom to 7 until userLocation is found, then 11
-    const [mapZoom, setMapZoom] = useState<number>(7);
+    // Set zoom to 11 if cached location exists, else 7
+    const [mapZoom, setMapZoom] = useState<number>(cachedLocation ? 11 : 7);
 
     const [trackData, setTracksData] = useState<GeoJSON.GeoJsonObject | null>(null);
     const [beaconPins, setBeacons] = useState<Beacon[]>([]);
@@ -199,130 +320,10 @@ const RailMap: React.FC = () => {
             }
         );
 
-        // Always use the highest version for openDB to avoid VersionError
-        const DB_VERSION = 2;
-
-        // Get railroad data from OpenStreetMap
-        const fetchRailways = async () => {
-            const STORE_NAME = 'geojson';
-
-            const db = await openDB('railways-db', DB_VERSION, {
-                upgrade(db) {
-                    if (!db.objectStoreNames.contains('geojson')) {
-                        db.createObjectStore('geojson');
-                    }
-                    if (!db.objectStoreNames.contains('beacons')) {
-                        db.createObjectStore('beacons');
-                    }
-                }
-            });
-
-            const cached = await db.get(STORE_NAME, 'railways');
-            if (cached) {
-                console.log('Railway map loaded from IndexedDB cache');
-                setTracksData(cached);
-                setTrackDataLoaded(true);
-                return;
-            }
-
-            const response = await fetch('/data/overpass-wi-railways.geojson');
-
-            if (!response.ok) throw new Error('Failed to fetch railways');
-
-            const data = await response.json();
-            await db.put(STORE_NAME, data, 'railways');
-
-            console.log('Railway map stored in IndexedDB');
-
-            setTracksData(data);
-            setTrackDataLoaded(true);
-        };
-
-        // Get beacons from the API or cache
-        const fetchBeacons = async () => {
-            const STORE_NAME = 'beacons';
-            const db = await openDB('railways-db', DB_VERSION, {
-                upgrade(db) {
-                    if (!db.objectStoreNames.contains('geojson')) {
-                        db.createObjectStore('geojson');
-                    }
-                    if (!db.objectStoreNames.contains(STORE_NAME)) {
-                        db.createObjectStore(STORE_NAME);
-                    }
-                }
-            });
-
-            let cached;
-            try {
-                cached = await db.get(STORE_NAME, 'beacons');
-            } catch (e) {
-                // If the store still doesn't exist, forcibly recreate DB
-                await db.close();
-                await indexedDB.deleteDatabase('railways-db');
-                const db2 = await openDB('railways-db', DB_VERSION, {
-                    upgrade(db) {
-                        if (!db.objectStoreNames.contains('geojson')) {
-                            db.createObjectStore('geojson');
-                        }
-                        if (!db.objectStoreNames.contains(STORE_NAME)) {
-                            db.createObjectStore(STORE_NAME);
-                        }
-                    }
-                });
-                cached = await db2.get(STORE_NAME, 'beacons');
-            }
-
-            if (cached) {
-                console.log('Beacons loaded from IndexedDB cache');
-                setBeacons(cached);
-                setBeaconsLoaded(true);
-                return;
-            }
-
-            try {
-                const apiUrl = import.meta.env.VITE_API_URL + "/api/v1/BeaconRailroads";
-                const response = await fetch(apiUrl, {
-                    headers: {
-                        'X-Api-Key': import.meta.env.VITE_API_KEY,
-                        'Content-Type': 'application/json'
-                    }
-                });
-                if (!response.ok) throw new Error('Failed to fetch map pins');
-
-                const { data: beacons } = await response.json();
-                await db.put(STORE_NAME, beacons, 'beacons');
-                setBeacons(beacons);
-                setBeaconsLoaded(true);
-                console.log('Beacons stored in IndexedDB');
-            } catch (error) {
-                console.error('Error fetching map pins:', error);
-            }
-        };
-
-        // Fetch initial map telemtry pin data from the API
-        const fetchInitialTelemetryPins = async () => {
-            try {
-                const minutesOldFilter = 15; // Fetch map pins from the last 15 minutes so old map pins are not shown
-                const apiUrl = import.meta.env.VITE_API_URL + "/api/v1/MapPins?minutes=" + minutesOldFilter;
-                const response = await fetch(apiUrl, {
-                    headers: {
-                        'X-Api-Key': import.meta.env.VITE_API_KEY,  
-                        'Content-Type': 'application/json' 
-                    }
-                });
-                if (!response.ok) throw new Error('Failed to fetch map pins');
-
-                const { data: pins } = await response.json();
-                setMapPins(pins);
-            } catch (error) {
-                console.error('Error fetching map pins:', error);
-            }
-        };
-
         // Chain loading: tracks -> beacons -> telemetry
-        fetchRailways()
-            .then(() => fetchBeacons())
-            .then(() => fetchInitialTelemetryPins());
+        fetchRailways(setTracksData, setTrackDataLoaded)
+            .then(() => fetchBeacons(setBeacons, setBeaconsLoaded))
+            .then(() => fetchInitialTelemetryPins(setMapPins));
     }, []);
 
     useEffect(() => {
@@ -400,10 +401,13 @@ const RailMap: React.FC = () => {
         };
     }, []);
 
+    // SOFT REFRESH ON FOCUS: Only refresh data, do NOT reload the page
     useEffect(() => {
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible') {
-                window.location.reload();
+                fetchRailways(setTracksData, setTrackDataLoaded)
+                    .then(() => fetchBeacons(setBeacons, setBeaconsLoaded))
+                    .then(() => fetchInitialTelemetryPins(setMapPins));
             }
         };
         document.addEventListener('visibilitychange', handleVisibilityChange);
