@@ -202,9 +202,9 @@ namespace Web.Server.Services
                 mapPin = await this.CreateMapPin(telemetry, beaconRailroads);
             }
 
-            await _mapPinRepository.UpsertAsync(mapPin!);
+            var upsertedMapPin = await _mapPinRepository.UpsertAsync(mapPin!);
 
-            var mapPinDTO = _mapper.Map<MapPinDTO>(mapPin);
+            var mapPinDTO = _mapper.Map<MapPinDTO>(upsertedMapPin);
 
             await _hubContext.Clients.All.SendCoreAsync(NotificationMethods.MapPinUpdate, [mapPinDTO], default);
         }
