@@ -581,12 +581,12 @@ namespace Web.ServerTests.Services
             await _service.UpsertMapPin(telemetry, toBeaconRailroads);
 
             // Assert
-            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(expectedMapPin), Times.Once);
+            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(expectedMapPin), Times.Never);
 
             _clientProxyMock?.Verify(proxy => proxy.SendCoreAsync(
                 NotificationMethods.MapPinUpdate,
                 It.Is<object[]>(args => args[0].Equals(expectedMapPinObjects[0])),
-                default), Times.Once);
+                default), Times.Never);
         }
 
         [TestMethod]

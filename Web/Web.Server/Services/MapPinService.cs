@@ -50,6 +50,23 @@ namespace Web.Server.Services
 
             if (previousMapPinByAddressID != null)
             {
+
+                var previousMapPinHotAddress = previousMapPinByAddressID.Addresses.Where(a => a.Source == "HOT").FirstOrDefault();
+
+                if (previousMapPinHotAddress != null)
+                {
+                    var beaconsAreDifferent = previousMapPinByAddressID.BeaconID != telemetry.BeaconID;
+                    var telemetryEotAfterPreviousHot = previousMapPinHotAddress.LastUpdate < telemetry.LastUpdate;
+
+                    if (beaconsAreDifferent && telemetryEotAfterPreviousHot)
+                    {
+                        // If telemetry is EOT from a different beacon from the previous map that reported an HOT,
+                        // do nothing since the previous beacon is still reporting the end of the train while the
+                        // head of the train is already at the next beacon.
+                        return;
+                    }
+                }
+
                 // Notes: With current logic, DPUs will never go here because their address ID is always unique.
                 mapPin = await this.UpdateMapPin(telemetry, previousMapPinByAddressID, beaconRailroads);
             }
