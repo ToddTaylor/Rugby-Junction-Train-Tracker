@@ -205,14 +205,18 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps> = ({ pin, size, maxPinAgeM
 };
 
 function getArrowIconSrc(direction?: string, moving?: boolean): string {
+    const cacheBuster = import.meta.env.VITE_APP_VERSION
+        ? `?v=${import.meta.env.VITE_APP_VERSION}`
+        : `?t=${Date.now()}`; // fallback to timestamp if version not set
+
     if (!direction) {
-        if (moving === true) return '/icons/unknown-green.svg';
-        if (moving === false) return '/icons/unknown-red.svg';
-        return '/icons/unknown.svg';
+        if (moving === true) return `/icons/unknown-green.svg${cacheBuster}`;
+        if (moving === false) return `/icons/unknown-red.svg${cacheBuster}`;
+        return `/icons/unknown.svg${cacheBuster}`;
     }
-    if (moving === true) return '/icons/arrow-green.svg';
-    if (moving === false) return '/icons/arrow-red.svg';
-    return '/icons/arrow.svg';
+    if (moving === true) return `/icons/arrow-green.svg${cacheBuster}`;
+    if (moving === false) return `/icons/arrow-red.svg${cacheBuster}`;
+    return `/icons/arrow.svg${cacheBuster}`;
 }
 
 function getRotation(direction?: string): number {
