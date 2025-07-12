@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Configuration;
 
-namespace ConsoleApp.Subscribers.LiveTrainTrackerAPI
+namespace ConsoleApp.Subscribers.LiveTrainTrackingAPI
 {
     public class BeaconApiClient : ApiClient
     {

@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Configuration;
 
-namespace ConsoleApp.Subscribers.LiveTrainTrackerAPI
+namespace ConsoleApp.Subscribers.LiveTrainTrackingAPI
 {
     public class BeaconHealthService : IDisposable
     {
@@ -34,13 +34,13 @@ namespace ConsoleApp.Subscribers.LiveTrainTrackerAPI
                 await _beaconApiClient.SendBeaconHealthAsync();
 
                 Console.ForegroundColor = ConsoleColor.Blue;
-                Console.WriteLine($"{_beaconID} beacon health sent at {DateTime.Now}");
+                Console.WriteLine($"[{_beaconID}] Beacon health sent at {DateTime.Now}");
                 Console.ResetColor();
             }
             catch (Exception ex)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"{_beaconID} error in BeaconHealthService: {ex.Message}");
+                Console.WriteLine($"[{_beaconID}] Error in beacon health service: {ex.Message}");
                 Console.ResetColor();
             }
         }

@@ -33,13 +33,13 @@ namespace ConsoleApp.Subscribers.RugbyJunctionAPI
                 await _beaconApiClient.SendBeaconHealthAsync();
 
                 Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine($"{_beaconID} beacon health sent at {DateTime.Now}");
+                Console.WriteLine($"[{_beaconID}] Beacon health sent at {DateTime.Now}");
                 Console.ResetColor();
             }
             catch (Exception ex)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"{_beaconID} error in BeaconHealthService: {ex.Message}");
+                Console.WriteLine($"[{_beaconID}] Error in beacon health service: {ex.Message}");
                 Console.ResetColor();
             }
         }

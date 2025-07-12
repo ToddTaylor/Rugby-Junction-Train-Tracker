@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace ConsoleApp.Subscribers.LiveTrainTrackerAPI
+namespace ConsoleApp.Subscribers.LiveTrainTrackingAPI
 {
     public class Telemetry
     {

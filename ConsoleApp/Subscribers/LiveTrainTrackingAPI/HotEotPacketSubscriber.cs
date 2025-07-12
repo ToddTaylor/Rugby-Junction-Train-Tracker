@@ -1,7 +1,7 @@
 using ConsoleApp.EventArgs;
 using Microsoft.Extensions.Configuration;
 
-namespace ConsoleApp.Subscribers.LiveTrainTrackerAPI
+namespace ConsoleApp.Subscribers.LiveTrainTrackingAPI
 {
     public class HotEotPacketSubscriber
     {

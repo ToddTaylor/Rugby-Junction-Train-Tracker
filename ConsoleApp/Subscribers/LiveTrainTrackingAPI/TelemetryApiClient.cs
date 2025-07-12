@@ -1,6 +1,6 @@
 ﻿using System.Net.Http.Json;
 
-namespace ConsoleApp.Subscribers.LiveTrainTrackerAPI
+namespace ConsoleApp.Subscribers.LiveTrainTrackingAPI
 {
     public class TelemetryApiClient : ApiClient
     {
