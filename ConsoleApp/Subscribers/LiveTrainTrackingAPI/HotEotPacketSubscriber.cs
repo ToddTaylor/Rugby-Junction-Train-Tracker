@@ -1,7 +1,7 @@
 using ConsoleApp.EventArgs;
 using Microsoft.Extensions.Configuration;
 
-namespace ConsoleApp.Subscribers.APILogger
+namespace ConsoleApp.Subscribers.LiveTrainTrackerAPI
 {
     public class HotEotPacketSubscriber
     {
@@ -20,12 +20,12 @@ namespace ConsoleApp.Subscribers.APILogger
 
             var alert = new Telemetry
             {
-                BeaconID = configuration.GetValue<int>("Beacon:BeaconID"),
                 AddressID = int.Parse(e.Packet.ID),
-                TrainID = null,
-                Moving = (e.Packet.MOT.HasValue) ? Convert.ToBoolean(e.Packet.MOT) : null,
+                BeaconID = configuration.GetValue<string>("Subscribers:0:Beacon:BeaconID"),
+                Detector = configuration.GetValue<string>("Subscribers:0:Beacon:DetectorID"),
+                Motion = (e.Packet.MOT.HasValue) ? Convert.ToBoolean(e.Packet.MOT) : null,
                 Source = e.Packet.SRC,
-                Timestamp = e.Packet.TimeReceived
+                TrainID = null
             };
 
             var apiClient = new TelemetryApiClient();

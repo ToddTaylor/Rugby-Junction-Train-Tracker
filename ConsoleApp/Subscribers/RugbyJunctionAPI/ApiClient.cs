@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Configuration;
 
-namespace ConsoleApp.Subscribers.APILogger
+namespace ConsoleApp.Subscribers.RugbyJunctionAPI
 {
     public class ApiClient
     {
@@ -18,7 +18,7 @@ namespace ConsoleApp.Subscribers.APILogger
         {
             try
             {
-                return _configuration.GetValue<string>("ApiSettings:ApiKey");
+                return _configuration.GetValue<string>("Subscribers:1:ApiSettings:ApiKey");
             }
             catch (Exception ex)
             {
@@ -31,7 +31,7 @@ namespace ConsoleApp.Subscribers.APILogger
         {
             try
             {
-                return _configuration.GetValue<string>("ApiSettings:Url");
+                return _configuration.GetValue<string>("Subscribers:1:ApiSettings:Url");
             }
             catch (Exception ex)
             {

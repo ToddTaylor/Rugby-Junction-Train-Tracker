@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace ConsoleApp.Subscribers.APILogger
+namespace ConsoleApp.Subscribers.RugbyJunctionAPI
 {
     public class Telemetry
     {

@@ -1,18 +1,19 @@
 ﻿using ConsoleApp;
 using ConsoleApp.Deserializers;
 using ConsoleApp.EventArgs;
-using ConsoleApp.Subscribers.APILogger;
 using Microsoft.Extensions.Configuration;
 using System.Reflection;
 
 class Program
 {
     private const int TIME_RECEIVED_OFFSET_MINUTES = 5;
+
     private const string FILE_NAME_PREFIX_EOT = "eot";
     private const string FILE_NAME_PREFIX_DPU = "dpu";
 
     public delegate void DpuPacketEventHandler(object? sender, DpuPacketEventArgs e);
     public delegate void HotEotPacketEventHandler(object? sender, HotEotPacketEventArgs e);
+
     public static event DpuPacketEventHandler DpuPacketReceived;
     public static event HotEotPacketEventHandler HotEotPacketReceived;
 
@@ -20,44 +21,33 @@ class Program
     {
         var configuration = ConfigurationHelper.LoadConfiguration();
 
-        // Add subscribers to the events
-        var hotEotSubscriberTypes = configuration.GetSection("HotEotPacketSubscription:Subscribers").Get<string[]>();
-        var dotSubscriberTypes = configuration.GetSection("DpuPacketSubscription:Subscribers").Get<string[]>();
-
-        if (hotEotSubscriberTypes == null || dotSubscriberTypes == null)
-        {
-            LogError("No subscribers found in the configuration.");
-            return;
-        }
-
-        foreach (var subscriberType in hotEotSubscriberTypes)
-        {
-            SubscribeToPacketEvent(subscriberType, "HotEotPacketReceived", "OnHotEotPacketReceived");
-        }
-
-        foreach (var subscriberType in dotSubscriberTypes)
-        {
-            SubscribeToPacketEvent(subscriberType, "DpuPacketReceived", "OnDpuPacketReceived");
-        }
-
         var logDirectoryPath = configuration.GetValue<string>("LogDirectoryPath");
 
         if (string.IsNullOrEmpty(logDirectoryPath) || !Directory.Exists(logDirectoryPath))
         {
-            LogError("Log directory path is not valid.");
+            LogError($"Telemetry log file directory path is not valid: {logDirectoryPath}");
             return;
         }
 
-        DeleteOldLogFiles(logDirectoryPath);
+        DeleteOldLogFiles(configuration);
 
-        var lastPositions = new Dictionary<string, long>();
+        AddHotEotEventSubscribers(configuration);
+
+        AddDotEventSubscribers(configuration);
 
         Console.WriteLine($"Telemetry Log Service started.  Processing messages posted with then last {TIME_RECEIVED_OFFSET_MINUTES} minutes...");
 
-        // Start beacon health service to update the API with the service health status.
-        var beaconApiClient = new BeaconApiClient();
-        using var beaconHealthService = new BeaconHealthService(beaconApiClient, configuration);
-        beaconHealthService.Start();
+        StartBeaconHealthServices(configuration);
+
+        ProcessTelemetryLogFiles(logDirectoryPath);
+
+        // Keep the app running...
+        Console.ReadLine();
+    }
+
+    private static void ProcessTelemetryLogFiles(string logDirectoryPath)
+    {
+        var lastPositions = new Dictionary<string, long>();
 
         while (true)
         {
@@ -75,14 +65,49 @@ class Program
 
             Thread.Sleep(1000); // Wait before checking the files again.
         }
-
-        // Keep the app running...
-        Console.ReadLine();
     }
 
-    private static void DeleteOldLogFiles(string directoryPath)
+    private static void AddDotEventSubscribers(IConfiguration configuration)
     {
-        var logFiles = Directory.GetFiles(directoryPath, "*.log");
+        var dotSubscriberTypes = configuration.GetSection("DpuPacketSubscription:Subscribers").Get<string[]>();
+
+        if (dotSubscriberTypes == null)
+        {
+            LogError("No DPU subscribers found in the configuration.");
+        }
+
+        foreach (var subscriberType in dotSubscriberTypes)
+        {
+            SubscribeToPacketEvent(subscriberType, "DpuPacketReceived", "OnDpuPacketReceived");
+        }
+    }
+
+    private static void AddHotEotEventSubscribers(IConfiguration configuration)
+    {
+        var hotEotSubscriberTypes = configuration.GetSection("HotEotPacketSubscription:Subscribers").Get<string[]>();
+
+        if (hotEotSubscriberTypes == null)
+        {
+            LogError("No HOT / EOT subscribers found in the configuration.");
+        }
+
+        foreach (var subscriberType in hotEotSubscriberTypes)
+        {
+            SubscribeToPacketEvent(subscriberType, "HotEotPacketReceived", "OnHotEotPacketReceived");
+        }
+    }
+
+    private static void DeleteOldLogFiles(IConfiguration configuration)
+    {
+        var logDirectoryPath = configuration.GetValue<string>("LogDirectoryPath");
+
+        if (string.IsNullOrEmpty(logDirectoryPath) || !Directory.Exists(logDirectoryPath))
+        {
+            LogError("Log directory path is not valid.");
+            return;
+        }
+
+        var logFiles = Directory.GetFiles(logDirectoryPath, "*.log");
 
         // Find the most recent eot*.log file
         var latestEotFile = logFiles
@@ -190,6 +215,52 @@ class Program
         return line.StartsWith("#");
     }
 
+    private static void OnHotEotPacketReceived(object sender, HotEotPacketEventArgs e)
+    {
+        // Event subscribers will implement this method.
+    }
+
+    private static void OnDpuPacketReceived(object sender, DpuPacketEventArgs e)
+    {
+        // Event subscribers will implement this method.
+    }
+
+    private static void StartBeaconHealthServices(IConfiguration configuration)
+    {
+        var beaconHealthServiceTypes = configuration.GetSection("BeaconHealthServices:Services").Get<string[]>();
+
+        if (beaconHealthServiceTypes == null)
+        {
+            LogError("No beacon health services in the configuration.");
+        }
+
+        foreach (var serviceType in beaconHealthServiceTypes)
+        {
+            StartBeaconHealthService(serviceType, "Start");
+        }
+    }
+
+    private static void StartBeaconHealthService(string serviceTypeName, string methodName)
+    {
+        var type = Type.GetType(serviceTypeName);
+        if (type != null)
+        {
+            var service = Activator.CreateInstance(type);
+            if (service != null)
+            {
+                var methodInfo = type.GetMethod(methodName, BindingFlags.Public | BindingFlags.Instance);
+                if (methodInfo != null)
+                {
+                    methodInfo.Invoke(service, null);
+                }
+                else
+                {
+                    LogError($"Method {methodName} not found in {serviceTypeName}.");
+                }
+            }
+        }
+    }
+
     private static void SubscribeToPacketEvent(string subscriberTypeName, string eventName, string methodName)
     {
         var type = Type.GetType(subscriberTypeName);
@@ -207,20 +278,5 @@ class Program
                 }
             }
         }
-    }
-
-    private static string GetTodayDateString()
-    {
-        return DateTime.Now.ToString("yyyyMMdd");
-    }
-
-    private static void OnHotEotPacketReceived(object sender, HotEotPacketEventArgs e)
-    {
-        // Event subscribers will implement this method.
-    }
-
-    private static void OnDpuPacketReceived(object sender, DpuPacketEventArgs e)
-    {
-        // Event subscribers will implement this method.
     }
 }

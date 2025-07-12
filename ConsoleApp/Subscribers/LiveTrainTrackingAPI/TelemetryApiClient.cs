@@ -1,6 +1,6 @@
 ﻿using System.Net.Http.Json;
 
-namespace ConsoleApp.Subscribers.APILogger
+namespace ConsoleApp.Subscribers.LiveTrainTrackerAPI
 {
     public class TelemetryApiClient : ApiClient
     {
@@ -12,7 +12,7 @@ namespace ConsoleApp.Subscribers.APILogger
         {
             try
             {
-                var url = $"{base.GetApUrl()}/Telemetries";
+                var url = base.GetTelemetryUrl();
 
                 var request = new HttpRequestMessage(HttpMethod.Post, url)
                 {

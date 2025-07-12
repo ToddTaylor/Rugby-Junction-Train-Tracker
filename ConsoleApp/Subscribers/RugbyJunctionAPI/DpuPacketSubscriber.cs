@@ -2,7 +2,7 @@ using ConsoleApp.EventArgs;
 using ConsoleApp.Models;
 using Microsoft.Extensions.Configuration;
 
-namespace ConsoleApp.Subscribers.APILogger
+namespace ConsoleApp.Subscribers.RugbyJunctionAPI
 {
     public class DpuPacketSubscriber
     {
@@ -21,7 +21,7 @@ namespace ConsoleApp.Subscribers.APILogger
 
             var alert = new Telemetry
             {
-                BeaconID = configuration.GetValue<int>("Beacon:BeaconID"),
+                BeaconID = configuration.GetValue<int>("Subscribers:1:Beacon:BeaconID"),
                 AddressID = int.Parse(e.Packet.ADDR),
                 TrainID = int.Parse(e.Packet.TRID),
                 Moving = this.IsMoving(e.Packet),

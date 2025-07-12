@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Configuration;
 
-namespace ConsoleApp.Subscribers.APILogger
+namespace ConsoleApp.Subscribers.RugbyJunctionAPI
 {
     public class BeaconApiClient : ApiClient
     {
@@ -40,7 +40,7 @@ namespace ConsoleApp.Subscribers.APILogger
         {
             try
             {
-                return base._configuration.GetValue<int>("Beacon:BeaconID");
+                return base._configuration.GetValue<int>("Subscribers:1:Beacon:BeaconID");
             }
             catch (Exception ex)
             {
