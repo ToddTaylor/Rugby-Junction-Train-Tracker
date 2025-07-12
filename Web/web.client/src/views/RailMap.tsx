@@ -254,7 +254,7 @@ const RailMap: React.FC = () => {
     Object.values(groupedPins).forEach(group => {
         group.forEach(pin => {
             const lastUpdate = new Date(pin.lastUpdate).getTime();
-            // If any address has source "EOT", use FIVE_MINUTES
+            // If any address has source "EOT", cut the max age in half.
             const hasEOT = Array.isArray(pin.addresses) && pin.addresses.some(addr => addr.source === "EOT");
             const maxAge = hasEOT ? MAX_PIN_AGE_MS / 2 : MAX_PIN_AGE_MS;
             if (now - lastUpdate <= maxAge) {
