@@ -19,6 +19,10 @@ import { useRailways } from '../hooks/useRailways';
 import { useBeacons } from '../hooks/useBeacons';
 import { useTelemetryPins } from '../hooks/useTelemetryPins';
 
+const DARK_TILE_URL = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
+const LIGHT_TILE_URL = "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+const TILE_ATTRIBUTION = '&copy; <a href="https://carto.com/">CARTO</a>';
+
 const fallbackCenter: LatLngTuple = [44.524570, -89.567290]; // Default if location fails
 
 const RailMap: React.FC = () => {
@@ -267,50 +271,107 @@ const RailMap: React.FC = () => {
         };
     }, []);
 
+    const [mapTheme, setMapTheme] = useState(() => localStorage.getItem('mapTheme') || 'dark');
+
+    const handleToggleTheme = () => {
+        setMapTheme(prev => {
+            const next = prev === 'dark' ? 'light' : 'dark';
+            localStorage.setItem('mapTheme', next);
+            return next;
+        });
+    };
+
+    const cacheBuster = import.meta.env.VITE_APP_VERSION
+        ? `?v=${import.meta.env.VITE_APP_VERSION}`
+        : `?t=${Date.now()}`;
+
     return (
-        <MapContainer
-            center={fallbackCenter}
-            zoom={mapZoom}
-            style={{ height: '100%', width: '100%' }}
-            scrollWheelZoom={true}
-            ref={mapRef}
-        >
-            <MapZoomListener />
-            <TileLayer
-                url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-            />
+        <>
+            <div style={{ position: 'absolute', top: 10, right: 10, zIndex: 1000, display: 'flex', alignItems: 'center' }}>
+                <span style={{ marginRight: 8 }}>
+                    <img src={`/icons/sun.svg${cacheBuster}`} alt="Light mode" style={{ opacity: mapTheme === 'light' ? 1 : 0.4, width: 24, height: 24 }} />
+                </span>
+                <label style={{ display: 'inline-flex', alignItems: 'center', cursor: 'pointer' }}>
+                    <input
+                        type="checkbox"
+                        checked={mapTheme === 'dark'}
+                        onChange={handleToggleTheme}
+                        style={{ display: 'none' }}
+                    />
+                    <span
+                        style={{
+                            width: 40,
+                            height: 24,
+                            background: mapTheme === 'dark' ? '#333' : '#bbb', // darker in light mode
+                            borderRadius: 12,
+                            position: 'relative',
+                            transition: 'background 0.2s',
+                            display: 'inline-block',
+                        }}
+                    >
+                        <span
+                            style={{
+                                position: 'absolute',
+                                left: mapTheme === 'dark' ? 20 : 2,
+                                top: 2,
+                                width: 20,
+                                height: 20,
+                                background: mapTheme === 'dark' ? '#fff' : '#f8f8f8',
+                                borderRadius: '50%',
+                                boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
+                                transition: 'left 0.2s, background 0.2s',
+                            }}
+                        />
+                    </span>
+                </label>
+                <span style={{ marginLeft: 8 }}>
+                    <img src={`/icons/moon.svg${cacheBuster}`} alt="Dark mode" style={{ opacity: mapTheme === 'dark' ? 1 : 0.4, width: 24, height: 24 }} />
+                </span>
+            </div>
+            <MapContainer
+                center={fallbackCenter}
+                zoom={mapZoom}
+                style={{ height: '100%', width: '100%' }}
+                scrollWheelZoom={true}
+                ref={mapRef}
+            >
+                <MapZoomListener />
+                <TileLayer
+                    url={mapTheme === 'dark' ? DARK_TILE_URL : LIGHT_TILE_URL}
+                    attribution={TILE_ATTRIBUTION}
+                />
 
-            {/* Display railroad tracks using locally cached Overpass query of just WI and then generate GeoJSON file. */}
-            {trackData && <GeoJSON 
-                    data={trackData} 
-                    style={(feature) => {
-                        if (!feature || !feature.properties) return {};
+                {/* Display railroad tracks using locally cached Overpass query of just WI and then generate GeoJSON file. */}
+                {trackData && <GeoJSON 
+                        data={trackData} 
+                        style={(feature) => {
+                            if (!feature || !feature.properties) return {};
 
-                        const name = feature.properties?.name || '';
+                            const name = feature.properties?.name || '';
 
-                        let color = 'gray';
-                        let weight = 1;
-                        if (name === 'CN Waukesha Subdivision') {
-                            color = '#005aa9';
-                            weight = 4;
-                        }
+                            let color = 'gray';
+                            let weight = 1;
+                            if (name === 'CN Waukesha Subdivision') {
+                                color = '#005aa9';
+                                weight = 4;
+                            }
 
-                        return { color, weight };
-                    }}
+                            return { color, weight };
+                        }}
+                    />}
+
+                {/* Beacon markers */}
+                {trackDataLoaded && <BeaconMarkers pins={beacons} zoom={mapZoom} />}
+
+                {/* Telemetry markers */}
+                {trackDataLoaded && beaconsLoaded && <TelemetryMarkers
+                    pins={telemetryPins}
+                    zoom={mapZoom}
+                    maxPinAgeMinutes={MAX_PIN_AGE_MINUTES}
                 />}
 
-            {/* Beacon markers */}
-            {trackDataLoaded && <BeaconMarkers pins={beacons} zoom={mapZoom} />}
-
-            {/* Telemetry markers */}
-            {trackDataLoaded && beaconsLoaded && <TelemetryMarkers
-                pins={telemetryPins}
-                zoom={mapZoom}
-                maxPinAgeMinutes={MAX_PIN_AGE_MINUTES}
-            />}
-
-        </MapContainer>
+            </MapContainer>
+        </>
     );
 };
 
