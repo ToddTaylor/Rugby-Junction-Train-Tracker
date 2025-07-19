@@ -9,162 +9,16 @@ import { LatLngTuple, Map as LeafletMap } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useSignalR } from '../hooks/useSignalR';
 import { Beacon, MapPin as MapPin } from '../types/types';
-import { openDB } from 'idb';
 import BeaconMarkers from '../components/BeaconMarkers';
 import TelemetryMarkers from '../components/TelemetryMarkers';
-import { getTrackedMapPins } from '../components/trackUtils'; // adjust path as needed
+import { getTrackedMapPins } from '../services/trackedPins';
+import { getCachedLocation, metersToLongitudeDegrees, pixelsToMeters } from '../utils/geo';
+import { updateMapPins, updateBeacon } from '../utils/updateHelpers';
+import { useRailways } from '../hooks/useRailways';
+import { useBeacons } from '../hooks/useBeacons';
+import { useTelemetryPins } from '../hooks/useTelemetryPins';
 
 const fallbackCenter: LatLngTuple = [44.524570, -89.567290]; // Default if location fails
-
-// Helper to get cached location from localStorage
-function getCachedLocation(): LatLngTuple | null {
-    const cached = localStorage.getItem('cachedUserLocation');
-    if (cached) {
-        try {
-            const [lat, lng] = JSON.parse(cached);
-            if (typeof lat === 'number' && typeof lng === 'number') {
-                return [lat, lng];
-            }
-        } catch {
-            // Ignore parse errors
-        }
-    }
-    return null;
-}
-
-function metersToLongitudeDegrees(meters: number, latitude: number): number {
-    // 1 deg longitude = 111320*cos(latitude)
-    return meters / (111320 * Math.cos(latitude * Math.PI / 180));
-}
-
-// Helper: convert pixels to meters at a given latitude and zoom
-function pixelsToMeters(pixels: number, latitude: number, zoom: number): number {
-    // Earth's circumference at equator: 40075016.686 meters
-    // 256 px = 40075016.686 meters at zoom 0
-    // metersPerPixel = circumference * cos(latitude) / (2 ^ (zoom + 8))
-    const metersPerPixel = (40075016.686 * Math.cos(latitude * Math.PI / 180)) / Math.pow(2, zoom + 8);
-    return pixels * metersPerPixel;
-}
-
-// Always use the highest version for openDB to avoid VersionError
-const DB_VERSION = 2;
-
-// Get railroad data from OpenStreetMap
-const fetchRailways = async (setTracksData: any, setTrackDataLoaded: any) => {
-    const STORE_NAME = 'geojson';
-
-    const db = await openDB('railways-db', DB_VERSION, {
-        upgrade(db) {
-            if (!db.objectStoreNames.contains('geojson')) {
-                db.createObjectStore('geojson');
-            }
-            if (!db.objectStoreNames.contains('beacons')) {
-                db.createObjectStore('beacons');
-            }
-        }
-    });
-
-    const cached = await db.get(STORE_NAME, 'railways');
-    if (cached) {
-        console.log('Railway map loaded from IndexedDB cache');
-        setTracksData(cached);
-        setTrackDataLoaded(true);
-        return;
-    }
-
-    const response = await fetch('/data/overpass-wi-railways.geojson');
-
-    if (!response.ok) throw new Error('Failed to fetch railways');
-
-    const data = await response.json();
-    await db.put(STORE_NAME, data, 'railways');
-
-    console.log('Railway map stored in IndexedDB');
-
-    setTracksData(data);
-    setTrackDataLoaded(true);
-};
-
-// Get beacons from the API or cache
-const fetchBeacons = async (setBeacons: any, setBeaconsLoaded: any) => {
-    const STORE_NAME = 'beacons';
-    const db = await openDB('railways-db', DB_VERSION, {
-        upgrade(db) {
-            if (!db.objectStoreNames.contains('geojson')) {
-                db.createObjectStore('geojson');
-            }
-            if (!db.objectStoreNames.contains(STORE_NAME)) {
-                db.createObjectStore(STORE_NAME);
-            }
-        }
-    });
-
-    let cached;
-    try {
-        cached = await db.get(STORE_NAME, 'beacons');
-    } catch (e) {
-        // If the store still doesn't exist, forcibly recreate DB
-        await db.close();
-        await indexedDB.deleteDatabase('railways-db');
-        const db2 = await openDB('railways-db', DB_VERSION, {
-            upgrade(db) {
-                if (!db.objectStoreNames.contains('geojson')) {
-                    db.createObjectStore('geojson');
-                }
-                if (!db.objectStoreNames.contains(STORE_NAME)) {
-                    db.createObjectStore(STORE_NAME);
-                }
-            }
-        });
-        cached = await db2.get(STORE_NAME, 'beacons');
-    }
-
-    if (cached) {
-        console.log('Beacons loaded from IndexedDB cache');
-        setBeacons(cached);
-        setBeaconsLoaded(true);
-        return;
-    }
-
-    try {
-        const apiUrl = import.meta.env.VITE_API_URL + "/api/v1/BeaconRailroads";
-        const response = await fetch(apiUrl, {
-            headers: {
-                'X-Api-Key': import.meta.env.VITE_API_KEY,
-                'Content-Type': 'application/json'
-            }
-        });
-        if (!response.ok) throw new Error('Failed to fetch map pins');
-
-        const { data: beacons } = await response.json();
-        await db.put(STORE_NAME, beacons, 'beacons');
-        setBeacons(beacons);
-        setBeaconsLoaded(true);
-        console.log('Beacons stored in IndexedDB');
-    } catch (error) {
-        console.error('Error fetching map pins:', error);
-    }
-};
-
-// Fetch initial map telemetry pin data from the API
-const fetchInitialTelemetryPins = async (setMapPins: any) => {
-    try {
-        const minutesOldFilter = 15; // Fetch map pins from the last 15 minutes so old map pins are not shown
-        const apiUrl = import.meta.env.VITE_API_URL + "/api/v1/MapPins?minutes=" + minutesOldFilter;
-        const response = await fetch(apiUrl, {
-            headers: {
-                'X-Api-Key': import.meta.env.VITE_API_KEY,  
-                'Content-Type': 'application/json' 
-            }
-        });
-        if (!response.ok) throw new Error('Failed to fetch map pins');
-
-        const { data: pins } = await response.json();
-        setMapPins(pins);
-    } catch (error) {
-        console.error('Error fetching map pins:', error);
-    }
-};
 
 const RailMap: React.FC = () => {
     // Use cached location if available, else fallbackCenter
@@ -175,20 +29,18 @@ const RailMap: React.FC = () => {
     // Set zoom to 11 if cached location exists, else 7
     const [mapZoom, setMapZoom] = useState<number>(cachedLocation ? 11 : 7);
 
-    const [trackData, setTracksData] = useState<GeoJSON.GeoJsonObject | null>(null);
-    const [beaconPins, setBeacons] = useState<Beacon[]>([]);
-    const [mapPins, setMapPins] = useState<MapPin[]>([]);
+    // Use custom hooks for data
+    const { trackData, trackDataLoaded } = useRailways();
+    const { beacons, beaconsLoaded, setBeacons } = useBeacons();
+    const { mapPins, setMapPins } = useTelemetryPins();
 
-    // Track loading state for each data set
-    const [trackDataLoaded, setTrackDataLoaded] = useState(false);
-    const [beaconsLoaded, setBeaconsLoaded] = useState(false);
-
+    // SignalR updates
     useSignalR({
         MapPinUpdate: (mapPin: MapPin) => {
-            setMapPins(mapPins => updateMapPins(mapPins, mapPin));
+            setMapPins((prevPins: MapPin[]) => updateMapPins(prevPins, mapPin));
         },
         BeaconUpdate: (beacon: Beacon) => {
-            setBeacons(beacons => updateBeacon(beacons, beacon));  
+            setBeacons((prevBeacons: Beacon[]) => updateBeacon(prevBeacons, beacon));
         }
     });
 
@@ -321,9 +173,7 @@ const RailMap: React.FC = () => {
         );
 
         // Chain loading: tracks -> beacons -> telemetry
-        fetchRailways(setTracksData, setTrackDataLoaded)
-            .then(() => fetchBeacons(setBeacons, setBeaconsLoaded))
-            .then(() => fetchInitialTelemetryPins(setMapPins));
+        // Removed old fetch/set state functions, using hooks instead
     }, []);
 
     useEffect(() => {
@@ -405,9 +255,9 @@ const RailMap: React.FC = () => {
     useEffect(() => {
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible') {
-                fetchRailways(setTracksData, setTrackDataLoaded)
-                    .then(() => fetchBeacons(setBeacons, setBeaconsLoaded))
-                    .then(() => fetchInitialTelemetryPins(setMapPins));
+                // fetchRailways(setTracksData, setTrackDataLoaded)
+                //     .then(() => fetchBeacons(setBeacons, setBeaconsLoaded))
+                //     .then(() => fetchInitialTelemetryPins(setMapPins));
             }
         };
         document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -450,7 +300,7 @@ const RailMap: React.FC = () => {
                 />}
 
             {/* Beacon markers */}
-            {trackDataLoaded && <BeaconMarkers pins={beaconPins} zoom={mapZoom} />}
+            {trackDataLoaded && <BeaconMarkers pins={beacons} zoom={mapZoom} />}
 
             {/* Telemetry markers */}
             {trackDataLoaded && beaconsLoaded && <TelemetryMarkers
@@ -462,40 +312,5 @@ const RailMap: React.FC = () => {
         </MapContainer>
     );
 };
-
-function updateMapPins(pins: MapPin[], newPin: MapPin): MapPin[] {
-    const existingIndex = pins.findIndex(
-        (mapPin) =>
-            Array.isArray(mapPin.addresses) &&
-            mapPin.addresses.some(addr1 =>
-                Array.isArray(newPin.addresses) &&
-                newPin.addresses.some(addr2 =>
-                    addr1.addressID === addr2.addressID && addr1.source === addr2.source
-                )
-            )
-    );
-
-    if (existingIndex !== -1) {
-        // Remove the existing map pin with the same address value
-        pins.splice(existingIndex, 1);
-    }
-
-    // Add the new pin to the array
-    return [...pins, newPin];
-}
-
-function updateBeacon(beacons: Beacon[], updatedBeacon: Beacon): Beacon[] {
-    const existingIndex = beacons.findIndex(
-        (beacon) => beacon.beaconID === updatedBeacon.beaconID && beacon.railroadID === updatedBeacon.railroadID
-    );
-
-    if (existingIndex !== -1) {
-        // Remove the existing map pin with the same addressID
-        beacons.splice(existingIndex, 1);
-    }
-
-    // Add the new pin to the array
-    return [...beacons, updatedBeacon];
-}
 
 export default RailMap;
