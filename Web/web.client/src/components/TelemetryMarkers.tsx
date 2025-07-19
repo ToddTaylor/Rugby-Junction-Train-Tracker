@@ -13,7 +13,12 @@ interface TelemetryMarkersProps {
     maxPinAgeMinutes: number;
 }
 
-function TelemetryMarkers({ pins: telemetryPins, zoom, maxPinAgeMinutes }: TelemetryMarkersProps) {
+const TelemetryMarkers: React.FC<TelemetryMarkersProps & { mapTheme: 'dark' | 'light' }> = ({
+    pins: telemetryPins,
+    zoom,
+    maxPinAgeMinutes,
+    mapTheme,
+}) => {
     const size = getMarkerSize(zoom);
 
     // Fix: Only render if pins is an object and has values
@@ -30,11 +35,12 @@ function TelemetryMarkers({ pins: telemetryPins, zoom, maxPinAgeMinutes }: Telem
                         pin={telemetryPin}
                         size={size}
                         maxPinAgeMinutes={maxPinAgeMinutes}
+                        mapTheme={mapTheme}
                     />
                 ) : null
             )}
         </>
     );
-}
+};
 
 export default TelemetryMarkers;

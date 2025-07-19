@@ -223,7 +223,7 @@ const RailMap: React.FC = () => {
     useEffect(() => {
         let wakeLock: any = null;
 
-        async function requestWakeLock() {
+        async function requestWakeLockAndLocation() {
             try {
                 if ('wakeLock' in navigator) {
                     // @ts-ignore
@@ -236,14 +236,21 @@ const RailMap: React.FC = () => {
             } catch (err) {
                 console.error('Error acquiring wake lock:', err);
             }
+            // Use cached location logic as on page load
+            const cachedLocation = getCachedLocation();
+            if (cachedLocation) {
+                setUserLocation(cachedLocation);
+            } else {
+                setUserLocation(fallbackCenter);
+            }
         }
 
-        requestWakeLock();
+        requestWakeLockAndLocation();
 
         // Re-acquire wake lock if the page becomes visible again
         const handleVisibilityChange = () => {
             if (wakeLock !== null && document.visibilityState === 'visible') {
-                requestWakeLock();
+                requestWakeLockAndLocation();
             }
         };
         document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -368,6 +375,7 @@ const RailMap: React.FC = () => {
                     pins={telemetryPins}
                     zoom={mapZoom}
                     maxPinAgeMinutes={MAX_PIN_AGE_MINUTES}
+                    mapTheme={mapTheme as 'dark' | 'light'}
                 />}
 
             </MapContainer>

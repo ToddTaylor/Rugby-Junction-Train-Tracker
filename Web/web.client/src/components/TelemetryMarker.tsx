@@ -54,7 +54,7 @@ const formatDirection = (dir?: string): string => {
     return map[dir.toUpperCase()] || 'Unknown Direction';
 };
 
-const TelemetryMarker: React.FC<TelemetryMarkerProps> = ({ pin, size, maxPinAgeMinutes }) => {
+const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'light' }> = ({ pin, size, maxPinAgeMinutes, mapTheme }) => {
     const markerRef = useRef<L.Marker>(null);
     const [brightness, setBrightness] = useState(() =>
         getPinBrightness(pin.lastUpdate, pin.addresses, maxPinAgeMinutes)
@@ -157,7 +157,7 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps> = ({ pin, size, maxPinAgeM
 
     // Use ArrowMapPin as the icon, with rotation and border color
     const createCustomIcon = () => {
-        const iconSrc = getArrowIconSrc(pin.direction, pin.moving != null ? !!pin.moving : undefined);
+        const iconSrc = getArrowIconSrc(pin.direction, pin.moving != null ? !!pin.moving : undefined, mapTheme);
 
         if (!pin.direction) {
             return L.divIcon({
@@ -204,19 +204,20 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps> = ({ pin, size, maxPinAgeM
     );
 };
 
-function getArrowIconSrc(direction?: string, moving?: boolean): string {
+function getArrowIconSrc(direction?: string, moving?: boolean, mapTheme: 'dark' | 'light' = 'dark'): string {
+    const suffix = mapTheme === 'dark' ? '-dark' : '-light';
     const cacheBuster = import.meta.env.VITE_APP_VERSION
         ? `?v=${import.meta.env.VITE_APP_VERSION}`
         : `?t=${Date.now()}`; // fallback to timestamp if version not set
 
     if (!direction) {
-        if (moving === true) return `/icons/unknown-green.svg${cacheBuster}`;
-        if (moving === false) return `/icons/unknown-red.svg${cacheBuster}`;
-        return `/icons/unknown.svg${cacheBuster}`;
+        if (moving === true) return `/icons/unknown-green${suffix}.svg${cacheBuster}`;
+        if (moving === false) return `/icons/unknown-red${suffix}.svg${cacheBuster}`;
+        return `/icons/unknown${suffix}.svg${cacheBuster}`;
     }
-    if (moving === true) return `/icons/arrow-green.svg${cacheBuster}`;
-    if (moving === false) return `/icons/arrow-red.svg${cacheBuster}`;
-    return `/icons/arrow.svg${cacheBuster}`;
+    if (moving === true) return `/icons/arrow-green${suffix}.svg${cacheBuster}`;
+    if (moving === false) return `/icons/arrow-red${suffix}.svg${cacheBuster}`;
+    return `/icons/arrow${suffix}.svg${cacheBuster}`;
 }
 
 function getRotation(direction?: string): number {
