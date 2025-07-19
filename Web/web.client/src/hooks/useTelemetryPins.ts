@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { MapPin } from '../types/types';
+import { MapPin } from '../types/MapPin';
 
 export function useTelemetryPins() {
   const [mapPins, setMapPins] = useState<MapPin[]>([]);

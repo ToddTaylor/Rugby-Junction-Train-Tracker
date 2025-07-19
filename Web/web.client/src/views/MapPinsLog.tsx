@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import '../App.css';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { Box, Typography } from '@mui/material';
-import { MapPin } from "../types/types";
+import { MapPin } from '../types/MapPin';
 import { format, parseISO } from "date-fns";
 
 function MapPinsLog() {

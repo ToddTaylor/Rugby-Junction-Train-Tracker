@@ -1,4 +1,5 @@
-import { MapPin, Beacon } from '../types/types';
+import { Beacon } from "../types/Beacon";
+import { MapPin } from "../types/MapPin";
 
 export function updateMapPins(pins: MapPin[], newPin: MapPin): MapPin[] {
     const existingIndex = pins.findIndex(

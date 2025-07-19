@@ -1,5 +1,4 @@
 import { openDB } from 'idb';
-import { Beacon, MapPin } from '../types/types';
 
 const DB_VERSION = 2;
 

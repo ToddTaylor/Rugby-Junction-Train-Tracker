@@ -1,4 +1,4 @@
-import { MapPin } from '../types/types';
+import { MapPin } from '../types/MapPin';
 import TelemetryMarker from './TelemetryMarker';
 
 // Add dynamic marker sizing based on zoom

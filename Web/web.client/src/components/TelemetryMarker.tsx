@@ -1,13 +1,13 @@
 import { Marker } from 'react-leaflet';
 import L from 'leaflet';
 import { useEffect, useRef, useState } from 'react';
-import { MapPin } from '../types/types';
 import { parseISO } from 'date-fns/parseISO';
 import { format } from 'date-fns';
 import { getTrackedMapPins, addTrackedMapPin, removeTrackedMapPin, getTrackedColor } from '../services/trackedPins';
 import ReactDOMServer from 'react-dom/server';
 import { ArrowIcon } from './ArrowIcon'; // adjust import as needed
 import { UnknownIcon } from './UnknownIcon'; 
+import { MapPin } from '../types/MapPin';
 
 function getPinBrightness(lastUpdate: string, addresses?: { source: string }[], maxPinAgeMinutes?: number): number {
     const now = new Date();

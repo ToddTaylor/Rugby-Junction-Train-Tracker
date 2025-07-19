@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { openDB } from 'idb';
-import { Beacon } from '../types/types';
+import { Beacon } from '../types/Beacon';
 
 export function useBeacons() {
   const [beacons, setBeacons] = useState<Beacon[]>([]);

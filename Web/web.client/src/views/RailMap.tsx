@@ -8,7 +8,8 @@ import {
 import { LatLngTuple, Map as LeafletMap } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useSignalR } from '../hooks/useSignalR';
-import { Beacon, MapPin as MapPin } from '../types/types';
+import { Beacon } from '../types/Beacon';
+import { MapPin } from '../types/MapPin';
 import BeaconMarkers from '../components/BeaconMarkers';
 import TelemetryMarkers from '../components/TelemetryMarkers';
 import { getTrackedMapPins } from '../services/trackedPins';

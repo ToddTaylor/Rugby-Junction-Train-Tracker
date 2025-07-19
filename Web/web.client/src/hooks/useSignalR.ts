@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import * as signalR from "@microsoft/signalr";
-import { MapPin, Beacon } from "../types/types";
+import { MapPin } from "../types/MapPin";
+import { Beacon } from "../types/Beacon";
 
 const beaconUpdateMethodName = "BeaconUpdate";
 const mapPinUpdateMethodName = "MapPinUpdate";

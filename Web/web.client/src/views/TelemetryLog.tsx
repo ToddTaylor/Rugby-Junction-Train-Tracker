@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import '../App.css';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { Box, Typography, TextField } from '@mui/material';
-import { Telemetry } from "../types/types";
+import { Telemetry } from '../types/Telemetry';
 import { format, parseISO } from "date-fns";
 
 function TelemetryLog() {
