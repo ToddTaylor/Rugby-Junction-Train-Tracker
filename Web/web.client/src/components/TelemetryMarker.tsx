@@ -102,9 +102,14 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
                 .join('');
         }
 
+        // Add a unique id to the trackText span for event delegation
+        const trackTextId = `track-text-${pin.id}`;
+        const trackingIcon = isTracked
+            ? `<img src='/icons/tracking-on.svg' alt='Tracking' style='height:16px;width:16px;vertical-align:middle;margin-right:6px;' />`
+            : `<img src='/icons/tracking-off.svg' alt='Not Tracking' style='height:16px;width:16px;vertical-align:middle;margin-right:6px;' />`;
         const trackText = isTracked
-            ? '▼ Click pin to untrack ▼'
-            : '▼ Click pin to track ▼';
+            ? 'Tracking'
+            : 'Not Tracking';
 
         const popupContent = `
             ${pin.railroad?.trim() ? `<strong>${pin.railroad} ${pin.subdivision + ' Sub' || ''}</strong><br/>` : ''}
@@ -113,30 +118,28 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
             ${pin.moving === true ? "Moving<br/>" : pin.moving === false ? "Not Moving<br/>" : ''}
             ${format(parseISO(pin.lastUpdate), 'h:mm aa')}<br/>
             ${addressLines}
-            <span>${trackText}</span>
+            <span id='${trackTextId}' style='cursor:pointer;text-decoration:underline;color:#007bff;display:inline-flex;align-items:center;'>${trackingIcon}${trackText}</span>
         `;
 
         marker.bindPopup(popupContent);
 
-        marker.on('mouseover', function () {
-            marker.openPopup();
-        });
-        marker.on('mouseout', function () {
-            marker.closePopup();
-        });
-
-        return () => {
-            marker.off('mouseover');
-            marker.off('mouseout');
+        let popupOpen = false;
+        const handleMarkerClick = () => {
+            if (popupOpen) {
+                marker.closePopup();
+                popupOpen = false;
+            } else {
+                marker.openPopup();
+                popupOpen = true;
+            }
         };
-    }, [pin, brightness, isTracked]);
+        marker.on('click', handleMarkerClick);
 
-    // Handle click on the marker to track/untrack
-    useEffect(() => {
-        const marker = markerRef.current;
-        if (!marker) return;
-
-        const handleClick = () => {
+        // Attach click handler to trackText in popup DOM on popupopen, and re-attach if popup content changes
+        let trackTextEl: HTMLElement | null = null;
+        let observer: MutationObserver | null = null;
+        const handleTrackTextClick = (e: any) => {
+            e.preventDefault();
             if (isTracked) {
                 removeTrackedMapPin(String(pin.id));
                 setIsTracked(false);
@@ -146,14 +149,56 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
                 setIsTracked(true);
                 setTrackColor(getTrackedColor(String(pin.id)));
             }
+            setTimeout(() => {
+                marker.closePopup();
+                marker.openPopup();
+                popupOpen = true;
+            }, 0);
         };
-
-        marker.on('click', handleClick);
+        const attachHandler = () => {
+            trackTextEl = document.getElementById(trackTextId);
+            if (trackTextEl) {
+                trackTextEl.addEventListener('click', handleTrackTextClick);
+            }
+        };
+        const detachHandler = () => {
+            if (trackTextEl) {
+                trackTextEl.removeEventListener('click', handleTrackTextClick);
+                trackTextEl = null;
+            }
+        };
+        const onPopupOpen = () => {
+            attachHandler();
+            // Watch for popup content changes and re-attach handler
+            const popupNode = document.querySelector('.leaflet-popup-content');
+            if (popupNode) {
+                observer = new MutationObserver(() => {
+                    detachHandler();
+                    attachHandler();
+                });
+                observer.observe(popupNode, { childList: true, subtree: true });
+            }
+        };
+        const onPopupClose = () => {
+            detachHandler();
+            if (observer) {
+                observer.disconnect();
+                observer = null;
+            }
+        };
+        marker.on('popupopen', onPopupOpen);
+        marker.on('popupclose', onPopupClose);
 
         return () => {
-            marker.off('click', handleClick);
+            marker.off('click', handleMarkerClick);
+            marker.off('popupopen', onPopupOpen);
+            marker.off('popupclose', onPopupClose);
+            detachHandler();
+            if (observer) {
+                observer.disconnect();
+            }
         };
-    }, [isTracked, pin.id]);
+    }, [pin, brightness, isTracked]);
 
     // Use ArrowMapPin as the icon, with rotation and border color
     const createCustomIcon = () => {
