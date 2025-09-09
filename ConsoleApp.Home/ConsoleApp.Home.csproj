@@ -5,10 +5,11 @@
 		<TargetFramework>net9.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
+		<UserSecretsId>3071d849-8c6d-4086-a4f0-3003d2e1f7a7</UserSecretsId>
 	</PropertyGroup>
 
 	<PropertyGroup>
-		<AssemblyName>RugbyJunctionTrainTracker</AssemblyName>
+		<AssemblyName>RugbyJunctionTrainTracker.Home</AssemblyName>
 	</PropertyGroup>
 
 	<ItemGroup>
