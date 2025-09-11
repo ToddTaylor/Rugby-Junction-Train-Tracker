@@ -42,7 +42,7 @@ namespace Services.Subscribers.LiveTrainTrackingAPI
         {
             try
             {
-                return base._configuration.GetValue<string>("Subscribers:0:Beacon:BeaconID");
+                return base._configuration.GetValue<string>("Subscribers:1:Beacon:BeaconID");
             }
             catch (Exception ex)
             {

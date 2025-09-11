@@ -40,7 +40,7 @@ namespace Services.Subscribers.RugbyJunctionAPI
         {
             try
             {
-                return base._configuration.GetValue<int>("Subscribers:1:Beacon:BeaconID");
+                return base._configuration.GetValue<int>("Subscribers:0:Beacon:BeaconID");
             }
             catch (Exception ex)
             {

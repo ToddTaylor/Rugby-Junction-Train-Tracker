@@ -1,5 +1,5 @@
-using Services.EventArgs;
 using Microsoft.Extensions.Configuration;
+using Services.EventArgs;
 
 namespace Services.Subscribers.LiveTrainTrackingAPI
 {
@@ -21,8 +21,8 @@ namespace Services.Subscribers.LiveTrainTrackingAPI
             var alert = new Telemetry
             {
                 AddressID = int.Parse(e.Packet.ID),
-                BeaconID = configuration.GetValue<string>("Subscribers:0:Beacon:BeaconID"),
-                Detector = configuration.GetValue<string>("Subscribers:0:Beacon:DetectorID"),
+                BeaconID = configuration.GetValue<string>("Subscribers:1:Beacon:BeaconID"),
+                Detector = configuration.GetValue<string>("Subscribers:1:Beacon:DetectorID"),
                 Motion = (e.Packet.MOT.HasValue) ? Convert.ToBoolean(e.Packet.MOT) : null,
                 Source = e.Packet.SRC,
                 TrainID = null

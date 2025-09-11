@@ -16,8 +16,8 @@ namespace Services.Subscribers.LiveTrainTrackingAPI
 
             _configuration = ConfigurationHelper.LoadConfiguration();
 
-            _beaconID = _configuration.GetValue<string>("Subscribers:0:ID");
-            _healthPingIntervalMinutes = _configuration.GetValue<int>("Subscribers:0:Beacon:HealthPingIntervalMinutes", 15);
+            _beaconID = _configuration.GetValue<string>("Subscribers:1:ID");
+            _healthPingIntervalMinutes = _configuration.GetValue<int>("Subscribers:1:Beacon:HealthPingIntervalMinutes", 15);
         }
 
         public void Start()

@@ -18,7 +18,7 @@ namespace Services.Subscribers.LiveTrainTrackingAPI
         {
             try
             {
-                return _configuration.GetValue<string>("Subscribers:0:ApiSettings:ApiKey");
+                return _configuration.GetValue<string>("Subscribers:1:ApiSettings:ApiKey");
             }
             catch (Exception ex)
             {
@@ -31,7 +31,7 @@ namespace Services.Subscribers.LiveTrainTrackingAPI
         {
             try
             {
-                return _configuration.GetValue<string>("Subscribers:0:ApiSettings:HealthUrl");
+                return _configuration.GetValue<string>("Subscribers:1:ApiSettings:HealthUrl");
             }
             catch (Exception ex)
             {
@@ -44,7 +44,7 @@ namespace Services.Subscribers.LiveTrainTrackingAPI
         {
             try
             {
-                return _configuration.GetValue<string>("Subscribers:0:ApiSettings:TelemetryUrl");
+                return _configuration.GetValue<string>("Subscribers:1:ApiSettings:TelemetryUrl");
             }
             catch (Exception ex)
             {

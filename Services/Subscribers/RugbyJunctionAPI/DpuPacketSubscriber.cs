@@ -1,6 +1,6 @@
+using Microsoft.Extensions.Configuration;
 using Services.EventArgs;
 using Services.Models;
-using Microsoft.Extensions.Configuration;
 
 namespace Services.Subscribers.RugbyJunctionAPI
 {
@@ -21,7 +21,7 @@ namespace Services.Subscribers.RugbyJunctionAPI
 
             var alert = new Telemetry
             {
-                BeaconID = configuration.GetValue<int>("Subscribers:1:Beacon:BeaconID"),
+                BeaconID = configuration.GetValue<int>("Subscribers:0:Beacon:BeaconID"),
                 AddressID = int.Parse(e.Packet.ADDR),
                 TrainID = int.Parse(e.Packet.TRID),
                 Moving = this.IsMoving(e.Packet),

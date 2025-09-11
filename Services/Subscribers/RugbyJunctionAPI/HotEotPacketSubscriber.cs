@@ -1,5 +1,5 @@
-using Services.EventArgs;
 using Microsoft.Extensions.Configuration;
+using Services.EventArgs;
 
 namespace Services.Subscribers.RugbyJunctionAPI
 {
@@ -20,7 +20,7 @@ namespace Services.Subscribers.RugbyJunctionAPI
 
             var alert = new Telemetry
             {
-                BeaconID = configuration.GetValue<int>("Subscribers:1:Beacon:BeaconID"),
+                BeaconID = configuration.GetValue<int>("Subscribers:0:Beacon:BeaconID"),
                 AddressID = int.Parse(e.Packet.ID),
                 TrainID = null,
                 Moving = (e.Packet.MOT.HasValue) ? Convert.ToBoolean(e.Packet.MOT) : null,

@@ -1,6 +1,6 @@
+using Microsoft.Extensions.Configuration;
 using Services.EventArgs;
 using Services.Models;
-using Microsoft.Extensions.Configuration;
 
 namespace Services.Subscribers.LiveTrainTrackingAPI
 {
@@ -22,8 +22,8 @@ namespace Services.Subscribers.LiveTrainTrackingAPI
             var alert = new Telemetry
             {
                 AddressID = int.Parse(e.Packet.ADDR),
-                BeaconID = configuration.GetValue<string>("Subscribers:0:Beacon:BeaconID"),
-                Detector = configuration.GetValue<string>("Subscribers:0:Beacon:DetectorID"),
+                BeaconID = configuration.GetValue<string>("Subscribers:1:Beacon:BeaconID"),
+                Detector = configuration.GetValue<string>("Subscribers:1:Beacon:DetectorID"),
                 Motion = IsMoving(e.Packet),
                 Source = "DPU",
                 TrainID = int.Parse(e.Packet.TRID),

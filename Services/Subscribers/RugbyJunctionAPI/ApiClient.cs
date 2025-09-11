@@ -18,7 +18,7 @@ namespace Services.Subscribers.RugbyJunctionAPI
         {
             try
             {
-                return _configuration.GetValue<string>("Subscribers:1:ApiSettings:ApiKey");
+                return _configuration.GetValue<string>("Subscribers:0:ApiSettings:ApiKey");
             }
             catch (Exception ex)
             {
@@ -31,7 +31,7 @@ namespace Services.Subscribers.RugbyJunctionAPI
         {
             try
             {
-                return _configuration.GetValue<string>("Subscribers:1:ApiSettings:Url");
+                return _configuration.GetValue<string>("Subscribers:0:ApiSettings:Url");
             }
             catch (Exception ex)
             {
