@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Configuration;
 using Services.EventArgs;
 using Services.Models;
 
@@ -6,30 +5,33 @@ namespace Services.Subscribers.LiveTrainTrackingAPI
 {
     public class DpuPacketSubscriber
     {
-        private readonly IConfiguration configuration;
+        private readonly AppSettings _appSettings;
+        private readonly Subscriber _subscriber;
 
-        public DpuPacketSubscriber()
+        public DpuPacketSubscriber(AppSettings appSettings)
         {
-            configuration = ConfigurationHelper.LoadConfiguration();
+            _appSettings = appSettings;
+            _subscriber = appSettings.Subscribers
+                .First(s => s.ID == Constants.SUBSCRIBER_ID);
         }
 
         private void OnDpuPacketReceived(object sender, DpuPacketEventArgs e)
         {
-            var sendInvalidMessages = configuration.GetValue<bool>("SendInvalidMessages");
+            var sendInvalidMessages = _subscriber.SendInvalidMessages;
 
             if (sendInvalidMessages == false && e.Packet.ADDR == "INV") { return; }
 
             var alert = new Telemetry
             {
                 AddressID = int.Parse(e.Packet.ADDR),
-                BeaconID = configuration.GetValue<string>("Subscribers:1:Beacon:BeaconID"),
-                Detector = configuration.GetValue<string>("Subscribers:1:Beacon:DetectorID"),
+                BeaconID = _subscriber.Beacon.BeaconID,
+                Detector = _subscriber.Beacon.DetectorID,
                 Motion = IsMoving(e.Packet),
                 Source = "DPU",
                 TrainID = int.Parse(e.Packet.TRID),
             };
 
-            var apiClient = new TelemetryApiClient();
+            var apiClient = new TelemetryApiClient(_appSettings);
             apiClient.SendTelemetryAsync(alert).GetAwaiter().GetResult();
 
             // Let web page respond to previous request before sending the next one.

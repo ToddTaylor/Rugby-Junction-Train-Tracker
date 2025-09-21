@@ -1,11 +1,16 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using Services.Models;
 
 namespace Services.Subscribers.RugbyJunctionAPI
 {
     public class BeaconApiClient : ApiClient
     {
-        public BeaconApiClient() : base()
+        private readonly Beacon _beacon;
+
+        public BeaconApiClient(AppSettings appSettings) : base(appSettings)
         {
+            _beacon = appSettings.Subscribers
+                .First(s => s.ID == Constants.SUBSCRIBER_ID)
+                .Beacon;
         }
 
         public async Task SendBeaconHealthAsync()
@@ -36,11 +41,11 @@ namespace Services.Subscribers.RugbyJunctionAPI
             }
         }
 
-        protected int? GetBeaconID()
+        protected string? GetBeaconID()
         {
             try
             {
-                return base._configuration.GetValue<int>("Subscribers:0:Beacon:BeaconID");
+                return _beacon.BeaconID;
             }
             catch (Exception ex)
             {

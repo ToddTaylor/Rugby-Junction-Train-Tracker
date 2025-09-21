@@ -1,6 +1,6 @@
-﻿using Microsoft.Extensions.Configuration;
-using Services.Deserializers;
+﻿using Services.Deserializers;
 using Services.EventArgs;
+using Services.Models;
 using System.Reflection;
 
 namespace Services
@@ -18,9 +18,9 @@ namespace Services
         public static event DpuPacketEventHandler DpuPacketReceived;
         public static event HotEotPacketEventHandler HotEotPacketReceived;
 
-        public static void ProcessLogs(IConfiguration? configuration)
+        public static void ProcessLogs(AppSettings appSettings)
         {
-            var logDirectoryPath = configuration.GetValue<string>("LogDirectoryPath");
+            var logDirectoryPath = appSettings.LogDirectoryPath;
 
             if (string.IsNullOrEmpty(logDirectoryPath) || !Directory.Exists(logDirectoryPath))
             {
@@ -28,15 +28,15 @@ namespace Services
                 return;
             }
 
-            DeleteOldLogFiles(configuration);
+            DeleteOldLogFiles(appSettings.LogDirectoryPath);
 
-            AddHotEotEventSubscribers(configuration);
+            AddHotEotEventSubscribers(appSettings);
 
-            AddDotEventSubscribers(configuration);
+            AddDpuEventSubscribers(appSettings);
 
             Console.WriteLine($"Telemetry Log Service started.  Processing messages posted with then last {TIME_RECEIVED_OFFSET_MINUTES} minutes...");
 
-            StartBeaconHealthServices(configuration);
+            StartBeaconHealthServices(appSettings);
 
             ProcessTelemetryLogFiles(logDirectoryPath);
 
@@ -66,40 +66,38 @@ namespace Services
             }
         }
 
-        private static void AddDotEventSubscribers(IConfiguration configuration)
+        private static void AddDpuEventSubscribers(AppSettings appsettings)
         {
-            var dotSubscriberTypes = configuration.GetSection("DpuPacketSubscription:Subscribers").Get<string[]>();
+            List<String> subscribers = appsettings.DpuPacketSubscription.Subscribers;
 
-            if (dotSubscriberTypes == null)
+            if (subscribers == null)
             {
                 LogError("No DPU subscribers found in the configuration.");
             }
 
-            foreach (var subscriberType in dotSubscriberTypes)
+            foreach (var subscriber in subscribers)
             {
-                SubscribeToPacketEvent(subscriberType, "DpuPacketReceived", "OnDpuPacketReceived");
+                SubscribeToPacketEvent(appsettings, subscriber, "DpuPacketReceived", "OnDpuPacketReceived");
             }
         }
 
-        private static void AddHotEotEventSubscribers(IConfiguration configuration)
+        private static void AddHotEotEventSubscribers(AppSettings appsettings)
         {
-            var hotEotSubscriberTypes = configuration.GetSection("HotEotPacketSubscription:Subscribers").Get<string[]>();
+            List<String> subscribers = appsettings.HotEotPacketSubscription.Subscribers;
 
-            if (hotEotSubscriberTypes == null)
+            if (subscribers == null)
             {
                 LogError("No HOT / EOT subscribers found in the configuration.");
             }
 
-            foreach (var subscriberType in hotEotSubscriberTypes)
+            foreach (var subscriber in subscribers)
             {
-                SubscribeToPacketEvent(subscriberType, "HotEotPacketReceived", "OnHotEotPacketReceived");
+                SubscribeToPacketEvent(appsettings, subscriber, "HotEotPacketReceived", "OnHotEotPacketReceived");
             }
         }
 
-        private static void DeleteOldLogFiles(IConfiguration configuration)
+        private static void DeleteOldLogFiles(String logDirectoryPath)
         {
-            var logDirectoryPath = configuration.GetValue<string>("LogDirectoryPath");
-
             if (string.IsNullOrEmpty(logDirectoryPath) || !Directory.Exists(logDirectoryPath))
             {
                 LogError("Log directory path is not valid.");
@@ -224,27 +222,27 @@ namespace Services
             // Event subscribers will implement this method.
         }
 
-        private static void StartBeaconHealthServices(IConfiguration configuration)
+        private static void StartBeaconHealthServices(AppSettings appSettings)
         {
-            var beaconHealthServiceTypes = configuration.GetSection("BeaconHealthServices:Services").Get<string[]>();
+            var services = appSettings.BeaconHealthServices.Services;
 
-            if (beaconHealthServiceTypes == null)
+            if (services == null || services.Count == 0)
             {
                 LogError("No beacon health services in the configuration.");
             }
 
-            foreach (var serviceType in beaconHealthServiceTypes)
+            foreach (var service in services)
             {
-                StartBeaconHealthService(serviceType, "Start");
+                StartBeaconHealthService(appSettings, service, "Start");
             }
         }
 
-        private static void StartBeaconHealthService(string serviceTypeName, string methodName)
+        private static void StartBeaconHealthService(AppSettings appsettings, string serviceTypeName, string methodName)
         {
             var type = Type.GetType(serviceTypeName);
             if (type != null)
             {
-                var service = Activator.CreateInstance(type);
+                var service = Activator.CreateInstance(type, appsettings);
                 if (service != null)
                 {
                     var methodInfo = type.GetMethod(methodName, BindingFlags.Public | BindingFlags.Instance);
@@ -260,12 +258,12 @@ namespace Services
             }
         }
 
-        private static void SubscribeToPacketEvent(string subscriberTypeName, string eventName, string methodName)
+        private static void SubscribeToPacketEvent(AppSettings appsettings, string subscriberTypeName, string eventName, string methodName)
         {
             var type = Type.GetType(subscriberTypeName);
             if (type != null)
             {
-                var subscriber = Activator.CreateInstance(type);
+                var subscriber = Activator.CreateInstance(type, appsettings);
                 if (subscriber != null)
                 {
                     var eventInfo = typeof(SoftEOTLogService).GetEvent(eventName);

@@ -1,23 +1,22 @@
-using Microsoft.Extensions.Configuration;
+using Services.Models;
 
 namespace Services.Subscribers.LiveTrainTrackingAPI
 {
     public class BeaconHealthService : IDisposable
     {
-        private readonly string? _beaconID;
         private readonly int _healthPingIntervalMinutes;
         private readonly BeaconApiClient _beaconApiClient;
-        private readonly IConfiguration _configuration;
+        private readonly Subscriber _subscriber;
         private Timer? _timer;
 
-        public BeaconHealthService()
+        public BeaconHealthService(AppSettings appSettings)
         {
-            _beaconApiClient = new BeaconApiClient();
+            _beaconApiClient = new BeaconApiClient(appSettings);
 
-            _configuration = ConfigurationHelper.LoadConfiguration();
+            _subscriber = appSettings.Subscribers
+                .First(s => s.ID == Constants.SUBSCRIBER_ID);
 
-            _beaconID = _configuration.GetValue<string>("Subscribers:1:ID");
-            _healthPingIntervalMinutes = _configuration.GetValue<int>("Subscribers:1:Beacon:HealthPingIntervalMinutes", 15);
+            _healthPingIntervalMinutes = _subscriber.Beacon.HealthPingIntervalMinutes;
         }
 
         public void Start()
@@ -34,13 +33,13 @@ namespace Services.Subscribers.LiveTrainTrackingAPI
                 await _beaconApiClient.SendBeaconHealthAsync();
 
                 Console.ForegroundColor = ConsoleColor.Blue;
-                Console.WriteLine($"[{_beaconID}] Beacon health sent at {DateTime.Now}");
+                Console.WriteLine($"[{Constants.SUBSCRIBER_ID}] Beacon health sent at {DateTime.Now}");
                 Console.ResetColor();
             }
             catch (Exception ex)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"[{_beaconID}] Error in beacon health service: {ex.Message}");
+                Console.WriteLine($"[{Constants.SUBSCRIBER_ID}] Error in beacon health service: {ex.Message}");
                 Console.ResetColor();
             }
         }

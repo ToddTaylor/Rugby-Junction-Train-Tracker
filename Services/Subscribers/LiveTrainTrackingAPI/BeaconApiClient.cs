@@ -1,11 +1,16 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using Services.Models;
 
 namespace Services.Subscribers.LiveTrainTrackingAPI
 {
     public class BeaconApiClient : ApiClient
     {
-        public BeaconApiClient() : base()
+        private readonly Beacon _beacon;
+
+        public BeaconApiClient(AppSettings appSettings) : base(appSettings)
         {
+            _beacon = appSettings.Subscribers
+                .First(s => s.ID == Constants.SUBSCRIBER_ID)
+                .Beacon;
         }
 
         public async Task SendBeaconHealthAsync()
@@ -42,7 +47,7 @@ namespace Services.Subscribers.LiveTrainTrackingAPI
         {
             try
             {
-                return base._configuration.GetValue<string>("Subscribers:1:Beacon:BeaconID");
+                return _beacon.BeaconID;
             }
             catch (Exception ex)
             {

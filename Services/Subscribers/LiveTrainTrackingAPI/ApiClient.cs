@@ -1,24 +1,25 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using Services.Models;
 
 namespace Services.Subscribers.LiveTrainTrackingAPI
 {
     public class ApiClient
     {
         protected readonly HttpClient _httpClient;
+        private readonly ApiSettings _apiSettings;
 
-        protected readonly IConfiguration _configuration;
-
-        public ApiClient()
+        public ApiClient(AppSettings appSettings)
         {
             _httpClient = new HttpClient();
-            _configuration = ConfigurationHelper.LoadConfiguration();
+            _apiSettings = appSettings.Subscribers
+                .First(s => s.ID == Constants.SUBSCRIBER_ID)
+                .ApiSettings;
         }
 
         protected string? GetApiKey()
         {
             try
             {
-                return _configuration.GetValue<string>("Subscribers:1:ApiSettings:ApiKey");
+                return _apiSettings.ApiKey;
             }
             catch (Exception ex)
             {
@@ -31,7 +32,7 @@ namespace Services.Subscribers.LiveTrainTrackingAPI
         {
             try
             {
-                return _configuration.GetValue<string>("Subscribers:1:ApiSettings:HealthUrl");
+                return _apiSettings.HealthUrl; ;
             }
             catch (Exception ex)
             {
@@ -44,7 +45,7 @@ namespace Services.Subscribers.LiveTrainTrackingAPI
         {
             try
             {
-                return _configuration.GetValue<string>("Subscribers:1:ApiSettings:TelemetryUrl");
+                return _apiSettings.Url;
             }
             catch (Exception ex)
             {

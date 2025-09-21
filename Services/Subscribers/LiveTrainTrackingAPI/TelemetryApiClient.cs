@@ -1,10 +1,11 @@
-﻿using System.Net.Http.Json;
+﻿using Services.Models;
+using System.Net.Http.Json;
 
 namespace Services.Subscribers.LiveTrainTrackingAPI
 {
     public class TelemetryApiClient : ApiClient
     {
-        public TelemetryApiClient() : base()
+        public TelemetryApiClient(AppSettings appSettings) : base(appSettings)
         {
         }
 

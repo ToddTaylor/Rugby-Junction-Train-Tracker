@@ -1,29 +1,26 @@
-using Microsoft.Extensions.Configuration;
+using Services.Models;
 
 namespace Services.Subscribers.RugbyJunctionAPI
 {
     public class BeaconHealthService : IDisposable
     {
-        private readonly string? _beaconID;
-        private readonly int _healthPingIntervalMinutes;
         private readonly BeaconApiClient _beaconApiClient;
-        private readonly IConfiguration _configuration;
+        private readonly Subscriber _subscriber;
         private Timer? _timer;
 
-        public BeaconHealthService()
+        public BeaconHealthService(AppSettings appSettings)
         {
-            _beaconApiClient = new BeaconApiClient();
+            _beaconApiClient = new BeaconApiClient(appSettings);
 
-            _configuration = ConfigurationHelper.LoadConfiguration();
-
-            _beaconID = _configuration.GetValue<string>("Subscribers:0:ID");
-            _healthPingIntervalMinutes = _configuration.GetValue<int>("Subscribers:0:Beacon:HealthPingIntervalMinutes", 15);
+            _subscriber = appSettings.Subscribers
+                .First(s => s.ID == Constants.SUBSCRIBER_ID);
         }
 
         public void Start()
         {
             // Call immediately, then every configured interval
-            _timer = new Timer(async _ => await SendHealthAsync(), null, TimeSpan.Zero, TimeSpan.FromMinutes(_healthPingIntervalMinutes));
+            int healthPingIntervalMinutes = _subscriber.Beacon.HealthPingIntervalMinutes;
+            _timer = new Timer(async _ => await SendHealthAsync(), null, TimeSpan.Zero, TimeSpan.FromMinutes(healthPingIntervalMinutes));
         }
 
         private async Task SendHealthAsync()
@@ -33,13 +30,13 @@ namespace Services.Subscribers.RugbyJunctionAPI
                 await _beaconApiClient.SendBeaconHealthAsync();
 
                 Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine($"[{_beaconID}] Beacon health sent at {DateTime.Now}");
+                Console.WriteLine($"[{_subscriber.ID}] Beacon health sent at {DateTime.Now}");
                 Console.ResetColor();
             }
             catch (Exception ex)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"[{_beaconID}] Error in beacon health service: {ex.Message}");
+                Console.WriteLine($"[{_subscriber.ID}] Error in beacon health service: {ex.Message}");
                 Console.ResetColor();
             }
         }

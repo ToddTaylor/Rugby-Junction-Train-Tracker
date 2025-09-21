@@ -20,12 +20,13 @@ namespace Services.Models
     public class ApiSettings
     {
         public string ApiKey { get; set; } = string.Empty;
+        public string? HealthUrl { get; set; }
         public string? Url { get; set; }
     }
 
     public class Beacon
     {
-        public int? BeaconID { get; set; }
+        public string? BeaconID { get; set; }
         public string? DetectorID { get; set; }
         public int HealthPingIntervalMinutes { get; set; }
     }

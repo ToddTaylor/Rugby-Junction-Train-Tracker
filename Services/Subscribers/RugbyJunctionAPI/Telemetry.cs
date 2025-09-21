@@ -9,7 +9,7 @@ namespace Services.Subscribers.RugbyJunctionAPI
         /// </summary>
         [JsonPropertyName("BeaconID")]
         [JsonRequired]
-        public required int BeaconID { get; set; }
+        public required string BeaconID { get; set; }
 
         /// <summary>
         /// ID for HOT and EOT, ADDR for DPU telemetry.
