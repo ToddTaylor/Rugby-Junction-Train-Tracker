@@ -358,7 +358,13 @@ const RailMap: React.FC = () => {
 
                             let color = 'gray';
                             let weight = 1;
-                            if (name === 'CN Waukesha Subdivision') {
+                            const highlightSubs = [
+                                'CN Waukesha Subdivision',
+                                'Neenah Subdivision',
+                                'Superior Subdivision'
+                                // Add more subdivision names here as needed
+                            ];
+                            if (highlightSubs.includes(name)) {
                                 color = '#005aa9';
                                 weight = 4;
                             }
