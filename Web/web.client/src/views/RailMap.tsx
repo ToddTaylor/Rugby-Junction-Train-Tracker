@@ -13,7 +13,7 @@ import { MapPin } from '../types/MapPin';
 import BeaconMarkers from '../components/BeaconMarkers';
 import TelemetryMarkers from '../components/TelemetryMarkers';
 import { getTrackedMapPins } from '../services/trackedPins';
-import { getCachedLocation, metersToLongitudeDegrees, pixelsToMeters } from '../utils/geo';
+import { metersToLongitudeDegrees, pixelsToMeters } from '../utils/geo';
 import { updateMapPins, updateBeacon } from '../utils/updateHelpers';
 import { useRailways } from '../hooks/useRailways';
 import { useBeacons } from '../hooks/useBeacons';
@@ -26,13 +26,10 @@ const TILE_ATTRIBUTION = '&copy; <a href="https://carto.com/">CARTO</a>';
 const fallbackCenter: LatLngTuple = [44.524570, -89.567290]; // Default if location fails
 
 const RailMap: React.FC = () => {
-    // Use cached location if available, else fallbackCenter
-    const cachedLocation = getCachedLocation();
-    const [userLocation, setUserLocation] = useState<LatLngTuple | null>(
-        cachedLocation || fallbackCenter
-    );
-    // Set zoom to 11 if cached location exists, else 7
-    const [mapZoom, setMapZoom] = useState<number>(cachedLocation ? 11 : 7);
+    // Use cached location and zoom if available, else fallbackCenter and default zoom
+    const savedMapState = JSON.parse(localStorage.getItem('mapState') || 'null');
+    const [mapZoom, setMapZoom] = useState<number>(savedMapState?.zoom || 7);
+    const [mapCenter, setMapCenter] = useState<LatLngTuple>(savedMapState?.center || fallbackCenter);
 
     // Use custom hooks for data
     const { trackData, trackDataLoaded } = useRailways();
@@ -160,28 +157,6 @@ const RailMap: React.FC = () => {
     const mapRef = useRef<LeafletMap | null>(null);
 
     useEffect(() => {
-        // Get browser location
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                const coords: LatLngTuple = [position.coords.latitude, position.coords.longitude];
-                setUserLocation(coords);
-                // Cache the location in localStorage
-                localStorage.setItem('cachedUserLocation', JSON.stringify(coords));
-            },
-            (error) => {
-                console.warn('Geolocation error:', error);
-                // Only use fallbackCenter if there is no cached location
-                if (!getCachedLocation()) {
-                    setUserLocation(fallbackCenter);
-                }
-            }
-        );
-
-        // Chain loading: tracks -> beacons -> telemetry
-        // Removed old fetch/set state functions, using hooks instead
-    }, []);
-
-    useEffect(() => {
         if (!mapRef.current) return;
         const map = mapRef.current;
 
@@ -193,24 +168,32 @@ const RailMap: React.FC = () => {
         if (telemetryPane && telemetryPane.parentNode) telemetryPane.parentNode.removeChild(telemetryPane);
 
         map.createPane('beaconPane');
-        map.getPane('beaconPane')!.style.zIndex = '400';
+        const beaconPaneCreated = map.getPane('beaconPane');
+        if (beaconPaneCreated) beaconPaneCreated.style.zIndex = '400';
 
         map.createPane('telemetryPane');
-        map.getPane('telemetryPane')!.style.zIndex = '500';
+        const telemetryPaneCreated = map.getPane('telemetryPane');
+        if (telemetryPaneCreated) telemetryPaneCreated.style.zIndex = '500';
     }, [mapRef.current]);
 
-    // Pan/zoom to userLocation when it changes and map is ready
-    useEffect(() => {
-        if (userLocation && mapRef.current) {
-            // Set zoom to 11 when user location is found
-            mapRef.current.setView(userLocation, 11);
-            setMapZoom(11);
-        }
-    }, [userLocation]);
-
+    // Save map center and zoom on move/zoom
     function MapZoomListener() {
         useMapEvents({
-            zoomend: (e) => setMapZoom(e.target.getZoom()),
+            zoomend: (e) => {
+                setMapZoom(e.target.getZoom());
+                setMapCenter([e.target.getCenter().lat, e.target.getCenter().lng]);
+                localStorage.setItem('mapState', JSON.stringify({
+                    center: [e.target.getCenter().lat, e.target.getCenter().lng],
+                    zoom: e.target.getZoom()
+                }));
+            },
+            moveend: (e) => {
+                setMapCenter([e.target.getCenter().lat, e.target.getCenter().lng]);
+                localStorage.setItem('mapState', JSON.stringify({
+                    center: [e.target.getCenter().lat, e.target.getCenter().lng],
+                    zoom: e.target.getZoom()
+                }));
+            }
         });
         return null;
     }
@@ -235,13 +218,6 @@ const RailMap: React.FC = () => {
                 }
             } catch (err) {
                 console.error('Error acquiring wake lock:', err);
-            }
-            // Use cached location logic as on page load
-            const cachedLocation = getCachedLocation();
-            if (cachedLocation) {
-                setUserLocation(cachedLocation);
-            } else {
-                setUserLocation(fallbackCenter);
             }
         }
 
@@ -336,7 +312,7 @@ const RailMap: React.FC = () => {
                 </span>
             </div>
             <MapContainer
-                center={fallbackCenter}
+                center={mapCenter}
                 zoom={mapZoom}
                 style={{ height: '100%', width: '100%' }}
                 scrollWheelZoom={true}
