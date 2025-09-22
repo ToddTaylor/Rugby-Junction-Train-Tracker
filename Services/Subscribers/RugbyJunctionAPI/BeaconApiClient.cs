@@ -1,21 +1,25 @@
-﻿using Services.Models;
+﻿using Polly.Retry;
+using Services.Models;
 
 namespace Services.Subscribers.RugbyJunctionAPI
 {
     public class BeaconApiClient : ApiClient
     {
         private readonly Beacon _beacon;
+        private readonly Subscriber _subscriber;
+        private readonly AsyncRetryPolicy _retryPolicy;
 
-        public BeaconApiClient(AppSettings appSettings) : base(appSettings)
+        public BeaconApiClient(AppSettings appSettings, Subscriber subscriber) : base(appSettings)
         {
-            _beacon = appSettings.Subscribers
-                .First(s => s.ID == Constants.SUBSCRIBER_ID)
-                .Beacon;
+            _subscriber = subscriber;
+            _beacon = subscriber.Beacon;
+
+            _retryPolicy = PollyPolicies.GetExponentialBackoffPolicy(_subscriber.ID);
         }
 
         public async Task SendBeaconHealthAsync()
         {
-            try
+            await _retryPolicy.ExecuteAsync(async () =>
             {
                 var beaconID = this.GetBeaconID() ?? throw new InvalidOperationException("Beacon ID is not configured.");
 
@@ -34,11 +38,7 @@ namespace Services.Subscribers.RugbyJunctionAPI
                     var errorContent = await response.Content.ReadAsStringAsync();
                     throw new HttpRequestException($"API error: {response.StatusCode} - {errorContent}");
                 }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error sending beacon health ID to API: {ex.Message}");
-            }
+            });
         }
 
         protected string? GetBeaconID()

@@ -1,36 +1,42 @@
-﻿using Services.Models;
-using System.Net.Http.Json;
+﻿using Polly.Retry;
+using Services.Models;
 
 namespace Services.Subscribers.RugbyJunctionAPI
 {
     public class TelemetryApiClient : ApiClient
     {
-        public TelemetryApiClient(AppSettings appSettings) : base(appSettings)
+        private readonly AsyncRetryPolicy _retryPolicy;
+
+        public TelemetryApiClient(AppSettings appSettings, string subscriberId) : base(appSettings)
         {
+            _retryPolicy = PollyPolicies.GetExponentialBackoffPolicy(subscriberId);
         }
 
         public async Task SendTelemetryAsync(Telemetry telemetry)
         {
             try
             {
-                var url = $"{base.GetApUrl()}/Telemetries";
-
-                var request = new HttpRequestMessage(HttpMethod.Post, url)
+                await _retryPolicy.ExecuteAsync(async () =>
                 {
-                    Content = JsonContent.Create(telemetry)
-                };
+                    var url = $"{base.GetApUrl()}/Telemetries";
 
-                // Add the API key to the headers
-                var _apiKey = base.GetApiKey();
-                request.Headers.Add("X-Api-Key", _apiKey);
+                    var request = new HttpRequestMessage(HttpMethod.Post, url)
+                    {
+                        Content = System.Net.Http.Json.JsonContent.Create(telemetry)
+                    };
 
-                var response = await base._httpClient.SendAsync(request);
+                    // Add the API key to the headers
+                    var _apiKey = base.GetApiKey();
+                    request.Headers.Add("X-Api-Key", _apiKey);
 
-                if (response.IsSuccessStatusCode == false)
-                {
-                    var errorContent = await response.Content.ReadAsStringAsync();
-                    throw new HttpRequestException($"API error: {response.StatusCode} - {errorContent}");
-                }
+                    var response = await base._httpClient.SendAsync(request);
+
+                    if (response.IsSuccessStatusCode == false)
+                    {
+                        var errorContent = await response.Content.ReadAsStringAsync();
+                        throw new HttpRequestException($"API error: {response.StatusCode} - {errorContent}");
+                    }
+                });
             }
             catch (Exception ex)
             {

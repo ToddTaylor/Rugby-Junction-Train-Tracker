@@ -31,7 +31,7 @@ namespace Services.Subscribers.RugbyJunctionAPI
                 Timestamp = e.Packet.TimeReceived
             };
 
-            var apiClient = new TelemetryApiClient(_appSettings);
+            var apiClient = new TelemetryApiClient(_appSettings, Constants.SUBSCRIBER_ID);
             apiClient.SendTelemetryAsync(alert).GetAwaiter().GetResult();
 
             // Let web page respond to previous request before sending the next one.
