@@ -25,6 +25,11 @@ namespace Web.Server.Entities
 
         public ICollection<Telemetry> Telemetries { get; set; } = [];
 
+        public MapPin Clone()
+        {
+            return (MapPin)this.MemberwiseClone();
+        }
+
         public override bool Equals(object? obj)
         {
             return Equals(obj as MapPin);

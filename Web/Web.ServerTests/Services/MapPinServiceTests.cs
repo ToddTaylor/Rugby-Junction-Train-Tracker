@@ -856,6 +856,135 @@ namespace Web.ServerTests.Services
         }
 
         [TestMethod]
+        public async Task UpsertMapPin_UpdateMapPin_SingleRailroad_MultiTrack_PreviousDirection()
+        {
+            // Arrange
+            var CNSussexBeacon = TestData.CN_Sussex_WI(_currentDateTime);
+            CNSussexBeacon.MultipleTracks = true; // Enable multi-track for this test.
+
+            var calculatedDirection = "N";
+
+            var newSource = "DPU";
+            var previousSource = "HOT";
+
+            var newAddressID = 23424;
+            var previousAddressID = 92342;
+
+            var telemetry = new Telemetry
+            {
+                BeaconID = CNSussexBeacon.BeaconID,
+                AddressID = newAddressID,
+                Source = newSource,
+                Moving = true,
+                CreatedAt = _currentDateTime,
+                LastUpdate = _currentDateTime
+            };
+
+            var beaconRailroads = new List<BeaconRailroad>
+            {
+                CNSussexBeacon
+            };
+
+            var previousMapPin = new MapPin
+            {
+                ID = 234,
+                BeaconID = CNSussexBeacon.BeaconID,
+                RailroadID = CNSussexBeacon.RailroadID,
+                Direction = calculatedDirection,
+                CreatedAt = _currentDateTime,
+                LastUpdate = _currentDateTime,
+                BeaconRailroad = CNSussexBeacon,
+                Moving = telemetry.Moving,
+                Addresses =
+                    [
+                        new Address
+                        {
+                            AddressID = previousAddressID,
+                            Source = previousSource,
+                            LastUpdate = _currentDateTime
+                        }
+                    ],
+            };
+
+            var expectedMapPinBeforeUpdate = new MapPin
+            {
+                ID = 0, // New map pin won't have an yet ID
+                BeaconID = CNSussexBeacon.BeaconID,
+                RailroadID = CNSussexBeacon.RailroadID,
+                Direction = null, // Can't calculate direction
+                CreatedAt = _currentDateTime,
+                LastUpdate = _currentDateTime,
+                BeaconRailroad = CNSussexBeacon,
+                Moving = telemetry.Moving,
+                Addresses =
+                [
+                    new Address
+                    {
+                        AddressID = newAddressID,
+                        Source = newSource,
+                        LastUpdate = _currentDateTime
+                    }
+                ],
+            };
+
+            var expectedMapPinAfterUpdate = expectedMapPinBeforeUpdate.Clone();
+            expectedMapPinAfterUpdate.ID = 234; // ID returned after insert.
+
+            var expectedMapPinObjects = new object[]
+            {
+                new MapPinDTO
+                {
+                    ID = 234,
+                    Direction = null,
+                    BeaconID = telemetry.BeaconID,
+                    RailroadID = CNSussexBeacon.RailroadID,
+                    Railroad = CNSussexBeacon.Railroad?.Name,
+                    Subdivision = CNSussexBeacon.Railroad?.Subdivision,
+                    Latitude = CNSussexBeacon.Latitude,
+                    Longitude = CNSussexBeacon.Longitude,
+                    Milepost = CNSussexBeacon.Milepost,
+                    Moving = telemetry.Moving,
+                    CreatedAt = _currentDateTime,
+                    LastUpdate = _currentDateTime,
+                    Addresses =
+                    [
+                        new AddressDTO
+                        {
+                            AddressID = newAddressID,
+                            Source = newSource
+                        }
+                    ],
+                }
+            };
+
+            _mapPinRepositoryMock.Setup(r => r.GetByAddressIdAsync(telemetry.AddressID))
+                .ReturnsAsync((MapPin?)null);
+            _mapPinRepositoryMock.Setup(r => r.GetByTimeThreshold(telemetry.BeaconID, CNSussexBeacon.RailroadID, MapPinService.TIME_THRESHOLD_MINUTES))
+                .ReturnsAsync(previousMapPin);
+            _beaconRailroadServiceMock.Setup(s => s.GetByIdAsync(previousMapPin.BeaconID, previousMapPin.RailroadID))
+                .ReturnsAsync(beaconRailroads[0]);
+            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(expectedMapPinBeforeUpdate))
+                .ReturnsAsync(expectedMapPinAfterUpdate);
+
+            _clientProxyMock.Setup(proxy => proxy.SendCoreAsync(
+                NotificationMethods.MapPinUpdate, expectedMapPinObjects, default))
+                    .Returns(Task.CompletedTask);
+            _hubContextMock.Setup(h => h.Clients).Returns(_hubClientsMock.Object);
+            _hubClientsMock.Setup(h => h.All).Returns(_clientProxyMock.Object);
+
+            // Act
+            await _service.UpsertMapPin(telemetry, beaconRailroads);
+
+            // Assert
+            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(expectedMapPinBeforeUpdate), Times.Once);
+
+            _clientProxyMock?.Verify(proxy => proxy.SendCoreAsync(
+                NotificationMethods.MapPinUpdate,
+                It.Is<object[]>(args => args[0].Equals(expectedMapPinObjects[0])),
+                default), Times.Once);
+        }
+
+        [TestMethod]
         public async Task UpsertMapPin_UpdateMapPin_SingleDpuCapableRailroad_TimeThreshold_PreviousDirection()
         {
             // Arrange

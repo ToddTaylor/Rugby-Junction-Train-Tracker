@@ -55,5 +55,18 @@ namespace Web.Server.Controllers.v1
                 return StatusCode(StatusCodes.Status500InternalServerError, response);
             }
         }
+
+        // DELETE: api/v1/MapPin/5
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteBeacon(int id)
+        {
+            var success = await _mapPinsService.DeleteMapPinAsync(id);
+            if (!success)
+            {
+                return NotFound();
+            }
+
+            return NoContent();
+        }
     }
 }

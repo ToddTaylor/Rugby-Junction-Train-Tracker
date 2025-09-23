@@ -32,6 +32,11 @@ namespace Web.Server.Services
             _timeProvider = timeProvider;
         }
 
+        public async Task<bool> DeleteMapPinAsync(int id)
+        {
+            return await _mapPinRepository.DeleteAsync(id);
+        }
+
         public async Task<IEnumerable<MapPin>> GetMapPinsAsync(int? minutes)
         {
             return await _mapPinRepository.GetAllAsync(minutes);
@@ -84,8 +89,8 @@ namespace Web.Server.Services
                     var previousMapPinByTimeThreshold = await _mapPinRepository.GetByTimeThreshold(beaconRailroad.BeaconID, beaconRailroad.RailroadID, TIME_THRESHOLD_MINUTES);
 
                     // Same beacon, same railroad, within 5 minutes threshold.
-                    // Unless there are multiple tracks, it's likely the same train.
-                    if (previousMapPinByTimeThreshold != null)
+                    // Unless there are multiple tracks, it's likely the same train. < TODO: There is no check for multiple tracks here!!!!
+                    if (previousMapPinByTimeThreshold != null && beaconRailroad.MultipleTracks == false)
                     {
                         var previousPinHasEOT = previousMapPinByTimeThreshold.Addresses.Any(a => a.Source == "EOT");
 

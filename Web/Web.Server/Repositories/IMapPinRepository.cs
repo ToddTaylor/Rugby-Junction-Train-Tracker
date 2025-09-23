@@ -13,5 +13,7 @@ namespace Web.Server.Repositories
         Task<IEnumerable<MapPin>> GetAllAsync(int? minutes);
 
         Task<MapPin> UpsertAsync(MapPin mapPin);
+
+        Task<bool> DeleteAsync(int id);
     }
 }

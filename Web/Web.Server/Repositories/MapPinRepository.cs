@@ -15,6 +15,7 @@ namespace Web.Server.Repositories
             _context = context;
             _timeProvider = timeProvider;
         }
+
         public async Task<MapPin?> GetByTimeThreshold(int beaconID, int railroadID, int minutesThreshold)
         {
             return await _context.MapPins
@@ -98,6 +99,18 @@ namespace Web.Server.Repositories
             await _context.SaveChangesAsync();
 
             return mapPin;
+        }
+
+        public async Task<bool> DeleteAsync(int id)
+        {
+            var mapPin = await _context.MapPins.FindAsync(id);
+            if (mapPin == null)
+            {
+                return false;
+            }
+            _context.MapPins.Remove(mapPin);
+            await _context.SaveChangesAsync();
+            return true;
         }
     }
 }
