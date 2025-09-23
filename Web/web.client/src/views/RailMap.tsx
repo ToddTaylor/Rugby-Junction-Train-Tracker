@@ -336,8 +336,11 @@ const RailMap: React.FC = () => {
                             let weight = 1;
                             const highlightSubs = [
                                 'CN Waukesha Subdivision',
+                                'Fox River Subdivision',
                                 'Neenah Subdivision',
-                                'Superior Subdivision'
+                                'Marinette Subdivision',
+                                'Superior Subdivision',
+                                'Valley Subdivision'
                                 // Add more subdivision names here as needed
                             ];
                             if (highlightSubs.includes(name)) {
