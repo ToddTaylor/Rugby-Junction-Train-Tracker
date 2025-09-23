@@ -52,6 +52,7 @@ namespace Web.Server.Repositories
                 throw new KeyNotFoundException("BeaconRailroad not found.");
             }
 
+            existing.Direction = beaconRailroad.Direction;
             existing.Latitude = beaconRailroad.Latitude;
             existing.Longitude = beaconRailroad.Longitude;
             existing.Milepost = beaconRailroad.Milepost;
