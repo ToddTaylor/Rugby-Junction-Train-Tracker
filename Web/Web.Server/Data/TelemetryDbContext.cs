@@ -18,6 +18,7 @@ namespace Web.Server.Data
         public DbSet<BeaconRailroad> BeaconRailroads { get; set; }
         public DbSet<MapPin> MapPins { get; set; }
         public DbSet<Owner> Owners { get; set; }
+        public DbSet<Subdivision> Subdivisions { get; set; }
         public DbSet<Railroad> Railroads { get; set; }
         public DbSet<Telemetry> Telemetries { get; set; }
 
@@ -40,11 +41,11 @@ namespace Web.Server.Data
 
             // Converts the Direction enum to text in the database instead of an int
             modelBuilder.Entity<BeaconRailroad>()
-                    .Property(t => t.Direction)
+                    .Property(br => br.Direction)
                     .HasConversion(new EnumToStringConverter<Direction>());
 
             modelBuilder.Entity<BeaconRailroad>()
-                .HasKey(br => new { br.BeaconID, br.RailroadID }); // composite key
+                .HasKey(br => new { br.BeaconID, br.SubdivisionID }); // composite key
 
             modelBuilder.Entity<BeaconRailroad>()
                 .HasOne(br => br.Beacon)
@@ -52,15 +53,21 @@ namespace Web.Server.Data
                 .HasForeignKey(br => br.BeaconID);
 
             modelBuilder.Entity<BeaconRailroad>()
-                .HasOne(br => br.Railroad)
+                .HasOne(br => br.Subdivision)
                 .WithMany(r => r.BeaconRailroads)
-                .HasForeignKey(br => br.RailroadID);
+                .HasForeignKey(br => br.SubdivisionID);
+
+            modelBuilder.Entity<Subdivision>()
+                .HasOne(s => s.Railroad)
+                .WithMany(r => r.Subdivisions)
+                .HasForeignKey(s => s.RailroadID)
+                .IsRequired();
 
             modelBuilder.Entity<MapPin>()
                 .HasOne(mp => mp.BeaconRailroad)
                 .WithMany() // <--- this is the key to preventing uniqueness
-                .HasForeignKey(mp => new { mp.BeaconID, mp.RailroadID })
-                .OnDelete(DeleteBehavior.Restrict); // or whatever behavior you want
+                .HasForeignKey(mp => new { mp.BeaconID, mp.SubdivisionId })
+                .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Address>()
                 .HasOne(a => a.MapPin)

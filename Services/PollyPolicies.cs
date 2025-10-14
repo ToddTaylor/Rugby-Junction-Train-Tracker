@@ -5,12 +5,14 @@ namespace Services
 {
     public static class PollyPolicies
     {
+        private const int RETRY_COUNT = 3;
+
         public static AsyncRetryPolicy GetExponentialBackoffPolicy(string subscriberId)
         {
             return Policy
                 .Handle<Exception>()
                 .WaitAndRetryAsync(
-                    5,
+                    RETRY_COUNT,
                     retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
                     (exception, timeSpan, retryCount, context) =>
                     {

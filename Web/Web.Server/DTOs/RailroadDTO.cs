@@ -1,18 +1,18 @@
-﻿namespace Web.Server.DTOs
+﻿using Web.Server.Entities;
+
+namespace Web.Server.DTOs
 {
     public class RailroadDTO : IEquatable<RailroadDTO?>
     {
         public int ID { get; set; }
 
-        public bool DpuCapable { get; set; }
+        public string Name { get; set; }
 
-        public required string Name { get; set; }
+        public ICollection<Subdivision> Subdivisions { get; set; }
 
-        public required string Subdivision { get; set; }
+        public DateTime CreatedAt { get; set; }
 
-        public required DateTime CreatedAt { get; set; }
-
-        public required DateTime LastUpdate { get; set; }
+        public DateTime LastUpdate { get; set; }
 
         public override bool Equals(object? obj)
         {
@@ -23,16 +23,15 @@
         {
             return other is not null &&
                    ID == other.ID &&
-                   DpuCapable == other.DpuCapable &&
                    Name == other.Name &&
-                   Subdivision == other.Subdivision &&
+                   EqualityComparer<ICollection<Subdivision>>.Default.Equals(Subdivisions, other.Subdivisions) &&
                    CreatedAt == other.CreatedAt &&
                    LastUpdate == other.LastUpdate;
         }
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(ID, DpuCapable, Name, Subdivision, CreatedAt, LastUpdate);
+            return HashCode.Combine(ID, Name, Subdivisions, CreatedAt, LastUpdate);
         }
 
         public static bool operator ==(RailroadDTO? left, RailroadDTO? right)

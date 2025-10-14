@@ -9,13 +9,10 @@ namespace Web.Server.Entities
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int ID { get; set; }
 
-        public bool DpuCapable { get; set; } = false;
+        [Required]
+        public string Name { get; set; }
 
-        public required string Name { get; set; }
-
-        public required string Subdivision { get; set; }
-
-        public ICollection<BeaconRailroad> BeaconRailroads { get; set; } = [];
+        public ICollection<Subdivision> Subdivisions { get; set; }
 
         public override bool Equals(object? obj)
         {
@@ -28,15 +25,13 @@ namespace Web.Server.Entities
                    CreatedAt == other.CreatedAt &&
                    LastUpdate == other.LastUpdate &&
                    ID == other.ID &&
-                   DpuCapable == other.DpuCapable &&
                    Name == other.Name &&
-                   Subdivision == other.Subdivision &&
-                   BeaconRailroads.SequenceEqual(other.BeaconRailroads); // Custom comparer that works.
+                   EqualityComparer<ICollection<Subdivision>>.Default.Equals(Subdivisions, other.Subdivisions);
         }
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(CreatedAt, LastUpdate, ID, DpuCapable, Name, Subdivision, BeaconRailroads);
+            return HashCode.Combine(CreatedAt, LastUpdate, ID, Name, Subdivisions);
         }
 
         public static bool operator ==(Railroad? left, Railroad? right)

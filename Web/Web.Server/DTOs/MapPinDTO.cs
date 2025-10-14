@@ -22,9 +22,9 @@
 
         public string? Railroad { get; set; }
 
-        public int? RailroadID { get; set; }
-
         public string? Subdivision { get; set; }
+
+        public int? SubdivisionID { get; set; }
 
         public List<AddressDTO> Addresses { get; set; }
 
@@ -46,8 +46,8 @@
                    Milepost == other.Milepost &&
                    Moving == other.Moving &&
                    Railroad == other.Railroad &&
-                   RailroadID == other.RailroadID &&
                    Subdivision == other.Subdivision &&
+                   SubdivisionID == other.SubdivisionID &&
                    Addresses.SequenceEqual(other.Addresses); // Custom comparer that works.
         }
 
@@ -64,8 +64,8 @@
             hash.Add(Milepost);
             hash.Add(Moving);
             hash.Add(Railroad);
-            hash.Add(RailroadID);
             hash.Add(Subdivision);
+            hash.Add(SubdivisionID);
             hash.Add(Addresses);
             return hash.ToHashCode();
         }

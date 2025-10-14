@@ -121,7 +121,7 @@ namespace Web.ServerTests.Services
             {
                 BeaconID = 1,
                 Direction = Direction.NorthSouth,
-                RailroadID = 1,
+                SubdivisionID = 1,
                 Latitude = 0,
                 Longitude = 0,
                 Milepost = 0,

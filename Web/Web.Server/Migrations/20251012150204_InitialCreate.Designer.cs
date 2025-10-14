@@ -10,7 +10,7 @@ using Web.Server.Data;
 namespace Web.Server.Migrations
 {
     [DbContext(typeof(TelemetryDbContext))]
-    [Migration("20250525175240_InitialCreate")]
+    [Migration("20251012150204_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -18,6 +18,37 @@ namespace Web.Server.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.4");
+
+            modelBuilder.Entity("Web.Server.Entities.Address", b =>
+                {
+                    b.Property<int>("ID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("AddressID")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CreatedAt")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LastUpdate")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("MapPinID")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("ID");
+
+                    b.HasIndex("MapPinID");
+
+                    b.ToTable("Addresses");
+                });
 
             modelBuilder.Entity("Web.Server.Entities.Beacon", b =>
                 {
@@ -48,7 +79,7 @@ namespace Web.Server.Migrations
                     b.Property<int>("BeaconID")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("RailroadID")
+                    b.Property<int>("SubdivisionID")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("CreatedAt")
@@ -72,9 +103,12 @@ namespace Web.Server.Migrations
                     b.Property<double>("Milepost")
                         .HasColumnType("REAL");
 
-                    b.HasKey("BeaconID", "RailroadID");
+                    b.Property<bool>("MultipleTracks")
+                        .HasColumnType("INTEGER");
 
-                    b.HasIndex("RailroadID");
+                    b.HasKey("BeaconID", "SubdivisionID");
+
+                    b.HasIndex("SubdivisionID");
 
                     b.ToTable("BeaconRailroads");
                 });
@@ -85,10 +119,13 @@ namespace Web.Server.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("AddressID")
+                    b.Property<int>("BeaconID")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("BeaconID")
+                    b.Property<int?>("BeaconRailroadBeaconID")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("BeaconRailroadSubdivisionID")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("CreatedAt")
@@ -96,8 +133,10 @@ namespace Web.Server.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Direction")
-                        .IsRequired()
                         .HasColumnType("TEXT");
+
+                    b.Property<int?>("DpuTrainID")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("LastUpdate")
                         .IsRequired()
@@ -106,17 +145,14 @@ namespace Web.Server.Migrations
                     b.Property<bool?>("Moving")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("RailroadID")
+                    b.Property<int>("SubdivisionId")
                         .HasColumnType("INTEGER");
-
-                    b.Property<string>("Source")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
 
                     b.HasKey("ID");
 
-                    b.HasIndex("BeaconID", "RailroadID")
-                        .IsUnique();
+                    b.HasIndex("BeaconID", "SubdivisionId");
+
+                    b.HasIndex("BeaconRailroadBeaconID", "BeaconRailroadSubdivisionID");
 
                     b.ToTable("MapPins");
                 });
@@ -178,13 +214,40 @@ namespace Web.Server.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("Subdivision")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
                     b.HasKey("ID");
 
                     b.ToTable("Railroads");
+                });
+
+            modelBuilder.Entity("Web.Server.Entities.Subdivision", b =>
+                {
+                    b.Property<int>("ID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CreatedAt")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("DpuCapable")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("LastUpdate")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("RailroadID")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("ID");
+
+                    b.HasIndex("RailroadID");
+
+                    b.ToTable("Subdivisions");
                 });
 
             modelBuilder.Entity("Web.Server.Entities.Telemetry", b =>
@@ -229,6 +292,17 @@ namespace Web.Server.Migrations
                     b.ToTable("Telemetries");
                 });
 
+            modelBuilder.Entity("Web.Server.Entities.Address", b =>
+                {
+                    b.HasOne("Web.Server.Entities.MapPin", "MapPin")
+                        .WithMany("Addresses")
+                        .HasForeignKey("MapPinID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("MapPin");
+                });
+
             modelBuilder.Entity("Web.Server.Entities.Beacon", b =>
                 {
                     b.HasOne("Web.Server.Entities.Owner", "Owner")
@@ -248,24 +322,41 @@ namespace Web.Server.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Web.Server.Entities.Railroad", "Railroad")
+                    b.HasOne("Web.Server.Entities.Subdivision", "Subdivision")
                         .WithMany("BeaconRailroads")
-                        .HasForeignKey("RailroadID")
+                        .HasForeignKey("SubdivisionID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Beacon");
 
-                    b.Navigation("Railroad");
+                    b.Navigation("Subdivision");
                 });
 
             modelBuilder.Entity("Web.Server.Entities.MapPin", b =>
                 {
                     b.HasOne("Web.Server.Entities.BeaconRailroad", "BeaconRailroad")
-                        .WithOne("MapPin")
-                        .HasForeignKey("Web.Server.Entities.MapPin", "BeaconID", "RailroadID");
+                        .WithMany()
+                        .HasForeignKey("BeaconID", "SubdivisionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Web.Server.Entities.BeaconRailroad", null)
+                        .WithMany("MapPins")
+                        .HasForeignKey("BeaconRailroadBeaconID", "BeaconRailroadSubdivisionID");
 
                     b.Navigation("BeaconRailroad");
+                });
+
+            modelBuilder.Entity("Web.Server.Entities.Subdivision", b =>
+                {
+                    b.HasOne("Web.Server.Entities.Railroad", "Railroad")
+                        .WithMany("Subdivisions")
+                        .HasForeignKey("RailroadID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Railroad");
                 });
 
             modelBuilder.Entity("Web.Server.Entities.Telemetry", b =>
@@ -294,11 +385,13 @@ namespace Web.Server.Migrations
 
             modelBuilder.Entity("Web.Server.Entities.BeaconRailroad", b =>
                 {
-                    b.Navigation("MapPin");
+                    b.Navigation("MapPins");
                 });
 
             modelBuilder.Entity("Web.Server.Entities.MapPin", b =>
                 {
+                    b.Navigation("Addresses");
+
                     b.Navigation("Telemetries");
                 });
 
@@ -308,6 +401,11 @@ namespace Web.Server.Migrations
                 });
 
             modelBuilder.Entity("Web.Server.Entities.Railroad", b =>
+                {
+                    b.Navigation("Subdivisions");
+                });
+
+            modelBuilder.Entity("Web.Server.Entities.Subdivision", b =>
                 {
                     b.Navigation("BeaconRailroads");
                 });

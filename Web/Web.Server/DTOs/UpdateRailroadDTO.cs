@@ -13,15 +13,13 @@
         {
             return other is not null &&
                    base.Equals(other) &&
-                   DpuCapable == other.DpuCapable &&
                    Name == other.Name &&
-                   Subdivision == other.Subdivision &&
                    ID == other.ID;
         }
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(base.GetHashCode(), DpuCapable, Name, Subdivision, ID);
+            return HashCode.Combine(base.GetHashCode(), Name, ID);
         }
 
         public static bool operator ==(UpdateRailroadDTO? left, UpdateRailroadDTO? right)

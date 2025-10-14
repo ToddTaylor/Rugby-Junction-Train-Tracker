@@ -20,10 +20,13 @@ namespace Web.Server.Repositories
         {
             return await _context.MapPins
                 .Where(mp => mp.BeaconID == beaconID &&
-                             mp.RailroadID == railroadID &&
+                             mp.SubdivisionId == railroadID &&
                              mp.LastUpdate >= _timeProvider.UtcNow.AddMinutes(-minutesThreshold))
                 .OrderByDescending(mp => mp.LastUpdate)
                 .Include(mp => mp.Addresses)
+                .Include(mp => mp.BeaconRailroad)
+                .Include(mp => mp.BeaconRailroad.Subdivision)
+                .Include(mp => mp.BeaconRailroad.Subdivision.Railroad)
                 .FirstOrDefaultAsync();
         }
 
@@ -32,6 +35,9 @@ namespace Web.Server.Repositories
             return await _context.MapPins
                 .Where(mp => mp.Addresses.Any(a => a.AddressID == addressID))
                 .Include(mp => mp.Addresses)
+                .Include(mp => mp.BeaconRailroad)
+                .Include(mp => mp.BeaconRailroad.Subdivision)
+                .Include(mp => mp.BeaconRailroad.Subdivision.Railroad)
                 .FirstOrDefaultAsync();
         }
 
@@ -51,6 +57,9 @@ namespace Web.Server.Repositories
                     .Where(mp => mp.LastUpdate >= _timeProvider.UtcNow.AddMinutes(-minutes.Value))
                     .OrderByDescending(mp => mp.LastUpdate)
                     .Include(mp => mp.Addresses)
+                    .Include(mp => mp.BeaconRailroad)
+                    .Include(mp => mp.BeaconRailroad.Subdivision)
+                    .Include(mp => mp.BeaconRailroad.Subdivision.Railroad)
                     .ToListAsync();
             }
             else
@@ -58,19 +67,23 @@ namespace Web.Server.Repositories
                 return await _context.MapPins
                     .OrderByDescending(mp => mp.LastUpdate)
                     .Include(mp => mp.Addresses)
+                    .Include(mp => mp.BeaconRailroad)
+                    .Include(mp => mp.BeaconRailroad.Subdivision)
+                    .Include(mp => mp.BeaconRailroad.Subdivision.Railroad)
                     .ToListAsync();
             }
         }
 
         public async Task<MapPin> UpsertAsync(MapPin mapPin)
         {
-            // Find existing map pin by matching address ID(s).
+            // Find existing map pin by matching address ID(s) and subdivision.
             var mapPinBAddressIds = mapPin.Addresses
                 .Select(a => a.AddressID)
                 .ToList();
 
             var existingMapPin = _context.MapPins
                 .Where(pin => pin.Addresses.Any(a => mapPinBAddressIds.Contains(a.AddressID)))
+                .Where(pin => pin.SubdivisionId == mapPin.SubdivisionId)
                 .FirstOrDefault();
 
             if (existingMapPin == null)
@@ -78,7 +91,7 @@ namespace Web.Server.Repositories
                 mapPin.Addresses = mapPin.Addresses;
                 mapPin.BeaconID = mapPin.BeaconID;
                 mapPin.CreatedAt = _timeProvider.UtcNow;
-                mapPin.RailroadID = mapPin.RailroadID;
+                mapPin.SubdivisionId = mapPin.SubdivisionId;
                 mapPin.Direction = mapPin.Direction;
                 mapPin.DpuTrainID = mapPin.DpuTrainID;
                 mapPin.LastUpdate = _timeProvider.UtcNow;

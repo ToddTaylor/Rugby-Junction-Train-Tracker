@@ -31,7 +31,7 @@ namespace Web.Server.Repositories
             return await _context.Owners
                 .Include(o => o.Beacons)
                 .ThenInclude(o => o.BeaconRailroads)
-                .ThenInclude(o => o.Railroad)
+                .ThenInclude(o => o.Subdivision)
                 .OrderByDescending(o => o.LastUpdate)
                 .ToListAsync();
         }
@@ -41,7 +41,7 @@ namespace Web.Server.Repositories
             return await _context.Owners
                 .Include(o => o.Beacons)
                 .ThenInclude(o => o.BeaconRailroads)
-                .ThenInclude(o => o.Railroad)
+                .ThenInclude(o => o.Subdivision)
                 .FirstOrDefaultAsync(o => o.ID == id);
         }
 

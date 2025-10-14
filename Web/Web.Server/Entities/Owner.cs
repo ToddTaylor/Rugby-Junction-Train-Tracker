@@ -10,21 +10,21 @@ namespace Web.Server.Entities
         public int ID { get; set; }
 
         [Required]
-        public required string FirstName { get; set; }
+        public string FirstName { get; set; }
 
         [Required]
-        public required string LastName { get; set; }
+        public string LastName { get; set; }
 
         [Required]
-        public required string Email { get; set; }
+        public string Email { get; set; }
 
         [Required]
-        public required string City { get; set; }
+        public string City { get; set; }
 
         [Required]
-        public required string State { get; set; }
+        public string State { get; set; }
 
-        public required ICollection<Beacon> Beacons { get; set; } = [];
+        public ICollection<Beacon> Beacons { get; set; } = [];
 
         public override bool Equals(object? obj)
         {

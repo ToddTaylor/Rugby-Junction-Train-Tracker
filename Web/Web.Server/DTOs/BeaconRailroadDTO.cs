@@ -14,7 +14,10 @@ namespace Web.Server.DTOs
         /// </summary>
         public int RailroadID { get; set; }
 
-        public RailroadDTO? Railroad { get; set; }
+        /// <summary>
+        /// The name of the railroad associated with the beacon.
+        /// </summary>
+        public string RailroadName { get; set; }
 
         /// <summary>
         /// The latitude coordinate of the beacon.
@@ -74,7 +77,7 @@ namespace Web.Server.DTOs
             return other is not null &&
                    BeaconID == other.BeaconID &&
                    RailroadID == other.RailroadID &&
-                   EqualityComparer<RailroadDTO?>.Default.Equals(Railroad, other.Railroad) &&
+                   RailroadName == other.RailroadName &&
                    Latitude == other.Latitude &&
                    Longitude == other.Longitude &&
                    Milepost == other.Milepost &&
@@ -89,7 +92,7 @@ namespace Web.Server.DTOs
             HashCode hash = new HashCode();
             hash.Add(BeaconID);
             hash.Add(RailroadID);
-            hash.Add(Railroad);
+            hash.Add(RailroadName);
             hash.Add(Latitude);
             hash.Add(Longitude);
             hash.Add(Milepost);

@@ -37,12 +37,12 @@ namespace Web.Server.Controllers.v1
 
                 foreach (var mapPinDTO in mapPinDTOs)
                 {
-                    var beaconRailroad = await _beaconRailroadService.GetByIdAsync(mapPinDTO.BeaconID, mapPinDTO.RailroadID.Value);
+                    var beaconRailroad = await _beaconRailroadService.GetByIdAsync(mapPinDTO.BeaconID, mapPinDTO.SubdivisionID.Value);
                     mapPinDTO.Milepost = beaconRailroad.Milepost;
                     mapPinDTO.Latitude = beaconRailroad.Latitude;
                     mapPinDTO.Longitude = beaconRailroad.Longitude;
-                    mapPinDTO.Railroad = beaconRailroad.Railroad.Name;
-                    mapPinDTO.Subdivision = beaconRailroad.Railroad.Subdivision;
+                    mapPinDTO.Railroad = beaconRailroad.Subdivision.Railroad.Name;
+                    mapPinDTO.Subdivision = beaconRailroad.Subdivision.Name;
                 }
 
                 response.Data = mapPinDTOs;

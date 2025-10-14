@@ -39,12 +39,12 @@ namespace Web.Server.Controllers.v1
         }
 
         [HttpGet("{beaconId:int}/{railroadId:int}")]
-        public async Task<ActionResult<BeaconRailroadDTO>> GetById(int beaconId, int railroadId)
+        public async Task<ActionResult<BeaconRailroadDTO>> GetById(int beaconId, int subdivisionId)
         {
             var response = new MessageEnvelope<BeaconRailroadDTO>(null, []);
             try
             {
-                var beaconRailroad = await _service.GetByIdAsync(beaconId, railroadId);
+                var beaconRailroad = await _service.GetByIdAsync(beaconId, subdivisionId);
                 if (beaconRailroad == null)
                 {
                     return NotFound();

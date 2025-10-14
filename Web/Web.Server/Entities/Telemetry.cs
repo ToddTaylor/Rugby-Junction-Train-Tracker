@@ -13,7 +13,8 @@ namespace Web.Server.Entities
 
         public Beacon Beacon { get; set; }
 
-        public required int AddressID { get; set; }
+        [Required]
+        public int AddressID { get; set; }
 
         public int? TrainID { get; set; }
 
@@ -27,7 +28,8 @@ namespace Web.Server.Entities
         /// The source of the alert.
         /// HOT, EOT, DPU, HBD
         /// </summary>
-        public required string Source { get; set; }
+        [Required]
+        public string Source { get; set; }
 
         public override bool Equals(object? obj)
         {

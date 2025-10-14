@@ -21,9 +21,15 @@ namespace Web.Server.Mappers
 
             CreateMap<CreateBeaconRailroadDTO, BeaconRailroad>();
             CreateMap<UpdateBeaconRailroadDTO, BeaconRailroad>();
-            CreateMap<BeaconRailroad, BeaconRailroadDTO>();
+            CreateMap<BeaconRailroad, BeaconRailroadDTO>()
+                .ForMember(dest => dest.RailroadID,
+                           opt => opt.MapFrom(src => src.Subdivision.Railroad.ID))
+                .ForMember(dest => dest.RailroadName,
+                           opt => opt.MapFrom(src => src.Subdivision.Railroad.Name));
 
             CreateMap<MapPin, MapPinDTO>()
+                .ForMember(dest => dest.BeaconID,
+                           opt => opt.MapFrom(src => src.BeaconID))
                 .ForMember(dest => dest.Direction,
                            opt => opt.MapFrom(src => src.Direction))
                 .ForMember(dest => dest.Latitude,
@@ -33,9 +39,11 @@ namespace Web.Server.Mappers
                 .ForMember(dest => dest.Milepost,
                            opt => opt.MapFrom(src => src.BeaconRailroad.Milepost))
                 .ForMember(dest => dest.Railroad,
-                           opt => opt.MapFrom(src => src.BeaconRailroad.Railroad.Name))
+                           opt => opt.MapFrom(src => src.BeaconRailroad.Subdivision.Railroad.Name))
                 .ForMember(dest => dest.Subdivision,
-                           opt => opt.MapFrom(src => src.BeaconRailroad.Railroad.Subdivision))
+                           opt => opt.MapFrom(src => src.BeaconRailroad.Subdivision.Name))
+                .ForMember(dest => dest.SubdivisionID,
+                           opt => opt.MapFrom(src => src.BeaconRailroad.Subdivision.ID))
                 .ForMember(dest => dest.Addresses,
                            opt => opt.MapFrom(src => src.Addresses != null
                                ? src.Addresses.Select(a => new AddressDTO

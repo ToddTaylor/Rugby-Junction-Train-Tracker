@@ -1,18 +1,35 @@
-﻿using Web.Server.Enums;
+﻿using System.ComponentModel.DataAnnotations;
+using Web.Server.Enums;
 
 namespace Web.Server.Entities
 {
     public class BeaconRailroad : EntityBase, IEquatable<BeaconRailroad?>
     {
+        [Required]
         public int BeaconID { get; set; }
+
         public Beacon? Beacon { get; set; }
-        public required Direction Direction { get; set; }
-        public int RailroadID { get; set; }
-        public Railroad? Railroad { get; set; }
-        public required double Latitude { get; set; }
-        public required double Longitude { get; set; }
+
+        [Required]
+        public Direction Direction { get; set; }
+
+        [Required]
+        public int SubdivisionID { get; set; }
+
+        public Subdivision Subdivision { get; set; }
+
+        [Required]
+        public double Latitude { get; set; }
+
+        [Required]
+        public double Longitude { get; set; }
+
         public ICollection<MapPin> MapPins { get; set; } = [];
-        public required double Milepost { get; set; }
+
+        [Required]
+        public double Milepost { get; set; }
+
+        [Required]
         public bool MultipleTracks { get; set; } = false;
 
         public override bool Equals(object? obj)
@@ -28,8 +45,8 @@ namespace Web.Server.Entities
                    BeaconID == other.BeaconID &&
                    EqualityComparer<Beacon?>.Default.Equals(Beacon, other.Beacon) &&
                    Direction == other.Direction &&
-                   RailroadID == other.RailroadID &&
-                   EqualityComparer<Railroad?>.Default.Equals(Railroad, other.Railroad) &&
+                   SubdivisionID == other.SubdivisionID &&
+                   EqualityComparer<Subdivision?>.Default.Equals(Subdivision, other.Subdivision) &&
                    Latitude == other.Latitude &&
                    Longitude == other.Longitude &&
                    EqualityComparer<ICollection<MapPin>>.Default.Equals(MapPins, other.MapPins) &&
@@ -45,8 +62,8 @@ namespace Web.Server.Entities
             hash.Add(BeaconID);
             hash.Add(Beacon);
             hash.Add(Direction);
-            hash.Add(RailroadID);
-            hash.Add(Railroad);
+            hash.Add(SubdivisionID);
+            hash.Add(Subdivision);
             hash.Add(Latitude);
             hash.Add(Longitude);
             hash.Add(MapPins);

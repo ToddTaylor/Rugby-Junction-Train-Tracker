@@ -29,23 +29,25 @@ namespace Web.Server.Repositories
         {
             return await _context.BeaconRailroads
                 .Include(br => br.Beacon)
-                .Include(br => br.Railroad)
+                .Include(br => br.Subdivision)
+                .ThenInclude(s => s.Railroad)
                 .OrderByDescending(br => br.LastUpdate)
                 .ToListAsync();
         }
 
-        public async Task<BeaconRailroad?> GetByIdAsync(int beaconId, int railroadId)
+        public async Task<BeaconRailroad?> GetByIdAsync(int beaconId, int subdivisionId)
         {
             return await _context.BeaconRailroads
                 .Include(br => br.Beacon)
-                .Include(br => br.Railroad)
-                .FirstOrDefaultAsync(br => br.BeaconID == beaconId && br.RailroadID == railroadId);
+                .Include(br => br.Subdivision)
+                .ThenInclude(s => s.Railroad)
+                .FirstOrDefaultAsync(br => br.BeaconID == beaconId && br.SubdivisionID == subdivisionId);
         }
 
         public async Task<BeaconRailroad> UpdateAsync(BeaconRailroad beaconRailroad)
         {
             var existing = await _context.BeaconRailroads
-                .FirstOrDefaultAsync(br => br.BeaconID == beaconRailroad.BeaconID && br.RailroadID == beaconRailroad.RailroadID);
+                .FirstOrDefaultAsync(br => br.BeaconID == beaconRailroad.BeaconID && br.SubdivisionID == beaconRailroad.SubdivisionID);
 
             if (existing == null)
             {
@@ -66,7 +68,7 @@ namespace Web.Server.Repositories
         public async Task<bool> DeleteAsync(int beaconId, int railroadId)
         {
             var beaconRailroad = await _context.BeaconRailroads
-                .FirstOrDefaultAsync(br => br.BeaconID == beaconId && br.RailroadID == railroadId);
+                .FirstOrDefaultAsync(br => br.BeaconID == beaconId && br.SubdivisionID == railroadId);
 
             if (beaconRailroad == null)
             {

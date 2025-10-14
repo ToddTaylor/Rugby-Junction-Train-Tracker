@@ -22,9 +22,9 @@ namespace Web.Server.Services
             return await _repository.GetAllAsync();
         }
 
-        public async Task<BeaconRailroad?> GetByIdAsync(int beaconId, int railroadId)
+        public async Task<BeaconRailroad?> GetByIdAsync(int beaconId, int subdivisionId)
         {
-            return await _repository.GetByIdAsync(beaconId, railroadId);
+            return await _repository.GetByIdAsync(beaconId, subdivisionId);
         }
 
         public async Task<BeaconRailroad> UpdateAsync(BeaconRailroad beaconRailroad)

@@ -9,6 +9,7 @@ namespace Web.Server.Entities
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int ID { get; set; }
 
+        [Required]
         public int OwnerID { get; set; }
 
         public Owner Owner { get; set; }

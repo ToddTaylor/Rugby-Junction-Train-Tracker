@@ -53,20 +53,20 @@ namespace Web.Server.Services
                 throw new InvalidOperationException("Telemetry must have an AddressID.");
             }
 
-            var telemetryBeacon = await _beaconService.GetBeaconByIdAsync(telemetry.BeaconID);
+            var beacon = await _beaconService.GetBeaconByIdAsync(telemetry.BeaconID);
 
-            if (telemetryBeacon == null)
+            if (beacon == null)
             {
-                throw new InvalidOperationException("Telemetry beacon not found.");
+                throw new InvalidOperationException("Telemetry beacon not found."); // TODO: Not found exception.
             }
 
-            await UpdateBeaconsTimestamps(telemetryBeacon);
+            await UpdateBeaconsTimestamps(beacon);
 
-            // Inserts new telemetry for historical logging purposes.
+            // Insert new telemetry for historical logging purposes.
             telemetry = await _telemetryRepository.AddAsync(telemetry);
 
-            // Map Pin service to deal with map pin update.
-            await _mapPinsService.UpsertMapPin(telemetry, telemetryBeacon.BeaconRailroads);
+            // Upsert map pin via Map Pin service.
+            await _mapPinsService.UpsertMapPin(telemetry, beacon.BeaconRailroads);
 
             // Notify clients about the new telemetry.
             return telemetry;

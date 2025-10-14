@@ -29,7 +29,7 @@ namespace Web.Server.Repositories
             return await _context.Telemetries
                 .Include(t => t.Beacon)
                 .ThenInclude(b => b.BeaconRailroads)
-                .ThenInclude(br => br.Railroad)
+                .ThenInclude(br => br.Subdivision)
                 .FirstAsync(t => t.ID == telemetry.ID);
         }
 
@@ -38,7 +38,7 @@ namespace Web.Server.Repositories
             return await _context.Telemetries
                 .Include(t => t.Beacon)
                 .ThenInclude(b => b.BeaconRailroads)
-                .ThenInclude(br => br.Railroad)
+                .ThenInclude(br => br.Subdivision)
                 .OrderByDescending(t => t.LastUpdate)
                 .ToListAsync();
         }
@@ -48,7 +48,7 @@ namespace Web.Server.Repositories
             return await _context.Telemetries
                 .Include(t => t.Beacon)
                 .ThenInclude(b => b.BeaconRailroads)
-                .ThenInclude(br => br.Railroad)
+                .ThenInclude(br => br.Subdivision)
                 .FirstOrDefaultAsync(t => t.ID == id);
         }
 

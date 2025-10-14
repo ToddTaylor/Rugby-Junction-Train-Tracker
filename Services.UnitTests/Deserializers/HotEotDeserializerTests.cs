@@ -1,6 +1,6 @@
+using FluentAssertions;
 using Services.Deserializers;
 using Services.Models;
-using FluentAssertions;
 
 namespace Services.UnitTests.Deserializers;
 
@@ -89,6 +89,29 @@ public class HotEotDeserializerTests
 
         // Assert
         actual.Should().BeEquivalentTo(expected);
+    }
+
+    [TestMethod]
+    public void Deserialize_Valid4_Test()
+    {
+        // Arrange
+        var data = "2025/09/24-14:10:53  2.7 HOT 20505 --- - - -- --- - SRQ NML - - ---- ------------";
+        var expected = new HotEotPacket
+        {
+            TimeReceived = new DateTime(2025, 9, 24, 19, 10, 53),
+            SIG = 2.7m,
+            SRC = "HOT",
+            ID = "20505",
+            CMD = "SRQ",
+            TYP = "NML",
+            RR = null,
+        };
+
+        // Act
+        var actual = HotEotDeserializer.Deserialize(data);
+
+        // Assert
+        Assert.AreEqual(expected, actual);
     }
 
     [TestMethod]

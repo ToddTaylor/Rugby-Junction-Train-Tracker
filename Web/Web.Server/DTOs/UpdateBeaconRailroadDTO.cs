@@ -15,7 +15,6 @@ namespace Web.Server.DTOs
                    base.Equals(other) &&
                    BeaconID == other.BeaconID &&
                    RailroadID == other.RailroadID &&
-                   EqualityComparer<RailroadDTO?>.Default.Equals(Railroad, other.Railroad) &&
                    Latitude == other.Latitude &&
                    Longitude == other.Longitude &&
                    Milepost == other.Milepost &&
@@ -32,7 +31,6 @@ namespace Web.Server.DTOs
             hash.Add(base.GetHashCode());
             hash.Add(BeaconID);
             hash.Add(RailroadID);
-            hash.Add(Railroad);
             hash.Add(Latitude);
             hash.Add(Longitude);
             hash.Add(Milepost);

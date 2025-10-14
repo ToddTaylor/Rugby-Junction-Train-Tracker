@@ -46,9 +46,7 @@ namespace Web.Server.Repositories
                 throw new KeyNotFoundException("Railroad not found.");
             }
 
-            existingRailroad.DpuCapable = railroad.DpuCapable;
             existingRailroad.Name = railroad.Name;
-            existingRailroad.Subdivision = railroad.Subdivision;
             existingRailroad.LastUpdate = _timeProvider.UtcNow;
 
             await _context.SaveChangesAsync();

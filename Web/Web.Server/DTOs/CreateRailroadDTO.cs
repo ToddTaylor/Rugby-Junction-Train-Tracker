@@ -2,11 +2,7 @@
 {
     public class CreateRailroadDTO : IEquatable<CreateRailroadDTO?>
     {
-        public bool DpuCapable { get; set; } = false;
-
         public required string Name { get; set; } = string.Empty;
-
-        public required string Subdivision { get; set; } = string.Empty;
 
         public override bool Equals(object? obj)
         {
@@ -16,14 +12,12 @@
         public bool Equals(CreateRailroadDTO? other)
         {
             return other is not null &&
-                   DpuCapable == other.DpuCapable &&
-                   Name == other.Name &&
-                   Subdivision == other.Subdivision;
+                   Name == other.Name;
         }
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(DpuCapable, Name, Subdivision);
+            return HashCode.Combine(Name);
         }
 
         public static bool operator ==(CreateRailroadDTO? left, CreateRailroadDTO? right)

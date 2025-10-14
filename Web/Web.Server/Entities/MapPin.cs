@@ -9,9 +9,11 @@ namespace Web.Server.Entities
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int ID { get; set; }
 
+        [Required]
         public int BeaconID { get; set; }
 
-        public int RailroadID { get; set; }
+        [Required]
+        public int SubdivisionId { get; set; }
 
         public BeaconRailroad? BeaconRailroad { get; set; }
 
@@ -42,7 +44,7 @@ namespace Web.Server.Entities
                    LastUpdate == other.LastUpdate &&
                    ID == other.ID &&
                    BeaconID == other.BeaconID &&
-                   RailroadID == other.RailroadID &&
+                   SubdivisionId == other.SubdivisionId &&
                    EqualityComparer<BeaconRailroad?>.Default.Equals(BeaconRailroad, other.BeaconRailroad) &&
                    Direction == other.Direction &&
                    DpuTrainID == other.DpuTrainID &&
@@ -58,7 +60,7 @@ namespace Web.Server.Entities
             hash.Add(LastUpdate);
             hash.Add(ID);
             hash.Add(BeaconID);
-            hash.Add(RailroadID);
+            hash.Add(SubdivisionId);
             hash.Add(BeaconRailroad);
             hash.Add(Direction);
             hash.Add(DpuTrainID);
