@@ -12,10 +12,6 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <Compile Include="Migrations\20250925014133_SeedData.cs_" />
-	</ItemGroup>
-
-	<ItemGroup>
 		<PackageReference Include="AutoMapper" Version="14.0.0" />
 		<PackageReference Include="Microsoft.AspNetCore.Http.Connections" Version="1.2.0" />
 		<PackageReference Include="Microsoft.AspNetCore.SignalR" Version="1.2.0" />

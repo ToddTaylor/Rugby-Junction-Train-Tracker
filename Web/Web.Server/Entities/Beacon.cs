@@ -14,6 +14,8 @@ namespace Web.Server.Entities
 
         public Owner Owner { get; set; }
 
+        public string Name { get; set; }
+
         public ICollection<BeaconRailroad> BeaconRailroads { get; set; } = [];
 
         public ICollection<Telemetry> Telemetries { get; set; } = [];
@@ -30,6 +32,7 @@ namespace Web.Server.Entities
                    LastUpdate == other.LastUpdate &&
                    ID == other.ID &&
                    OwnerID == other.OwnerID &&
+                   Name == other.Name &&
                    EqualityComparer<Owner>.Default.Equals(Owner, other.Owner) &&
                    EqualityComparer<ICollection<BeaconRailroad>>.Default.Equals(BeaconRailroads, other.BeaconRailroads) &&
                    EqualityComparer<ICollection<Telemetry>>.Default.Equals(Telemetries, other.Telemetries);
@@ -37,7 +40,7 @@ namespace Web.Server.Entities
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(CreatedAt, LastUpdate, ID, OwnerID, Owner, BeaconRailroads, Telemetries);
+            return HashCode.Combine(CreatedAt, LastUpdate, ID, OwnerID, Owner, Name, BeaconRailroads, Telemetries);
         }
 
         public static bool operator ==(Beacon? left, Beacon? right)

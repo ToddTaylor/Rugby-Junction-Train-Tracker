@@ -10,7 +10,7 @@ using Web.Server.Data;
 namespace Web.Server.Migrations
 {
     [DbContext(typeof(TelemetryDbContext))]
-    [Migration("20251012150204_InitialCreate")]
+    [Migration("20251015013528_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -61,6 +61,10 @@ namespace Web.Server.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("LastUpdate")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
@@ -121,6 +125,10 @@ namespace Web.Server.Migrations
 
                     b.Property<int>("BeaconID")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("BeaconName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
 
                     b.Property<int?>("BeaconRailroadBeaconID")
                         .HasColumnType("INTEGER");

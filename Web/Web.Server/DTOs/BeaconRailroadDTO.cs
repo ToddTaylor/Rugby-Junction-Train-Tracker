@@ -10,6 +10,11 @@ namespace Web.Server.DTOs
         public int BeaconID { get; set; }
 
         /// <summary>
+        /// The name of the beacon.
+        /// </summary>
+        public string BeaconName { get; set; }
+
+        /// <summary>
         /// The railroad unique identifier associated with the beacon.  I.e., which railroad the beacon monitors.
         /// </summary>
         public int RailroadID { get; set; }

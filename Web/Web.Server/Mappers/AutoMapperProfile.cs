@@ -22,6 +22,8 @@ namespace Web.Server.Mappers
             CreateMap<CreateBeaconRailroadDTO, BeaconRailroad>();
             CreateMap<UpdateBeaconRailroadDTO, BeaconRailroad>();
             CreateMap<BeaconRailroad, BeaconRailroadDTO>()
+                .ForMember(dest => dest.BeaconName,
+                           opt => opt.MapFrom(src => src.Beacon.Name))
                 .ForMember(dest => dest.RailroadID,
                            opt => opt.MapFrom(src => src.Subdivision.Railroad.ID))
                 .ForMember(dest => dest.RailroadName,
@@ -30,6 +32,8 @@ namespace Web.Server.Mappers
             CreateMap<MapPin, MapPinDTO>()
                 .ForMember(dest => dest.BeaconID,
                            opt => opt.MapFrom(src => src.BeaconID))
+                .ForMember(dest => dest.BeaconName,
+                           opt => opt.MapFrom(src => src.BeaconRailroad.Beacon.Name))
                 .ForMember(dest => dest.Direction,
                            opt => opt.MapFrom(src => src.Direction))
                 .ForMember(dest => dest.Latitude,

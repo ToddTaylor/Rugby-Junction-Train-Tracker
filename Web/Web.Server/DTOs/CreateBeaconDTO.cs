@@ -1,10 +1,13 @@
 ﻿
 
+
 namespace Web.Server.DTOs
 {
     public class CreateBeaconDTO : IEquatable<CreateBeaconDTO?>
     {
         public required int OwnerID { get; set; }
+
+        public string? Name { get; set; }
 
         public override bool Equals(object? obj)
         {
@@ -14,12 +17,13 @@ namespace Web.Server.DTOs
         public bool Equals(CreateBeaconDTO? other)
         {
             return other is not null &&
-                   OwnerID == other.OwnerID;
+                   OwnerID == other.OwnerID &&
+                   Name == other.Name;
         }
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(OwnerID);
+            return HashCode.Combine(OwnerID, Name);
         }
 
         public static bool operator ==(CreateBeaconDTO? left, CreateBeaconDTO? right)

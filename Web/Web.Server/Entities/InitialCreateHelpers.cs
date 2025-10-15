@@ -1,14 +1,11 @@
 ﻿using Microsoft.EntityFrameworkCore.Migrations;
 
-#nullable disable
-
-namespace Web.Server.Migrations
+namespace Web.Server.Entities
 {
-    /// <inheritdoc />
-    public partial class SeedData : Migration
+    internal static class InitialCreateHelpers
     {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
+
+        internal static void InsertSeedData(MigrationBuilder migrationBuilder)
         {
             string now = DateTime.UtcNow.ToString("O");
 
@@ -52,18 +49,17 @@ namespace Web.Server.Migrations
             // Insert beacons
             migrationBuilder.InsertData(
                 table: "Beacons",
-                columns: new[] { "ID", "OwnerID", "CreatedAt", "LastUpdate" },
+                columns: new[] { "ID", "OwnerID", "Name", "CreatedAt", "LastUpdate" },
                 values: new object[,]
                 {
-                    { 1, 1, now, now },
-                    { 2, 2, now, now },
-                    { 3, 3, now, now },
-                    { 4, 3, now, now },
-                    { 5, 3, now, now },
-                    { 6, 4, now, now },
-                    { 7, 4, now, now },
-                    { 8, 4, now, now },
-                    { 9, 4, now, now }
+                    { 1, 1, "Rugby Junction", now, now },
+                    { 2, 2, "Sussex", now, now },
+                    { 4, 3, "Ladysmith", now, now },
+                    { 5, 3, "Neenah", now, now },
+                    { 6, 4, "Stanberry", now, now },
+                    { 7, 4, "Owen", now, now },
+                    { 8, 4, "Gordon", now, now },
+                    { 9, 4, "Stone Lake", now, now }
                 }
             );
 
@@ -74,7 +70,7 @@ namespace Web.Server.Migrations
                 values: new object[,]
                 {
                     { 1, 1, "NorthSouth", 43.280958, -88.214682, 117.2, true, now, now },
-                    { 1, 2, "NorthwestSoutheast", 43.280958, -88.213966, 0, false, now, now },
+                    { 1, 2, "NorthwestSoutheast", 43.280958, -88.213966, 112.16, true, now, now },
                     { 2, 1, "NorthSouth", 43.159517, -88.200492, 108.6, false, now, now },
                     { 4, 4, "All", 45.463224, -91.110779, 129, true, now, now },
                     { 5, 3, "NorthSouth", 44.171033, -88.474169, 185.3, true, now, now },
@@ -84,12 +80,6 @@ namespace Web.Server.Migrations
                     { 9, 4, "NorthSouth", 45.854653, -91.548329, 389, true, now, now }
                 }
             );
-        }
-
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-
         }
     }
 }

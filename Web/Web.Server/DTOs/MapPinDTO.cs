@@ -6,6 +6,8 @@
 
         public required int BeaconID { get; set; }
 
+        public required string BeaconName { get; set; }
+
         public required DateTime CreatedAt { get; set; }
 
         public required DateTime LastUpdate { get; set; }
@@ -38,6 +40,7 @@
             return other is not null &&
                    ID == other.ID &&
                    BeaconID == other.BeaconID &&
+                   BeaconName == other.BeaconName &&
                    CreatedAt == other.CreatedAt &&
                    LastUpdate == other.LastUpdate &&
                    Direction == other.Direction &&
@@ -56,6 +59,7 @@
             HashCode hash = new HashCode();
             hash.Add(ID);
             hash.Add(BeaconID);
+            hash.Add(BeaconName);
             hash.Add(CreatedAt);
             hash.Add(LastUpdate);
             hash.Add(Direction);

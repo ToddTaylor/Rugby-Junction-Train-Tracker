@@ -112,7 +112,8 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
             : 'Not Tracking';
 
         const popupContent = `
-            ${pin.railroad?.trim() ? `<strong>${pin.railroad} ${pin.subdivision + ' Sub' || ''}</strong><br/>` : ''}
+            ${pin.beaconName ? `<strong>${pin.beaconName}</strong><br/>` : ''}
+            ${pin.railroad?.trim() ? `${pin.railroad} ${pin.subdivision + ' Sub' || ''}<br/>` : ''}
             MP ${pin.milepost}<br/>
             ${formatDirection(pin.direction)}<br/>
             ${pin.moving === true ? "Moving<br/>" : pin.moving === false ? "Not Moving<br/>" : ''}

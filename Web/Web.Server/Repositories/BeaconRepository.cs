@@ -18,14 +18,6 @@ namespace Web.Server.Repositories
 
         public async Task<Beacon> AddAsync(Beacon beacon)
         {
-            if (beacon.BeaconRailroads != null)
-            {
-                foreach (BeaconRailroad beaconRailroad in beacon.BeaconRailroads)
-                {
-                    _context.Entry(beaconRailroad).State = EntityState.Unchanged;
-                }
-            }
-
             beacon.CreatedAt = _timeProvider.UtcNow;
             beacon.LastUpdate = beacon.CreatedAt;
 
@@ -59,6 +51,7 @@ namespace Web.Server.Repositories
                 throw new KeyNotFoundException("Beacon not found.");
             }
 
+            existingBeacon.Name = beacon.Name;
             existingBeacon.Owner = beacon.Owner;
             existingBeacon.LastUpdate = _timeProvider.UtcNow;
 

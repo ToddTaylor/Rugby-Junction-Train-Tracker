@@ -61,6 +61,10 @@ namespace Web.Server.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("OwnerID")
                         .HasColumnType("INTEGER");
 
@@ -118,6 +122,10 @@ namespace Web.Server.Migrations
 
                     b.Property<int>("BeaconID")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("BeaconName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
 
                     b.Property<int?>("BeaconRailroadBeaconID")
                         .HasColumnType("INTEGER");
