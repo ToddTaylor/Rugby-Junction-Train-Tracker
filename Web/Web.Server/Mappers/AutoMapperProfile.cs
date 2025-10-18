@@ -19,15 +19,24 @@ namespace Web.Server.Mappers
             // TODO: Added [Required] to entity properties as alternative to having to add dummy values here.
             CreateMap<Beacon, BeaconDTO>();
 
-            CreateMap<CreateBeaconRailroadDTO, BeaconRailroad>();
-            CreateMap<UpdateBeaconRailroadDTO, BeaconRailroad>();
+            CreateMap<CreateBeaconRailroadDTO, BeaconRailroad>()
+                .ForMember(dest => dest.Beacon, opt => opt.Ignore())
+                .ForMember(dest => dest.Subdivision, opt => opt.Ignore());
+            CreateMap<UpdateBeaconRailroadDTO, BeaconRailroad>()
+                .ForMember(dest => dest.Beacon, opt => opt.Ignore())
+                .ForMember(dest => dest.Subdivision, opt => opt.Ignore());
+
             CreateMap<BeaconRailroad, BeaconRailroadDTO>()
                 .ForMember(dest => dest.BeaconName,
                            opt => opt.MapFrom(src => src.Beacon.Name))
                 .ForMember(dest => dest.RailroadID,
                            opt => opt.MapFrom(src => src.Subdivision.Railroad.ID))
                 .ForMember(dest => dest.RailroadName,
-                           opt => opt.MapFrom(src => src.Subdivision.Railroad.Name));
+                           opt => opt.MapFrom(src => src.Subdivision.Railroad.Name))
+                .ForMember(dest => dest.SubdivisionID,
+                           opt => opt.MapFrom(src => src.Subdivision.ID))
+                .ForMember(dest => dest.SubdivisionName,
+                           opt => opt.MapFrom(src => src.Subdivision.Name));
 
             CreateMap<MapPin, MapPinDTO>()
                 .ForMember(dest => dest.BeaconID,

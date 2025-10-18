@@ -25,6 +25,16 @@ namespace Web.Server.DTOs
         public string RailroadName { get; set; }
 
         /// <summary>
+        /// The railroad subdivision unique identifier associated with the beacon.  I.e., which railroad subdivision the beacon monitors.
+        /// </summary>
+        public int SubdivisionID { get; set; }
+
+        /// <summary>
+        /// The name of the railroad subdivision associated with the beacon.
+        /// </summary>
+        public string SubdivisionName { get; set; }
+
+        /// <summary>
         /// The latitude coordinate of the beacon.
         /// </summary>
         /// <example>43.294944</example>
@@ -81,8 +91,8 @@ namespace Web.Server.DTOs
         {
             return other is not null &&
                    BeaconID == other.BeaconID &&
-                   RailroadID == other.RailroadID &&
-                   RailroadName == other.RailroadName &&
+                   SubdivisionID == other.SubdivisionID &&
+                   SubdivisionName == other.SubdivisionName &&
                    Latitude == other.Latitude &&
                    Longitude == other.Longitude &&
                    Milepost == other.Milepost &&
@@ -96,8 +106,8 @@ namespace Web.Server.DTOs
         {
             HashCode hash = new HashCode();
             hash.Add(BeaconID);
-            hash.Add(RailroadID);
-            hash.Add(RailroadName);
+            hash.Add(SubdivisionID);
+            hash.Add(SubdivisionName);
             hash.Add(Latitude);
             hash.Add(Longitude);
             hash.Add(Milepost);

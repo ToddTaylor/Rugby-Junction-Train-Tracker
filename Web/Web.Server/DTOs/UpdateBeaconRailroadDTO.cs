@@ -1,9 +1,11 @@
-
-
 namespace Web.Server.DTOs
 {
-    public class UpdateBeaconRailroadDTO : BeaconRailroadDTO, IEquatable<UpdateBeaconRailroadDTO?>
+    public class UpdateBeaconRailroadDTO : CreateBeaconRailroadDTO, IEquatable<UpdateBeaconRailroadDTO?>
     {
+        public int BeaconID { get; set; }
+
+        public int SubdivisionID { get; set; }
+
         public override bool Equals(object? obj)
         {
             return Equals(obj as UpdateBeaconRailroadDTO);
@@ -14,15 +16,15 @@ namespace Web.Server.DTOs
             return other is not null &&
                    base.Equals(other) &&
                    BeaconID == other.BeaconID &&
-                   RailroadID == other.RailroadID &&
+                   SubdivisionID == other.SubdivisionID &&
                    Latitude == other.Latitude &&
                    Longitude == other.Longitude &&
                    Milepost == other.Milepost &&
                    MultipleTracks == other.MultipleTracks &&
                    Online == other.Online &&
                    Direction == other.Direction &&
-                   CreatedAt == other.CreatedAt &&
-                   LastUpdate == other.LastUpdate;
+                   BeaconID == other.BeaconID &&
+                   SubdivisionID == other.SubdivisionID;
         }
 
         public override int GetHashCode()
@@ -30,15 +32,15 @@ namespace Web.Server.DTOs
             HashCode hash = new HashCode();
             hash.Add(base.GetHashCode());
             hash.Add(BeaconID);
-            hash.Add(RailroadID);
+            hash.Add(SubdivisionID);
             hash.Add(Latitude);
             hash.Add(Longitude);
             hash.Add(Milepost);
             hash.Add(MultipleTracks);
             hash.Add(Online);
             hash.Add(Direction);
-            hash.Add(CreatedAt);
-            hash.Add(LastUpdate);
+            hash.Add(BeaconID);
+            hash.Add(SubdivisionID);
             return hash.ToHashCode();
         }
 

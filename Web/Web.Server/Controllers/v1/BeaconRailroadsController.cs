@@ -38,7 +38,7 @@ namespace Web.Server.Controllers.v1
             }
         }
 
-        [HttpGet("{beaconId:int}/{railroadId:int}")]
+        [HttpGet("{beaconId:int}/{subdivisionId:int}")]
         public async Task<ActionResult<BeaconRailroadDTO>> GetById(int beaconId, int subdivisionId)
         {
             var response = new MessageEnvelope<BeaconRailroadDTO>(null, []);
@@ -73,7 +73,7 @@ namespace Web.Server.Controllers.v1
 
                 var created = await _service.AddAsync(beaconRailroad);
                 response.Data = _mapper.Map<BeaconRailroadDTO>(created);
-                return CreatedAtAction(nameof(GetById), new { beaconId = response.Data.BeaconID, railroadId = response.Data.RailroadID }, response);
+                return CreatedAtAction(nameof(GetById), new { beaconId = response.Data.BeaconID, railroadId = response.Data.SubdivisionID }, response);
             }
             catch (Exception ex)
             {
@@ -82,16 +82,16 @@ namespace Web.Server.Controllers.v1
             }
         }
 
-        [HttpPut("{beaconId:int}/{railroadId:int}")]
-        public async Task<IActionResult> Update(int beaconId, int railroadId, UpdateBeaconRailroadDTO dto)
+        [HttpPut("{beaconId:int}/{subdivisionId:int}")]
+        public async Task<IActionResult> Update(int beaconId, int subdivisionId, UpdateBeaconRailroadDTO dto)
         {
             var response = new MessageEnvelope<BeaconRailroadDTO>(null, []);
 
             try
             {
-                if (beaconId != dto.BeaconID || railroadId != dto.RailroadID)
+                if (beaconId != dto.BeaconID || subdivisionId != dto.SubdivisionID)
                 {
-                    response.Errors.Add("BeaconID and RailroadID in the URL must match the DTO.");
+                    response.Errors.Add("BeaconID and SubdivisionID in the URL must match the DTO.");
                     return BadRequest(response);
                 }
 
@@ -109,10 +109,10 @@ namespace Web.Server.Controllers.v1
             }
         }
 
-        [HttpDelete("{beaconId:int}/{railroadId:int}")]
-        public async Task<IActionResult> Delete(int beaconId, int railroadId)
+        [HttpDelete("{beaconId:int}/{subdivisionId:int}")]
+        public async Task<IActionResult> Delete(int beaconId, int subdivisionId)
         {
-            var deleted = await _service.DeleteAsync(beaconId, railroadId);
+            var deleted = await _service.DeleteAsync(beaconId, subdivisionId);
             if (!deleted)
             {
                 return NotFound();

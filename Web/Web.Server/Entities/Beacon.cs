@@ -14,6 +14,7 @@ namespace Web.Server.Entities
 
         public Owner Owner { get; set; }
 
+        [Required]
         public string Name { get; set; }
 
         public ICollection<BeaconRailroad> BeaconRailroads { get; set; } = [];
