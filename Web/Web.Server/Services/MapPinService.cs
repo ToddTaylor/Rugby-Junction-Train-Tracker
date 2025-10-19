@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.SignalR;
 using Web.Server.DTOs;
 using Web.Server.Entities;
+using Web.Server.Enums;
 using Web.Server.Hubs;
 using Web.Server.Providers;
 using Web.Server.Repositories;
@@ -10,7 +11,7 @@ namespace Web.Server.Services
 {
     public class MapPinService : IMapPinService
     {
-        public const int TIME_THRESHOLD_MINUTES = 5;
+        public const int TIME_THRESHOLD_MINUTES = 2;
 
         private readonly IBeaconRailroadService _beaconRailroadService;
         private readonly IHubContext<NotificationHub> _hubContext;
@@ -47,7 +48,7 @@ namespace Web.Server.Services
             return await _mapPinRepository.GetByAddressIdAsync(addressID);
         }
 
-        public async Task UpsertMapPin(Telemetry telemetry, ICollection<BeaconRailroad> beaconRailroads)
+        public async Task UpsertMapPin(Telemetry telemetry, ICollection<BeaconRailroad> railroadBeacons)
         {
             MapPin? mapPin = null;
 
@@ -55,155 +56,221 @@ namespace Web.Server.Services
 
             if (previousMapPinByAddressID == null)
             {
-                var singleRailroadBeacon = beaconRailroads.Count == 1;
+                // No previous map pin exists with same address ID (HOT / EOT).
+
+                var singleRailroadBeacon = railroadBeacons.Count == 1;
 
                 if (singleRailroadBeacon)
                 {
                     // Single railroad beacon.
 
-                    var beaconRailroad = beaconRailroads.First();
+                    var railroadBeacon = railroadBeacons.First();
 
-                    var previousMapPinByTimeThreshold = await _mapPinRepository.GetByTimeThreshold(beaconRailroad.BeaconID, beaconRailroad.SubdivisionID, TIME_THRESHOLD_MINUTES);
-
-                    // Same beacon, same railroad, within 5 minutes threshold.
-                    // Unless there are multiple tracks, it's likely the same train. < TODO: There is no check for multiple tracks here!!!!
-                    if (previousMapPinByTimeThreshold != null && beaconRailroad.MultipleTracks == false)
+                    if (railroadBeacon.MultipleTracks == false)
                     {
-                        var previousPinHasEOT = previousMapPinByTimeThreshold.Addresses.Any(a => a.Source == "EOT");
+                        // Single track railroad beacon.
 
-                        if (telemetry.Source == "EOT" && previousPinHasEOT)
+                        var previousMapPinWithinTimeThreshold = await _mapPinRepository.GetByTimeThreshold(railroadBeacon.BeaconID, railroadBeacon.SubdivisionID, TIME_THRESHOLD_MINUTES);
+
+                        if (previousMapPinWithinTimeThreshold != null)
                         {
-                            // The previous map pin already has an EOT with a differet address ID, so it's not the same train.
-                            // Do nothing.
-                        }
-                        else
-                        {
-                            // NOTE: This logic may be problematic. Set breakpoint here
-                            // if too many addresses are being added to the same map pin.
-                            previousMapPinByTimeThreshold.Addresses.Add(
-                                new Address
-                                {
-                                    AddressID = telemetry.AddressID,
-                                    Source = telemetry.Source,
-                                    CreatedAt = telemetry.CreatedAt,
-                                    LastUpdate = telemetry.LastUpdate
-                                });
+                            // Existing map pin found for the same beacon and railroad subdivision within the time threshold. 
 
-                            mapPin = previousMapPinByTimeThreshold;
-                        }
-                    }
-                }
-                else
-                {
-                    // Multiple railroad beacon.
-
-                    var dpuCapableBeaconRailroads = beaconRailroads.Where(br => br.Subdivision.DpuCapable == true);
-
-                    var oneBeaconRailroadThatIsDpuCapable = dpuCapableBeaconRailroads.Count() == 1;
-
-                    if (oneBeaconRailroadThatIsDpuCapable)
-                    {
-                        // Since there's only one DPU-capable beacon railroad, DPU logic can be applied without concern of grouping
-                        // two DPU equipped trains from different railroads together.
-
-                        var dpuCapableBeaconRailroad = dpuCapableBeaconRailroads.First();
-
-                        if (telemetry.TrainID.HasValue)
-                        {
-                            // This is a DPU.  See if it can be combined with the other DPU with the same Train ID.
-
-                            var previousMapPinByDpuTrainID = await _mapPinRepository.GetByTrainIdAsync(telemetry.TrainID.Value);
-
-                            if (previousMapPinByDpuTrainID != null)
+                            // Determine how to handle each source type for time threashold matches.
+                            switch (telemetry.Source)
                             {
-                                var matchingAddressIDAndSourceNotFound = !(
-                                    previousMapPinByDpuTrainID.Addresses.Any(a =>
-                                            a.AddressID == telemetry.AddressID
-                                                && a.Source == telemetry.Source
-                                        )
-                                 );
-
-                                if (matchingAddressIDAndSourceNotFound)
-                                {
-                                    previousMapPinByDpuTrainID.Addresses.Add(
-                                    new Address
+                                case SourceEnum.DPU:
                                     {
-                                        AddressID = telemetry.AddressID,
-                                        Source = telemetry.Source,
-                                        CreatedAt = telemetry.CreatedAt,
-                                        LastUpdate = telemetry.LastUpdate
-                                    });
-                                } // Else: This is just a timestamp update to the map pin with an existing address ID and source
+                                        // Add the DPU address to the existing map pin.
 
-                                mapPin = previousMapPinByDpuTrainID;
+                                        previousMapPinWithinTimeThreshold.Addresses.Add(
+                                            new Address
+                                            {
+                                                AddressID = telemetry.AddressID,
+                                                Source = telemetry.Source,
+                                                CreatedAt = telemetry.CreatedAt,
+                                                LastUpdate = telemetry.LastUpdate
+                                            });
+
+                                        mapPin = previousMapPinWithinTimeThreshold;
+
+                                        break;
+                                    }
+                                case SourceEnum.HOT:
+                                    {
+                                        // Add the HOT address to the existing map pin.
+
+                                        // Note: WSOR seems to run trains with multiple HOT.
+                                        // Since this is a single-track railroad beacon,
+                                        // it's assumed to be the same train.
+
+                                        previousMapPinWithinTimeThreshold.Addresses.Add(
+                                            new Address
+                                            {
+                                                AddressID = telemetry.AddressID,
+                                                Source = telemetry.Source,
+                                                CreatedAt = telemetry.CreatedAt,
+                                                LastUpdate = telemetry.LastUpdate
+                                            });
+
+                                        mapPin = previousMapPinWithinTimeThreshold;
+                                        break;
+                                    }
+                                case SourceEnum.EOT:
+                                    {
+                                        var previousMapPinHasEOT = previousMapPinWithinTimeThreshold.Addresses
+                                            .FirstOrDefault(a => a.Source == SourceEnum.EOT);
+
+                                        if (previousMapPinHasEOT == null)
+                                        {
+                                            // The previous map pin does not have an EOT address ID, so add it.
+
+                                            previousMapPinWithinTimeThreshold.Addresses.Add(
+                                                new Address
+                                                {
+                                                    AddressID = telemetry.AddressID,
+                                                    Source = telemetry.Source,
+                                                    CreatedAt = telemetry.CreatedAt,
+                                                    LastUpdate = telemetry.LastUpdate
+                                                });
+
+                                            mapPin = previousMapPinWithinTimeThreshold;
+                                        }
+                                        else
+                                        {
+                                            // The previous map pin already has an EOT address ID. Is it a match?
+
+                                            if (telemetry.AddressID == previousMapPinHasEOT.AddressID)
+                                            {
+                                                // The EOT address ID is the same, update the timestamp.
+                                                mapPin = previousMapPinWithinTimeThreshold;
+                                                mapPin.LastUpdate = telemetry.LastUpdate;
+                                            }
+                                            else
+                                            {
+                                                // The EOT address ID is different, so it's not the same train.
+                                                // Do nothing and a new map pin with new address will be created below.
+                                            }
+                                        }
+                                        break;
+                                    }
+                            }
+                        } // Else: Multiple track railroad beacon.  Can't assume it's the same train.
+                    }
+                    else
+                    {
+                        // Multiple railroad beacon.
+
+                        var dpuCapableBeaconRailroads = railroadBeacons.Where(br => br.Subdivision.DpuCapable == true);
+
+                        var oneBeaconRailroadThatIsDpuCapable = dpuCapableBeaconRailroads.Count() == 1;
+
+                        if (oneBeaconRailroadThatIsDpuCapable)
+                        {
+                            // Since there's only one DPU-capable beacon railroad, DPU logic can be applied without concern of grouping
+                            // two DPU equipped trains from different railroads together.
+
+                            var dpuCapableBeaconRailroad = dpuCapableBeaconRailroads.First();
+
+                            if (telemetry.TrainID.HasValue)
+                            {
+                                // This is a DPU.  See if it can be combined with the other DPU with the same Train ID.
+
+                                var previousMapPinByDpuTrainID = await _mapPinRepository.GetByTrainIdAsync(telemetry.TrainID.Value);
+
+                                if (previousMapPinByDpuTrainID != null)
+                                {
+                                    var matchingAddressIDAndSourceNotFound = !(
+                                        previousMapPinByDpuTrainID.Addresses.Any(a =>
+                                                a.AddressID == telemetry.AddressID
+                                                    && a.Source == telemetry.Source
+                                            )
+                                     );
+
+                                    if (matchingAddressIDAndSourceNotFound)
+                                    {
+                                        previousMapPinByDpuTrainID.Addresses.Add(
+                                        new Address
+                                        {
+                                            AddressID = telemetry.AddressID,
+                                            Source = telemetry.Source,
+                                            CreatedAt = telemetry.CreatedAt,
+                                            LastUpdate = telemetry.LastUpdate
+                                        });
+                                    } // Else: This is just a timestamp update to the map pin with an existing address ID and source
+
+                                    mapPin = previousMapPinByDpuTrainID;
+                                }
                             }
                         }
-                    }
 
-                    var toBeaconRailroadIsSingleTracked = beaconRailroads.Where(br => br.BeaconID == telemetry.BeaconID && br.MultipleTracks == false).FirstOrDefault();
+                        var toBeaconRailroadIsSingleTracked = railroadBeacons.Where(br => br.BeaconID == telemetry.BeaconID && br.MultipleTracks == false).FirstOrDefault();
 
-                    if (toBeaconRailroadIsSingleTracked != null)
-                    {
-                        // Since the "to" beacon railroad is single-tracked, time threshold logic can be applied without concern
-                        // of grouping two trains from different tracks together.
-
-                        var previousMapPinByTimeThreshold = await _mapPinRepository.GetByTimeThreshold(
-                            toBeaconRailroadIsSingleTracked.BeaconID,
-                            toBeaconRailroadIsSingleTracked.Subdivision.ID,
-                            TIME_THRESHOLD_MINUTES);
-
-                        if (previousMapPinByTimeThreshold != null)
+                        if (toBeaconRailroadIsSingleTracked != null)
                         {
-                            // Single beacon, same railroad, single track within 5 minutes threshold... it's likely the same train.
+                            // Since the "to" beacon railroad is single-tracked, time threshold logic can be applied without concern
+                            // of grouping two trains from different tracks together.
 
-                            var previousPinHasEOT = previousMapPinByTimeThreshold.Addresses.Any(a => a.Source == "EOT");
+                            var previousMapPinByTimeThreshold = await _mapPinRepository.GetByTimeThreshold(
+                                toBeaconRailroadIsSingleTracked.BeaconID,
+                                toBeaconRailroadIsSingleTracked.Subdivision.ID,
+                                TIME_THRESHOLD_MINUTES);
 
-                            if (telemetry.Source == "EOT" && previousPinHasEOT)
+                            if (previousMapPinByTimeThreshold != null)
                             {
-                                // The previous map pin already has an EOT with a differet address ID, so it's not the same train.
-                                // Do nothing.
-                            }
-                            else
-                            {
-                                var newMapPin = previousMapPinByTimeThreshold;
-                                newMapPin.CreatedAt = telemetry.CreatedAt;
-                                newMapPin.LastUpdate = telemetry.LastUpdate;
+                                // Single beacon, same railroad, single track within 5 minutes threshold... it's likely the same train.
 
-                                newMapPin.Addresses.Add(
-                                    new Address
+                                var previousPinHasEOT = previousMapPinByTimeThreshold.Addresses.Any(a => a.Source == SourceEnum.EOT);
+
+                                if (telemetry.Source == SourceEnum.EOT && previousPinHasEOT)
+                                {
+                                    // The previous map pin already has an EOT with a differet address ID, so it's not the same train.
+                                    // Do nothing.
+                                }
+                                else
+                                {
+                                    var newMapPin = previousMapPinByTimeThreshold;
+                                    newMapPin.CreatedAt = telemetry.CreatedAt;
+                                    newMapPin.LastUpdate = telemetry.LastUpdate;
+
+                                    newMapPin.Addresses.Add(
+                                        new Address
+                                        {
+                                            AddressID = telemetry.AddressID,
+                                            Source = telemetry.Source,
+                                            CreatedAt = telemetry.CreatedAt,
+                                            LastUpdate = telemetry.LastUpdate
+                                        });
+
+                                    newMapPin.BeaconID = telemetry.BeaconID;
+                                    newMapPin.BeaconRailroad = toBeaconRailroadIsSingleTracked;
+
+                                    if (telemetry.TrainID.HasValue)
                                     {
-                                        AddressID = telemetry.AddressID,
-                                        Source = telemetry.Source,
-                                        CreatedAt = telemetry.CreatedAt,
-                                        LastUpdate = telemetry.LastUpdate
-                                    });
+                                        newMapPin.DpuTrainID = telemetry.TrainID.Value;
+                                    }
 
-                                newMapPin.BeaconID = telemetry.BeaconID;
-                                newMapPin.BeaconRailroad = toBeaconRailroadIsSingleTracked;
+                                    if (telemetry.Moving.HasValue)
+                                    {
+                                        newMapPin.Moving = telemetry.Moving;
+                                    }
 
-                                if (telemetry.TrainID.HasValue)
-                                {
-                                    newMapPin.DpuTrainID = telemetry.TrainID.Value;
+                                    mapPin = newMapPin;
                                 }
-
-                                if (telemetry.Moving.HasValue)
-                                {
-                                    newMapPin.Moving = telemetry.Moving;
-                                }
-
-                                mapPin = newMapPin;
                             }
                         }
                     }
                 }
             }
-            else // Previous map pin with same address ID
+            else
             {
-                var previousMapPinHotAddress = previousMapPinByAddressID.Addresses.Where(a => a.Source == "HOT").FirstOrDefault();
+                // Previous map pin with same address ID.
+
+                var previousMapPinHotAddress = previousMapPinByAddressID.Addresses.Where(a => a.Source == SourceEnum.HOT).FirstOrDefault();
 
                 if (previousMapPinHotAddress != null)
                 {
-                    var telemetryEotSource = telemetry.Source == "EOT";
+                    var telemetryEotSource = telemetry.Source == SourceEnum.EOT;
                     var beaconsAreDifferent = previousMapPinByAddressID.BeaconID != telemetry.BeaconID;
                     var telemetryEotNotAfterPreviousHot = previousMapPinHotAddress.LastUpdate > telemetry.LastUpdate;
 
@@ -217,14 +284,14 @@ namespace Web.Server.Services
                 }
 
                 // Notes: With current logic, DPUs will never go here because their address ID is always unique.
-                mapPin = await this.UpdateMapPin(telemetry, previousMapPinByAddressID, beaconRailroads);
+                mapPin = await this.UpdateMapPin(telemetry, previousMapPinByAddressID, railroadBeacons);
             }
 
             if (mapPin == null)
             {
                 // Note: A new map pin will never have a direction as it
                 // can't be calculated without a previous map pin.
-                mapPin = await this.CreateMapPin(telemetry, beaconRailroads);
+                mapPin = await this.CreateMapPin(telemetry, railroadBeacons);
             }
 
             var upsertedMapPin = await _mapPinRepository.UpsertAsync(mapPin!);

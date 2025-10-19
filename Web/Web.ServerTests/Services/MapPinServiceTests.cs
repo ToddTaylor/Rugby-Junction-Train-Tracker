@@ -169,6 +169,7 @@ namespace Web.ServerTests.Services
                     ID = 234,
                     Direction = null,
                     BeaconID = WSORRugbyJunctionBeacon.BeaconID,
+                    BeaconName = WSORRugbyJunctionBeacon.Beacon.Name,
                     Railroad = WSORRugbyJunctionBeacon.Subdivision.Railroad.Name,
                     Subdivision = WSORRugbyJunctionBeacon.Subdivision.Name,
                     SubdivisionID = WSORRugbyJunctionBeacon.Subdivision.ID,
@@ -266,6 +267,7 @@ namespace Web.ServerTests.Services
                     ID = expectedMapPinAfterInsert.ID,
                     Direction = null,
                     BeaconID = WSORRugbyJunctionBeacon.BeaconID,
+                    BeaconName = WSORRugbyJunctionBeacon.Beacon.Name,
                     Railroad = WSORRugbyJunctionBeacon.Subdivision.Railroad.Name,
                     Subdivision = WSORRugbyJunctionBeacon.Subdivision.Name,
                     SubdivisionID = WSORRugbyJunctionBeacon.Subdivision.ID,
@@ -387,6 +389,7 @@ namespace Web.ServerTests.Services
                     ID = expectedMapPinAfterInsert.ID,
                     Direction = "S",
                     BeaconID = telemetry.BeaconID,
+                    BeaconName = CNRugbyJunctionBeacon.Beacon.Name,
                     Railroad = CNRugbyJunctionBeacon.Subdivision.Railroad.Name,
                     Subdivision = CNRugbyJunctionBeacon.Subdivision.Name,
                     SubdivisionID = CNRugbyJunctionBeacon.Subdivision.ID,
@@ -436,18 +439,9 @@ namespace Web.ServerTests.Services
         }
 
         /// <summary>
-        /// Summary:
         /// If a train emitting HOT telemetry from a single track and later detected emitting EOT telemetry by a 
         /// multi-track beacon, multi-railroad, the existing map pin should be updated with the additional source
         /// for the HOT with a calculated direction.
-        /// 
-        /// If:
-        /// - Both beacons are on the same railroad
-        /// - From beacon is single track, single railroad
-        /// - To beacon railroad is multi track, multi railroad
-        /// - To beacon detects telemetry from HOT source
-        /// Then:
-        /// - Update existing map pin for to beacon with caclulated direction and add new source to addresses
         /// </summary>
         [TestMethod]
         public async Task UpsertMapPin_SingleRailroad_SameAddress_DifferentSource()
@@ -545,6 +539,7 @@ namespace Web.ServerTests.Services
                     ID = toMapPinAfterUpdate.ID,
                     Direction = toDirection,
                     BeaconID = telemetry.BeaconID,
+                    BeaconName = CNRugbyJunctionBeacon.Beacon.Name,
                     Railroad = CNRugbyJunctionBeacon.Subdivision.Railroad.Name,
                     Subdivision = CNRugbyJunctionBeacon.Subdivision.Name,
                     SubdivisionID = CNRugbyJunctionBeacon.Subdivision.ID,
@@ -598,17 +593,8 @@ namespace Web.ServerTests.Services
         }
 
         /// <summary>
-        /// Summary:
         /// If a train emitting HOT telemetry from a single track and later detected emitting HOT telemetry by a 
         /// multi-track beacon, multi-railroad, the existing map pin last update should be updated.
-        /// 
-        /// If:
-        /// - Both beacons are on the same railroad
-        /// - From beacon is single track, single railroad
-        /// - To beacon railroad is multi track, multi railroad
-        /// - To beacon detects telemetry from HOT source
-        /// Then:
-        /// - Update existing map pin last update date for to beacon 
         /// </summary>
         [TestMethod]
         public async Task UpsertMapPin_SingleRailroad_SameAddress_SameSource()
@@ -693,6 +679,7 @@ namespace Web.ServerTests.Services
                     ID = toMapPinAfterUpdate.ID,
                     Direction = toDirection,
                     BeaconID = telemetry.BeaconID,
+                    BeaconName = CNRugbyJunctionBeacon.Beacon.Name,
                     Railroad = CNRugbyJunctionBeacon.Subdivision.Railroad.Name,
                     Subdivision = CNRugbyJunctionBeacon.Subdivision.Name,
                     SubdivisionID = CNRugbyJunctionBeacon.Subdivision.ID,
@@ -831,6 +818,7 @@ namespace Web.ServerTests.Services
                     ID = previousMapPin.ID,
                     Direction = calculatedDirection,
                     BeaconID = telemetry.BeaconID,
+                    BeaconName = CNRugbyJunctionBeacon.Beacon.Name,
                     Railroad = CNRugbyJunctionBeacon.Subdivision.Railroad.Name,
                     Subdivision = CNRugbyJunctionBeacon.Subdivision.Name,
                     SubdivisionID = CNRugbyJunctionBeacon.Subdivision.ID,
@@ -879,7 +867,6 @@ namespace Web.ServerTests.Services
         }
 
         /// <summary>
-        /// Summary:
         /// If a train emitting HOT telemetry from a single track and later detected emitting DPU telemetry by the
         /// same single-track beacon, the existing map pin should be updated with the additional source
         /// for the DPU.
@@ -973,6 +960,7 @@ namespace Web.ServerTests.Services
                     ID = toMapPinBeforeUpdate.ID,
                     Direction = toDirection,
                     BeaconID = telemetry.BeaconID,
+                    BeaconName = CNSussexBeacon.Beacon.Name,
                     Railroad = CNSussexBeacon.Subdivision.Railroad.Name,
                     Subdivision = CNSussexBeacon.Subdivision.Name,
                     SubdivisionID = CNSussexBeacon.Subdivision.ID,
@@ -1109,6 +1097,7 @@ namespace Web.ServerTests.Services
                     ID = 234,
                     Direction = null,
                     BeaconID = telemetry.BeaconID,
+                    BeaconName = CNSussexBeacon.Beacon.Name,
                     Railroad = CNSussexBeacon.Subdivision.Railroad.Name,
                     Subdivision = CNSussexBeacon.Subdivision.Name,
                     SubdivisionID = CNSussexBeacon.Subdivision.ID,
@@ -1258,6 +1247,7 @@ namespace Web.ServerTests.Services
                     ID = toMapPinAfterUpdate.ID,
                     Direction = toDirection,
                     BeaconID = telemetry.BeaconID,
+                    BeaconName = CNRugbyJunctionBeacon.Beacon.Name,
                     Railroad = CNRugbyJunctionBeacon.Subdivision.Railroad.Name,
                     Subdivision = CNRugbyJunctionBeacon.Subdivision.Name,
                     SubdivisionID = CNRugbyJunctionBeacon.Subdivision.ID,
@@ -1399,6 +1389,7 @@ namespace Web.ServerTests.Services
                     ID = expectedMapPinBeforeInsert.ID,
                     Direction = null, // Can't predict direction because DPU group logic doesn't exist yet.
                     BeaconID = telemetry.BeaconID,
+                    BeaconName = CNRugbyJunctionBeacon.Beacon.Name,
                     Railroad = CNRugbyJunctionBeacon.Subdivision.Railroad.Name,
                     Subdivision = CNRugbyJunctionBeacon.Subdivision.Name,
                     SubdivisionID = CNRugbyJunctionBeacon.Subdivision.ID,
@@ -1531,6 +1522,7 @@ namespace Web.ServerTests.Services
                     ID = expectedMapPinBeforeInsert.ID,
                     Direction = null, // Can't predict direction because DPU group logic doesn't exist yet.
                     BeaconID = telemetry.BeaconID,
+                    BeaconName = CNRugbyJunctionBeacon.Beacon.Name,
                     Railroad = CNRugbyJunctionBeacon.Subdivision.Railroad.Name,
                     Subdivision = CNRugbyJunctionBeacon.Subdivision.Name,
                     SubdivisionID = CNRugbyJunctionBeacon.Subdivision.ID,
@@ -1580,11 +1572,49 @@ namespace Web.ServerTests.Services
 
         private static class TestData
         {
+            public static Beacon Hartford_WI()
+            {
+                return new Beacon
+                {
+                    ID = 4,
+                    OwnerID = 1,
+                    Name = "Hartford",
+                    CreatedAt = DateTime.UtcNow,
+                    LastUpdate = DateTime.UtcNow
+                };
+            }
+
+            public static Beacon RugbyJunction_WI()
+            {
+                return new Beacon
+                {
+                    ID = 1,
+                    OwnerID = 1,
+                    Name = "Rugby Junction",
+                    CreatedAt = DateTime.UtcNow,
+                    LastUpdate = DateTime.UtcNow
+                };
+            }
+
+            public static Beacon Sussex_WI()
+            {
+                return new Beacon
+                {
+                    ID = 2,
+                    OwnerID = 1,
+                    Name = "Sussex",
+                    CreatedAt = DateTime.UtcNow,
+                    LastUpdate = DateTime.UtcNow
+                };
+            }
+
+
             public static BeaconRailroad CN_RugbyJunction_WI(DateTime currentDateTime)
             {
                 return new BeaconRailroad
                 {
                     BeaconID = 1,
+                    Beacon = TestData.RugbyJunction_WI(),
                     SubdivisionID = 1,
                     Subdivision = TestData.CN_Waukesha(currentDateTime),
                     Direction = Direction.NorthSouth,
@@ -1602,6 +1632,7 @@ namespace Web.ServerTests.Services
                 return new BeaconRailroad
                 {
                     BeaconID = 2,
+                    Beacon = TestData.Sussex_WI(),
                     SubdivisionID = 1,
                     Subdivision = TestData.CN_Waukesha(currentDateTime),
                     Direction = Direction.NorthSouth,
@@ -1619,6 +1650,7 @@ namespace Web.ServerTests.Services
                 return new BeaconRailroad
                 {
                     BeaconID = 3,
+                    Beacon = TestData.RugbyJunction_WI(),
                     SubdivisionID = 2,
                     Subdivision = TestData.WSOR_Milwaukee(currentDateTime),
                     Direction = Direction.NorthwestSoutheast,
@@ -1636,6 +1668,7 @@ namespace Web.ServerTests.Services
                 return new BeaconRailroad
                 {
                     BeaconID = 4,
+                    Beacon = TestData.Hartford_WI(),
                     SubdivisionID = 2,
                     Subdivision = TestData.WSOR_Milwaukee(currentDateTime),
                     Direction = Direction.NorthwestSoutheast,
