@@ -18,6 +18,7 @@ namespace Web.Server.Entities
         [Required]
         public int SubdivisionId { get; set; }
 
+        [NotMapped]
         public BeaconRailroad? BeaconRailroad { get; set; }
 
         public string? Direction { get; set; }
@@ -27,8 +28,6 @@ namespace Web.Server.Entities
         public bool? Moving { get; set; }
 
         public ICollection<Address> Addresses { get; set; } = [];
-
-        public ICollection<Telemetry> Telemetries { get; set; } = [];
 
         public MapPin Clone()
         {
@@ -52,8 +51,7 @@ namespace Web.Server.Entities
                    Direction == other.Direction &&
                    DpuTrainID == other.DpuTrainID &&
                    Moving == other.Moving &&
-                   Addresses.SequenceEqual(other.Addresses) &&      // Custom comparer that works.
-                   Telemetries.SequenceEqual(other.Telemetries);    // Custom comparer that works.
+                   Addresses.SequenceEqual(other.Addresses);    // Custom comparer that works.
         }
 
         public override int GetHashCode()
@@ -69,7 +67,6 @@ namespace Web.Server.Entities
             hash.Add(DpuTrainID);
             hash.Add(Moving);
             hash.Add(Addresses);
-            hash.Add(Telemetries);
             return hash.ToHashCode();
         }
 

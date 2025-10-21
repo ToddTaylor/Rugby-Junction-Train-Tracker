@@ -18,10 +18,6 @@ namespace Web.Server.Entities
 
         public int? TrainID { get; set; }
 
-        public int? MapPinID { get; set; }
-
-        public MapPin? MapPin { get; set; }
-
         public bool? Moving { get; set; }
 
         /// <summary>
@@ -46,8 +42,6 @@ namespace Web.Server.Entities
                    EqualityComparer<Beacon>.Default.Equals(Beacon, other.Beacon) &&
                    AddressID == other.AddressID &&
                    TrainID == other.TrainID &&
-                   MapPinID == other.MapPinID &&
-                   EqualityComparer<MapPin?>.Default.Equals(MapPin, other.MapPin) &&
                    Moving == other.Moving &&
                    Source == other.Source;
         }
@@ -62,8 +56,6 @@ namespace Web.Server.Entities
             hash.Add(Beacon);
             hash.Add(AddressID);
             hash.Add(TrainID);
-            hash.Add(MapPinID);
-            hash.Add(MapPin);
             hash.Add(Moving);
             hash.Add(Source);
             return hash.ToHashCode();

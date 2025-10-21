@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using Web.Server.Enums;
 
 namespace Web.Server.Entities
@@ -16,6 +17,7 @@ namespace Web.Server.Entities
         [Required]
         public int SubdivisionID { get; set; }
 
+        [NotMapped]
         public Subdivision Subdivision { get; set; }
 
         [Required]
@@ -24,6 +26,7 @@ namespace Web.Server.Entities
         [Required]
         public double Longitude { get; set; }
 
+        [NotMapped]
         public ICollection<MapPin> MapPins { get; set; } = [];
 
         [Required]

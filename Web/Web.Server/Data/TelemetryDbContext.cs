@@ -79,11 +79,6 @@ namespace Web.Server.Data
                 .WithMany(b => b.Telemetries)
                 .HasForeignKey(t => t.BeaconID);
 
-            modelBuilder.Entity<Telemetry>()
-                .HasOne(t => t.MapPin)
-                .WithMany(b => b.Telemetries)
-                .HasForeignKey(t => t.MapPinID);
-
         }
     }
 }

@@ -91,6 +91,31 @@ namespace Web.Server.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Telemetries",
+                columns: table => new
+                {
+                    ID = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    BeaconID = table.Column<int>(type: "INTEGER", nullable: false),
+                    AddressID = table.Column<int>(type: "INTEGER", nullable: false),
+                    TrainID = table.Column<int>(type: "INTEGER", nullable: true),
+                    Moving = table.Column<bool>(type: "INTEGER", nullable: true),
+                    Source = table.Column<string>(type: "TEXT", nullable: false),
+                    CreatedAt = table.Column<string>(type: "TEXT", nullable: false),
+                    LastUpdate = table.Column<string>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Telemetries", x => x.ID);
+                    table.ForeignKey(
+                        name: "FK_Telemetries_Beacons_BeaconID",
+                        column: x => x.BeaconID,
+                        principalTable: "Beacons",
+                        principalColumn: "ID",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "BeaconRailroads",
                 columns: table => new
                 {
@@ -133,8 +158,6 @@ namespace Web.Server.Migrations
                     Direction = table.Column<string>(type: "TEXT", nullable: true),
                     DpuTrainID = table.Column<int>(type: "INTEGER", nullable: true),
                     Moving = table.Column<bool>(type: "INTEGER", nullable: true),
-                    BeaconRailroadBeaconID = table.Column<int>(type: "INTEGER", nullable: true),
-                    BeaconRailroadSubdivisionID = table.Column<int>(type: "INTEGER", nullable: true),
                     CreatedAt = table.Column<string>(type: "TEXT", nullable: false),
                     LastUpdate = table.Column<string>(type: "TEXT", nullable: false)
                 },
@@ -147,11 +170,6 @@ namespace Web.Server.Migrations
                         principalTable: "BeaconRailroads",
                         principalColumns: new[] { "BeaconID", "SubdivisionID" },
                         onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_MapPins_BeaconRailroads_BeaconRailroadBeaconID_BeaconRailroadSubdivisionID",
-                        columns: x => new { x.BeaconRailroadBeaconID, x.BeaconRailroadSubdivisionID },
-                        principalTable: "BeaconRailroads",
-                        principalColumns: new[] { "BeaconID", "SubdivisionID" });
                 });
 
             migrationBuilder.CreateTable(
@@ -177,37 +195,6 @@ namespace Web.Server.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
-            migrationBuilder.CreateTable(
-                name: "Telemetries",
-                columns: table => new
-                {
-                    ID = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    BeaconID = table.Column<int>(type: "INTEGER", nullable: false),
-                    AddressID = table.Column<int>(type: "INTEGER", nullable: false),
-                    TrainID = table.Column<int>(type: "INTEGER", nullable: true),
-                    MapPinID = table.Column<int>(type: "INTEGER", nullable: true),
-                    Moving = table.Column<bool>(type: "INTEGER", nullable: true),
-                    Source = table.Column<string>(type: "TEXT", nullable: false),
-                    CreatedAt = table.Column<string>(type: "TEXT", nullable: false),
-                    LastUpdate = table.Column<string>(type: "TEXT", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Telemetries", x => x.ID);
-                    table.ForeignKey(
-                        name: "FK_Telemetries_Beacons_BeaconID",
-                        column: x => x.BeaconID,
-                        principalTable: "Beacons",
-                        principalColumn: "ID",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_Telemetries_MapPins_MapPinID",
-                        column: x => x.MapPinID,
-                        principalTable: "MapPins",
-                        principalColumn: "ID");
-                });
-
             migrationBuilder.CreateIndex(
                 name: "IX_Addresses_MapPinID",
                 table: "Addresses",
@@ -229,11 +216,6 @@ namespace Web.Server.Migrations
                 columns: new[] { "BeaconID", "SubdivisionId" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_MapPins_BeaconRailroadBeaconID_BeaconRailroadSubdivisionID",
-                table: "MapPins",
-                columns: new[] { "BeaconRailroadBeaconID", "BeaconRailroadSubdivisionID" });
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Subdivisions_RailroadID",
                 table: "Subdivisions",
                 column: "RailroadID");
@@ -242,11 +224,6 @@ namespace Web.Server.Migrations
                 name: "IX_Telemetries_BeaconID",
                 table: "Telemetries",
                 column: "BeaconID");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Telemetries_MapPinID",
-                table: "Telemetries",
-                column: "MapPinID");
 
             InitialCreateHelpers.InsertSeedData(migrationBuilder);
         }

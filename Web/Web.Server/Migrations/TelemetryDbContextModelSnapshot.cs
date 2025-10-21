@@ -127,12 +127,6 @@ namespace Web.Server.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<int?>("BeaconRailroadBeaconID")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int?>("BeaconRailroadSubdivisionID")
-                        .HasColumnType("INTEGER");
-
                     b.Property<string>("CreatedAt")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -156,8 +150,6 @@ namespace Web.Server.Migrations
                     b.HasKey("ID");
 
                     b.HasIndex("BeaconID", "SubdivisionId");
-
-                    b.HasIndex("BeaconRailroadBeaconID", "BeaconRailroadSubdivisionID");
 
                     b.ToTable("MapPins");
                 });
@@ -275,9 +267,6 @@ namespace Web.Server.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<int?>("MapPinID")
-                        .HasColumnType("INTEGER");
-
                     b.Property<bool?>("Moving")
                         .HasColumnType("INTEGER");
 
@@ -291,8 +280,6 @@ namespace Web.Server.Migrations
                     b.HasKey("ID");
 
                     b.HasIndex("BeaconID");
-
-                    b.HasIndex("MapPinID");
 
                     b.ToTable("Telemetries");
                 });
@@ -346,10 +333,6 @@ namespace Web.Server.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Web.Server.Entities.BeaconRailroad", null)
-                        .WithMany("MapPins")
-                        .HasForeignKey("BeaconRailroadBeaconID", "BeaconRailroadSubdivisionID");
-
                     b.Navigation("BeaconRailroad");
                 });
 
@@ -372,13 +355,7 @@ namespace Web.Server.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Web.Server.Entities.MapPin", "MapPin")
-                        .WithMany("Telemetries")
-                        .HasForeignKey("MapPinID");
-
                     b.Navigation("Beacon");
-
-                    b.Navigation("MapPin");
                 });
 
             modelBuilder.Entity("Web.Server.Entities.Beacon", b =>
@@ -388,16 +365,9 @@ namespace Web.Server.Migrations
                     b.Navigation("Telemetries");
                 });
 
-            modelBuilder.Entity("Web.Server.Entities.BeaconRailroad", b =>
-                {
-                    b.Navigation("MapPins");
-                });
-
             modelBuilder.Entity("Web.Server.Entities.MapPin", b =>
                 {
                     b.Navigation("Addresses");
-
-                    b.Navigation("Telemetries");
                 });
 
             modelBuilder.Entity("Web.Server.Entities.Owner", b =>

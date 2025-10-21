@@ -20,6 +20,7 @@ namespace Web.Server.Entities
         [Required]
         public string Name { get; set; }
 
+        [NotMapped]
         public ICollection<BeaconRailroad> BeaconRailroads { get; set; } = [];
 
         public override bool Equals(object? obj)
