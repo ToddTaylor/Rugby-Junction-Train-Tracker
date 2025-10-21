@@ -74,7 +74,7 @@ namespace Web.Server.Entities
                     { 2, 1, "NorthSouth", 43.159517, -88.200492, 108.6, false, now, now },
                     { 4, 4, "All", 45.463224, -91.110779, 129, true, now, now },
                     { 5, 3, "NorthSouth", 44.171033, -88.474169, 185.3, true, now, now },
-                    { 6, 4, "NorthSouth", 45.993272, -91.611853, 401.2, false, now, now },
+                    { 6, 4, "NorthSouth", 45.993272, -91.611853, 401.2, true, now, now },
                     { 7, 4, "NorthSouth", 44.947213, -90.559989, 308, false, now, now },
                     { 8, 4, "NorthSouth", 46.244620, -91.795016, 421, false, now, now },
                     { 9, 4, "NorthSouth", 45.854653, -91.548329, 389, true, now, now }
