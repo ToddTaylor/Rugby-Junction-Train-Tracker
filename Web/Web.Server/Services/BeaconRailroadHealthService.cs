@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 using Web.Server.Data;
 using Web.Server.DTOs;
 using Web.Server.Hubs;
@@ -37,7 +38,7 @@ namespace Web.Server.Services
 
                 var cutoff = DateTime.UtcNow.AddMinutes(-15);
 
-                var beaconRailroads = dbContext.BeaconRailroads.ToList();
+                var beaconRailroads = dbContext.BeaconRailroads.Include(br => br.Beacon).ToList();
 
                 var beaconRailroadDTOs = _mapper.Map<IEnumerable<BeaconRailroadDTO>>(beaconRailroads);
 

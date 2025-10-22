@@ -11,6 +11,7 @@ const MIN_OUTLINE_PX = 8; // allow smaller for high zoom
 const MAX_OUTLINE_PX = 2048; // allow very large for low zoom
 
 const BeaconMarker: React.FC<{ pin: Beacon; zoom: number; idx: number }> = ({ pin: beaconPin, zoom, idx }) => {
+    const beaconName = beaconPin.beaconName;
     const color = beaconPin.online === false ? '#888888' : '#005aa9';
     const title = beaconPin.online === true ? 'online' : 'offline';
     const beaconDotSizePx = getBeaconDotSizePx(zoom);
@@ -69,7 +70,7 @@ const BeaconMarker: React.FC<{ pin: Beacon; zoom: number; idx: number }> = ({ pi
                 html: `
                     <div class=\"beacon-container\" style=\"position: relative; width: ${outlineSize}px; height: ${outlineSize}px;\">
                         ${dottedOutline}
-                        <div class=\"beacon-dot\" title=\"Beacon ${title}\" style=\"
+                        <div class=\"beacon-dot\" title=\"${beaconName} ${title}\" style=\"
                             width:${beaconDotSizePx}px;
                             height:${beaconDotSizePx}px;
                             background:${color};
