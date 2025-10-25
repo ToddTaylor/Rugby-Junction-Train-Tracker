@@ -353,7 +353,7 @@ const RailMap: React.FC = () => {
                     />}
 
                 {/* Beacon markers */}
-                {trackDataLoaded && <BeaconMarkers pins={beacons} zoom={mapZoom} />}
+                {trackDataLoaded && <BeaconMarkers pins={beacons} zoom={mapZoom} mapTheme={mapTheme as 'dark' | 'light'} />}
 
                 {/* Telemetry markers */}
                 {trackDataLoaded && beaconsLoaded && <TelemetryMarkers
