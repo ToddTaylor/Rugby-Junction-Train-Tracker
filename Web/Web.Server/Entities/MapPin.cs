@@ -13,9 +13,6 @@ namespace Web.Server.Entities
         public int BeaconID { get; set; }
 
         [Required]
-        public string BeaconName { get; set; }
-
-        [Required]
         public int SubdivisionId { get; set; }
 
         [NotMapped]

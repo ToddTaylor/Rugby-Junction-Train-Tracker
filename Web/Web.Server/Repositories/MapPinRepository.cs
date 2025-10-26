@@ -92,7 +92,6 @@ namespace Web.Server.Repositories
             {
                 mapPin.Addresses = mapPin.Addresses;
                 mapPin.BeaconID = mapPin.BeaconID;
-                mapPin.BeaconName = mapPin.BeaconName;
                 mapPin.CreatedAt = _timeProvider.UtcNow;
                 mapPin.SubdivisionId = mapPin.SubdivisionId;
                 mapPin.Direction = mapPin.Direction;
