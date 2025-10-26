@@ -52,6 +52,7 @@ namespace Web.Server.Services
         {
             MapPin? mapPin = null;
 
+            // HOT / EOT logic depends on whether a previous map pin exists with the same address ID.
             var previousMapPinByAddressID = await _mapPinRepository.GetByAddressIdAsync(telemetry.AddressID);
 
             if (previousMapPinByAddressID == null)
@@ -87,6 +88,7 @@ namespace Web.Server.Services
                                             new Address
                                             {
                                                 AddressID = telemetry.AddressID,
+                                                DpuTrainID = telemetry.TrainID,
                                                 Source = telemetry.Source,
                                                 CreatedAt = telemetry.CreatedAt,
                                                 LastUpdate = telemetry.LastUpdate
@@ -194,6 +196,7 @@ namespace Web.Server.Services
                                         {
                                             AddressID = telemetry.AddressID,
                                             Source = telemetry.Source,
+                                            DpuTrainID = telemetry.TrainID,
                                             CreatedAt = telemetry.CreatedAt,
                                             LastUpdate = telemetry.LastUpdate
                                         });
@@ -245,11 +248,6 @@ namespace Web.Server.Services
                                     newMapPin.BeaconID = telemetry.BeaconID;
                                     newMapPin.BeaconRailroad = toBeaconRailroadIsSingleTracked;
 
-                                    if (telemetry.TrainID.HasValue)
-                                    {
-                                        newMapPin.DpuTrainID = telemetry.TrainID.Value;
-                                    }
-
                                     if (telemetry.Moving.HasValue)
                                     {
                                         newMapPin.Moving = telemetry.Moving;
@@ -287,6 +285,32 @@ namespace Web.Server.Services
                 mapPin = await this.UpdateMapPin(telemetry, previousMapPinByAddressID, railroadBeacons);
             }
 
+            // Check for new DPU telemetry by Train ID.
+            if (telemetry.TrainID.HasValue && previousMapPinByAddressID == null)
+            {
+                var previousMapPinByTrainID = await _mapPinRepository.GetByTrainIdAsync(telemetry.TrainID.Value);
+
+                if (previousMapPinByTrainID != null)
+                {
+                    var previousDpuAddress = previousMapPinByTrainID.Addresses.FirstOrDefault(a => a.Source == SourceEnum.DPU && a.AddressID == telemetry.AddressID);
+
+                    if (previousDpuAddress == null)
+                    {
+                        previousMapPinByTrainID.Addresses.Add(
+                            new Address
+                            {
+                                AddressID = telemetry.AddressID,
+                                DpuTrainID = telemetry.TrainID,
+                                Source = telemetry.Source,
+                                CreatedAt = telemetry.CreatedAt,
+                                LastUpdate = telemetry.LastUpdate
+                            });
+                    } // Simple last updates are handled in regular Address ID logic, no need to duplicate here.
+
+                    mapPin = previousMapPinByTrainID;
+                }
+            }
+
             if (mapPin == null)
             {
                 // Note: A new map pin will never have a direction as it
@@ -313,6 +337,7 @@ namespace Web.Server.Services
             [
                 new Address {
                     AddressID = telemetry.AddressID,
+                    DpuTrainID = telemetry.TrainID,
                     Source = telemetry.Source,
                     CreatedAt = telemetry.CreatedAt,
                     LastUpdate = telemetry.LastUpdate
@@ -340,11 +365,6 @@ namespace Web.Server.Services
                 mapPin.SubdivisionId = beaconRailroad.Subdivision.ID;
             }
 
-            if (telemetry.TrainID.HasValue)
-            {
-                mapPin.DpuTrainID = telemetry.TrainID.Value;
-            }
-
             if (telemetry.Moving.HasValue)
             {
                 mapPin.Moving = telemetry.Moving;
@@ -369,6 +389,7 @@ namespace Web.Server.Services
                 previousMapPin.Addresses.Add(new Address
                 {
                     AddressID = telemetry.AddressID,
+                    DpuTrainID = telemetry.TrainID,
                     Source = telemetry.Source,
                     CreatedAt = telemetry.CreatedAt,
                     LastUpdate = telemetry.LastUpdate

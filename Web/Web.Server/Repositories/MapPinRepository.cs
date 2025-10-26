@@ -44,8 +44,8 @@ namespace Web.Server.Repositories
         public async Task<MapPin?> GetByTrainIdAsync(int dpuTrainID)
         {
             return await _context.MapPins
-                .Where(mp => mp.DpuTrainID == dpuTrainID)
                 .Include(mp => mp.Addresses)
+                .Where(mp => mp.Addresses.Any(a => a.DpuTrainID == dpuTrainID))
                 .FirstOrDefaultAsync();
         }
 
@@ -95,7 +95,6 @@ namespace Web.Server.Repositories
                 mapPin.CreatedAt = _timeProvider.UtcNow;
                 mapPin.SubdivisionId = mapPin.SubdivisionId;
                 mapPin.Direction = mapPin.Direction;
-                mapPin.DpuTrainID = mapPin.DpuTrainID;
                 mapPin.LastUpdate = _timeProvider.UtcNow;
                 mapPin.BeaconRailroad = null;
 

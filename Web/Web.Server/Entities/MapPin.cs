@@ -20,8 +20,6 @@ namespace Web.Server.Entities
 
         public string? Direction { get; set; }
 
-        public int? DpuTrainID { get; set; }
-
         public bool? Moving { get; set; }
 
         public ICollection<Address> Addresses { get; set; } = [];
@@ -46,7 +44,6 @@ namespace Web.Server.Entities
                    SubdivisionId == other.SubdivisionId &&
                    EqualityComparer<BeaconRailroad?>.Default.Equals(BeaconRailroad, other.BeaconRailroad) &&
                    Direction == other.Direction &&
-                   DpuTrainID == other.DpuTrainID &&
                    Moving == other.Moving &&
                    Addresses.SequenceEqual(other.Addresses);    // Custom comparer that works.
         }
@@ -61,7 +58,6 @@ namespace Web.Server.Entities
             hash.Add(SubdivisionId);
             hash.Add(BeaconRailroad);
             hash.Add(Direction);
-            hash.Add(DpuTrainID);
             hash.Add(Moving);
             hash.Add(Addresses);
             return hash.ToHashCode();

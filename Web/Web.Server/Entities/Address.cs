@@ -12,6 +12,8 @@ namespace Web.Server.Entities
         [Required]
         public int AddressID { get; set; }
 
+        public int? DpuTrainID { get; set; }
+
         public int MapPinID { get; set; }
 
         public MapPin MapPin { get; set; }
@@ -35,6 +37,7 @@ namespace Web.Server.Entities
                    LastUpdate == other.LastUpdate &&
                    ID == other.ID &&
                    AddressID == other.AddressID &&
+                   DpuTrainID == other.DpuTrainID &&
                    MapPinID == other.MapPinID &&
                    EqualityComparer<MapPin>.Default.Equals(MapPin, other.MapPin) &&
                    Source == other.Source;
@@ -42,7 +45,7 @@ namespace Web.Server.Entities
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(CreatedAt, LastUpdate, ID, AddressID, MapPinID, MapPin, Source);
+            return HashCode.Combine(CreatedAt, LastUpdate, ID, AddressID, DpuTrainID, MapPinID, MapPin, Source);
         }
 
         public static bool operator ==(Address? left, Address? right)
