@@ -147,7 +147,28 @@ const RailMap: React.FC = () => {
         }
     });
 
-    // Build a map of pins by id for TelemetryMarkers
+    // Track last known update time and direction for each beacon, even after pin timeout
+    const [beaconLastUpdateMap, setBeaconLastUpdateMap] = useState<{ [beaconID: string]: { lastUpdate: string, direction: string | null } }>({});
+
+    // Update last train time and direction for each beacon when telemetry pins change
+    useEffect(() => {
+        const newMap: { [beaconID: string]: { lastUpdate: string, direction: string | null } } = { ...beaconLastUpdateMap };
+        mapPins.forEach(pin => {
+            if (pin.beaconID && pin.lastUpdate) {
+                const prev = newMap[pin.beaconID];
+                if (!prev || new Date(pin.lastUpdate) > new Date(prev.lastUpdate)) {
+                    newMap[pin.beaconID] = {
+                        lastUpdate: pin.lastUpdate,
+                        direction: pin.direction ?? null
+                    };
+                }
+            }
+        });
+        setBeaconLastUpdateMap(newMap);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [mapPins]);
+
+    // Build a map of pins by id for TelemetryMarkers (only non-expired pins)
     const telemetryPins: { [id: string]: MapPin } = {};
     offsetFilteredMarkers.forEach(pin => {
         telemetryPins[pin.id] = pin;
@@ -353,7 +374,7 @@ const RailMap: React.FC = () => {
                     />}
 
                 {/* Beacon markers */}
-                {trackDataLoaded && <BeaconMarkers pins={beacons} zoom={mapZoom} mapTheme={mapTheme as 'dark' | 'light'} />}
+                {trackDataLoaded && <BeaconMarkers pins={beacons} zoom={mapZoom} mapTheme={mapTheme as 'dark' | 'light'} beaconLastUpdateMap={beaconLastUpdateMap} />}
 
                 {/* Telemetry markers */}
                 {trackDataLoaded && beaconsLoaded && <TelemetryMarkers

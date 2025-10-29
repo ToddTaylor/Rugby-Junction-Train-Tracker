@@ -9,9 +9,11 @@ interface BeaconLabelPinProps {
     zoom: number;
     mapTheme: 'dark' | 'light';
     getLabelOffsetLat: (lat: number, zoom: number) => number;
+    lastUpdateTime?: string | null;
+    direction?: string | null;
 }
 
-const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({ beaconPin, idx, zoom, mapTheme, getLabelOffsetLat }) => {
+const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({ beaconPin, idx, zoom, mapTheme, getLabelOffsetLat, lastUpdateTime, direction }) => {
     // Sizing and style logic
     const base = 1 + (zoom - 7) * 0.09;
     const labelFontSize = 13;
@@ -30,6 +32,34 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({ beaconPin, idx, zoom, m
     const pointerColor = mapTheme === 'dark' ? '#222' : '#fff';
     const borderColor = mapTheme === 'dark' ? '#444' : '#c5d8ee';
 
+    // Add status text below label, with direction between 'Last Train:' and timestamp
+    // Map direction letter to arrow icon
+    function getDirectionArrow(dir: string | null): string {
+        switch (dir) {
+            case 'N': return '▲';
+            case 'S': return '▼';
+            case 'E': return '►';
+            case 'W': return '◄';
+            default: return dir ? dir : '';
+        }
+    }
+
+    let statusText = '';
+    if (lastUpdateTime) {
+        statusText = `Last Train: ${direction ? getDirectionArrow(direction) + ' ' : ''}${lastUpdateTime}`;
+    }
+    // Style for status text
+    const statusFontSize = labelFontSize;
+    const statusFontWeight = 200;
+    const statusLetterSpacing = '0.5px';
+    const statusFontFamily = `'Segoe UI ExtraLight', 'Segoe UI Light', 'Segoe UI', 'Arial', 'Helvetica Neue', Helvetica, Arial, sans-serif`;
+    const statusTextColor = mapTheme === 'dark' ? '#fffbe6' : '#005aa9';
+    const statusBg = mapTheme === 'dark' ? 'rgba(0,0,0,0.45)' : 'rgba(255,255,255,0.7)';
+    const statusTextShadow = mapTheme === 'dark'
+        ? '0 1px 4px #000, 0 0 2px #fffbe6'
+        : '0 1px 4px #fff, 0 0 2px #005aa9';
+    const statusPadding = `${labelPadding / 2}px 8px`;
+    const statusRadius = `${labelRadius / 1.5}px`;
     return (
         <Marker
             key={`beacon-label-${beaconPin.beaconID ?? idx}`}
@@ -42,9 +72,22 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({ beaconPin, idx, zoom, m
                         <div style=\"position: absolute; top: 0; left: 50%; transform: translateX(-50%); z-index: 0; width:0;height:0;border-left:${pointerBorderWidth}px solid transparent;border-right:${pointerBorderWidth}px solid transparent;border-bottom:${pointerBorderHeight}px solid ${borderColor};\"></div>
                         <div style=\"position: relative; z-index: 1; width:0;height:0;border-left:${pointerWidth}px solid transparent;border-right:${pointerWidth}px solid transparent;border-bottom:${pointerHeight}px solid ${pointerColor};margin-top:2px;\"></div>
                         <div style=\"background:${labelBg};color:${labelColor};font-size:${labelFontSize}px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-weight:500;padding:${labelPadding}px 12px;border-radius:${labelRadius}px;box-shadow:0 1px 6px rgba(0,0,0,0.13);margin-top:-2px;white-space:nowrap;text-transform:uppercase;border:1px solid ${borderColor};cursor:grab;\">${beaconPin.beaconName || ''}</div>
+                        ${statusText ? `<div style="
+                            background:${statusBg};
+                            color:${statusTextColor};
+                            font-size:${statusFontSize}px;
+                            font-family:${statusFontFamily};
+                            font-weight:${statusFontWeight};
+                            letter-spacing:${statusLetterSpacing};
+                            margin-top:2px;
+                            white-space:nowrap;
+                            text-shadow:${statusTextShadow};
+                            padding:${statusPadding};
+                            border-radius:${statusRadius};
+                        ">${statusText}</div>` : ''}
                     </div>
                 `,
-                iconSize: [iconWidth, iconHeight],
+                iconSize: [iconWidth, iconHeight + (statusText ? 18 : 0)],
                 iconAnchor: [iconAnchorX, iconAnchorY],
             })}
         />

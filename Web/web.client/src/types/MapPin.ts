@@ -3,6 +3,7 @@ import { Address } from './Address';
 export type MapPin = {
     id: string;
     addresses: Address[];
+    beaconID: string;
     beaconName: string;
     latitude: number;
     longitude: number;

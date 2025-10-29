@@ -8,9 +8,10 @@ interface BeaconMarkersProps {
     pins: Beacon[];
     zoom: number;
     mapTheme: 'dark' | 'light';
+    beaconLastUpdateMap?: { [beaconID: string]: { lastUpdate: string, direction: string | null } };
 }
 
-const BeaconMarkers: React.FC<BeaconMarkersProps> = ({ pins: beaconPins, zoom, mapTheme }) => {
+const BeaconMarkers: React.FC<BeaconMarkersProps> = ({ pins: beaconPins, zoom, mapTheme, beaconLastUpdateMap }) => {
     // Vertical offset for label marker (in degrees latitude, approx 7px)
     const getLabelOffsetLat = (lat: number, zoom: number) => {
         // Pointer is 1/3 smaller, so 7px at current zoom
@@ -22,8 +23,19 @@ const BeaconMarkers: React.FC<BeaconMarkersProps> = ({ pins: beaconPins, zoom, m
     return (
         <>
             {beaconPins.map((beaconPin, idx) => {
-                // Scale label marker size and pointer with zoom
-                    const LABEL_ZOOM_THRESHOLD = 11; // Hide labels below this zoom
+                const LABEL_ZOOM_THRESHOLD = 11;
+                // Find the latest telemetry pin for this beacon
+                // Always use the last known update time and direction for this beacon
+                let lastUpdateTime: string | null = null;
+                let direction: string | null = null;
+                if (beaconLastUpdateMap && beaconPin.beaconID) {
+                    const entry = beaconLastUpdateMap[String(beaconPin.beaconID)];
+                    if (entry && entry.lastUpdate) {
+                        const d = new Date(entry.lastUpdate);
+                        lastUpdateTime = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        direction = entry.direction;
+                    }
+                }
                 return (
                     <React.Fragment key={`beacon-group-${beaconPin.beaconID ?? idx}`}>
                         <BeaconMarker
@@ -38,6 +50,8 @@ const BeaconMarkers: React.FC<BeaconMarkersProps> = ({ pins: beaconPins, zoom, m
                                 zoom={zoom}
                                 mapTheme={mapTheme}
                                 getLabelOffsetLat={getLabelOffsetLat}
+                                lastUpdateTime={lastUpdateTime}
+                                direction={direction}
                             />
                         )}
                     </React.Fragment>
