@@ -52,3 +52,9 @@ export default tseslint.config({
   },
 })
 ```
+
+## Application Features (Project-specific)
+
+- Real-time telemetry updates via SignalR
+- Beacon labels show last train time plus direction arrows (▲ ▼ ► ◄)
+- Stale-aware refresh on tab/device wake (`useStaleRefresh`): When the page becomes visible after being hidden beyond configurable thresholds (30s mobile / 2m desktop by default), a soft data re-fetch (telemetry + beacons) runs. If hidden extremely long (≥10m) or the soft refresh fails, a hard reload occurs to guarantee fresh state.

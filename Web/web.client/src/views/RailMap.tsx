@@ -18,6 +18,7 @@ import { updateMapPins, updateBeacon } from '../utils/updateHelpers';
 import { useRailways } from '../hooks/useRailways';
 import { useBeacons } from '../hooks/useBeacons';
 import { useTelemetryPins } from '../hooks/useTelemetryPins';
+import { useStaleRefresh } from '../hooks/useStaleRefresh';
 
 const DARK_TILE_URL = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
 const LIGHT_TILE_URL = "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
@@ -36,7 +37,7 @@ const RailMap: React.FC = () => {
     const { beacons, beaconsLoaded, setBeacons } = useBeacons();
     const { mapPins, setMapPins } = useTelemetryPins();
 
-    // SignalR updates
+    // SignalR updates (retain reference to connection if needed for future reconnect logic)
     useSignalR({
         MapPinUpdate: (mapPin: MapPin) => {
             setMapPins((prevPins: MapPin[]) => updateMapPins(prevPins, mapPin));
@@ -44,6 +45,14 @@ const RailMap: React.FC = () => {
         BeaconUpdate: (beacon: Beacon) => {
             setBeacons((prevBeacons: Beacon[]) => updateBeacon(prevBeacons, beacon));
         }
+    });
+
+    // Stale refresh on wake/tab visibility change (soft refresh first, fallback to hard reload handled inside hook)
+    useStaleRefresh(setMapPins, setBeacons, () => { /* beacons loaded flag is maintained by hook's fetchBeacons */ }, {
+        hiddenThresholdMsMobile: 30_000, // 30s for mobile
+        hiddenThresholdMsDesktop: 120_000, // 2m desktop
+        hardReloadFallbackMs: 10 * 60_000, // 10 minutes
+        enableHardReload: true
     });
 
     const sortedData: MapPin[] = mapPins

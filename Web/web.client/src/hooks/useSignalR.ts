@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as signalR from "@microsoft/signalr";
 import { MapPin } from "../types/MapPin";
 import { Beacon } from "../types/Beacon";
@@ -12,6 +12,8 @@ export function useSignalR(handlers: {
     BeaconUpdate?: (beacons: Beacon) => void;
 }) {
     const handlersRef = useRef(handlers);
+    const [connectionState, setConnectionState] = useState<signalR.HubConnectionState | null>(null);
+    const connectionRef = useRef<signalR.HubConnection | null>(null);
 
     // Keep ref updated
     useEffect(() => {
@@ -27,6 +29,8 @@ export function useSignalR(handlers: {
             })
             .withAutomaticReconnect()
             .build();
+        connectionRef.current = connection;
+        setConnectionState(connection.state);
 
         // Register handlers if provided
         if (handlersRef.current.MapPinUpdate) {
@@ -51,15 +55,23 @@ export function useSignalR(handlers: {
 
         connection.onreconnecting(error => {
             console.warn("SignalR reconnecting...", error);
+            setConnectionState(connection.state);
         });
 
         connection.onreconnected(connectionId => {
             console.log("SignalR reconnected. Connection ID:", connectionId);
+            setConnectionState(connection.state);
         });
 
         connection.start()
-            .then(() => console.log("SignalR Connected"))
-            .catch(err => console.error("SignalR Connection Error: ", err));
+            .then(() => {
+                console.log("SignalR Connected");
+                setConnectionState(connection.state);
+            })
+            .catch(err => {
+                console.error("SignalR Connection Error: ", err);
+                setConnectionState(connection.state);
+            });
 
         return () => {
             connection.off(mapPinUpdateMethodName);
@@ -67,4 +79,6 @@ export function useSignalR(handlers: {
             connection.stop();
         };
     }, []);
+
+    return { connection: connectionRef.current, connectionState };
 }
