@@ -60,7 +60,15 @@ namespace Web.Server.Services
                 throw new InvalidOperationException("Telemetry beacon not found."); // TODO: Not found exception.
             }
 
-            await UpdateBeaconsTimestamps(beacon);
+            var updatedBeaconRailroads = await _beaconRailroadService.UpdateAsync(beacon.BeaconRailroads);
+
+            var beaconRailroadDTOs = _mapper.Map<ICollection<BeaconRailroadDTO>>(updatedBeaconRailroads);
+
+            // Set online status to true since it's now updated.
+            beaconRailroadDTOs.ToList().ForEach(beaconRailroadDTO => beaconRailroadDTO.Online = true);
+
+            // Notify clients about the updated beacon railroads.
+            await _hubContext.Clients.All.SendAsync(NotificationMethods.BeaconUpdate, beaconRailroadDTOs);
 
             // Insert new telemetry for historical logging purposes.
             telemetry = await _telemetryRepository.AddAsync(telemetry);
@@ -70,27 +78,6 @@ namespace Web.Server.Services
 
             // Notify clients about the new telemetry.
             return telemetry;
-        }
-
-        private async Task UpdateBeaconsTimestamps(Beacon telemetryBeacon)
-        {
-            // Update's the telemetry beacon railroads with the current timestamp and notify clients that beacon railroads are online.
-            foreach (var beaconRailroad in telemetryBeacon.BeaconRailroads)
-            {
-                await UpdateBeaconTimestamp(beaconRailroad);
-            }
-        }
-
-        private async Task UpdateBeaconTimestamp(BeaconRailroad beaconRailroad)
-        {
-            beaconRailroad.LastUpdate = _timeProvider.UtcNow;
-
-            await _beaconRailroadService.UpdateAsync(beaconRailroad);
-
-            var beaconRailroadDTO = _mapper.Map<BeaconRailroadDTO>(beaconRailroad);
-            beaconRailroadDTO.Online = true; // Set online status to true since it's now updated.
-
-            await _hubContext.Clients.All.SendAsync(NotificationMethods.BeaconUpdate, beaconRailroadDTO);
         }
     }
 }

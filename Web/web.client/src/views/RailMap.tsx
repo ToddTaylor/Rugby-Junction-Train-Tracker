@@ -42,8 +42,14 @@ const RailMap: React.FC = () => {
         MapPinUpdate: (mapPin: MapPin) => {
             setMapPins((prevPins: MapPin[]) => updateMapPins(prevPins, mapPin));
         },
-        BeaconUpdate: (beacon: Beacon) => {
-            setBeacons((prevBeacons: Beacon[]) => updateBeacon(prevBeacons, beacon));
+        BeaconUpdate: (beaconBatch: Beacon[]) => {
+            setBeacons((prevBeacons: Beacon[]) => {
+                let updated = prevBeacons;
+                beaconBatch.forEach(b => {
+                    updated = updateBeacon(updated, b);
+                });
+                return updated;
+            });
         }
     });
 

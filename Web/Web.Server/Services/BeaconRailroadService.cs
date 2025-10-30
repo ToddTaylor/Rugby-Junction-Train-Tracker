@@ -1,4 +1,5 @@
 using Web.Server.Entities;
+using Web.Server.Providers;
 using Web.Server.Repositories;
 
 namespace Web.Server.Services
@@ -6,10 +7,12 @@ namespace Web.Server.Services
     public class BeaconRailroadService : IBeaconRailroadService
     {
         private readonly IBeaconRailroadRepository _repository;
+        private readonly ITimeProvider _timeProvider;
 
-        public BeaconRailroadService(IBeaconRailroadRepository repository)
+        public BeaconRailroadService(IBeaconRailroadRepository repository, ITimeProvider timeProvider)
         {
             _repository = repository;
+            _timeProvider = timeProvider;
         }
 
         public async Task<BeaconRailroad> AddAsync(BeaconRailroad beaconRailroad)
@@ -30,6 +33,22 @@ namespace Web.Server.Services
         public async Task<BeaconRailroad> UpdateAsync(BeaconRailroad beaconRailroad)
         {
             return await _repository.UpdateAsync(beaconRailroad);
+        }
+
+        public async Task<ICollection<BeaconRailroad>> UpdateAsync(ICollection<BeaconRailroad> beaconRailroads)
+        {
+            List<BeaconRailroad> updatedRailroads = new();
+
+            foreach (var beaconRailroad in beaconRailroads)
+            {
+                beaconRailroad.LastUpdate = _timeProvider.UtcNow;
+
+                BeaconRailroad updated = await UpdateAsync(beaconRailroad);
+
+                updatedRailroads.Add(updated);
+            }
+
+            return updatedRailroads;
         }
 
         public async Task<bool> DeleteAsync(int beaconId, int railroadId)

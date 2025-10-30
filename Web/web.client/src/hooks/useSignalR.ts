@@ -9,7 +9,7 @@ const mapPinUpdateMethodName = "MapPinUpdate";
 // Accept handlers for multiple events
 export function useSignalR(handlers: {
     MapPinUpdate?: (mapPin: MapPin) => void;
-    BeaconUpdate?: (beacons: Beacon) => void;
+    BeaconUpdate?: (beacons: Beacon[]) => void;
 }) {
     const handlersRef = useRef(handlers);
     const [connectionState, setConnectionState] = useState<signalR.HubConnectionState | null>(null);
@@ -40,8 +40,9 @@ export function useSignalR(handlers: {
             });
         }
         if (handlersRef.current.BeaconUpdate) {
-            connection.on(beaconUpdateMethodName, (beacon: Beacon) => {
-                handlersRef.current.BeaconUpdate?.(beacon);
+            connection.on(beaconUpdateMethodName, (payload: Beacon | Beacon[]) => {
+                const arr = Array.isArray(payload) ? payload : [payload];
+                handlersRef.current.BeaconUpdate?.(arr);
             });
         }
 
