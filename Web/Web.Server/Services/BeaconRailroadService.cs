@@ -41,8 +41,6 @@ namespace Web.Server.Services
 
             foreach (var beaconRailroad in beaconRailroads)
             {
-                beaconRailroad.LastUpdate = _timeProvider.UtcNow;
-
                 BeaconRailroad updated = await UpdateAsync(beaconRailroad);
 
                 updatedRailroads.Add(updated);
