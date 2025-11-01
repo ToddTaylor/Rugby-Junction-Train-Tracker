@@ -42,6 +42,10 @@ namespace Web.Server.Services
         {
             return await _mapPinRepository.GetAllAsync(minutes);
         }
+        public async Task<IEnumerable<MapPin>> GetMapPinsLatestAsync()
+        {
+            return await _mapPinRepository.GetLatestAsync();
+        }
 
         public async Task<MapPin?> GetMapPinByIdAsync(int addressID)
         {

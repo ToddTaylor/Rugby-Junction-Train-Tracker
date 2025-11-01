@@ -66,6 +66,8 @@ namespace Web.Server.Mappers
                                }).ToList()
                                : new List<AddressDTO>()));
 
+            CreateMap<MapPin, MapPinLatestDTO>();
+
             CreateMap<CreateOwnerDTO, Owner>()
                 .ForMember(dest => dest.ID, opt => opt.Ignore())
                 .ForMember(dest => dest.Beacons, opt => opt.Ignore());

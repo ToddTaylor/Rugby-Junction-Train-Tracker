@@ -49,6 +49,16 @@ namespace Web.Server.Repositories
                 .FirstOrDefaultAsync();
         }
 
+        public async Task<IEnumerable<MapPin>> GetLatestAsync()
+        {
+            var mapPins = await _context.MapPins
+                .GroupBy(mp => mp.BeaconID)
+                .Select(g => g.OrderByDescending(mp => mp.LastUpdate).First())
+                .ToListAsync();
+
+            return mapPins;
+        }
+
         public async Task<IEnumerable<MapPin>> GetAllAsync(int? minutes)
         {
             if (minutes.HasValue)

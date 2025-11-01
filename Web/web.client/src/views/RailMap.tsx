@@ -165,6 +165,41 @@ const RailMap: React.FC = () => {
     // Track last known update time and direction for each beacon, even after pin timeout
     const [beaconLastUpdateMap, setBeaconLastUpdateMap] = useState<{ [beaconID: string]: { lastUpdate: string, direction: string | null } }>({});
 
+    // Seed beacon last update map from latest API on initial load
+    useEffect(() => {
+        let aborted = false;
+        async function fetchLatest() {
+            try {
+                const apiUrl = import.meta.env.VITE_API_URL + '/api/v1/MapPins/latest';
+                const response = await fetch(apiUrl, {
+                    headers: {
+                        'X-Api-Key': import.meta.env.VITE_API_KEY,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                if (!response.ok) throw new Error('Failed to fetch latest map pins');
+                const json = await response.json();
+                const items: Array<{ beaconID: number | string; lastUpdate: string; direction: string | null }> = json?.data || [];
+                if (aborted || !Array.isArray(items)) return;
+                setBeaconLastUpdateMap(prev => {
+                    const updated = { ...prev };
+                    items.forEach(item => {
+                        const key = String(item.beaconID);
+                        const existing = updated[key];
+                        if (!existing || new Date(item.lastUpdate) > new Date(existing.lastUpdate)) {
+                            updated[key] = { lastUpdate: item.lastUpdate, direction: item.direction };
+                        }
+                    });
+                    return updated;
+                });
+            } catch (e) {
+                console.error('Error seeding latest beacon updates:', e);
+            }
+        }
+        fetchLatest();
+        return () => { aborted = true; };
+    }, []);
+
     // Update last train time and direction for each beacon when telemetry pins change
     useEffect(() => {
         const newMap: { [beaconID: string]: { lastUpdate: string, direction: string | null } } = { ...beaconLastUpdateMap };

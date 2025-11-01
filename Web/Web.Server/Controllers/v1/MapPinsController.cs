@@ -56,6 +56,26 @@ namespace Web.Server.Controllers.v1
             }
         }
 
+        [HttpGet("Latest")]
+        public async Task<ActionResult> GetLatest()
+        {
+            var response = new MessageEnvelope<IEnumerable<MapPinLatestDTO>>(null, []);
+            try
+            {
+                var mapPins = await _mapPinsService.GetMapPinsLatestAsync();
+                var mapPinDTOs = _mapper.Map<IEnumerable<MapPinLatestDTO>>(mapPins);
+
+                response.Data = mapPinDTOs;
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while fetching map pins.");
+                response.Errors.Add(ex.Message);
+                return StatusCode(StatusCodes.Status500InternalServerError, response);
+            }
+        }
+
         // DELETE: api/v1/MapPin/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteBeacon(int id)
