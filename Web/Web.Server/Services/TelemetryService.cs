@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.SignalR;
 using Web.Server.DTOs;
 using Web.Server.Entities;
 using Web.Server.Hubs;
-using Web.Server.Providers;
 using Web.Server.Repositories;
 
 namespace Web.Server.Services
@@ -16,7 +15,6 @@ namespace Web.Server.Services
         private readonly IHubContext<NotificationHub> _hubContext;
         private readonly IMapper _mapper;
         private readonly IMapPinService _mapPinsService;
-        private readonly ITimeProvider _timeProvider;
 
         public TelemetryService(
             IBeaconRailroadService beaconRailroadService,
@@ -24,8 +22,7 @@ namespace Web.Server.Services
             IHubContext<NotificationHub> hubContext,
             IMapper mapper,
             IMapPinService mapPinsService,
-            ITelemetryRepository telemetryRepository,
-            ITimeProvider timeProvider)
+            ITelemetryRepository telemetryRepository)
         {
             _beaconRailroadService = beaconRailroadService;
             _beaconService = beaconService;
@@ -33,7 +30,6 @@ namespace Web.Server.Services
             _mapper = mapper;
             _mapPinsService = mapPinsService;
             _telemetryRepository = telemetryRepository;
-            _timeProvider = timeProvider;
         }
 
         public async Task<IEnumerable<Telemetry>> GetTelemetriesAsync()

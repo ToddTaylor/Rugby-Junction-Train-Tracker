@@ -46,8 +46,7 @@ namespace Web.ServerTests.Services
                 _hubContextMock.Object,
                 _mapperMock.Object,
                 _mapPinServiceMock.Object,
-                _telemetryRepositoryMock.Object,
-                _timeProviderMock.Object
+                _telemetryRepositoryMock.Object
             );
         }
 
