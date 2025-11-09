@@ -10,6 +10,24 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Theme Variables (Dark as base) */
+  --color-bg: #242424;
+  --color-bg-elevated: #2f2f2f;
+  --color-bg-elevated-alt: #1f1f1f;
+  --color-border: #3d3d3d;
+  --color-text-primary: rgba(255,255,255,0.9);
+  --color-text-secondary: rgba(255,255,255,0.65);
+  --color-accent: #c21717;
+  --color-accent-hover: #e32323;
+  --color-error-bg: #3b0d0d;
+  --color-error-text: #ffb3b3;
+  --color-input-bg: #2c2c2c;
+  --color-input-border: #555;
+  --color-card-shadow: 0 4px 18px rgba(0,0,0,0.4);
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --focus-ring: 0 0 0 3px rgba(21,131,239,0.4);
 }
 
 html, body, #root {
@@ -68,13 +86,13 @@ button:focus-visible {
   flex-direction: column;
   min-height: 100vh;
   height: 100vh;
-  width: 100vw;
+  width: 100%; /* avoid 100vw which can trigger horizontal scrollbar due to scrollbar width */
   box-sizing: border-box;
 }
 
 .app-header, .app-footer {
-  width: 100vw;
-  min-width: 100vw;
+  width: 100%;
+  min-width: 100%;
   left: 0;
   right: 0;
   position: relative;
@@ -107,7 +125,7 @@ button:focus-visible {
   flex: 1;
   min-height: 0;
   height: 100%;
-  width: 100vw;
+  width: 100%;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -189,6 +207,20 @@ button:focus-visible {
   :root {
     color: #213547;
     background-color: #ffffff;
+    --color-bg: #ffffff;
+    --color-bg-elevated: #ffffff;
+    --color-bg-elevated-alt: #f5f7fa;
+    --color-border: #d0d7e2;
+    --color-text-primary: #1f2d3d;
+    --color-text-secondary: #4a5a6a;
+  --color-accent: #b50f0f;
+  --color-accent-hover: #d61919;
+    --color-error-bg: #ffe6e6;
+    --color-error-text: #a30000;
+    --color-input-bg: #ffffff;
+    --color-input-border: #b6c2cf;
+    --color-card-shadow: 0 4px 18px rgba(0,0,0,0.15);
+    --focus-ring: 0 0 0 3px rgba(0,90,169,0.35);
   }
   a:hover {
     color: #747bff;

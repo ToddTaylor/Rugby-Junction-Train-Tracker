@@ -68,13 +68,13 @@ namespace Web.Server.Mappers
 
             CreateMap<MapPin, MapPinLatestDTO>();
 
-            CreateMap<CreateOwnerDTO, Owner>()
-                .ForMember(dest => dest.ID, opt => opt.Ignore())
-                .ForMember(dest => dest.Beacons, opt => opt.Ignore());
-            CreateMap<UpdateOwnerDTO, Owner>();
+            CreateMap<CreateUserDTO, User>()
+                .ForMember(dest => dest.ID, opt => opt.Ignore());
+            CreateMap<UpdateUserDTO, User>();
 
-            CreateMap<Owner, OwnerDTO>();
-            CreateMap<Owner, UpdateOwnerDTO>();
+            CreateMap<User, UserDTO>()
+                .ForMember(dest => dest.Roles, opt => opt.MapFrom(src => src.UserRoles.Select(ur => ur.Role.RoleName).ToList()));
+            CreateMap<User, UpdateUserDTO>();
 
             CreateMap<CreateRailroadDTO, Railroad>()
                 .ForMember(dest => dest.ID, opt => opt.Ignore());

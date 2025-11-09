@@ -99,7 +99,7 @@ builder.Services.AddSwaggerGen(options =>
 builder.Services.AddScoped<IBeaconRepository, BeaconRepository>();
 builder.Services.AddScoped<IBeaconRailroadRepository, BeaconRailroadRepository>();
 builder.Services.AddScoped<IMapPinRepository, MapPinRepository>();
-builder.Services.AddScoped<IOwnerRepository, OwnerRepository>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IRailroadRepository, RailroadRepository>();
 builder.Services.AddScoped<ITelemetryRepository, TelemetryRepository>();
 
@@ -107,9 +107,10 @@ builder.Services.AddScoped<ITelemetryRepository, TelemetryRepository>();
 builder.Services.AddScoped<IBeaconService, BeaconService>();
 builder.Services.AddScoped<IBeaconRailroadService, BeaconRailroadService>();
 builder.Services.AddScoped<IMapPinService, MapPinService>();
-builder.Services.AddScoped<IOwnerService, OwnerService>();
+builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IRailroadService, RailroadService>();
 builder.Services.AddScoped<ITelemetryService, TelemetryService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
 
 builder.Services.AddScoped<ITimeProvider, SystemTimeProvider>();
 
@@ -125,7 +126,16 @@ app.UseCors(corsPolicyName);
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<TelemetryDbContext>();
-    dbContext.Database.Migrate();
+    try
+    {
+        dbContext.Database.Migrate();
+        SeedData.SeedDatabase(dbContext);
+    }
+    catch (Exception ex)
+    {
+        File.WriteAllText("db-migration-error.txt", ex.ToString());
+        throw;
+    }
 }
 
 // Use the API Key Middleware

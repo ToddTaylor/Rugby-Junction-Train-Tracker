@@ -58,3 +58,6 @@ export default tseslint.config({
 - Real-time telemetry updates via SignalR
 - Beacon labels show last train time plus direction arrows (▲ ▼ ► ◄)
 - Stale-aware refresh on tab/device wake (`useStaleRefresh`): When the page becomes visible after being hidden beyond configurable thresholds (30s mobile / 2m desktop by default), a soft data re-fetch (telemetry + beacons) runs. If hidden extremely long (≥10m) or the soft refresh fails, a hard reload occurs to guarantee fresh state.
+
+### Theming (Light/Dark Mode)
+The login screen and future UI components use a CSS variable theme defined in `src/index.css`. Dark mode variables are the default; light mode overrides activate via the `prefers-color-scheme: light` media query. Component styles (e.g. `src/views/Login.css`) reference shared variables such as `--color-bg`, `--color-text-primary`, and `--color-accent`. To extend the palette, add new variables under `:root` (dark baseline) and provide corresponding overrides inside the light media query. This keeps styling DRY and automatically adapts across user system preferences.

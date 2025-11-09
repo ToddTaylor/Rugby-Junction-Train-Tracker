@@ -12,7 +12,7 @@ namespace Web.Server.Entities
         [Required]
         public int OwnerID { get; set; }
 
-        public Owner Owner { get; set; }
+        public User Owner { get; set; }
 
         [Required]
         public string Name { get; set; }
@@ -34,7 +34,7 @@ namespace Web.Server.Entities
                    ID == other.ID &&
                    OwnerID == other.OwnerID &&
                    Name == other.Name &&
-                   EqualityComparer<Owner>.Default.Equals(Owner, other.Owner) &&
+                   EqualityComparer<User>.Default.Equals(Owner, other.Owner) &&
                    EqualityComparer<ICollection<BeaconRailroad>>.Default.Equals(BeaconRailroads, other.BeaconRailroads) &&
                    EqualityComparer<ICollection<Telemetry>>.Default.Equals(Telemetries, other.Telemetries);
         }

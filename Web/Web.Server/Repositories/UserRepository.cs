@@ -5,49 +5,56 @@ using Web.Server.Providers;
 
 namespace Web.Server.Repositories
 {
-    public class OwnerRepository : IOwnerRepository
+    public class UserRepository : IUserRepository
     {
         private readonly TelemetryDbContext _context;
         private readonly ITimeProvider _timeProvider;
 
-        public OwnerRepository(TelemetryDbContext context, ITimeProvider timeProvider)
+        public UserRepository(TelemetryDbContext context, ITimeProvider timeProvider)
         {
             _context = context;
             _timeProvider = timeProvider;
         }
 
-        public async Task<Owner> AddAsync(Owner owner)
+        public async Task<User> AddAsync(User owner)
         {
             owner.CreatedAt = _timeProvider.UtcNow;
             owner.LastUpdate = owner.CreatedAt;
 
-            _context.Owners.Add(owner);
+            _context.Users.Add(owner);
             await _context.SaveChangesAsync();
             return owner;
         }
 
-        public async Task<IEnumerable<Owner>> GetAllAsync()
+        public async Task<IEnumerable<User>> GetAllAsync()
         {
-            return await _context.Owners
-                .Include(o => o.Beacons)
-                .ThenInclude(o => o.BeaconRailroads)
-                .ThenInclude(o => o.Subdivision)
+            return await _context.Users
+                .Include(o => o.UserRoles)
+                .ThenInclude(ur => ur.Role)
                 .OrderByDescending(o => o.LastUpdate)
                 .ToListAsync();
         }
 
-        public async Task<Owner?> GetByIdAsync(int id)
+        public async Task<User?> GetByEmailAsync(string email)
         {
-            return await _context.Owners
-                .Include(o => o.Beacons)
-                .ThenInclude(o => o.BeaconRailroads)
-                .ThenInclude(o => o.Subdivision)
+            var user = await _context.Users
+                .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.Email == email);
+            return user;
+        }
+
+        public async Task<User?> GetByIdAsync(int id)
+        {
+            return await _context.Users
+                .Include(o => o.UserRoles)
+                .ThenInclude(ur => ur.Role)
                 .FirstOrDefaultAsync(o => o.ID == id);
         }
 
-        public async Task<Owner> UpdateAsync(Owner owner)
+        public async Task<User> UpdateAsync(User owner)
         {
-            var existingOwner = await _context.Owners.FindAsync(owner.ID);
+            var existingOwner = await _context.Users.FindAsync(owner.ID);
             if (existingOwner == null)
             {
                 throw new KeyNotFoundException("Owner not found.");
@@ -56,8 +63,6 @@ namespace Web.Server.Repositories
             existingOwner.FirstName = owner.FirstName;
             existingOwner.LastName = owner.LastName;
             existingOwner.Email = owner.Email;
-            existingOwner.City = owner.City;
-            existingOwner.State = owner.State;
             existingOwner.LastUpdate = _timeProvider.UtcNow;
 
             await _context.SaveChangesAsync();
@@ -66,13 +71,13 @@ namespace Web.Server.Repositories
 
         public async Task<bool> DeleteAsync(int id)
         {
-            var owner = await _context.Owners.FindAsync(id);
+            var owner = await _context.Users.FindAsync(id);
             if (owner == null)
             {
                 return false;
             }
 
-            _context.Owners.Remove(owner);
+            _context.Users.Remove(owner);
             await _context.SaveChangesAsync();
             return true;
         }

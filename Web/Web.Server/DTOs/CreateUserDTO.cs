@@ -1,6 +1,6 @@
 ﻿namespace Web.Server.DTOs
 {
-    public class CreateOwnerDTO : IEquatable<CreateOwnerDTO?>
+    public class CreateUserDTO : IEquatable<CreateUserDTO?>
     {
         public required string FirstName { get; set; }
 
@@ -14,10 +14,10 @@
 
         public override bool Equals(object? obj)
         {
-            return Equals(obj as CreateOwnerDTO);
+            return Equals(obj as CreateUserDTO);
         }
 
-        public bool Equals(CreateOwnerDTO? other)
+        public bool Equals(CreateUserDTO? other)
         {
             return other is not null &&
                    FirstName == other.FirstName &&
@@ -32,12 +32,12 @@
             return HashCode.Combine(FirstName, LastName, Email, City, State);
         }
 
-        public static bool operator ==(CreateOwnerDTO? left, CreateOwnerDTO? right)
+        public static bool operator ==(CreateUserDTO? left, CreateUserDTO? right)
         {
-            return EqualityComparer<CreateOwnerDTO>.Default.Equals(left, right);
+            return EqualityComparer<CreateUserDTO>.Default.Equals(left, right);
         }
 
-        public static bool operator !=(CreateOwnerDTO? left, CreateOwnerDTO? right)
+        public static bool operator !=(CreateUserDTO? left, CreateUserDTO? right)
         {
             return !(left == right);
         }

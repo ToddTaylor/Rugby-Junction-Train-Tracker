@@ -17,7 +17,9 @@ namespace Web.Server.Data
         public DbSet<Beacon> Beacons { get; set; }
         public DbSet<BeaconRailroad> BeaconRailroads { get; set; }
         public DbSet<MapPin> MapPins { get; set; }
-        public DbSet<Owner> Owners { get; set; }
+        public DbSet<Role> Roles { get; set; }
+        public DbSet<UserRole> UserRoles { get; set; }
+        public DbSet<User> Users { get; set; }
         public DbSet<Subdivision> Subdivisions { get; set; }
         public DbSet<Railroad> Railroads { get; set; }
         public DbSet<Telemetry> Telemetries { get; set; }
@@ -44,9 +46,14 @@ namespace Web.Server.Data
                     .Property(br => br.Direction)
                     .HasConversion(new EnumToStringConverter<Direction>());
 
+            // Composite keys
             modelBuilder.Entity<BeaconRailroad>()
-                .HasKey(br => new { br.BeaconID, br.SubdivisionID }); // composite key
+                .HasKey(br => new { br.BeaconID, br.SubdivisionID });
 
+            modelBuilder.Entity<UserRole>()
+                .HasKey(ur => new { ur.UserId, ur.RoleId });
+
+            // Relationships
             modelBuilder.Entity<BeaconRailroad>()
                 .HasOne(br => br.Beacon)
                 .WithMany(b => b.BeaconRailroads)
@@ -79,6 +86,15 @@ namespace Web.Server.Data
                 .WithMany(b => b.Telemetries)
                 .HasForeignKey(t => t.BeaconID);
 
+            modelBuilder.Entity<UserRole>()
+                .HasOne(ur => ur.User)
+                .WithMany(u => u.UserRoles)
+                .HasForeignKey(ur => ur.UserId);
+
+            modelBuilder.Entity<UserRole>()
+                .HasOne(ur => ur.Role)
+                .WithMany(r => r.UserRoles)
+                .HasForeignKey(ur => ur.RoleId);
         }
     }
 }

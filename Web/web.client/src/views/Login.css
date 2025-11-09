@@ -1,0 +1,171 @@
+/* Login Screen Styles - Light/Dark adaptive via CSS variables */
+
+.login-page {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  /* Use dynamic viewport to avoid Edge/Chrome vertical overflow and remove calc that exceeded 100vh */
+  min-height: 100dvh;
+  width: 100%;
+  padding: 40px 16px 24px;
+  box-sizing: border-box;
+  overflow-x: hidden; /* prevent stray horizontal scrollbar from 100vw usage in some nested flex contexts */
+  overflow-y: hidden; /* eliminate vertical scrollbar under normal conditions */
+}
+
+/* Ensure root/body doesn't add extra height via default flex centering when login-page is present */
+body:has(.login-page) {
+  min-height: 100dvh;
+  overflow-y: auto; /* allow natural scroll if viewport is shorter than card but avoid forced scrollbar */
+}
+
+.login-card {
+  width: 100%;
+  max-width: 380px;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 28px 32px 24px;
+  box-sizing: border-box;
+  box-shadow: var(--color-card-shadow);
+  font-family: system-ui, Segoe UI, Arial, sans-serif;
+  backdrop-filter: blur(4px);
+}
+
+.login-title {
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0 0 4px;
+  color: var(--color-accent);
+  letter-spacing: .5px;
+}
+
+.login-subtitle {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin: 0 0 16px;
+}
+
+.login-error {
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  margin: 0 0 16px;
+  line-height: 1.3;
+}
+
+.login-form-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0 0 6px;
+  color: var(--color-text-primary);
+  text-transform: uppercase;
+  letter-spacing: .75px;
+}
+
+.login-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 14px;
+  font-size: 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-input-border);
+  background: var(--color-input-bg);
+  color: var(--color-text-primary);
+  margin: 0 0 14px;
+  outline: none;
+  transition: border-color .15s, background-color .15s;
+}
+.login-input:focus {
+  border-color: var(--color-accent);
+  box-shadow: var(--focus-ring);
+}
+
+.login-remember {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  margin: 2px 0 14px;
+  color: var(--color-text-secondary);
+}
+.login-remember input[type=checkbox] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.login-info {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin: 0 0 18px;
+  line-height: 1.4;
+}
+
+.login-action-btn {
+  width: 100%;
+  padding: 10px 16px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  border: none;
+  background: var(--color-accent);
+  color: #fff;
+  cursor: pointer;
+  letter-spacing: .5px;
+  transition: background-color .15s, transform .15s;
+}
+.login-action-btn:hover:not([disabled]) {
+  background: var(--color-accent-hover);
+}
+.login-action-btn:active:not([disabled]) {
+  transform: translateY(1px);
+}
+.login-action-btn[disabled] {
+  opacity: .65;
+  cursor: default;
+}
+
+.login-resend-wrap {
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+.login-resend-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--color-accent);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: underline;
+}
+.login-resend-btn:hover {
+  color: var(--color-accent-hover);
+}
+
+.login-ready-msg {
+  font-size: 16px;
+  color: var(--color-text-primary);
+}
+
+/* Light mode specific subtle tweaks */
+@media (prefers-color-scheme: light) {
+  .login-card {
+    backdrop-filter: none;
+  }
+}
+
+/* Small screen adjustments */
+@media (max-width: 480px) {
+  .login-card {
+    padding: 26px 24px 24px;
+  }
+  .login-title {
+    font-size: 24px;
+  }
+}

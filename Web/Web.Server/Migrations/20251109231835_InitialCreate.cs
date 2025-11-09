@@ -1,5 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
-using Web.Server.Entities;
+﻿using System;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -11,25 +11,6 @@ namespace Web.Server.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.CreateTable(
-                name: "Owners",
-                columns: table => new
-                {
-                    ID = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    FirstName = table.Column<string>(type: "TEXT", nullable: false),
-                    LastName = table.Column<string>(type: "TEXT", nullable: false),
-                    Email = table.Column<string>(type: "TEXT", nullable: false),
-                    City = table.Column<string>(type: "TEXT", nullable: false),
-                    State = table.Column<string>(type: "TEXT", nullable: false),
-                    CreatedAt = table.Column<string>(type: "TEXT", nullable: false),
-                    LastUpdate = table.Column<string>(type: "TEXT", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Owners", x => x.ID);
-                });
-
             migrationBuilder.CreateTable(
                 name: "Railroads",
                 columns: table => new
@@ -46,25 +27,35 @@ namespace Web.Server.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Beacons",
+                name: "Roles",
+                columns: table => new
+                {
+                    RoleId = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    RoleName = table.Column<string>(type: "TEXT", nullable: false),
+                    Description = table.Column<string>(type: "TEXT", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Roles", x => x.RoleId);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Users",
                 columns: table => new
                 {
                     ID = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
-                    OwnerID = table.Column<int>(type: "INTEGER", nullable: false),
-                    Name = table.Column<string>(type: "TEXT", nullable: false),
+                    FirstName = table.Column<string>(type: "TEXT", nullable: false),
+                    LastName = table.Column<string>(type: "TEXT", nullable: false),
+                    Email = table.Column<string>(type: "TEXT", nullable: false),
+                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false),
                     CreatedAt = table.Column<string>(type: "TEXT", nullable: false),
                     LastUpdate = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Beacons", x => x.ID);
-                    table.ForeignKey(
-                        name: "FK_Beacons_Owners_OwnerID",
-                        column: x => x.OwnerID,
-                        principalTable: "Owners",
-                        principalColumn: "ID",
-                        onDelete: ReferentialAction.Cascade);
+                    table.PrimaryKey("PK_Users", x => x.ID);
                 });
 
             migrationBuilder.CreateTable(
@@ -91,26 +82,48 @@ namespace Web.Server.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Telemetries",
+                name: "Beacons",
                 columns: table => new
                 {
                     ID = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
-                    BeaconID = table.Column<int>(type: "INTEGER", nullable: false),
-                    AddressID = table.Column<int>(type: "INTEGER", nullable: false),
-                    TrainID = table.Column<int>(type: "INTEGER", nullable: true),
-                    Moving = table.Column<bool>(type: "INTEGER", nullable: true),
-                    Source = table.Column<string>(type: "TEXT", nullable: false),
+                    OwnerID = table.Column<int>(type: "INTEGER", nullable: false),
+                    Name = table.Column<string>(type: "TEXT", nullable: false),
                     CreatedAt = table.Column<string>(type: "TEXT", nullable: false),
                     LastUpdate = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Telemetries", x => x.ID);
+                    table.PrimaryKey("PK_Beacons", x => x.ID);
                     table.ForeignKey(
-                        name: "FK_Telemetries_Beacons_BeaconID",
-                        column: x => x.BeaconID,
-                        principalTable: "Beacons",
+                        name: "FK_Beacons_Users_OwnerID",
+                        column: x => x.OwnerID,
+                        principalTable: "Users",
+                        principalColumn: "ID",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "UserRoles",
+                columns: table => new
+                {
+                    UserId = table.Column<int>(type: "INTEGER", nullable: false),
+                    RoleId = table.Column<int>(type: "INTEGER", nullable: false),
+                    AssignedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_UserRoles", x => new { x.UserId, x.RoleId });
+                    table.ForeignKey(
+                        name: "FK_UserRoles_Roles_RoleId",
+                        column: x => x.RoleId,
+                        principalTable: "Roles",
+                        principalColumn: "RoleId",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_UserRoles_Users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "Users",
                         principalColumn: "ID",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -147,16 +160,39 @@ namespace Web.Server.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Telemetries",
+                columns: table => new
+                {
+                    ID = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    BeaconID = table.Column<int>(type: "INTEGER", nullable: false),
+                    AddressID = table.Column<int>(type: "INTEGER", nullable: false),
+                    TrainID = table.Column<int>(type: "INTEGER", nullable: true),
+                    Moving = table.Column<bool>(type: "INTEGER", nullable: true),
+                    Source = table.Column<string>(type: "TEXT", nullable: false),
+                    CreatedAt = table.Column<string>(type: "TEXT", nullable: false),
+                    LastUpdate = table.Column<string>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Telemetries", x => x.ID);
+                    table.ForeignKey(
+                        name: "FK_Telemetries_Beacons_BeaconID",
+                        column: x => x.BeaconID,
+                        principalTable: "Beacons",
+                        principalColumn: "ID",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "MapPins",
                 columns: table => new
                 {
                     ID = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     BeaconID = table.Column<int>(type: "INTEGER", nullable: false),
-                    BeaconName = table.Column<string>(type: "TEXT", nullable: false),
                     SubdivisionId = table.Column<int>(type: "INTEGER", nullable: false),
                     Direction = table.Column<string>(type: "TEXT", nullable: true),
-                    DpuTrainID = table.Column<int>(type: "INTEGER", nullable: true),
                     Moving = table.Column<bool>(type: "INTEGER", nullable: true),
                     CreatedAt = table.Column<string>(type: "TEXT", nullable: false),
                     LastUpdate = table.Column<string>(type: "TEXT", nullable: false)
@@ -179,6 +215,7 @@ namespace Web.Server.Migrations
                     ID = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     AddressID = table.Column<int>(type: "INTEGER", nullable: false),
+                    DpuTrainID = table.Column<int>(type: "INTEGER", nullable: true),
                     MapPinID = table.Column<int>(type: "INTEGER", nullable: false),
                     Source = table.Column<string>(type: "TEXT", nullable: false),
                     CreatedAt = table.Column<string>(type: "TEXT", nullable: false),
@@ -225,7 +262,10 @@ namespace Web.Server.Migrations
                 table: "Telemetries",
                 column: "BeaconID");
 
-            InitialCreateHelpers.InsertSeedData(migrationBuilder);
+            migrationBuilder.CreateIndex(
+                name: "IX_UserRoles_RoleId",
+                table: "UserRoles",
+                column: "RoleId");
         }
 
         /// <inheritdoc />
@@ -238,7 +278,13 @@ namespace Web.Server.Migrations
                 name: "Telemetries");
 
             migrationBuilder.DropTable(
+                name: "UserRoles");
+
+            migrationBuilder.DropTable(
                 name: "MapPins");
+
+            migrationBuilder.DropTable(
+                name: "Roles");
 
             migrationBuilder.DropTable(
                 name: "BeaconRailroads");
@@ -250,7 +296,7 @@ namespace Web.Server.Migrations
                 name: "Subdivisions");
 
             migrationBuilder.DropTable(
-                name: "Owners");
+                name: "Users");
 
             migrationBuilder.DropTable(
                 name: "Railroads");

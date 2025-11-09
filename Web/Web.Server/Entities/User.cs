@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Web.Server.Entities
 {
-    public class Owner : EntityBase, IEquatable<Owner?>
+    public class User : EntityBase, IEquatable<User?>
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -18,20 +18,18 @@ namespace Web.Server.Entities
         [Required]
         public string Email { get; set; }
 
-        [Required]
-        public string City { get; set; }
+        public bool IsActive { get; set; }
 
-        [Required]
-        public string State { get; set; }
+        // Navigation
 
-        public ICollection<Beacon> Beacons { get; set; } = [];
+        public ICollection<UserRole> UserRoles { get; set; }
 
         public override bool Equals(object? obj)
         {
-            return Equals(obj as Owner);
+            return Equals(obj as User);
         }
 
-        public bool Equals(Owner? other)
+        public bool Equals(User? other)
         {
             return other is not null &&
                    CreatedAt == other.CreatedAt &&
@@ -40,9 +38,8 @@ namespace Web.Server.Entities
                    FirstName == other.FirstName &&
                    LastName == other.LastName &&
                    Email == other.Email &&
-                   City == other.City &&
-                   State == other.State &&
-                   EqualityComparer<ICollection<Beacon>>.Default.Equals(Beacons, other.Beacons);
+                   IsActive == other.IsActive &&
+                   EqualityComparer<ICollection<UserRole>>.Default.Equals(UserRoles, other.UserRoles);
         }
 
         public override int GetHashCode()
@@ -54,18 +51,17 @@ namespace Web.Server.Entities
             hash.Add(FirstName);
             hash.Add(LastName);
             hash.Add(Email);
-            hash.Add(City);
-            hash.Add(State);
-            hash.Add(Beacons);
+            hash.Add(IsActive);
+            hash.Add(UserRoles);
             return hash.ToHashCode();
         }
 
-        public static bool operator ==(Owner? left, Owner? right)
+        public static bool operator ==(User? left, User? right)
         {
-            return EqualityComparer<Owner>.Default.Equals(left, right);
+            return EqualityComparer<User>.Default.Equals(left, right);
         }
 
-        public static bool operator !=(Owner? left, Owner? right)
+        public static bool operator !=(User? left, User? right)
         {
             return !(left == right);
         }

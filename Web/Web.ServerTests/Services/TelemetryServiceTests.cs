@@ -130,15 +130,12 @@ namespace Web.ServerTests.Services
             {
                 ID = 1,
                 OwnerID = 1,
-                Owner = new Owner
+                Owner = new User
                 {
                     ID = 1,
                     FirstName = "Test",
                     LastName = "Owner",
-                    Email = "test@example.com",
-                    City = "City",
-                    State = "State",
-                    Beacons = new List<Beacon>()
+                    Email = "test@example.com"
                 },
                 BeaconRailroads = new List<BeaconRailroad> { beaconRailroad },
                 Telemetries = new List<Telemetry>()
