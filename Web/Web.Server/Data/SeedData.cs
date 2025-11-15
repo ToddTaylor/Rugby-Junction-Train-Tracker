@@ -15,8 +15,8 @@ namespace Web.Server.Data
                 dbContext.Users.AddRange(
                     new User { ID = 1, FirstName = "Todd", LastName = "Taylor", Email = "rugbyjunctionwi@outlook.com", IsActive = true, CreatedAt = staticDate, LastUpdate = staticDate },
                     new User { ID = 2, FirstName = "Chris", LastName = "Stromberg", Email = "c.k.stromberg@gmail.com", IsActive = true, CreatedAt = staticDate, LastUpdate = staticDate },
-                    new User { ID = 3, FirstName = "Thomas", LastName = "Hogan", Email = "TheSteelHighway@gmail.com", IsActive = true, CreatedAt = staticDate, LastUpdate = staticDate },
-                    new User { ID = 4, FirstName = "Brian", LastName = "Sykes", Email = "bsykes957@bellsouth.net", IsActive = true, CreatedAt = staticDate, LastUpdate = staticDate }
+                    new User { ID = 3, FirstName = "Thomas", LastName = "Hogan", Email = "TheSteelHighway@gmail.com", IsActive = false, CreatedAt = staticDate, LastUpdate = staticDate },
+                    new User { ID = 4, FirstName = "Jesus", LastName = "Micheel", Email = "Jesusmicheel43@gmail.com", IsActive = true, CreatedAt = staticDate, LastUpdate = staticDate }
                 );
             }
 
@@ -62,10 +62,11 @@ namespace Web.Server.Data
                     new Beacon { ID = 2, OwnerID = 2, Name = "Sussex", CreatedAt = staticDate, LastUpdate = staticDate },
                     new Beacon { ID = 4, OwnerID = 3, Name = "Ladysmith", CreatedAt = staticDate, LastUpdate = staticDate },
                     new Beacon { ID = 5, OwnerID = 3, Name = "Neenah", CreatedAt = staticDate, LastUpdate = staticDate },
-                    new Beacon { ID = 6, OwnerID = 4, Name = "Stanberry", CreatedAt = staticDate, LastUpdate = staticDate },
-                    new Beacon { ID = 7, OwnerID = 4, Name = "Owen", CreatedAt = staticDate, LastUpdate = staticDate },
-                    new Beacon { ID = 8, OwnerID = 4, Name = "Gordon", CreatedAt = staticDate, LastUpdate = staticDate },
-                    new Beacon { ID = 9, OwnerID = 4, Name = "Stone Lake", CreatedAt = staticDate, LastUpdate = staticDate }
+                    new Beacon { ID = 6, OwnerID = 3, Name = "Stanberry", CreatedAt = staticDate, LastUpdate = staticDate },
+                    new Beacon { ID = 7, OwnerID = 3, Name = "Owen", CreatedAt = staticDate, LastUpdate = staticDate },
+                    new Beacon { ID = 8, OwnerID = 3, Name = "Gordon", CreatedAt = staticDate, LastUpdate = staticDate },
+                    new Beacon { ID = 9, OwnerID = 3, Name = "Stone Lake", CreatedAt = staticDate, LastUpdate = staticDate },
+                    new Beacon { ID = 10, OwnerID = 4, Name = "South Neenah", CreatedAt = staticDate, LastUpdate = staticDate }
                 );
             }
 
@@ -81,7 +82,8 @@ namespace Web.Server.Data
                     new BeaconRailroad { BeaconID = 6, SubdivisionID = 4, Direction = Direction.NorthSouth, Latitude = 45.993272, Longitude = -91.611853, Milepost = 401.2, MultipleTracks = true, CreatedAt = staticDate, LastUpdate = staticDate },
                     new BeaconRailroad { BeaconID = 7, SubdivisionID = 4, Direction = Direction.NorthSouth, Latitude = 44.947213, Longitude = -90.559989, Milepost = 308.0, MultipleTracks = false, CreatedAt = staticDate, LastUpdate = staticDate },
                     new BeaconRailroad { BeaconID = 8, SubdivisionID = 4, Direction = Direction.NorthSouth, Latitude = 46.244620, Longitude = -91.795016, Milepost = 421.0, MultipleTracks = false, CreatedAt = staticDate, LastUpdate = staticDate },
-                    new BeaconRailroad { BeaconID = 9, SubdivisionID = 4, Direction = Direction.NorthSouth, Latitude = 45.854653, Longitude = -91.548329, Milepost = 389.0, MultipleTracks = true, CreatedAt = staticDate, LastUpdate = staticDate }
+                    new BeaconRailroad { BeaconID = 9, SubdivisionID = 4, Direction = Direction.NorthSouth, Latitude = 45.854653, Longitude = -91.548329, Milepost = 389.0, MultipleTracks = true, CreatedAt = staticDate, LastUpdate = staticDate },
+                    new BeaconRailroad { BeaconID = 10, SubdivisionID = 3, Direction = Direction.NorthSouth, Latitude = 44.164714, Longitude = -88.477814, Milepost = 185.0, MultipleTracks = true, CreatedAt = staticDate, LastUpdate = staticDate }
                 );
             }
 
