@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 // import { Popup } from 'react-leaflet';
 import { Beacon } from '../types/Beacon';
 import BeaconMarker from './BeaconMarker';
@@ -20,9 +20,24 @@ const BeaconMarkers: React.FC<BeaconMarkersProps> = ({ pins: beaconPins, zoom, m
         return lat - (offsetMeters / 111320); // 1 deg lat ~ 111.32km
     };
 
+    // Deduplicate beacons by beaconID to avoid duplicate React keys when upstream data contains repeats
+    const uniqueBeaconPins = useMemo(() => {
+        const byId = new Map<string | number, Beacon>();
+        for (const b of beaconPins) {
+            if (b.beaconID !== undefined && b.beaconID !== null) {
+                byId.set(b.beaconID, b); // overwrite keeps latest occurrence
+            } else {
+                // Use a Symbol fallback to keep truly missing IDs unique
+                byId.set(Symbol('no-id') as any, b);
+            }
+        }
+        // Map preserves insertion order with overwrites; spread to array
+        return Array.from(byId.values());
+    }, [beaconPins]);
+
     return (
         <>
-            {beaconPins.map((beaconPin, idx) => {
+            {uniqueBeaconPins.map((beaconPin, idx) => {
                 const LABEL_ZOOM_THRESHOLD = 11;
                 // Find the latest telemetry pin for this beacon
                 // Always use the last known update time and direction for this beacon
@@ -36,8 +51,10 @@ const BeaconMarkers: React.FC<BeaconMarkersProps> = ({ pins: beaconPins, zoom, m
                         direction = entry.direction;
                     }
                 }
+                // Stable unique key: use beaconID plus lastUpdate (if present) for identity, fallback to idx
+                const keyRoot = beaconPin.beaconID != null ? `beacon-${beaconPin.beaconID}` : `beacon-idx-${idx}`;
                 return (
-                    <React.Fragment key={`beacon-group-${beaconPin.beaconID ?? idx}`}>
+                    <React.Fragment key={keyRoot}>
                         <BeaconMarker
                             pin={beaconPin}
                             zoom={zoom}
