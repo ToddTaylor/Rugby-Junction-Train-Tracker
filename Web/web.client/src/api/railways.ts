@@ -20,7 +20,7 @@ export const fetchRailways = async (setTracksData: any, setTrackDataLoaded: any)
         setTrackDataLoaded(true);
         return;
     }
-    const response = await fetch('/data/overpass-wi-railways.geojson');
+    const response = await fetch('/data/usdot-wisconsin-no-fields.geojson');
     if (!response.ok) throw new Error('Failed to fetch railways');
     const data = await response.json();
     await db.put(STORE_NAME, data, 'railways');

@@ -1,11 +1,11 @@
-﻿import React, { useEffect, useState, useRef } from 'react';
+﻿import React, { useEffect, useState, useRef, useMemo } from 'react';
 import {
     MapContainer,
     TileLayer,
-    GeoJSON,
     useMapEvents
 } from 'react-leaflet';
 import { LatLngTuple, Map as LeafletMap } from 'leaflet';
+import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useSignalR } from '../hooks/useSignalR';
 import { Beacon } from '../types/Beacon';
@@ -61,49 +61,36 @@ const RailMap: React.FC = () => {
         enableHardReload: true
     });
 
-    const sortedData: MapPin[] = mapPins
-        .sort((a, b) => new Date(b.lastUpdate).getTime() - new Date(a.lastUpdate).getTime())
-        .map((pin) => ({
-            ...pin,
-            id: pin.id,
-        }));
-
-    // Group pins by their lat/lng to handle overlapping markers
-    const groupedPins: { [key: string]: MapPin[] } = {};
-    sortedData.forEach(pin => {
-        const key = `${pin.latitude},${pin.longitude}`;
-        if (!groupedPins[key]) groupedPins[key] = [];
-        groupedPins[key].push(pin);
-    });
-
-    // Marker icon size in pixels
+    // Marker icon size in pixels (constant)
     const MARKER_SIZE_PX = 20;
 
-    // Offset markers so that pins with the same lat/lng are side by side (east-west)
-    const offsetMarkers: MapPin[] = [];
-    Object.values(groupedPins).forEach(group => {
-        const n = group.length;
-        if (n === 1) {
-            // Only one marker at this location, do not offset
-            offsetMarkers.push({
-                ...group[0],
-                longitude: group[0].longitude // ensure no offset
-            });
-        } else {
-            // As markers are removed, recalculate offsets so remaining markers are always centered
-            group.forEach((pin, idx) => {
-                // Center the group around the original longitude
-                const offsetIndex = idx - (n - 1) / 2;
-                // Convert marker width in pixels to meters, then to longitude degrees
-                const offsetMeters = pixelsToMeters(MARKER_SIZE_PX, pin.latitude, mapZoom);
-                const offsetDeg = metersToLongitudeDegrees(offsetMeters * offsetIndex, pin.latitude);
-                offsetMarkers.push({
-                    ...pin,
-                    longitude: pin.longitude + offsetDeg
+    // Memoize sorting, grouping, and offset calculations to avoid recomputation on unrelated renders
+    const { groupedPins } = useMemo(() => {
+        const sorted: MapPin[] = [...mapPins]
+            .sort((a, b) => new Date(b.lastUpdate).getTime() - new Date(a.lastUpdate).getTime())
+            .map(pin => ({ ...pin }));
+        const grouped: { [key: string]: MapPin[] } = {};
+        sorted.forEach(pin => {
+            const key = `${pin.latitude},${pin.longitude}`;
+            (grouped[key] ||= []).push(pin);
+        });
+        const offsets: MapPin[] = [];
+        Object.values(grouped).forEach(group => {
+            const n = group.length;
+            if (n === 1) {
+                offsets.push({ ...group[0], longitude: group[0].longitude });
+            } else {
+                group.forEach((pin, idx) => {
+                    const offsetIndex = idx - (n - 1) / 2;
+                    const offsetMeters = pixelsToMeters(MARKER_SIZE_PX, pin.latitude, mapZoom);
+                    const offsetDeg = metersToLongitudeDegrees(offsetMeters * offsetIndex, pin.latitude);
+                    offsets.push({ ...pin, longitude: pin.longitude + offsetDeg });
                 });
-            });
-        }
-    });
+            }
+        });
+        // offsetMarkers result not used directly; only groupedPins needed for downstream filtering
+        return { groupedPins: grouped };
+    }, [mapPins, mapZoom]);
 
     // Prune pins older than 10 minutes on a timer so they disappear even if no new data arrives
     // @ts-expect-error
@@ -119,48 +106,42 @@ const RailMap: React.FC = () => {
     const MAX_PIN_AGE_MINUTES = Number(import.meta.env.VITE_MAX_PIN_AGE_MINUTES);
     const MAX_PIN_AGE_MS = MAX_PIN_AGE_MINUTES * 60 * 1000;
     const now = Date.now();
-    const filteredPins: MapPin[] = [];
-    Object.values(groupedPins).forEach(group => {
-        group.forEach(pin => {
-            const lastUpdate = new Date(pin.lastUpdate).getTime();
-            // If any address has source "EOT", cut the max age in half.
-            const hasEOT = Array.isArray(pin.addresses) && pin.addresses.some(addr => addr.source === "EOT");
-            const maxAge = hasEOT ? MAX_PIN_AGE_MS / 2 : MAX_PIN_AGE_MS;
-            if (now - lastUpdate <= maxAge) {
-                filteredPins.push(pin);
-            }
+    const filteredPins: MapPin[] = useMemo(() => {
+        const list: MapPin[] = [];
+        Object.values(groupedPins).forEach(group => {
+            group.forEach(pin => {
+                const lastUpdate = new Date(pin.lastUpdate).getTime();
+                const hasEOT = Array.isArray(pin.addresses) && pin.addresses.some(addr => addr.source === 'EOT');
+                const maxAge = hasEOT ? MAX_PIN_AGE_MS / 2 : MAX_PIN_AGE_MS;
+                if (now - lastUpdate <= maxAge) list.push(pin);
+            });
         });
-    });
+        return list;
+    }, [groupedPins, now, MAX_PIN_AGE_MS]);
 
     // Group filtered pins by their lat/lng to handle overlapping markers
-    const groupedFilteredPins: { [key: string]: MapPin[] } = {};
-    filteredPins.forEach(pin => {
-        const key = `${pin.latitude},${pin.longitude}`;
-        if (!groupedFilteredPins[key]) groupedFilteredPins[key] = [];
-        groupedFilteredPins[key].push(pin);
-    });
-
-    // Re-apply offset logic to only the filtered pins
-    const offsetFilteredMarkers: MapPin[] = [];
-    Object.values(groupedFilteredPins).forEach(group => {
-        const n = group.length;
-        if (n === 1) {
-            offsetFilteredMarkers.push({
-                ...group[0],
-                longitude: group[0].longitude
-            });
-        } else {
-            group.forEach((pin, idx) => {
-                const offsetIndex = idx - (n - 1) / 2;
-                const offsetMeters = pixelsToMeters(MARKER_SIZE_PX, pin.latitude, mapZoom);
-                const offsetDeg = metersToLongitudeDegrees(offsetMeters * offsetIndex, pin.latitude);
-                offsetFilteredMarkers.push({
-                    ...pin,
-                    longitude: pin.longitude + offsetDeg
+    const { offsetFilteredMarkers } = useMemo(() => {
+        const grouped: { [key: string]: MapPin[] } = {};
+        filteredPins.forEach(pin => {
+            const key = `${pin.latitude},${pin.longitude}`;
+            (grouped[key] ||= []).push(pin);
+        });
+        const offsets: MapPin[] = [];
+        Object.values(grouped).forEach(group => {
+            const n = group.length;
+            if (n === 1) {
+                offsets.push({ ...group[0], longitude: group[0].longitude });
+            } else {
+                group.forEach((pin, idx) => {
+                    const offsetIndex = idx - (n - 1) / 2;
+                    const offsetMeters = pixelsToMeters(MARKER_SIZE_PX, pin.latitude, mapZoom);
+                    const offsetDeg = metersToLongitudeDegrees(offsetMeters * offsetIndex, pin.latitude);
+                    offsets.push({ ...pin, longitude: pin.longitude + offsetDeg });
                 });
-            });
-        }
-    });
+            }
+        });
+        return { offsetFilteredMarkers: offsets };
+    }, [filteredPins, mapZoom]);
 
     // Track last known update time and direction for each beacon, even after pin timeout
     const [beaconLastUpdateMap, setBeaconLastUpdateMap] = useState<{ [beaconID: string]: { lastUpdate: string, direction: string | null } }>({});
@@ -226,6 +207,51 @@ const RailMap: React.FC = () => {
 
     // Use ref to get the map instance
     const mapRef = useRef<LeafletMap | null>(null);
+    const railLayerRef = useRef<L.GeoJSON | null>(null);
+
+    // Imperative, single-instance GeoJSON layer creation & incremental population to avoid recursive re-render stack overflow
+    useEffect(() => {
+        if (!mapRef.current) return;
+        if (trackDataLoading) return; // wait until loading completes
+        if (!trackData) return; // nothing to render yet
+
+        const map = mapRef.current;
+        if (!railLayerRef.current) {
+            railLayerRef.current = L.geoJSON(undefined, {
+                style: () => ({ color: '#005aa9', weight: 4 })
+            }).addTo(map);
+        }
+        const layer = railLayerRef.current!;
+        layer.clearLayers();
+
+        const features: any[] | undefined = (trackData as any)?.features;
+        if (Array.isArray(features)) {
+            const featuresArr = features as any[];
+            let i = 0;
+            const chunkSize = 500; // tune chunk size if needed
+            function addNext() {
+                const slice = { ...trackData, features: featuresArr.slice(i, i + chunkSize) };
+                layer.addData(slice as any);
+                i += chunkSize;
+                if (i < featuresArr.length) {
+                    setTimeout(addNext, 0); // yield to event loop to keep UI responsive
+                }
+            }
+            addNext();
+        } else {
+            layer.addData(trackData as any);
+        }
+    }, [trackData, trackDataLoading]);
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            if (railLayerRef.current && mapRef.current) {
+                mapRef.current.removeLayer(railLayerRef.current);
+                railLayerRef.current = null;
+            }
+        };
+    }, []);
 
     useEffect(() => {
         if (!mapRef.current) return;
@@ -395,14 +421,7 @@ const RailMap: React.FC = () => {
                     attribution={TILE_ATTRIBUTION}
                 />
 
-                {/* Display railroad tracks using locally cached Overpass query of just WI and then generate GeoJSON file. */}
-                {trackData && !trackDataLoading && <GeoJSON
-                    data={trackData}
-                    style={(feature) => {
-                        if (!feature) return {};
-                        return { color: '#005aa9', weight: 4 };
-                    }}
-                />}
+                {/* Railroad tracks added imperatively via Leaflet GeoJSON layer */}
 
                 {trackDataLoading && (
                     <div style={{

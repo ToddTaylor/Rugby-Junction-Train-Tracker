@@ -2,8 +2,7 @@
 // Posts back { success: boolean, data?: GeoJSON.GeoJsonObject, error?: string }
 
 const candidatePaths = [
-  '/data/overpass-wi-railways.geojson',
-  '/data/overpass-wi-railways.json'
+  '/data/usdot-wisconsin-no-fields.geojson'
 ];
 
 async function fetchRailways(): Promise<GeoJSON.GeoJsonObject | null> {
