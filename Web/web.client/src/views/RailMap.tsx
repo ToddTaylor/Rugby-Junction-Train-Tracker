@@ -33,7 +33,7 @@ const RailMap: React.FC = () => {
     const [mapCenter, setMapCenter] = useState<LatLngTuple>(savedMapState?.center || fallbackCenter);
 
     // Use custom hooks for data
-    const { trackData, trackDataLoaded } = useRailways();
+    const { trackData, trackDataLoaded, trackDataLoading } = useRailways();
     const { beacons, beaconsLoaded, setBeacons } = useBeacons();
     const { mapPins, setMapPins } = useTelemetryPins();
 
@@ -396,32 +396,31 @@ const RailMap: React.FC = () => {
                 />
 
                 {/* Display railroad tracks using locally cached Overpass query of just WI and then generate GeoJSON file. */}
-                {trackData && <GeoJSON 
-                        data={trackData} 
-                        style={(feature) => {
-                            if (!feature || !feature.properties) return {};
+                {trackData && !trackDataLoading && <GeoJSON
+                    data={trackData}
+                    style={(feature) => {
+                        if (!feature) return {};
+                        return { color: '#005aa9', weight: 4 };
+                    }}
+                />}
 
-                            const name = feature.properties?.name || '';
-
-                            let color = 'gray';
-                            let weight = 1;
-                            const highlightSubs = [
-                                'CN Waukesha Subdivision',
-                                'Fox River Subdivision',
-                                'Neenah Subdivision',
-                                'Marinette Subdivision',
-                                'Superior Subdivision',
-                                'Valley Subdivision'
-                                // Add more subdivision names here as needed
-                            ];
-                            if (highlightSubs.includes(name)) {
-                                color = '#005aa9';
-                                weight = 4;
-                            }
-
-                            return { color, weight };
-                        }}
-                    />}
+                {trackDataLoading && (
+                    <div style={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        background: 'rgba(0,0,0,0.6)',
+                        color: '#fff',
+                        padding: '8px 14px',
+                        borderRadius: 6,
+                        zIndex: 900,
+                        fontSize: 14,
+                        letterSpacing: '0.5px'
+                    }}>
+                        Loading railways…
+                    </div>
+                )}
 
                 {/* Beacon markers */}
                 {trackDataLoaded && <BeaconMarkers pins={beacons} zoom={mapZoom} mapTheme={mapTheme as 'dark' | 'light'} beaconLastUpdateMap={beaconLastUpdateMap} />}

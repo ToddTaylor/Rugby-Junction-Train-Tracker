@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 
 import { defineConfig } from 'vite';
 import plugin from '@vitejs/plugin-react';
+import compression from 'vite-plugin-compression';
 import fs from 'fs';
 import path from 'path';
 import child_process from 'child_process';
@@ -43,7 +44,17 @@ const target = env.ASPNETCORE_HTTPS_PORT ? `https://localhost:${env.ASPNETCORE_H
 
 // https://vitejs.dev/config/
 export default defineConfig({
-    plugins: [plugin()],
+    plugins: [
+        plugin(),
+        compression({
+            verbose: true,
+            threshold: 8 * 1024, // Only assets bigger than 8KB
+            algorithm: 'gzip',
+            ext: '.gz',
+            deleteOriginFile: false, // Keep original files
+            compressionOptions: { level: 9 }
+        })
+    ],
     resolve: {
         alias: {
             '@': fileURLToPath(new URL('./src', import.meta.url))
