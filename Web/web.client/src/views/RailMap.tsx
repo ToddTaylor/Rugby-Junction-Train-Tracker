@@ -143,59 +143,83 @@ const RailMap: React.FC = () => {
         return { offsetFilteredMarkers: offsets };
     }, [filteredPins, mapZoom]);
 
-    // Track last known update time and direction for each beacon, even after pin timeout
-    const [beaconLastUpdateMap, setBeaconLastUpdateMap] = useState<{ [beaconID: string]: { lastUpdate: string, direction: string | null } }>({});
+    // Track last known update time and direction for each beacon, even after pin timeout.
+    // Seed from localStorage so a full reload retains prior knowledge.
+    const [beaconLastUpdateMap, setBeaconLastUpdateMap] = useState<{ [beaconID: string]: { lastUpdate: string; direction: string | null } }>(() => {
+        try {
+            const raw = localStorage.getItem('beaconLastUpdateMap');
+            if (raw) return JSON.parse(raw);
+        } catch { /* ignore corrupt storage */ }
+        return {};
+    });
 
-    // Seed beacon last update map from latest API on initial load
+    // Persist map to localStorage whenever it changes (lightweight JSON)
     useEffect(() => {
-        let aborted = false;
-        async function fetchLatest() {
-            try {
-                const apiUrl = import.meta.env.VITE_API_URL + '/api/v1/MapPins/latest';
-                const response = await fetch(apiUrl, {
-                    headers: {
-                        'X-Api-Key': import.meta.env.VITE_API_KEY,
-                        'Content-Type': 'application/json'
+        try { localStorage.setItem('beaconLastUpdateMap', JSON.stringify(beaconLastUpdateMap)); } catch { /* ignore quota */ }
+    }, [beaconLastUpdateMap]);
+
+    // Helper to merge latest beacon timestamps from API
+    async function mergeLatestBeaconUpdates() {
+        try {
+            const apiUrl = import.meta.env.VITE_API_URL + '/api/v1/MapPins/latest';
+            const response = await fetch(apiUrl, {
+                headers: {
+                    'X-Api-Key': import.meta.env.VITE_API_KEY,
+                    'Content-Type': 'application/json'
+                }
+            });
+            if (!response.ok) throw new Error('Failed to fetch latest map pins');
+            const json = await response.json();
+            const items: Array<{ beaconID: number | string; lastUpdate: string; direction: string | null }> = json?.data || [];
+            if (!Array.isArray(items)) return;
+            setBeaconLastUpdateMap(prev => {
+                const updated = { ...prev };
+                items.forEach(item => {
+                    const key = String(item.beaconID);
+                    const existing = updated[key];
+                    if (!existing || new Date(item.lastUpdate) > new Date(existing.lastUpdate)) {
+                        updated[key] = { lastUpdate: item.lastUpdate, direction: item.direction };
                     }
                 });
-                if (!response.ok) throw new Error('Failed to fetch latest map pins');
-                const json = await response.json();
-                const items: Array<{ beaconID: number | string; lastUpdate: string; direction: string | null }> = json?.data || [];
-                if (aborted || !Array.isArray(items)) return;
-                setBeaconLastUpdateMap(prev => {
-                    const updated = { ...prev };
-                    items.forEach(item => {
-                        const key = String(item.beaconID);
-                        const existing = updated[key];
-                        if (!existing || new Date(item.lastUpdate) > new Date(existing.lastUpdate)) {
-                            updated[key] = { lastUpdate: item.lastUpdate, direction: item.direction };
-                        }
-                    });
-                    return updated;
-                });
-            } catch (e) {
-                console.error('Error seeding latest beacon updates:', e);
+                return updated;
+            });
+        } catch (e) {
+            console.error('Error merging latest beacon updates:', e);
+        }
+    }
+
+    // Initial seed
+    useEffect(() => { mergeLatestBeaconUpdates(); }, []);
+
+    // Refresh latest timestamps when page becomes visible (soft refresh scenario)
+    useEffect(() => {
+        function onVisibility() {
+            if (document.visibilityState === 'visible') {
+                mergeLatestBeaconUpdates();
             }
         }
-        fetchLatest();
-        return () => { aborted = true; };
+        document.addEventListener('visibilitychange', onVisibility);
+        return () => document.removeEventListener('visibilitychange', onVisibility);
     }, []);
 
     // Update last train time and direction for each beacon when telemetry pins change
     useEffect(() => {
-        const newMap: { [beaconID: string]: { lastUpdate: string, direction: string | null } } = { ...beaconLastUpdateMap };
-        mapPins.forEach(pin => {
-            if (pin.beaconID && pin.lastUpdate) {
-                const prev = newMap[pin.beaconID];
-                if (!prev || new Date(pin.lastUpdate) > new Date(prev.lastUpdate)) {
-                    newMap[pin.beaconID] = {
-                        lastUpdate: pin.lastUpdate,
-                        direction: pin.direction ?? null
-                    };
+        if (!mapPins.length) return; // avoid unnecessary state set when empty batch
+        setBeaconLastUpdateMap(prev => {
+            const updated = { ...prev };
+            mapPins.forEach(pin => {
+                if (pin.beaconID && pin.lastUpdate) {
+                    const prevEntry = updated[pin.beaconID];
+                    if (!prevEntry || new Date(pin.lastUpdate) > new Date(prevEntry.lastUpdate)) {
+                        updated[pin.beaconID] = {
+                            lastUpdate: pin.lastUpdate,
+                            direction: pin.direction ?? null
+                        };
+                    }
                 }
-            }
+            });
+            return updated;
         });
-        setBeaconLastUpdateMap(newMap);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [mapPins]);
 
