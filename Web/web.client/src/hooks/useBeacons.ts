@@ -5,6 +5,12 @@ import { Beacon } from '../types/Beacon';
 export function useBeacons() {
   const [beacons, setBeacons] = useState<Beacon[]>([]);
   const [beaconsLoaded, setBeaconsLoaded] = useState(false);
+  // Load persisted beacon statuses once at module init
+  let initialStatusMap: Record<string, boolean> = {};
+  try {
+    const raw = localStorage.getItem('beaconStatusMap');
+    if (raw) initialStatusMap = JSON.parse(raw);
+  } catch { /* ignore malformed storage */ }
 
   useEffect(() => {
     const fetchBeacons = async () => {
@@ -38,8 +44,17 @@ export function useBeacons() {
         });
         cached = await db2.get(STORE_NAME, 'beacons');
       }
+      const graceUntil = Number(localStorage.getItem('focusGraceUntil') || '0');
+      const now = Date.now();
       if (cached) {
-        setBeacons(cached);
+        const withStatus = (cached as Beacon[]).map(b => {
+          const stored = initialStatusMap[b.beaconID];
+          if (stored === true && b.online === false && now < graceUntil) {
+            return { ...b, online: true };
+          }
+          return stored === undefined ? b : { ...b, online: stored };
+        });
+        setBeacons(withStatus);
         setBeaconsLoaded(true);
         return;
       }
@@ -54,7 +69,14 @@ export function useBeacons() {
         if (!response.ok) throw new Error('Failed to fetch map pins');
         const { data: beacons } = await response.json();
         await db.put(STORE_NAME, beacons, 'beacons');
-        setBeacons(beacons);
+        const withStatus = (beacons as Beacon[]).map(b => {
+          const stored = initialStatusMap[b.beaconID];
+          if (stored === true && b.online === false && now < graceUntil) {
+            return { ...b, online: true };
+          }
+          return stored === undefined ? b : { ...b, online: stored };
+        });
+        setBeacons(withStatus);
         setBeaconsLoaded(true);
       } catch (error) {
         console.error('Error fetching map pins:', error);
@@ -62,6 +84,14 @@ export function useBeacons() {
     };
     fetchBeacons();
   }, []);
+
+  // Persist status map whenever beacons array changes (includes SignalR updates)
+  useEffect(() => {
+    if (!beacons.length) return;
+    const statusMap: Record<string, boolean> = {};
+    beacons.forEach(b => { if (b && b.beaconID) statusMap[b.beaconID] = !!b.online; });
+    try { localStorage.setItem('beaconStatusMap', JSON.stringify(statusMap)); } catch { /* ignore quota */ }
+  }, [beacons]);
 
   return { beacons, beaconsLoaded, setBeacons };
 }

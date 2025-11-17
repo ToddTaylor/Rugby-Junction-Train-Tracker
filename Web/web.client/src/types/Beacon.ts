@@ -5,5 +5,5 @@ export type Beacon = {
     latitude: number;
     longitude: number;
     milepost: number;
-    online: Boolean;
+    online: boolean; // primitive boolean for reliable equality checks & persistence
 };

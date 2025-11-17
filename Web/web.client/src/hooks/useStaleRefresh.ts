@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { fetchInitialTelemetryPins, fetchBeacons } from '../api/railways';
+import { fetchInitialTelemetryPins } from '../api/mapPinsApi';
+import { fetchBeacons } from '../api/beaconsApi';
 import { Beacon } from '../types/Beacon';
 import { MapPin } from '../types/MapPin';
 
@@ -61,6 +62,9 @@ export function useStaleRefresh(
       if (!lastHiddenAt.current) return;
       const hiddenDuration = Date.now() - lastHiddenAt.current;
       lastHiddenAt.current = null;
+
+      // Set grace period (retain prior online statuses briefly to avoid flicker)
+      try { localStorage.setItem('focusGraceUntil', String(Date.now() + 5000)); } catch { /* ignore */ }
 
       const threshold = isMobileUA() ? options.hiddenThresholdMsMobile! : options.hiddenThresholdMsDesktop!;
 

@@ -58,8 +58,24 @@ export const fetchBeacons = async (setBeacons: any, setBeaconsLoaded: any) => {
         });
         cached = await db2.get(STORE_NAME, 'beacons');
     }
+    // Load previously persisted status map and grace timestamp
+    let statusMap: Record<string, boolean> = {};
+    try {
+        const raw = localStorage.getItem('beaconStatusMap');
+        if (raw) statusMap = JSON.parse(raw);
+    } catch { /* ignore */ }
+    const graceUntil = Number(localStorage.getItem('focusGraceUntil') || '0');
+    const now = Date.now();
+
     if (cached) {
-        setBeacons(cached);
+        const withStatus = (cached as any[]).map(b => {
+            const prevOnline = statusMap[b.beaconID];
+            if (prevOnline === true && b.online === false && now < graceUntil) {
+                return { ...b, online: true };
+            }
+            return prevOnline === undefined ? b : { ...b, online: prevOnline };
+        });
+        setBeacons(withStatus);
         setBeaconsLoaded(true);
         return;
     }
@@ -74,7 +90,14 @@ export const fetchBeacons = async (setBeacons: any, setBeaconsLoaded: any) => {
         if (!response.ok) throw new Error('Failed to fetch map pins');
         const { data: beacons } = await response.json();
         await db.put(STORE_NAME, beacons, 'beacons');
-        setBeacons(beacons);
+        const withStatus = (beacons as any[]).map(b => {
+            const prevOnline = statusMap[b.beaconID];
+            if (prevOnline === true && b.online === false && now < graceUntil) {
+                return { ...b, online: true };
+            }
+            return prevOnline === undefined ? b : { ...b, online: prevOnline };
+        });
+        setBeacons(withStatus);
         setBeaconsLoaded(true);
     } catch (error) {
         console.error('Error fetching map pins:', error);
