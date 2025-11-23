@@ -10,5 +10,6 @@ namespace Web.Server.Services
         Task<User> CreateUserAsync(User owner);
         Task<User> UpdateUserAsync(int id, User owner);
         Task<bool> DeleteUserAsync(int id);
+        Task<Role?> GetRoleByNameAsync(string roleName);
     }
 }

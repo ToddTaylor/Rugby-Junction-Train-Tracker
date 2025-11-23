@@ -16,14 +16,23 @@ namespace Web.Server.Repositories
             _timeProvider = timeProvider;
         }
 
-        public async Task<User> AddAsync(User owner)
+        public async Task<User> AddAsync(User user)
         {
-            owner.CreatedAt = _timeProvider.UtcNow;
-            owner.LastUpdate = owner.CreatedAt;
+            user.CreatedAt = _timeProvider.UtcNow;
+            user.LastUpdate = user.CreatedAt;
 
-            _context.Users.Add(owner);
+            // Ensure UserRoles are attached
+            if (user.UserRoles != null)
+            {
+                foreach (var userRole in user.UserRoles)
+                {
+                    userRole.User = user;
+                }
+            }
+
+            _context.Users.Add(user);
             await _context.SaveChangesAsync();
-            return owner;
+            return user;
         }
 
         public async Task<IEnumerable<User>> GetAllAsync()
@@ -52,32 +61,63 @@ namespace Web.Server.Repositories
                 .FirstOrDefaultAsync(o => o.ID == id);
         }
 
-        public async Task<User> UpdateAsync(User owner)
+        public async Task<User> UpdateAsync(User user)
         {
-            var existingOwner = await _context.Users.FindAsync(owner.ID);
-            if (existingOwner == null)
+            var existingUser = await _context.Users
+                .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.ID == user.ID);
+            if (existingUser == null)
             {
-                throw new KeyNotFoundException("Owner not found.");
+                throw new KeyNotFoundException("User not found.");
             }
 
-            existingOwner.FirstName = owner.FirstName;
-            existingOwner.LastName = owner.LastName;
-            existingOwner.Email = owner.Email;
-            existingOwner.LastUpdate = _timeProvider.UtcNow;
+            existingUser.FirstName = user.FirstName;
+            existingUser.LastName = user.LastName;
+            existingUser.Email = user.Email;
+            existingUser.IsActive = user.IsActive;
+            existingUser.LastUpdate = _timeProvider.UtcNow;
+
+            // Prepare new role IDs
+            var newRoleIds = user.UserRoles?.Select(ur => ur.RoleId).ToHashSet() ?? new HashSet<int>();
+
+            // Remove roles that are not in the new set
+            var rolesToRemove = existingUser.UserRoles
+                .Where(ur => !newRoleIds.Contains(ur.RoleId))
+                .ToList();
+            _context.UserRoles.RemoveRange(rolesToRemove);
+
+            // Add new roles that don't exist yet
+            var existingRoleIds = existingUser.UserRoles.Select(ur => ur.RoleId).ToHashSet();
+            var rolesToAdd = newRoleIds.Except(existingRoleIds);
+            foreach (var roleId in rolesToAdd)
+            {
+                _context.UserRoles.Add(new UserRole
+                {
+                    UserId = existingUser.ID,
+                    RoleId = roleId,
+                    AssignedAt = DateTime.UtcNow
+                });
+            }
 
             await _context.SaveChangesAsync();
-            return existingOwner;
+
+            // Re-query the user with roles for a fresh tracked instance
+            return await _context.Users
+                .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.ID == user.ID);
         }
 
         public async Task<bool> DeleteAsync(int id)
         {
-            var owner = await _context.Users.FindAsync(id);
-            if (owner == null)
+            var user = await _context.Users.FindAsync(id);
+            if (user == null)
             {
                 return false;
             }
 
-            _context.Users.Remove(owner);
+            _context.Users.Remove(user);
             await _context.SaveChangesAsync();
             return true;
         }

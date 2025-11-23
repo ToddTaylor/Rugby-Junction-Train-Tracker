@@ -73,8 +73,16 @@ namespace Web.Server.Mappers
             CreateMap<UpdateUserDTO, User>();
 
             CreateMap<User, UserDTO>()
-                .ForMember(dest => dest.Roles, opt => opt.MapFrom(src => src.UserRoles.Select(ur => ur.Role.RoleName).ToList()));
-            CreateMap<User, UpdateUserDTO>();
+                .ForMember(dest => dest.Roles,
+                    opt => opt.MapFrom(src => src.UserRoles != null
+                        ? src.UserRoles.Select(ur => ur.Role.RoleName).ToList()
+                        : new List<string>()));
+
+            CreateMap<CreateUserDTO, User>()
+                .ForMember(dest => dest.UserRoles, opt => opt.Ignore());
+
+            CreateMap<UpdateUserDTO, User>()
+                .ForMember(dest => dest.UserRoles, opt => opt.Ignore());
 
             CreateMap<CreateRailroadDTO, Railroad>()
                 .ForMember(dest => dest.ID, opt => opt.Ignore());
