@@ -1,4 +1,5 @@
-﻿namespace Web.Server.DTOs
+﻿
+namespace Web.Server.DTOs
 {
     public class CreateUserDTO : IEquatable<CreateUserDTO?>
     {
@@ -8,9 +9,7 @@
 
         public required string Email { get; set; }
 
-        public required string City { get; set; }
-
-        public required string State { get; set; }
+        public required Boolean IsActive { get; set; }
 
         public override bool Equals(object? obj)
         {
@@ -23,13 +22,12 @@
                    FirstName == other.FirstName &&
                    LastName == other.LastName &&
                    Email == other.Email &&
-                   City == other.City &&
-                   State == other.State;
+                   IsActive == other.IsActive;
         }
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(FirstName, LastName, Email, City, State);
+            return HashCode.Combine(FirstName, LastName, Email, IsActive);
         }
 
         public static bool operator ==(CreateUserDTO? left, CreateUserDTO? right)

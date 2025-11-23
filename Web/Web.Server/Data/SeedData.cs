@@ -16,7 +16,8 @@ namespace Web.Server.Data
                     new User { ID = 1, FirstName = "Todd", LastName = "Taylor", Email = "rugbyjunctionwi@outlook.com", IsActive = true, CreatedAt = staticDate, LastUpdate = staticDate },
                     new User { ID = 2, FirstName = "Chris", LastName = "Stromberg", Email = "c.k.stromberg@gmail.com", IsActive = true, CreatedAt = staticDate, LastUpdate = staticDate },
                     new User { ID = 3, FirstName = "Thomas", LastName = "Hogan", Email = "TheSteelHighway@gmail.com", IsActive = false, CreatedAt = staticDate, LastUpdate = staticDate },
-                    new User { ID = 4, FirstName = "Jesus", LastName = "Micheel", Email = "Jesusmicheel43@gmail.com", IsActive = true, CreatedAt = staticDate, LastUpdate = staticDate }
+                    new User { ID = 4, FirstName = "Jesus", LastName = "Micheel", Email = "Jesusmicheel43@gmail.com", IsActive = true, CreatedAt = staticDate, LastUpdate = staticDate },
+                    new User { ID = 5, FirstName = "Mike", LastName = "Flenz", Email = "mwflenz1@gmail.com", IsActive = true, CreatedAt = staticDate, LastUpdate = staticDate }
                 );
             }
 
@@ -61,7 +62,7 @@ namespace Web.Server.Data
                     new Beacon { ID = 1, OwnerID = 1, Name = "Rugby Junction", CreatedAt = staticDate, LastUpdate = staticDate },
                     new Beacon { ID = 2, OwnerID = 2, Name = "Sussex", CreatedAt = staticDate, LastUpdate = staticDate },
                     new Beacon { ID = 4, OwnerID = 3, Name = "Ladysmith", CreatedAt = staticDate, LastUpdate = staticDate },
-                    new Beacon { ID = 5, OwnerID = 3, Name = "Neenah", CreatedAt = staticDate, LastUpdate = staticDate },
+                    new Beacon { ID = 5, OwnerID = 5, Name = "Neenah", CreatedAt = staticDate, LastUpdate = staticDate },
                     new Beacon { ID = 6, OwnerID = 3, Name = "Stanberry", CreatedAt = staticDate, LastUpdate = staticDate },
                     new Beacon { ID = 7, OwnerID = 3, Name = "Owen", CreatedAt = staticDate, LastUpdate = staticDate },
                     new Beacon { ID = 8, OwnerID = 3, Name = "Gordon", CreatedAt = staticDate, LastUpdate = staticDate },
@@ -94,7 +95,8 @@ namespace Web.Server.Data
                     new UserRole { UserId = 1, RoleId = 1, AssignedAt = staticDate },
                     new UserRole { UserId = 2, RoleId = 3, AssignedAt = staticDate },
                     new UserRole { UserId = 3, RoleId = 3, AssignedAt = staticDate },
-                    new UserRole { UserId = 4, RoleId = 3, AssignedAt = staticDate }
+                    new UserRole { UserId = 4, RoleId = 3, AssignedAt = staticDate },
+                    new UserRole { UserId = 5, RoleId = 3, AssignedAt = staticDate }
                 );
             }
 
