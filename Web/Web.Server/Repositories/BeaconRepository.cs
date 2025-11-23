@@ -52,11 +52,14 @@ namespace Web.Server.Repositories
             }
 
             existingBeacon.Name = beacon.Name;
-            existingBeacon.Owner = beacon.Owner;
+            existingBeacon.OwnerID = beacon.OwnerID; // Ensure OwnerID is updated
             existingBeacon.LastUpdate = _timeProvider.UtcNow;
 
             await _context.SaveChangesAsync();
-            return existingBeacon;
+            return await _context.Beacons
+                .Include(b => b.Owner)
+                .Include(b => b.BeaconRailroads)
+                .FirstOrDefaultAsync(b => b.ID == beacon.ID);
         }
 
         public async Task<bool> DeleteAsync(int id)

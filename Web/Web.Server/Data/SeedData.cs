@@ -17,7 +17,8 @@ namespace Web.Server.Data
                     new User { ID = 2, FirstName = "Chris", LastName = "Stromberg", Email = "c.k.stromberg@gmail.com", IsActive = true, CreatedAt = staticDate, LastUpdate = staticDate },
                     new User { ID = 3, FirstName = "Thomas", LastName = "Hogan", Email = "TheSteelHighway@gmail.com", IsActive = false, CreatedAt = staticDate, LastUpdate = staticDate },
                     new User { ID = 4, FirstName = "Jesus", LastName = "Micheel", Email = "Jesusmicheel43@gmail.com", IsActive = true, CreatedAt = staticDate, LastUpdate = staticDate },
-                    new User { ID = 5, FirstName = "Mike", LastName = "Flenz", Email = "mwflenz1@gmail.com", IsActive = true, CreatedAt = staticDate, LastUpdate = staticDate }
+                    new User { ID = 5, FirstName = "Mike", LastName = "Flenz", Email = "mwflenz1@gmail.com", IsActive = true, CreatedAt = staticDate, LastUpdate = staticDate },
+                    new User { ID = 6, FirstName = "Joe", LastName = "Davis", Email = "joe54902@yahoo.com", IsActive = true, CreatedAt = staticDate, LastUpdate = staticDate }
                 );
             }
 
@@ -67,7 +68,7 @@ namespace Web.Server.Data
                     new Beacon { ID = 7, OwnerID = 3, Name = "Owen", CreatedAt = staticDate, LastUpdate = staticDate },
                     new Beacon { ID = 8, OwnerID = 3, Name = "Gordon", CreatedAt = staticDate, LastUpdate = staticDate },
                     new Beacon { ID = 9, OwnerID = 3, Name = "Stone Lake", CreatedAt = staticDate, LastUpdate = staticDate },
-                    new Beacon { ID = 10, OwnerID = 4, Name = "South Neenah", CreatedAt = staticDate, LastUpdate = staticDate }
+                    new Beacon { ID = 10, OwnerID = 6, Name = "Oshkosh", CreatedAt = staticDate, LastUpdate = staticDate }
                 );
             }
 
@@ -96,7 +97,8 @@ namespace Web.Server.Data
                     new UserRole { UserId = 2, RoleId = 3, AssignedAt = staticDate },
                     new UserRole { UserId = 3, RoleId = 3, AssignedAt = staticDate },
                     new UserRole { UserId = 4, RoleId = 3, AssignedAt = staticDate },
-                    new UserRole { UserId = 5, RoleId = 3, AssignedAt = staticDate }
+                    new UserRole { UserId = 5, RoleId = 3, AssignedAt = staticDate },
+                    new UserRole { UserId = 6, RoleId = 3, AssignedAt = staticDate }
                 );
             }
 

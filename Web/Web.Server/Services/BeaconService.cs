@@ -33,7 +33,16 @@ namespace Web.Server.Services
 
         public async Task<Beacon> UpdateBeaconAsync(int id, Beacon beacon)
         {
-            return await _beaconRepository.UpdateAsync(beacon);
+            var existingBeacon = await _beaconRepository.GetByIdAsync(id);
+            if (existingBeacon == null)
+                throw new KeyNotFoundException();
+
+            // Update all relevant fields, including OwnerID
+            existingBeacon.Name = beacon.Name;
+            existingBeacon.OwnerID = beacon.OwnerID;
+            existingBeacon.LastUpdate = DateTime.UtcNow;
+
+            return await _beaconRepository.UpdateAsync(existingBeacon);
         }
 
         public async Task<Beacon> UpdateBeaconHealthAsync(int id, Beacon beacon)

@@ -70,8 +70,7 @@ namespace Web.Server.Controllers.v1
         [HttpPut("{id}")]
         public async Task<IActionResult> PutBeacon(int id, UpdateBeaconDTO updateBeaconDTO)
         {
-            var response = new MessageEnvelope<BeaconRailroadDTO>(null, []);
-
+            var response = new MessageEnvelope<BeaconDTO>(null, []);
             try
             {
                 if (id != updateBeaconDTO.ID)
@@ -81,16 +80,18 @@ namespace Web.Server.Controllers.v1
 
                 var beacon = _mapper.Map<Beacon>(updateBeaconDTO);
 
+                Beacon updatedBeacon;
                 try
                 {
-                    await _beaconService.UpdateBeaconAsync(updateBeaconDTO.ID, beacon);
+                    updatedBeacon = await _beaconService.UpdateBeaconAsync(id, beacon);
                 }
                 catch (KeyNotFoundException)
                 {
                     return NotFound();
                 }
 
-                return NoContent();
+                response.Data = _mapper.Map<BeaconDTO>(updatedBeacon);
+                return Ok(response);
             }
             catch (Exception ex)
             {
