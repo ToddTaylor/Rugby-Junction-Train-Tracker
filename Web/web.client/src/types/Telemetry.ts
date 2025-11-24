@@ -1,6 +1,7 @@
 export type Telemetry = {
     id: string;
     beaconID: number;
+    beaconName: string;
     addressID: number;
     trainID: number;
     moving: boolean;

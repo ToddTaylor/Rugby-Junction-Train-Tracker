@@ -1,5 +1,6 @@
 ﻿
 
+
 namespace Web.Server.DTOs
 {
     public class TelemetryDTO : IEquatable<TelemetryDTO?>
@@ -7,6 +8,8 @@ namespace Web.Server.DTOs
         public int ID { get; set; }
 
         public required int BeaconID { get; set; }
+
+        public required string BeaconName { get; set; }
 
         public required int AddressID { get; set; }
 
@@ -34,6 +37,7 @@ namespace Web.Server.DTOs
             return other is not null &&
                    ID == other.ID &&
                    BeaconID == other.BeaconID &&
+                   BeaconName == other.BeaconName &&
                    AddressID == other.AddressID &&
                    TrainID == other.TrainID &&
                    Moving == other.Moving &&
@@ -44,7 +48,17 @@ namespace Web.Server.DTOs
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(ID, BeaconID, AddressID, TrainID, Moving, Source, CreatedAt, LastUpdate);
+            HashCode hash = new HashCode();
+            hash.Add(ID);
+            hash.Add(BeaconID);
+            hash.Add(BeaconName);
+            hash.Add(AddressID);
+            hash.Add(TrainID);
+            hash.Add(Moving);
+            hash.Add(Source);
+            hash.Add(CreatedAt);
+            hash.Add(LastUpdate);
+            return hash.ToHashCode();
         }
 
         public static bool operator ==(TelemetryDTO? left, TelemetryDTO? right)
