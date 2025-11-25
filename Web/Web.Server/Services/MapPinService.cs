@@ -274,12 +274,12 @@ namespace Web.Server.Services
                 {
                     var telemetryEotSource = telemetry.Source == SourceEnum.EOT;
                     var beaconsAreDifferent = previousMapPinByAddressID.BeaconID != telemetry.BeaconID;
-                    var telemetryEotNotAfterPreviousHot = previousMapPinHotAddress.LastUpdate > telemetry.LastUpdate;
+                    var telemetryEotAfterPreviousHot = previousMapPinHotAddress.LastUpdate <= telemetry.LastUpdate;
 
-                    if (telemetryEotSource && beaconsAreDifferent && telemetryEotNotAfterPreviousHot)
+                    if (telemetryEotSource && beaconsAreDifferent && telemetryEotAfterPreviousHot)
                     {
                         // If telemetry is EOT from a different beacon than the previous map pin that reported an HOT
-                        // and the EOT timestamp is not after the HOT timestamp, do nothing since the previous beacon
+                        // and the EOT timestamp is after the HOT timestamp, do nothing since the previous beacon
                         // is still reporting the end of the train while the head of the train is already at the next beacon.
                         return;
                     }

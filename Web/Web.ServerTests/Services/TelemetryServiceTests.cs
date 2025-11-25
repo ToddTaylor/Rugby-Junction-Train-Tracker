@@ -142,15 +142,17 @@ namespace Web.ServerTests.Services
             };
             var telemetry = new Telemetry { BeaconID = 1, AddressID = 1, Source = "HOT", CreatedAt = DateTime.UtcNow };
             var addedTelemetry = new Telemetry { BeaconID = 1, AddressID = 1, Source = "HOT", CreatedAt = DateTime.UtcNow };
+            var beaconRailroadDto = new BeaconRailroadDTO();
+            var beaconRailroadDtos = new List<BeaconRailroadDTO> { beaconRailroadDto };
 
             _beaconServiceMock.Setup(s => s.GetBeaconByIdAsync(1)).ReturnsAsync(beacon);
             _telemetryRepositoryMock.Setup(r => r.AddAsync(telemetry)).ReturnsAsync(addedTelemetry);
             _mapPinServiceMock.Setup(m => m.UpsertMapPin(It.IsAny<Telemetry>(), It.IsAny<ICollection<BeaconRailroad>>()))
                 .Returns(Task.CompletedTask);
-            _beaconRailroadServiceMock.Setup(b => b.UpdateAsync(It.IsAny<BeaconRailroad>()))
-                .ReturnsAsync(beaconRailroad);
-            _mapperMock.Setup(m => m.Map<BeaconRailroadDTO>(It.IsAny<BeaconRailroad>()))
-                .Returns(new BeaconRailroadDTO());
+            _beaconRailroadServiceMock.Setup(b => b.UpdateAsync(It.IsAny<ICollection<BeaconRailroad>>()))
+                .ReturnsAsync(new List<BeaconRailroad> { beaconRailroad });
+            _mapperMock.Setup(m => m.Map<ICollection<BeaconRailroadDTO>>(It.IsAny<ICollection<BeaconRailroad>>()))
+                .Returns(beaconRailroadDtos);
             _timeProviderMock.Setup(t => t.UtcNow).Returns(DateTime.UtcNow);
 
             // Act
