@@ -17,7 +17,6 @@ namespace Web.Server.Entities
         [Required]
         public int SubdivisionID { get; set; }
 
-        [NotMapped]
         public Subdivision Subdivision { get; set; }
 
         [Required]

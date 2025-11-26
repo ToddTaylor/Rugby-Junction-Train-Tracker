@@ -22,7 +22,7 @@ namespace Web.Server.Repositories
 
             _context.BeaconRailroads.Add(beaconRailroad);
             await _context.SaveChangesAsync();
-            return beaconRailroad;
+            return await GetByIdAsync(beaconRailroad.BeaconID, beaconRailroad.SubdivisionID);
         }
 
         public async Task<IEnumerable<BeaconRailroad>> GetAllAsync()
@@ -62,7 +62,9 @@ namespace Web.Server.Repositories
             existing.LastUpdate = _timeProvider.UtcNow;
 
             await _context.SaveChangesAsync();
-            return existing;
+
+            // Re-query with all necessary includes for a fully hydrated object
+            return await GetByIdAsync(beaconRailroad.BeaconID, beaconRailroad.SubdivisionID);
         }
 
         public async Task<bool> DeleteAsync(int beaconId, int railroadId)

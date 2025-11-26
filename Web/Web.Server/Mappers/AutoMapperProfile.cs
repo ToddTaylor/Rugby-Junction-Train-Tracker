@@ -30,11 +30,11 @@ namespace Web.Server.Mappers
                 .ForMember(dest => dest.BeaconName,
                            opt => opt.MapFrom(src => src.Beacon.Name))
                 .ForMember(dest => dest.RailroadID,
-                           opt => opt.MapFrom(src => src.Subdivision.Railroad.ID))
+                           opt => opt.MapFrom(src => src.Subdivision.RailroadID))
                 .ForMember(dest => dest.RailroadName,
                            opt => opt.MapFrom(src => src.Subdivision.Railroad.Name))
                 .ForMember(dest => dest.SubdivisionID,
-                           opt => opt.MapFrom(src => src.Subdivision.ID))
+                           opt => opt.MapFrom(src => src.SubdivisionID))
                 .ForMember(dest => dest.SubdivisionName,
                            opt => opt.MapFrom(src => src.Subdivision.Name));
 

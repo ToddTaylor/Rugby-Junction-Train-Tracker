@@ -73,11 +73,16 @@ namespace Web.Server.Controllers.v1
 
                 var created = await _service.AddAsync(beaconRailroad);
                 response.Data = _mapper.Map<BeaconRailroadDTO>(created);
-                return CreatedAtAction(nameof(GetById), new { beaconId = response.Data.BeaconID, railroadId = response.Data.SubdivisionID }, response);
+                return CreatedAtAction(nameof(GetById), new { beaconId = response.Data.BeaconID, subdivisionId = response.Data.SubdivisionID }, response);
             }
             catch (Exception ex)
             {
                 response.Errors.Add(ex.Message);
+                if (ex.InnerException != null)
+                { 
+                    response.Errors.Add(ex.InnerException.Message); 
+                }
+
                 return StatusCode(StatusCodes.Status500InternalServerError, response);
             }
         }
