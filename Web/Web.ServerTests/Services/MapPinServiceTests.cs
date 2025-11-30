@@ -484,8 +484,8 @@ namespace Web.ServerTests.Services
                 BeaconID = CNSussexBeacon.BeaconID,
                 SubdivisionId = CNSussexBeacon.Subdivision.ID,
                 Direction = fromDirection,
-                CreatedAt = _currentDateTime,
-                LastUpdate = _currentDateTime,
+                CreatedAt = _currentDateTime.AddSeconds(-5),
+                LastUpdate = _currentDateTime.AddSeconds(-5),
                 BeaconRailroad = CNSussexBeacon,
                 Moving = telemetry.Moving,
                 Addresses =
@@ -494,8 +494,8 @@ namespace Web.ServerTests.Services
                         {
                             AddressID = telemetry.AddressID,
                             Source = fromSource, // Different source from new telemetry (HOT > EOT)
-                            CreatedAt = _currentDateTime,
-                            LastUpdate = _currentDateTime
+                            CreatedAt = _currentDateTime.AddSeconds(-5),
+                            LastUpdate = _currentDateTime.AddSeconds(-5)
                         }
                     ],
             };

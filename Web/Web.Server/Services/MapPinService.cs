@@ -274,7 +274,7 @@ namespace Web.Server.Services
                 {
                     var telemetryEotSource = telemetry.Source == SourceEnum.EOT;
                     var beaconsAreDifferent = previousMapPinByAddressID.BeaconID != telemetry.BeaconID;
-                    var telemetryEotAfterPreviousHot = previousMapPinHotAddress.LastUpdate <= telemetry.LastUpdate;
+                    var telemetryEotAfterPreviousHot = telemetry.LastUpdate > previousMapPinByAddressID.LastUpdate;
 
                     if (telemetryEotSource && beaconsAreDifferent && telemetryEotAfterPreviousHot)
                     {
