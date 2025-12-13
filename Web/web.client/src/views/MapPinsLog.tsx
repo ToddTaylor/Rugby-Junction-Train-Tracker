@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import '../App.css';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
-import { Box, Typography, TextField } from '@mui/material';
+import { Box, Typography, FormControl, InputLabel, Select, MenuItem, Checkbox, ListItemText } from '@mui/material';
 import { MapPin } from '../types/MapPin';
 import { format, parseISO } from "date-fns";
 
 function MapPinsLog() {
     const [mapPins, setMapPins] = useState<MapPin[]>([]);
-    const [beaconNameFilter, setBeaconNameFilter] = useState<string>('');
+    const [beaconNameFilter, setBeaconNameFilter] = useState<string[]>([]);
 
     useEffect(() => {
         const fetchMapPins = async () => {
@@ -68,13 +68,12 @@ function MapPinsLog() {
         { field: 'moving', headerName: 'Moving', width: 90 },
     ];
 
-    // Filter by beacon name(s) if filter entered. Comma-separated tokens; case-insensitive substring match.
-    const filteredData: MapPin[] = beaconNameFilter.trim()
-        ? sortedData.filter(row => {
-            const tokens = beaconNameFilter.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
-            const name = (row.beaconName || '').toLowerCase();
-            return tokens.some(tok => name.includes(tok));
-        })
+    // Get unique beacon names for dropdown
+    const beaconNames = Array.from(new Set(sortedData.map(row => row.beaconName).filter(Boolean))).sort();
+
+    // Filter by beacon name(s) if any selected
+    const filteredData: MapPin[] = beaconNameFilter.length > 0
+        ? sortedData.filter(row => beaconNameFilter.includes(row.beaconName))
         : sortedData;
 
     return (
@@ -90,28 +89,42 @@ function MapPinsLog() {
             <Typography variant="h5" gutterBottom>
                 Map Pins Log
             </Typography>
-            <TextField
-                label="Filter by Beacon Name"
-                variant="outlined"
-                size="small"
-                value={beaconNameFilter}
-                onChange={e => setBeaconNameFilter(e.target.value)}
-                sx={{
-                    mb: 2,
-                    backgroundColor: '#fff',
-                    borderRadius: 1,
-                    boxShadow: 1,
-                    '& .MuiOutlinedInput-root': {
+            <FormControl sx={{ minWidth: 220, mb: 2, backgroundColor: '#fff', borderRadius: 1, boxShadow: 1 }} size="small">
+                <InputLabel
+                    id="beacon-name-select-label"
+                    sx={{
                         color: '#222',
                         backgroundColor: '#fff',
-                        '& fieldset': { borderColor: '#1976d2' },
-                        '&:hover fieldset': { borderColor: '#1565c0' },
-                        '&.Mui-focused fieldset': { borderColor: '#1976d2' },
-                    },
-                    '& label': { color: '#222', backgroundColor: '#fff', padding: '0 4px' },
-                    '& label.Mui-focused': { color: '#1976d2', backgroundColor: '#fff' },
-                }}
-            />
+                        padding: '0 4px',
+                        zIndex: 1,
+                    }}
+                >
+                    Filter by Beacon Name
+                </InputLabel>
+                <Select
+                    labelId="beacon-name-select-label"
+                    multiple
+                    value={beaconNameFilter}
+                    label="Filter by Beacon Name"
+                    onChange={e => {
+                        const value = e.target.value;
+                        setBeaconNameFilter(typeof value === 'string' ? value.split(',') : value);
+                    }}
+                    renderValue={(selected) =>
+                        selected.length === 0 ? <em>All</em> : selected.join(', ')
+                    }
+                >
+                    <MenuItem value="" disabled>
+                        <em>All</em>
+                    </MenuItem>
+                    {beaconNames.map(name => (
+                        <MenuItem key={name} value={name}>
+                            <Checkbox checked={beaconNameFilter.indexOf(name) > -1} />
+                            <ListItemText primary={name} />
+                        </MenuItem>
+                    ))}
+                </Select>
+            </FormControl>
             <DataGrid
                 rows={filteredData}
                 columns={columns}

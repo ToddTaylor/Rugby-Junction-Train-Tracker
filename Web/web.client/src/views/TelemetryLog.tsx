@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import '../App.css';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
-import { Box, Typography, TextField, FormControl, InputLabel, Select, MenuItem, IconButton, Tooltip } from '@mui/material';
+import { Box, Typography, TextField, FormControl, InputLabel, Select, MenuItem, IconButton, Tooltip, Checkbox, ListItemText } from '@mui/material';
 import ClearIcon from '@mui/icons-material/Clear';
 import { Telemetry } from '../types/Telemetry';
 import { format, parseISO } from "date-fns";
@@ -9,7 +9,8 @@ import { format, parseISO } from "date-fns";
 function TelemetryLog() {
     const [telemetries, setTelemetries] = useState<Telemetry[]>([]);
     const [addressIdFilter, setAddressIdFilter] = useState<string>('');
-    const [beaconNameFilter, setBeaconNameFilter] = useState<string>('');
+    const [beaconNameFilter, setBeaconNameFilter] = useState<string[]>([]);
+    const [sourceFilter, setSourceFilter] = useState<string[]>([]);
 
     useEffect(() => {
         const fetchTelemetries = async () => {
@@ -43,16 +44,20 @@ function TelemetryLog() {
     // Get unique beacon names for dropdown
     const beaconNames = Array.from(new Set(sortedData.map(row => row.beaconName).filter(Boolean))).sort();
 
-    // Filter rows by addressID and beaconName (dropdown selection)
+    // Filter rows by addressID, beaconName, and source (multi-select)
     const filteredData = sortedData.filter(row => {
         // Address ID filter
         if (addressIdFilter.trim()) {
             const addrTokens = addressIdFilter.split(',').map(v => v.trim()).filter(Boolean);
             if (!addrTokens.includes(String(row.addressID))) return false;
         }
-        // Beacon Name filter (exact match from dropdown)
-        if (beaconNameFilter) {
-            if (row.beaconName !== beaconNameFilter) return false;
+        // Beacon Name filter (multi-select)
+        if (beaconNameFilter.length > 0) {
+            if (!beaconNameFilter.includes(row.beaconName)) return false;
+        }
+        // Source filter (multi-select)
+        if (sourceFilter.length > 0) {
+            if (!sourceFilter.includes(row.source)) return false;
         }
         return true;
     });
@@ -104,13 +109,61 @@ function TelemetryLog() {
                     </InputLabel>
                     <Select
                         labelId="beacon-name-select-label"
+                        multiple
                         value={beaconNameFilter}
                         label="Filter by Beacon Name"
-                        onChange={e => setBeaconNameFilter(e.target.value)}
+                        onChange={e => {
+                            const value = e.target.value;
+                            setBeaconNameFilter(typeof value === 'string' ? value.split(',') : value);
+                        }}
+                        renderValue={(selected) =>
+                            selected.length === 0 ? <em>All</em> : selected.join(', ')
+                        }
                     >
-                        <MenuItem value=""><em>All</em></MenuItem>
+                        <MenuItem value="" disabled>
+                            <em>All</em>
+                        </MenuItem>
                         {beaconNames.map(name => (
-                            <MenuItem key={name} value={name}>{name}</MenuItem>
+                            <MenuItem key={name} value={name}>
+                                <Checkbox checked={beaconNameFilter.indexOf(name) > -1} />
+                                <ListItemText primary={name} />
+                            </MenuItem>
+                        ))}
+                    </Select>
+                </FormControl>
+                <FormControl sx={{ minWidth: 160, backgroundColor: '#fff', borderRadius: 1, boxShadow: 1 }} size="small">
+                    <InputLabel
+                        id="source-select-label"
+                        sx={{
+                            color: '#222',
+                            backgroundColor: '#fff',
+                            padding: '0 4px',
+                            zIndex: 1,
+                        }}
+                    >
+                        Filter by Source
+                    </InputLabel>
+                    <Select
+                        labelId="source-select-label"
+                        multiple
+                        value={sourceFilter}
+                        label="Filter by Source"
+                        onChange={e => {
+                            const value = e.target.value;
+                            setSourceFilter(typeof value === 'string' ? value.split(',') : value);
+                        }}
+                        renderValue={(selected) =>
+                            selected.length === 0 ? <em>All</em> : selected.join(', ')
+                        }
+                    >
+                        <MenuItem value="" disabled>
+                            <em>All</em>
+                        </MenuItem>
+                        {['EOT', 'HOT', 'DPU'].map(source => (
+                            <MenuItem key={source} value={source}>
+                                <Checkbox checked={sourceFilter.indexOf(source) > -1} />
+                                <ListItemText primary={source} />
+                            </MenuItem>
                         ))}
                     </Select>
                 </FormControl>
@@ -139,8 +192,9 @@ function TelemetryLog() {
                     <IconButton
                         aria-label="clear filters"
                         onClick={() => {
-                            setBeaconNameFilter('');
+                            setBeaconNameFilter([]);
                             setAddressIdFilter('');
+                            setSourceFilter([]);
                         }}
                         sx={{ ml: 1, color: '#fff', backgroundColor: '#222', '&:hover': { backgroundColor: '#444' } }}
                     >
