@@ -8,6 +8,9 @@ namespace Services.Subscribers.RugbyJunctionAPI
         private readonly AppSettings _appSettings;
         private readonly Subscriber _subscriber;
 
+        // Address IDs that should be ignored.
+        private readonly int[] addressIdBlackList = new int[] { 0, 999999 };
+
         public HotEotPacketSubscriber(AppSettings appSettings)
         {
             _appSettings = appSettings;
@@ -17,6 +20,10 @@ namespace Services.Subscribers.RugbyJunctionAPI
 
         private void OnHotEotPacketReceived(object sender, HotEotPacketEventArgs e)
         {
+            if (!int.TryParse(e.Packet.ID, out var addressId)) { return; }
+
+            if (addressIdBlackList.Contains(addressId)) { return; }
+
             var sendInvalidMessages = _subscriber.SendInvalidMessages;
 
             if (sendInvalidMessages == false && e.Packet.SRC == "INV") { return; }
@@ -24,7 +31,7 @@ namespace Services.Subscribers.RugbyJunctionAPI
             var alert = new Telemetry
             {
                 BeaconID = _subscriber.Beacon.BeaconID,
-                AddressID = int.Parse(e.Packet.ID),
+                AddressID = addressId,
                 TrainID = null,
                 Moving = (e.Packet.MOT.HasValue) ? Convert.ToBoolean(e.Packet.MOT) : null,
                 Source = e.Packet.SRC,

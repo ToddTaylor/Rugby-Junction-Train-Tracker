@@ -8,6 +8,9 @@ namespace Services.Subscribers.RugbyJunctionAPI
         private readonly AppSettings _appSettings;
         private readonly Subscriber _subscriber;
 
+        // Address IDs that should be ignored.
+        private readonly int[] addressIdBlackList = new int[] { 0, 999999 };
+
         public DpuPacketSubscriber(AppSettings appSettings)
         {
             _appSettings = appSettings;
@@ -17,6 +20,10 @@ namespace Services.Subscribers.RugbyJunctionAPI
 
         private void OnDpuPacketReceived(object sender, DpuPacketEventArgs e)
         {
+            if (!int.TryParse(e.Packet.ADDR, out var addressId)) { return; }
+
+            if (addressIdBlackList.Contains(addressId)) { return; }
+
             var sendInvalidMessages = _subscriber.SendInvalidMessages;
 
             if (sendInvalidMessages == false && e.Packet.ADDR == "INV") { return; }

@@ -10,7 +10,9 @@ namespace Services.Subscribers.RugbyJunctionAPI
 
         public BeaconHealthService(AppSettings appSettings)
         {
-            var subscriber = appSettings.Subscribers.First(s => s.ID == Constants.SUBSCRIBER_ID);
+            var subscriber = appSettings.Subscribers
+                .First(s => s.ID == Constants.SUBSCRIBER_ID);
+
             _beaconApiClient = new BeaconApiClient(appSettings, subscriber);
 
             _subscriber = subscriber;
@@ -29,7 +31,7 @@ namespace Services.Subscribers.RugbyJunctionAPI
             {
                 await _beaconApiClient.SendBeaconHealthAsync();
 
-                Console.ForegroundColor = ConsoleColor.Green;
+                Console.ForegroundColor = ConsoleColor.DarkGray;
                 Console.WriteLine($"[{DateTime.Now}] [{_subscriber.ID}] Beacon health sent at {DateTime.Now}");
                 Console.ResetColor();
             }

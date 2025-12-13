@@ -9,6 +9,7 @@ namespace Services
     {
         private const int TIME_RECEIVED_OFFSET_MINUTES = 5;
 
+        private const string FILE_NAME_PREFIX_HOT = "hot";
         private const string FILE_NAME_PREFIX_EOT = "eot";
         private const string FILE_NAME_PREFIX_DPU = "dpu";
 
@@ -175,7 +176,8 @@ namespace Services
                     continue;
                 }
 
-                if (Path.GetFileName(logFilePath).StartsWith(FILE_NAME_PREFIX_EOT, StringComparison.OrdinalIgnoreCase))
+                if (Path.GetFileName(logFilePath).Contains(FILE_NAME_PREFIX_HOT, StringComparison.OrdinalIgnoreCase) ||
+                    Path.GetFileName(logFilePath).Contains(FILE_NAME_PREFIX_EOT, StringComparison.OrdinalIgnoreCase))
                 {
                     var hotPacket = HotEotDeserializer.Deserialize(line);
 

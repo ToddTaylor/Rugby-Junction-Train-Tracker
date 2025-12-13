@@ -32,14 +32,14 @@ namespace Services.Subscribers.LiveTrainTrackingAPI
             {
                 await _beaconApiClient.SendBeaconHealthAsync();
 
-                Console.ForegroundColor = ConsoleColor.Blue;
-                Console.WriteLine($"[{Constants.SUBSCRIBER_ID}] Beacon health sent at {DateTime.Now}");
+                Console.ForegroundColor = ConsoleColor.DarkGray;
+                Console.WriteLine($"[{DateTime.Now}] [{_subscriber.ID}] Beacon health sent at {DateTime.Now}");
                 Console.ResetColor();
             }
             catch (Exception ex)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"[{Constants.SUBSCRIBER_ID}] Error in beacon health service: {ex.Message}");
+                Console.WriteLine($"[{DateTime.Now}] [{_subscriber.ID}] Error in beacon health service: {ex.Message}");
                 Console.ResetColor();
             }
         }
