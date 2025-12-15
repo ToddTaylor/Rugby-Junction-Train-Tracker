@@ -35,7 +35,7 @@ namespace Services
 
             AddDpuEventSubscribers(appSettings);
 
-            Console.WriteLine($"Telemetry Log Service started.  Processing messages posted with then last {TIME_RECEIVED_OFFSET_MINUTES} minutes...");
+            Console.WriteLine($"Telemetry Log Service started.  Processing messages posted within the last {TIME_RECEIVED_OFFSET_MINUTES} minutes...");
 
             StartBeaconHealthServices(appSettings);
 
