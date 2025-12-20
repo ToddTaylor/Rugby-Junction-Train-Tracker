@@ -26,7 +26,7 @@ namespace Services.Subscribers.LiveTrainTrackingAPI
                 AddressID = int.Parse(e.Packet.ID),
                 BeaconID = _subscriber.Beacon.BeaconID,
                 Detector = _subscriber.Beacon.DetectorID,
-                Motion = (e.Packet.MOT.HasValue) ? Convert.ToBoolean(e.Packet.MOT) : null,
+                Motion = IsMoving(e.Packet),
                 Source = e.Packet.SRC,
                 TrainID = null
             };
@@ -36,6 +36,32 @@ namespace Services.Subscribers.LiveTrainTrackingAPI
 
             // Let web page respond to previous request before sending the next one.
             Thread.Sleep(100);
+        }
+
+        /// <summary>
+        /// If a EOT's brake pressure is below 85 PSI or the motion flag is zero, the train is not moving.
+        /// 
+        /// Brake pressure information is only provided via BRK status messages.
+        /// </summary>
+        /// <param name="hotEotpacket">HOT/EOT packet containing brake pressure and motion information.</param>
+        /// <returns>Returns true if train is moving, else false.</returns>
+        private bool? IsMoving(HotEotPacket hotEotpacket)
+        {
+            var minimumBrakePSI = 85;
+
+            if (hotEotpacket.BP.HasValue)
+            {
+                return hotEotpacket.BP.Value >= minimumBrakePSI;
+            }
+
+            var parkingBrakeOn = 1;
+
+            if (hotEotpacket.MOT.HasValue && hotEotpacket.MOT.Value == parkingBrakeOn)
+            {
+                return Convert.ToBoolean(hotEotpacket.MOT.Value);
+            }
+
+            return null;
         }
     }
 }

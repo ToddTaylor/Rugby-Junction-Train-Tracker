@@ -53,7 +53,7 @@ namespace Services.Subscribers.LiveTrainTrackingAPI
 
             if (dpuPacket.BP.HasValue)
             {
-                return dpuPacket.BP.Value > minimumBrakePSI;
+                return dpuPacket.BP.Value >= minimumBrakePSI;
             }
 
             var parkingBrakeOn = 1;
