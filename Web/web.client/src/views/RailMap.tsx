@@ -100,8 +100,8 @@ const RailMap: React.FC = () => {
         return () => clearInterval(interval);
     }, []);
 
-    // Build a filtered list of pins that are not older than 10 minutes,
-    // but change pins where any address source == "EOT" to half the time (5 minutes)
+    // Build a filtered list of pins that are not older than X minutes (.env variable),
+    // but change pins where any address source == "EOT" to half the time (X/2 minutes)
     // For filtering (milliseconds)
     const MAX_PIN_AGE_MINUTES = Number(import.meta.env.VITE_MAX_PIN_AGE_MINUTES);
     const MAX_PIN_AGE_MS = MAX_PIN_AGE_MINUTES * 60 * 1000;
