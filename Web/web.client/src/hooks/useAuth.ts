@@ -21,9 +21,15 @@ export function useAuth() {
   const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
   const [state, setState] = useState<AuthState>(() => {
     if (isLocalhost) {
-      // Fake session for localhost
+      // Fake session for localhost with Admin role
       return {
-        session: { email: 'dev@localhost', token: 'dev-token', expiresUtc: new Date(Date.now() + 86400000).toISOString() },
+        session: { 
+          email: 'dev@localhost', 
+          token: 'dev-token', 
+          expiresUtc: new Date(Date.now() + 86400000).toISOString(),
+          roles: ['Admin'],
+          userId: 1
+        },
         loading: false,
         error: undefined,
         step: 'ready',

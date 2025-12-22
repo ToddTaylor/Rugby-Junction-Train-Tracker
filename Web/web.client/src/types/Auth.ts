@@ -2,6 +2,8 @@ export interface AuthSession {
   email: string;
   token: string;
   expiresUtc: string; // ISO date
+  roles?: string[]; // User roles for authorization
+  userId?: number; // User ID
 }
 
 export interface AuthState {
