@@ -9,22 +9,19 @@ import { ArrowIcon } from './ArrowIcon'; // adjust import as needed
 import { UnknownIcon } from './UnknownIcon'; 
 import { MapPin } from '../types/MapPin';
 
-function getPinBrightness(lastUpdate: string, addresses?: { source: string }[], maxPinAgeMinutes?: number): number {
+function getPinBrightness(lastUpdate: string, maxPinAgeMinutes?: number): number {
     const now = new Date();
     const created = parseISO(lastUpdate);
     maxPinAgeMinutes = maxPinAgeMinutes || Number(import.meta.env.VITE_MAX_PIN_AGE_MINUTES);
-    let minutes = (now.getTime() - created.getTime()) / 60000;
+    const minutes = (now.getTime() - created.getTime()) / 60000;
 
-    // Check if any address has source "EOT"
-    const isEOT = Array.isArray(addresses) && addresses.some(a => a.source === "EOT");
-    const t2 = isEOT ? maxPinAgeMinutes / 6 : maxPinAgeMinutes * 1/3;
-    const t4 = isEOT ? maxPinAgeMinutes / 3 : maxPinAgeMinutes * 2/3;
-    const t6 = isEOT ? maxPinAgeMinutes / 2 : maxPinAgeMinutes;
-
-    if (minutes < t2) return 1.0;
-    if (minutes < t4) return 0.7;
-    if (minutes < t6) return 0.4;
-    return 0.4;
+    // Exponential decay from 1.0 to minBrightness over maxPinAgeMinutes
+    // Pin will be removed from map when maxPinAgeMinutes is reached
+    const minBrightness = 0.1;
+    const normalizedTime = Math.min(minutes / maxPinAgeMinutes, 1.0);
+    const brightness = minBrightness + (1.0 - minBrightness) * Math.pow(1 - normalizedTime, 4);
+    
+    return brightness;
 }
 
 interface TelemetryMarkerProps {
@@ -57,7 +54,7 @@ const formatDirection = (dir?: string): string => {
 const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'light' }> = ({ pin, size, maxPinAgeMinutes, mapTheme }) => {
     const markerRef = useRef<L.Marker>(null);
     const [brightness, setBrightness] = useState(() =>
-        getPinBrightness(pin.lastUpdate, pin.addresses, maxPinAgeMinutes)
+        getPinBrightness(pin.lastUpdate, maxPinAgeMinutes)
     );
     const [isTracked, setIsTracked] = useState(() =>
         !!getTrackedMapPins().find(tp => tp.id === String(pin.id))
@@ -83,7 +80,7 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
 
     useEffect(() => {
         const update = () => {
-            const newBrightness = getPinBrightness(pin.lastUpdate, pin.addresses, maxPinAgeMinutes);
+            const newBrightness = getPinBrightness(pin.lastUpdate, maxPinAgeMinutes);
             setBrightness(newBrightness);
         };
         update();
