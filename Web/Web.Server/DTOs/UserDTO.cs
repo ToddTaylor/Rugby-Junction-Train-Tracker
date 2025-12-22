@@ -16,6 +16,8 @@
 
         public DateTime LastUpdate { get; set; }
 
+        public DateTime? LastLogin { get; set; }
+
         public List<string> Roles { get; set; }
 
         public override bool Equals(object? obj)

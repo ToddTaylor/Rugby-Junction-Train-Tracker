@@ -7,6 +7,8 @@ using System.Security.Cryptography;
 using System.Text;
 using Web.Server.DTOs;
 using Web.Server.Providers;
+using Web.Server.Repositories;
+using Microsoft.EntityFrameworkCore;
 
 namespace Web.Server.Services;
 
@@ -18,13 +20,25 @@ public class AuthService : IAuthService
         public DateTime ExpiresUtc { get; set; }
     }
 
+    private class TokenEntry
+    {
+        public int UserId { get; set; }
+        public DateTime ExpiresUtc { get; set; }
+        public DateTime LastRefreshed { get; set; }
+    }
+
     private readonly ITimeProvider _timeProvider;
     private readonly ILogger<AuthService> _logger;
+    private readonly IUserRepository _userRepository;
 
     // email -> CodeEntry
     private static readonly ConcurrentDictionary<string, CodeEntry> _codes = new(StringComparer.OrdinalIgnoreCase);
     // email -> list of send timestamps (UTC)
     private static readonly ConcurrentDictionary<string, List<DateTime>> _sendHistory = new(StringComparer.OrdinalIgnoreCase);
+    // token -> TokenEntry
+    private static readonly ConcurrentDictionary<string, TokenEntry> _tokens = new(StringComparer.OrdinalIgnoreCase);
+    // Refresh LastLogin at most once per hour per user
+    private static readonly TimeSpan LastLoginRefreshInterval = TimeSpan.FromHours(1);
 
     public const int CodeLength = 6;
     public static readonly TimeSpan CodeLifetime = TimeSpan.FromMinutes(10);
@@ -32,10 +46,11 @@ public class AuthService : IAuthService
     public static readonly TimeSpan LongSessionLifetime = TimeSpan.FromDays(365);
     public const int MaxSendsPerHour = 5;
 
-    public AuthService(ITimeProvider timeProvider, ILogger<AuthService> logger)
+    public AuthService(ITimeProvider timeProvider, ILogger<AuthService> logger, IUserRepository userRepository)
     {
         _timeProvider = timeProvider;
         _logger = logger;
+        _userRepository = userRepository;
     }
 
     public async Task<(bool Success, List<string> Errors)> SendCodeAsync(string email)
@@ -110,19 +125,19 @@ public class AuthService : IAuthService
         return (true, errors);
     }
 
-    public Task<(bool Success, AuthVerifySuccessDTO? Result, List<string> Errors)> VerifyCodeAsync(string email, string code, bool remember)
+    public async Task<(bool Success, AuthVerifySuccessDTO? Result, List<string> Errors)> VerifyCodeAsync(string email, string code, bool remember)
     {
         var errors = new List<string>();
         if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(code))
         {
             errors.Add("Email and code are required.");
-            return Task.FromResult<(bool, AuthVerifySuccessDTO?, List<string>)>((false, null, errors));
+            return (false, null, errors);
         }
 
         if (!_codes.TryGetValue(email, out var entry))
         {
             errors.Add("Code not found. Please request a new code.");
-            return Task.FromResult<(bool, AuthVerifySuccessDTO?, List<string>)>((false, null, errors));
+            return (false, null, errors);
         }
 
         var now = _timeProvider.UtcNow;
@@ -130,24 +145,94 @@ public class AuthService : IAuthService
         {
             errors.Add("Code expired. Please request a new code.");
             _codes.TryRemove(email, out _); // cleanup
-            return Task.FromResult<(bool, AuthVerifySuccessDTO?, List<string>)>((false, null, errors));
+            return (false, null, errors);
         }
 
         if (!HashesEqual(entry.CodeHash, Hash(code)))
         {
             errors.Add("Invalid code.");
-            return Task.FromResult<(bool, AuthVerifySuccessDTO?, List<string>)>((false, null, errors));
+            return (false, null, errors);
         }
+
+        // Look up user and get roles
+        var user = await _userRepository.GetByEmailAsync(email);
+        if (user == null)
+        {
+            errors.Add("User not found.");
+            return (false, null, errors);
+        }
+
+        if (!user.IsActive)
+        {
+            errors.Add("User account is inactive.");
+            return (false, null, errors);
+        }
+
+        // Update last login timestamp
+        user.LastLogin = now;
+        await _userRepository.UpdateAsync(user);
+
+        // Get user roles
+        var roles = user.UserRoles?.Select(ur => ur.Role?.RoleName ?? string.Empty)
+            .Where(r => !string.IsNullOrEmpty(r))
+            .ToList() ?? new List<string>();
 
         // success: generate token
         var token = Guid.NewGuid().ToString("N");
         var expires = now.Add(remember ? LongSessionLifetime : ShortSessionLifetime);
-        var result = new AuthVerifySuccessDTO { Token = token, ExpiresUtc = expires };
+        
+        // Store token mapping
+        _tokens[token] = new TokenEntry
+        {
+            UserId = user.ID,
+            ExpiresUtc = expires,
+            LastRefreshed = now
+        };
+        
+        var result = new AuthVerifySuccessDTO 
+        { 
+            Token = token, 
+            ExpiresUtc = expires,
+            Roles = roles,
+            UserId = user.ID
+        };
 
         // Optionally remove the code to prevent reuse
         _codes.TryRemove(email, out _);
 
-        return Task.FromResult<(bool, AuthVerifySuccessDTO?, List<string>)>((true, result, errors));
+        return (true, result, errors);
+    }
+
+    public async Task<(bool IsValid, int? UserId)> ValidateAndRefreshTokenAsync(string token)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+            return (false, null);
+
+        if (!_tokens.TryGetValue(token, out var entry))
+            return (false, null);
+
+        var now = _timeProvider.UtcNow;
+        
+        // Check if token is expired
+        if (now > entry.ExpiresUtc)
+        {
+            _tokens.TryRemove(token, out _);
+            return (false, null);
+        }
+
+        // Only update LastLogin if it's been more than the refresh interval since last update
+        if (now - entry.LastRefreshed > LastLoginRefreshInterval)
+        {
+            var user = await _userRepository.GetByIdAsync(entry.UserId);
+            if (user != null && user.IsActive)
+            {
+                user.LastLogin = now;
+                await _userRepository.UpdateAsync(user);
+                entry.LastRefreshed = now;
+            }
+        }
+
+        return (true, entry.UserId);
     }
 
     private static string GenerateNumericCode(int length)

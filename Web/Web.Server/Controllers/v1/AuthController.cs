@@ -48,7 +48,7 @@ public class AuthController : ControllerBase
         var (success, result, errors) = await _authService.VerifyCodeAsync(request.Email, request.Code, request.Remember);
         if (success && result != null)
         {
-            return Ok(new { success, token = result.Token, expiresUtc = result.ExpiresUtc });
+            return Ok(new { success, token = result.Token, expiresUtc = result.ExpiresUtc, roles = result.Roles, userId = result.UserId });
         }
         return BadRequest(new { success, errors });
     }

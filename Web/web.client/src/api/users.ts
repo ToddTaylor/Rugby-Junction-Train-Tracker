@@ -1,7 +1,33 @@
 import { User, CreateUser, UpdateUser } from '../types/User';
+import { getCookie } from '../utils/cookies';
+import { AuthSession } from '../types/Auth';
 
 const API_URL = import.meta.env.VITE_API_URL;
 const API_KEY = import.meta.env.VITE_API_KEY;
+const SESSION_KEY = 'rjtt_auth_session';
+const COOKIE_NAME = 'rjtt_auth';
+
+function getAuthToken(): string | null {
+  // Try cookie first
+  const cookieData = getCookie(COOKIE_NAME);
+  if (cookieData) {
+    try {
+      const session = JSON.parse(cookieData) as AuthSession;
+      return session.token;
+    } catch { }
+  }
+  
+  // Try sessionStorage
+  const sessionData = sessionStorage.getItem(SESSION_KEY);
+  if (sessionData) {
+    try {
+      const session = JSON.parse(sessionData) as AuthSession;
+      return session.token;
+    } catch { }
+  }
+  
+  return null;
+}
 
 interface ApiResponse<T> {
   data: T | null;
@@ -10,13 +36,20 @@ interface ApiResponse<T> {
 
 async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<ApiResponse<T>> {
   try {
+    const token = getAuthToken();
+    const headers: Record<string, string> = {
+      'X-Api-Key': API_KEY,
+      'Content-Type': 'application/json',
+      ...options?.headers as Record<string, string>,
+    };
+    
+    if (token) {
+      headers['X-Auth-Token'] = token;
+    }
+    
     const response = await fetch(`${API_URL}${endpoint}`, {
       ...options,
-      headers: {
-        'X-Api-Key': API_KEY,
-        'Content-Type': 'application/json',
-        ...options?.headers,
-      },
+      headers,
     });
 
     const json = await response.json();

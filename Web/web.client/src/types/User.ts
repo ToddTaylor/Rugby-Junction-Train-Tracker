@@ -6,6 +6,7 @@ export interface User {
   isActive: boolean;
   createdAt: string;
   lastUpdate: string;
+  lastLogin?: string;
   roles: string[];
 }
 

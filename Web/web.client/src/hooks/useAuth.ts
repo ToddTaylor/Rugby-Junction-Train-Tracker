@@ -72,7 +72,13 @@ export function useAuth() {
       setState(s => ({ ...s, loading: false, error: resp.errors?.join(', ') || 'Invalid code' }));
       return;
     }
-    const session: AuthSession = { email: state.emailInput, token: resp.token, expiresUtc: resp.expiresUtc };
+    const session: AuthSession = { 
+      email: state.emailInput, 
+      token: resp.token, 
+      expiresUtc: resp.expiresUtc,
+      roles: resp.roles,
+      userId: resp.userId
+    };
     if (state.remember) {
       setCookie(COOKIE_NAME, JSON.stringify(session), 365); // 1 year
       sessionStorage.removeItem(SESSION_KEY);

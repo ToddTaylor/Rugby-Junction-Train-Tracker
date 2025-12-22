@@ -268,6 +268,7 @@ const AdminUsers: React.FC = () => {
                   <span className={`arrow-down ${sortField === 'email' && sortDirection === 'desc' ? 'active' : ''}`}>▼</span>
                 </span>
               </th>
+              <th>Last Login</th>
               <th>Roles</th>
               <th>Status</th>
               <th>Created</th>
@@ -280,6 +281,7 @@ const AdminUsers: React.FC = () => {
                 <td>{user.lastName}</td>
                 <td>{user.firstName}</td>
                 <td>{user.email}</td>
+                <td>{user.lastLogin ? formatDate(user.lastLogin) : 'Never'}</td>
                 <td>
                   <div className="roles-badges">
                     {user.roles.map(role => (

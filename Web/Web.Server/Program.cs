@@ -141,6 +141,9 @@ using (var scope = app.Services.CreateScope())
 // Use the API Key Middleware
 app.UseMiddleware<Web.Server.Middleware.ApiKeyMiddleware>();
 
+// Use the Auth Token Middleware (updates LastLogin)
+app.UseMiddleware<Web.Server.Middleware.AuthTokenMiddleware>();
+
 app.UseDefaultFiles();
 
 // Enable .geojson file serving

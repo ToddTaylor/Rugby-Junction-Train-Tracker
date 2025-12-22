@@ -25,7 +25,14 @@ export async function sendLoginCode(req: SendCodeRequest): Promise<SendCodeRespo
 }
 
 export interface VerifyCodeRequest { email: string; code: string; remember: boolean; }
-export interface VerifyCodeResponse { success: boolean; token?: string; expiresUtc?: string; errors?: string[]; }
+export interface VerifyCodeResponse { 
+  success: boolean; 
+  token?: string; 
+  expiresUtc?: string; 
+  roles?: string[]; 
+  userId?: number; 
+  errors?: string[]; 
+}
 
 export async function verifyLoginCode(req: VerifyCodeRequest): Promise<VerifyCodeResponse> {
   try {
@@ -43,6 +50,8 @@ export async function verifyLoginCode(req: VerifyCodeRequest): Promise<VerifyCod
       success: !!data?.success,
       token: data?.token,
       expiresUtc: data?.expiresUtc,
+      roles: data?.roles,
+      userId: data?.userId,
       errors: data?.errors
     };
   } catch (e: any) {
