@@ -90,6 +90,16 @@ namespace Web.Server.Mappers
 
             CreateMap<Railroad, RailroadDTO>();
 
+            CreateMap<CreateSubdivisionDTO, Subdivision>()
+                .ForMember(dest => dest.ID, opt => opt.Ignore())
+                .ForMember(dest => dest.Railroad, opt => opt.Ignore());
+            CreateMap<UpdateSubdivisionDTO, Subdivision>()
+                .ForMember(dest => dest.Railroad, opt => opt.Ignore());
+
+            CreateMap<Subdivision, SubdivisionDTO>()
+                .ForMember(dest => dest.Railroad,
+                    opt => opt.MapFrom(src => src.Railroad.Name));
+
             CreateMap<CreateTelemetryDTO, Telemetry>()
                 .ForPath(dest => dest.Beacon.ID, opt => opt.MapFrom(src => src.BeaconID))
                 .ReverseMap()

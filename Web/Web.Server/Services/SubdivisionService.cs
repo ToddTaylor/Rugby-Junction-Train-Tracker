@@ -27,9 +27,9 @@ namespace Web.Server.Services
             return await _subdivisionRepository.AddAsync(subdivision);
         }
 
-        public async Task UpdateSubdivisionAsync(Subdivision subdivision)
+        public async Task<Subdivision> UpdateSubdivisionAsync(Subdivision subdivision)
         {
-            await _subdivisionRepository.UpdateAsync(subdivision);
+            return await _subdivisionRepository.UpdateAsync(subdivision);
         }
 
         public async Task DeleteSubdivisionAsync(int id)

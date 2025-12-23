@@ -74,6 +74,11 @@ const AdminRailroads = () => {
     return sorted;
   }, [railroads, searchTerm, sortField, sortDirection]);
 
+  const getSortIcon = (field: SortField) => {
+    const icon = sortField !== field ? '⇅' : sortDirection === 'asc' ? '⬆' : '⬇';
+    return <span style={{ fontSize: '1.2em', marginLeft: '0.3em' }}>{icon}</span>;
+  };
+
   const paginatedRailroads = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     return sortedRailroads.slice(startIndex, startIndex + itemsPerPage);
@@ -183,11 +188,7 @@ const AdminRailroads = () => {
           <thead>
             <tr>
               <th className="sortable" onClick={() => handleSort('name')}>
-                Name
-                <span className="sort-arrows">
-                  <span className={`arrow-up ${sortField === 'name' && sortDirection === 'asc' ? 'active' : ''}`}>▲</span>
-                  <span className={`arrow-down ${sortField === 'name' && sortDirection === 'desc' ? 'active' : ''}`}>▼</span>
-                </span>
+                Name {getSortIcon('name')}
               </th>
               <th>Created</th>
               <th>Actions</th>

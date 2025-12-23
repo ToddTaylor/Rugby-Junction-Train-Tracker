@@ -192,6 +192,11 @@ const AdminUsers: React.FC = () => {
     }
   });
 
+  const getSortIcon = (field: 'firstName' | 'lastName' | 'email') => {
+    const icon = sortField !== field ? '⇅' : sortDirection === 'asc' ? '⬆' : '⬇';
+    return <span style={{ fontSize: '1.2em', marginLeft: '0.3em' }}>{icon}</span>;
+  };
+
   // Paginate sorted users
   const totalPages = Math.ceil(sortedUsers.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -248,25 +253,13 @@ const AdminUsers: React.FC = () => {
           <thead>
             <tr>
               <th className="sortable" onClick={() => handleSort('lastName')}>
-                Last Name
-                <span className="sort-arrows">
-                  <span className={`arrow-up ${sortField === 'lastName' && sortDirection === 'asc' ? 'active' : ''}`}>▲</span>
-                  <span className={`arrow-down ${sortField === 'lastName' && sortDirection === 'desc' ? 'active' : ''}`}>▼</span>
-                </span>
+                Last Name {getSortIcon('lastName')}
               </th>
               <th className="sortable" onClick={() => handleSort('firstName')}>
-                First Name
-                <span className="sort-arrows">
-                  <span className={`arrow-up ${sortField === 'firstName' && sortDirection === 'asc' ? 'active' : ''}`}>▲</span>
-                  <span className={`arrow-down ${sortField === 'firstName' && sortDirection === 'desc' ? 'active' : ''}`}>▼</span>
-                </span>
+                First Name {getSortIcon('firstName')}
               </th>
               <th className="sortable" onClick={() => handleSort('email')}>
-                Email
-                <span className="sort-arrows">
-                  <span className={`arrow-up ${sortField === 'email' && sortDirection === 'asc' ? 'active' : ''}`}>▲</span>
-                  <span className={`arrow-down ${sortField === 'email' && sortDirection === 'desc' ? 'active' : ''}`}>▼</span>
-                </span>
+                Email {getSortIcon('email')}
               </th>
               <th>Last Login</th>
               <th>Roles</th>

@@ -3,6 +3,8 @@ namespace Web.Server.DTOs
 {
     public class CreateSubdivisionDTO : IEquatable<CreateSubdivisionDTO?>
     {
+        public required int RailroadID { get; set; }
+
         public bool DpuCapable { get; set; } = false;
 
         public required string Name { get; set; }
@@ -15,13 +17,14 @@ namespace Web.Server.DTOs
         public bool Equals(CreateSubdivisionDTO? other)
         {
             return other is not null &&
+                   RailroadID == other.RailroadID &&
                    DpuCapable == other.DpuCapable &&
                    Name == other.Name;
         }
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(DpuCapable, Name);
+            return HashCode.Combine(RailroadID, DpuCapable, Name);
         }
 
         public static bool operator ==(CreateSubdivisionDTO? left, CreateSubdivisionDTO? right)

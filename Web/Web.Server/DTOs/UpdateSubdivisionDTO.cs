@@ -15,6 +15,7 @@ namespace Web.Server.DTOs
         {
             return other is not null &&
                    base.Equals(other) &&
+                   RailroadID == other.RailroadID &&
                    DpuCapable == other.DpuCapable &&
                    Name == other.Name &&
                    ID == other.ID;
@@ -22,7 +23,7 @@ namespace Web.Server.DTOs
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(base.GetHashCode(), DpuCapable, Name, ID);
+            return HashCode.Combine(base.GetHashCode(), RailroadID, DpuCapable, Name, ID);
         }
 
         public static bool operator ==(UpdateSubdivisionDTO? left, UpdateSubdivisionDTO? right)

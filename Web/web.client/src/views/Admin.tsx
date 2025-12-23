@@ -7,6 +7,7 @@ const Admin: React.FC = () => {
 
   const menuItems = [
     { path: '/admin/railroads', label: 'Railroad Management', icon: '🚂' },
+    { path: '/admin/subdivisions', label: 'Subdivision Management', icon: '🛤️' },
     { path: '/admin/users', label: 'User Management', icon: '👥' },
     // Future menu items can be added here
     // { path: '/admin/settings', label: 'Settings', icon: '⚙️' },

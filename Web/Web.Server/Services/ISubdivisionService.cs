@@ -8,6 +8,6 @@ namespace Web.Server.Services
         Task DeleteSubdivisionAsync(int ID);
         Task<Subdivision> GetSubdivisionAsync(int ID);
         Task<IEnumerable<Subdivision>> GetSubdivisionsAsync();
-        Task UpdateSubdivisionAsync(Subdivision subdivision);
+        Task<Subdivision> UpdateSubdivisionAsync(Subdivision subdivision);
     }
 }

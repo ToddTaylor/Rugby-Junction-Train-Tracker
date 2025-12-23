@@ -71,23 +71,27 @@ namespace Web.Server.Controllers.v1
 
         // PUT: api/Subdivisions/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutSubdivision(int id, UpdateSubdivisionDTO updateSubdivisionDTO)
+        public async Task<ActionResult> PutSubdivision(int id, UpdateSubdivisionDTO updateSubdivisionDTO)
         {
+            var response = new MessageEnvelope<SubdivisionDTO>(null, []);
             if (id != updateSubdivisionDTO.ID)
             {
-                return BadRequest();
+                response.Errors.Add("ID mismatch.");
+                return BadRequest(response);
             }
 
-            var railroad = _mapper.Map<Subdivision>(updateSubdivisionDTO);
+            var subdivision = _mapper.Map<Subdivision>(updateSubdivisionDTO);
 
             try
             {
-                await _subdivisionService.UpdateSubdivisionAsync(railroad);
-                return NoContent();
+                var updatedSubdivision = await _subdivisionService.UpdateSubdivisionAsync(subdivision);
+                response.Data = _mapper.Map<SubdivisionDTO>(updatedSubdivision);
+                return Ok(response);
             }
             catch (KeyNotFoundException)
             {
-                return NotFound();
+                response.Errors.Add("Subdivision not found.");
+                return NotFound(response);
             }
         }
 

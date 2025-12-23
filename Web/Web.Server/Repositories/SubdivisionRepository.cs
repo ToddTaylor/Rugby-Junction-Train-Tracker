@@ -29,24 +29,31 @@ namespace Web.Server.Repositories
         public async Task<IEnumerable<Subdivision>> GetAllAsync()
         {
             return await _context.Subdivisions
+                .Include(s => s.Railroad)
                 .OrderByDescending(r => r.LastUpdate)
                 .ToListAsync();
         }
 
         public async Task<Subdivision?> GetByIdAsync(int id)
         {
-            return await _context.Subdivisions.FirstOrDefaultAsync(r => r.ID == id);
+            return await _context.Subdivisions
+                .Include(s => s.Railroad)
+                .FirstOrDefaultAsync(r => r.ID == id);
         }
 
         public async Task<Subdivision> UpdateAsync(Subdivision sudivision)
         {
-            var existingSubdivision = await _context.Subdivisions.FindAsync(sudivision.ID);
+            var existingSubdivision = await _context.Subdivisions
+                .Include(s => s.Railroad)
+                .FirstOrDefaultAsync(s => s.ID == sudivision.ID);
             if (existingSubdivision == null)
             {
                 throw new KeyNotFoundException("Subdivision not found.");
             }
 
             existingSubdivision.Name = sudivision.Name;
+            existingSubdivision.RailroadID = sudivision.RailroadID;
+            existingSubdivision.DpuCapable = sudivision.DpuCapable;
             existingSubdivision.LastUpdate = _timeProvider.UtcNow;
 
             await _context.SaveChangesAsync();

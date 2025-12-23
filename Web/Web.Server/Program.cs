@@ -101,6 +101,7 @@ builder.Services.AddScoped<IBeaconRailroadRepository, BeaconRailroadRepository>(
 builder.Services.AddScoped<IMapPinRepository, MapPinRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IRailroadRepository, RailroadRepository>();
+builder.Services.AddScoped<ISubdivisionRepository, SubdivisionRepository>();
 builder.Services.AddScoped<ITelemetryRepository, TelemetryRepository>();
 
 // Custom services
@@ -109,6 +110,7 @@ builder.Services.AddScoped<IBeaconRailroadService, BeaconRailroadService>();
 builder.Services.AddScoped<IMapPinService, MapPinService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IRailroadService, RailroadService>();
+builder.Services.AddScoped<ISubdivisionService, SubdivisionService>();
 builder.Services.AddScoped<ITelemetryService, TelemetryService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 
