@@ -71,23 +71,27 @@ namespace Web.Server.Controllers.v1
 
         // PUT: api/Railroads/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutRailroad(int id, UpdateRailroadDTO updateRailroadDTO)
+        public async Task<ActionResult> PutRailroad(int id, UpdateRailroadDTO updateRailroadDTO)
         {
+            var response = new MessageEnvelope<RailroadDTO>(null, []);
             if (id != updateRailroadDTO.ID)
             {
-                return BadRequest();
+                response.Errors.Add("ID mismatch.");
+                return BadRequest(response);
             }
 
             var railroad = _mapper.Map<Railroad>(updateRailroadDTO);
 
             try
             {
-                await _railroadService.UpdateRailroadAsync(railroad);
-                return NoContent();
+                var updatedRailroad = await _railroadService.UpdateRailroadAsync(railroad);
+                response.Data = _mapper.Map<RailroadDTO>(updatedRailroad);
+                return Ok(response);
             }
             catch (KeyNotFoundException)
             {
-                return NotFound();
+                response.Errors.Add("Railroad not found.");
+                return NotFound(response);
             }
         }
 

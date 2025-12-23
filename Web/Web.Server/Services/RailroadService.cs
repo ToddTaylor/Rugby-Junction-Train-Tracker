@@ -27,9 +27,9 @@ namespace Web.Server.Services
             return await _railroadRepository.AddAsync(railroad);
         }
 
-        public async Task UpdateRailroadAsync(Railroad railroad)
+        public async Task<Railroad> UpdateRailroadAsync(Railroad railroad)
         {
-            await _railroadRepository.UpdateAsync(railroad);
+            return await _railroadRepository.UpdateAsync(railroad);
         }
 
         public async Task DeleteRailroadAsync(int id)

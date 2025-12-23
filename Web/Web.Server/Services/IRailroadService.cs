@@ -8,6 +8,6 @@ namespace Web.Server.Services
         Task DeleteRailroadAsync(int ID);
         Task<Railroad> GetRailroadAsync(int ID);
         Task<IEnumerable<Railroad>> GetRailroadsAsync();
-        Task UpdateRailroadAsync(Railroad railroad);
+        Task<Railroad> UpdateRailroadAsync(Railroad railroad);
     }
 }
