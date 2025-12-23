@@ -17,7 +17,7 @@ function getPinBrightness(lastUpdate: string, maxPinAgeMinutes?: number): number
 
     // Exponential decay from 1.0 to minBrightness over maxPinAgeMinutes
     // Pin will be removed from map when maxPinAgeMinutes is reached
-    const minBrightness = 0.1;
+    const minBrightness = 0.3;
     const normalizedTime = Math.min(minutes / maxPinAgeMinutes, 1.0);
     const brightness = minBrightness + (1.0 - minBrightness) * Math.pow(1 - normalizedTime, 4);
     
