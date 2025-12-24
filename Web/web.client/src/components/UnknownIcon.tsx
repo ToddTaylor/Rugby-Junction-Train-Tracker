@@ -11,9 +11,7 @@ export const UnknownIcon: React.FC<{
     style={{
       width: size,
       height: size,
-      border: trackColor ? `3px dashed ${trackColor}` : 'none',
-      borderRadius: '50%',
-      boxSizing: 'border-box',
+      position: 'relative',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -21,6 +19,28 @@ export const UnknownIcon: React.FC<{
       textAlign: 'center',
     }}
   >
+    {trackColor && (
+      <svg
+        style={{
+          position: 'absolute',
+          top: -3,
+          left: -3,
+          width: size + 6,
+          height: size + 6,
+          pointerEvents: 'none',
+        }}
+      >
+        <circle
+          cx={(size + 6) / 2}
+          cy={(size + 6) / 2}
+          r={(size + 6) / 2 - 1.5}
+          fill="none"
+          stroke={trackColor}
+          strokeWidth="3"
+          strokeDasharray="8 8"
+        />
+      </svg>
+    )}
     <img
       src={iconSrc}
       alt="No direction"
