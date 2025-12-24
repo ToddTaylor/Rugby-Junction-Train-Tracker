@@ -1,5 +1,6 @@
 .admin-users {
   padding: 2rem;
+  padding-bottom: 80px;
   max-width: 1400px;
   margin: 0 auto;
   color: #e0e0e0;
@@ -9,13 +10,36 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
+  margin-bottom: 10px;
 }
 
 .admin-users-header h1 {
   margin: 0;
   font-size: 2rem;
   color: #f0f0f0;
+}
+
+.header-buttons {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-back {
+  background: #007bff;
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 4px;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.2s;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-back:hover {
+  background: #0056b3;
 }
 
 .admin-users-loading {
@@ -38,16 +62,25 @@
 
 .users-controls {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
-  margin-bottom: 1.5rem;
-  gap: 1rem;
+  margin-bottom: 10px;
+  flex-wrap: nowrap;
 }
 
 .search-box {
-  flex: 1;
-  max-width: 400px;
+  flex: 0 0 auto;
+  width: 400px;
   position: relative;
+}
+
+.right-controls {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 15px;
+  flex: 0 0 auto;
+  margin-left: auto;
 }
 
 .search-input {
@@ -96,6 +129,10 @@
 .results-info {
   color: #888;
   font-size: 0.9rem;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  height: 42px;
 }
 
 .users-table-container {
@@ -366,7 +403,7 @@
 
 .pagination {
   display: flex;
-  justify-content: center;
+  justify-content: flex-end;
   align-items: center;
   gap: 0.5rem;
   margin-top: 2rem;

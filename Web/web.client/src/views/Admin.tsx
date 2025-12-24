@@ -19,9 +19,6 @@ const Admin: React.FC = () => {
   return (
     <div className="admin-layout">
       <aside className="admin-sidebar">
-        <div className="admin-sidebar-header">
-          <h2>Administration</h2>
-        </div>
         <nav className="admin-nav">
           <ul>
             {menuItems.map((item) => (
@@ -37,11 +34,6 @@ const Admin: React.FC = () => {
             ))}
           </ul>
         </nav>
-        <div className="admin-sidebar-footer">
-          <Link to="/" className="back-link">
-            ← Back to App
-          </Link>
-        </div>
       </aside>
       <main className="admin-content">
         <Outlet />

@@ -119,6 +119,39 @@ button:focus-visible {
 .app-title {
   font-weight: 600;
   font-size: 20px;
+  flex: 1;
+}
+
+.btn-back-header {
+  background: #007bff;
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 4px;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.2s;
+  margin-left: auto;
+}
+
+.btn-back-header:hover {
+  background: #0056b3;
+}
+
+.admin-button {
+  background: #007bff;
+  color: #fff;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.2s;
+  margin-left: auto;
+}
+
+.admin-button:hover {
+  background: #0056b3;
 }
 
 .app-main {
@@ -139,6 +172,10 @@ button:focus-visible {
   text-align: center;
   padding: 0.5rem 0;
   font-size: 14px;
+}
+
+body:has(.admin-layout) .app-footer {
+  display: none;
 }
 
 /* ---------- Leaflet Map Styles ---------- */

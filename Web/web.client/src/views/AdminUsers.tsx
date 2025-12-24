@@ -243,8 +243,41 @@ const AdminUsers: React.FC = () => {
             </button>
           )}
         </div>
-        <div className="results-info">
-          Showing {startIndex + 1}-{Math.min(endIndex, sortedUsers.length)} of {sortedUsers.length} users
+        <div className="right-controls">
+          <div className="results-info">
+            Showing {startIndex + 1}-{Math.min(endIndex, sortedUsers.length)} of {sortedUsers.length} users
+          </div>
+          {totalPages > 1 && (
+            <div className="pagination">
+              <button
+                className="pagination-btn"
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+              >
+                Previous
+              </button>
+              
+              <div className="pagination-pages">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <button
+                    key={page}
+                    className={`pagination-page ${currentPage === page ? 'active' : ''}`}
+                    onClick={() => setCurrentPage(page)}
+                  >
+                    {page}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                className="pagination-btn"
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+              >
+                Next
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -297,38 +330,6 @@ const AdminUsers: React.FC = () => {
           </tbody>
         </table>
       </div>
-
-      {totalPages > 1 && (
-        <div className="pagination">
-          <button
-            className="pagination-btn"
-            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-            disabled={currentPage === 1}
-          >
-            Previous
-          </button>
-          
-          <div className="pagination-pages">
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-              <button
-                key={page}
-                className={`pagination-page ${currentPage === page ? 'active' : ''}`}
-                onClick={() => setCurrentPage(page)}
-              >
-                {page}
-              </button>
-            ))}
-          </div>
-
-          <button
-            className="pagination-btn"
-            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-            disabled={currentPage === totalPages}
-          >
-            Next
-          </button>
-        </div>
-      )}
 
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>

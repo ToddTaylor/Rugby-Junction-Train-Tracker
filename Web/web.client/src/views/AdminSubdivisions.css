@@ -1,5 +1,6 @@
 .admin-subdivisions-container {
   padding: 2rem;
+  padding-bottom: 80px;
   max-width: 1400px;
   margin: 0 auto;
   background-color: #1a1a1a;
@@ -11,7 +12,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
+  margin-bottom: 10px;
 }
 
 .admin-header h1 {
@@ -20,13 +21,54 @@
   margin: 0;
 }
 
+.header-buttons {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-back {
+  background: #007bff;
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 4px;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.2s;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-back:hover {
+  background: #0056b3;
+}
+
+.admin-controls {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  margin-bottom: 10px;
+  flex-wrap: nowrap;
+}
+
 .search-bar {
-  margin-bottom: 1.5rem;
+  position: relative;
+  flex: 0 0 auto;
+  width: 400px;
+}
+
+.right-controls {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 15px;
+  flex: 0 0 auto;
+  margin-left: auto;
 }
 
 .search-bar input {
   width: 100%;
-  max-width: 400px;
   padding: 0.75rem;
   border: 1px solid #444;
   border-radius: 4px;
@@ -37,6 +79,15 @@
 
 .search-bar input::placeholder {
   color: #888;
+}
+
+.results-info {
+  color: #888;
+  font-size: 14px;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  height: 42px;
 }
 
 .subdivisions-table {
@@ -143,9 +194,8 @@
 
 .pagination {
   display: flex;
-  justify-content: center;
+  justify-content: flex-end;
   gap: 0.5rem;
-  margin-top: 1.5rem;
 }
 
 .pagination button {

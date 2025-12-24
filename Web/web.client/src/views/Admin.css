@@ -70,20 +70,24 @@
   font-weight: 500;
 }
 
-.admin-sidebar-footer {
-  padding: 1.5rem;
+.back-link-item {
+  margin-top: 1rem;
+  padding-top: 1rem;
   border-top: 1px solid #444;
 }
 
 .back-link {
-  display: block;
+  display: flex;
+  align-items: center;
+  padding: 1rem 1.5rem;
   color: #888;
   text-decoration: none;
-  font-size: 0.9rem;
-  transition: color 0.2s;
+  transition: all 0.2s;
+  border-left: 3px solid transparent;
 }
 
 .back-link:hover {
+  background-color: #333;
   color: #f0f0f0;
 }
 

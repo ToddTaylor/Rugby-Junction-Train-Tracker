@@ -19,6 +19,7 @@ import { useRailways } from '../hooks/useRailways';
 import { useBeacons } from '../hooks/useBeacons';
 import { useTelemetryPins } from '../hooks/useTelemetryPins';
 import { useStaleRefresh } from '../hooks/useStaleRefresh';
+import { useAuth } from '../hooks/useAuth';
 
 const DARK_TILE_URL = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
 const LIGHT_TILE_URL = "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
@@ -31,6 +32,10 @@ const RailMap: React.FC = () => {
     const savedMapState = JSON.parse(localStorage.getItem('mapState') || 'null');
     const [mapZoom, setMapZoom] = useState<number>(savedMapState?.zoom || 7);
     const [mapCenter, setMapCenter] = useState<LatLngTuple>(savedMapState?.center || fallbackCenter);
+
+    // Auth for admin button
+    const { session } = useAuth();
+    const isAdmin = session?.roles?.includes('Admin');
 
     // Use custom hooks for data
     const { trackData, trackDataLoaded, trackDataLoading } = useRailways();
@@ -391,7 +396,21 @@ const RailMap: React.FC = () => {
 
     return (
         <>
-            <div style={{ position: 'absolute', top: 10, right: 10, zIndex: 1000, display: 'flex', alignItems: 'center' }}>
+            <div style={{ position: 'absolute', top: 10, right: 10, zIndex: 1000, display: 'flex', alignItems: 'center', gap: 12 }}>
+                {isAdmin && (
+                    <a href="/admin" style={{
+                        background: '#007bff',
+                        color: '#fff',
+                        padding: '8px 16px',
+                        borderRadius: '4px',
+                        textDecoration: 'none',
+                        fontSize: '14px',
+                        fontWeight: 500,
+                        transition: 'background 0.2s',
+                    }}>
+                        Admin
+                    </a>
+                )}
                 <span style={{ marginRight: 8 }}>
                     <img src={`/icons/sun.svg${cacheBuster}`} alt="Light mode" style={{ opacity: mapTheme === 'light' ? 1 : 0.4, width: 24, height: 24 }} />
                 </span>

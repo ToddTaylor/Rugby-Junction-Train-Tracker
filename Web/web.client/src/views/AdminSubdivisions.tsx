@@ -194,16 +194,36 @@ export const AdminSubdivisions: React.FC = () => {
 
       {error && <div className="error-message">{error}</div>}
 
-      <div className="search-bar">
-        <input
-          type="text"
-          placeholder="Search subdivisions..."
-          value={searchTerm}
-          onChange={(e) => {
-            setSearchTerm(e.target.value);
-            setCurrentPage(1);
-          }}
-        />
+      <div className="admin-controls">
+        <div className="search-bar">
+          <input
+            type="text"
+            placeholder="Search subdivisions..."
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
+          />
+        </div>
+        <div className="right-controls">
+          <div className="results-info">
+            Showing {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, sortedSubdivisions.length)} of {sortedSubdivisions.length} subdivisions
+          </div>
+          {totalPages > 1 && (
+            <div className="pagination">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <button
+                  key={page}
+                  className={currentPage === page ? 'active' : ''}
+                  onClick={() => setCurrentPage(page)}
+                >
+                  {page}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       <table className="subdivisions-table">
@@ -243,20 +263,6 @@ export const AdminSubdivisions: React.FC = () => {
           ))}
         </tbody>
       </table>
-
-      {totalPages > 1 && (
-        <div className="pagination">
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-            <button
-              key={page}
-              className={currentPage === page ? 'active' : ''}
-              onClick={() => setCurrentPage(page)}
-            >
-              {page}
-            </button>
-          ))}
-        </div>
-      )}
 
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
