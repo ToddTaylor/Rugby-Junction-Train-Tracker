@@ -198,6 +198,18 @@ body:has(.admin-layout) .app-footer {
   z-index: 500;
 }
 
+/* ---------- Tracking Dot Pulse Animation ---------- */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(1.3);
+  }
+}
+
 /* ---------- Beacon Animation ---------- */
 .beacon-container {
   position: relative;

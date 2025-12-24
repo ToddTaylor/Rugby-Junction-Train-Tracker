@@ -20,26 +20,21 @@ export const ArrowIcon: React.FC<{
     }}
   >
     {trackColor && (
-      <svg
+      <div
         style={{
           position: 'absolute',
-          top: -3,
-          left: -3,
-          width: size + 6,
-          height: size + 6,
-          pointerEvents: 'none',
+          top: 0,
+          left: '50%',
+          width: 10,
+          height: 10,
+          backgroundColor: trackColor,
+          borderRadius: '50%',
+          border: '1px solid rgba(0, 0, 0, 0.3)',
+          zIndex: 10,
+          animation: 'pulse 1.5s ease-in-out infinite',
+          marginLeft: -6,
         }}
-      >
-        <circle
-          cx={(size + 6) / 2}
-          cy={(size + 6) / 2}
-          r={(size + 6) / 2 - 1.5}
-          fill="none"
-          stroke={trackColor}
-          strokeWidth="3"
-          strokeDasharray="8 8"
-        />
-      </svg>
+      />
     )}
     <img
       src={iconSrc}

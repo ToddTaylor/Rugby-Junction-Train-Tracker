@@ -201,8 +201,6 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
     // Use ArrowMapPin as the icon, with rotation and border color
     const createCustomIcon = () => {
         const iconSrc = getArrowIconSrc(pin.direction, pin.moving != null ? !!pin.moving : undefined, mapTheme);
-        const borderWidth = trackColor ? 3 : 0;
-        const totalSize = size + (borderWidth * 2); // border adds to both sides
 
         if (!pin.direction) {
             return L.divIcon({
@@ -214,9 +212,9 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
                         size={size}
                     />
                 ),
-                iconSize: [totalSize, totalSize],
-                iconAnchor: [totalSize / 2, totalSize / 2], // <-- absolute center of marker
-                popupAnchor: [0, -totalSize / 2],      // popup appears above the marker, scales with size
+                iconSize: [size, size],
+                iconAnchor: [size / 2, size / 2], // <-- absolute center of marker
+                popupAnchor: [0, -size / 2],      // popup appears above the marker, scales with size
                 className: 'telemetry-marker-z',
             });
         }
@@ -231,9 +229,9 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
                     rotation={getRotation(pin.direction)}
                 />
             ),
-            iconSize: [totalSize, totalSize],
-            iconAnchor: [totalSize / 2, totalSize / 2], // <-- absolute center of marker
-            popupAnchor: [0, -totalSize / 2],      // popup appears above the marker, scales with size
+            iconSize: [size, size],
+            iconAnchor: [size / 2, size / 2], // <-- absolute center of marker
+            popupAnchor: [0, -size / 2],      // popup appears above the marker, scales with size
             className: 'telemetry-marker-z',
         });
     };
