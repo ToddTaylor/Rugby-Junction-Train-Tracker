@@ -6,6 +6,7 @@ const Admin: React.FC = () => {
   const location = useLocation();
 
   const menuItems = [
+    { path: '/admin/beacons', label: 'Beacons', icon: '📡' },
     { path: '/admin/railroads', label: 'Railroads', icon: '🚂' },
     { path: '/admin/subdivisions', label: 'Subdivisions', icon: '🛤️' },
     { path: '/admin/users', label: 'Users', icon: '👥' },

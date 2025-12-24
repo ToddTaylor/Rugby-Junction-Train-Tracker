@@ -7,6 +7,7 @@ import Login from './views/Login';
 import Admin from './views/Admin';
 import AdminUsers from './views/AdminUsers';
 import AdminRailroads from './views/AdminRailroads';
+import AdminBeacons from './views/AdminBeacons';
 import { AdminSubdivisions } from './views/AdminSubdivisions';
 import PrivateRoute from './components/PrivateRoute';
 import AdminRoute from './components/AdminRoute';
@@ -24,8 +25,7 @@ function App() {
                     <Route path="telemetrylog" element={<PrivateRoute><TelemetryLog /></PrivateRoute>} />
                     <Route path="webcams" element={<PrivateRoute><WebCams /></PrivateRoute>} />
                     <Route path="admin" element={<AdminRoute><Admin /></AdminRoute>}>
-                        <Route index element={<Navigate to="/admin/users" replace />} />
-                        <Route path="users" element={<AdminUsers />} />
+                        <Route index element={<Navigate to="/admin/users" replace />} />                        <Route path="beacons" element={<AdminBeacons />} />                        <Route path="users" element={<AdminUsers />} />
                         <Route path="railroads" element={<AdminRailroads />} />
                         <Route path="subdivisions" element={<AdminSubdivisions />} />
                     </Route>
