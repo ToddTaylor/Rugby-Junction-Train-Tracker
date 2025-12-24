@@ -161,7 +161,7 @@ const AdminRailroads = () => {
   return (
     <div className="admin-railroads">
       <div className="admin-header">
-        <h1>Railroad Management</h1>
+        <h1>Railroads</h1>
         <button className="btn-primary" onClick={handleAdd}>Add Railroad</button>
       </div>
 

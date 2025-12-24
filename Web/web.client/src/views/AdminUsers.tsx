@@ -216,7 +216,7 @@ const AdminUsers: React.FC = () => {
   return (
     <div className="admin-users">
       <div className="admin-users-header">
-        <h1>User Management</h1>
+        <h1>Users</h1>
         <button className="btn-primary" onClick={handleCreate}>
           Add User
         </button>

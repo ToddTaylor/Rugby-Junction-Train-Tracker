@@ -186,7 +186,7 @@ export const AdminSubdivisions: React.FC = () => {
   return (
     <div className="admin-subdivisions-container">
       <div className="admin-header">
-        <h1>Subdivision Management</h1>
+        <h1>Subdivisions</h1>
         <button className="btn-primary" onClick={handleCreate}>
           Add Subdivision
         </button>
