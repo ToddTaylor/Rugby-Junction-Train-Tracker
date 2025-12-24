@@ -1,7 +1,16 @@
 // Service for tracked map pins (localStorage logic)
 export const TRACKED_KEY = 'trackedMapPins';
 export const TRACK_COLORS = [
-    'red', 'blue', 'green', 'purple', 'orange', 'yellow', 'pink', 'teal', 'brown', 'gray',
+    '#FF3366', // Bright pink/red
+    '#00FFFF', // Cyan
+    '#00FF00', // Lime green
+    '#FF00FF', // Magenta
+    '#FFFF00', // Yellow
+    '#FF6600', // Orange
+    '#00FF99', // Spring green
+    '#FF0099', // Hot pink
+    '#66FF00', // Chartreuse
+    '#0099FF', // Sky blue
 ];
 export type TrackedPin = { id: string, expires: number, color: string };
 

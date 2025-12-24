@@ -12,8 +12,7 @@ export const ArrowIcon: React.FC<{
     style={{
       width: size,
       height: size,
-      filter: `brightness(${brightness})`,
-      border: `3px dotted ${trackColor ?? 'transparent'}`,
+      border: trackColor ? `3px dashed ${trackColor}` : 'none',
       borderRadius: '50%',
       boxSizing: 'border-box',
       display: 'flex',
@@ -30,6 +29,7 @@ export const ArrowIcon: React.FC<{
         height: '100%',
         display: 'block',
         transform: `rotate(${rotation}deg)`,
+        filter: `brightness(${brightness})`,
       }}
     />
   </div>
