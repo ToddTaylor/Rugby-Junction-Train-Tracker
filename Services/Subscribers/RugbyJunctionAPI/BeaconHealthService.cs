@@ -27,18 +27,20 @@ namespace Services.Subscribers.RugbyJunctionAPI
 
         private async Task SendHealthAsync()
         {
+            var timestamp = DateTime.UtcNow.ToString("yyyy/MM/dd-HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
+
             try
             {
                 await _beaconApiClient.SendBeaconHealthAsync();
 
                 Console.ForegroundColor = ConsoleColor.DarkGray;
-                Console.WriteLine($"[{DateTime.Now}] [{_subscriber.ID}] Beacon health sent at {DateTime.Now}");
+                Console.WriteLine($"{timestamp} [{_subscriber.ID}] Beacon health sent successfully.");
                 Console.ResetColor();
             }
             catch (Exception ex)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"[{DateTime.Now}] [{_subscriber.ID}] Error in beacon health service: {ex.Message}");
+                Console.WriteLine($"{timestamp} [{_subscriber.ID}] Error in beacon health service: {ex.Message}");
                 Console.ResetColor();
             }
         }

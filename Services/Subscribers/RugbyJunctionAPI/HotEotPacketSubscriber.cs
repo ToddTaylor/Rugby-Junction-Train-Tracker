@@ -7,6 +7,7 @@ namespace Services.Subscribers.RugbyJunctionAPI
     {
         private readonly AppSettings _appSettings;
         private readonly Subscriber _subscriber;
+        private readonly TelemetryThrottleService _throttleService;
 
         // Address IDs that should be ignored.
         private readonly int[] addressIdBlackList = new int[] { 0, 999999 };
@@ -16,6 +17,7 @@ namespace Services.Subscribers.RugbyJunctionAPI
             _appSettings = appSettings;
             _subscriber = appSettings.Subscribers
                 .First(s => s.ID == Constants.SUBSCRIBER_ID);
+            _throttleService = new TelemetryThrottleService(_subscriber.TelemetryThrottleIntervalSeconds);
         }
 
         private void OnHotEotPacketReceived(object sender, HotEotPacketEventArgs e)
@@ -27,6 +29,19 @@ namespace Services.Subscribers.RugbyJunctionAPI
             var sendInvalidMessages = _subscriber.SendInvalidMessages;
 
             if (sendInvalidMessages == false && e.Packet.SRC == "INV") { return; }
+
+            // Check if this message should be throttled based on AddressID
+            if (!_throttleService.ShouldSendMessage(addressId))
+            {
+                var timestamp = e.Packet.TimeReceived.ToString("yyyy/MM/dd-HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
+                var source = e.Packet.SRC;
+
+                Console.ForegroundColor = ConsoleColor.DarkGray; 
+                Console.WriteLine($"{timestamp}  0.0 {source} {addressId} << Throttled");
+                Console.ResetColor();
+
+                return;
+            }
 
             var alert = new Telemetry
             {

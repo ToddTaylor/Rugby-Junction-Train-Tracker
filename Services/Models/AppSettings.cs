@@ -15,6 +15,12 @@ namespace Services.Models
         public ApiSettings ApiSettings { get; set; } = new();
         public Beacon Beacon { get; set; } = new();
         public bool SendInvalidMessages { get; set; }
+        /// <summary>
+        /// Time interval in seconds to throttle telemetry messages per AddressID.
+        /// Default is 60 seconds (1 minute).
+        /// Only one message per AddressID will be sent within this interval.
+        /// </summary>
+        public int TelemetryThrottleIntervalSeconds { get; set; } = 60;
     }
 
     public class ApiSettings
