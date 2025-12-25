@@ -241,6 +241,7 @@ const AdminBeacons = () => {
         <table className="beacons-table">
           <thead>
             <tr>
+              <th>Beacon ID</th>
               <th className="sortable" onClick={() => handleSort('name')}>
                 Name {getSortIcon('name')}
               </th>
@@ -255,6 +256,7 @@ const AdminBeacons = () => {
           <tbody>
             {paginatedBeacons.map(beacon => (
               <tr key={beacon.id}>
+                <td>{beacon.id}</td>
                 <td>{beacon.name}</td>
                 <td>{getOwnerName(beacon.ownerID)}</td>
                 <td>

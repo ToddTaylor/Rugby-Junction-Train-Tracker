@@ -283,7 +283,7 @@ const AdminBeaconRailroads = () => {
         <table className="beacon-railroads-table">
           <thead>
             <tr>
-              <th>ID</th>
+              <th>Beacon ID</th>
               <th className="sortable" onClick={() => handleSort('beaconName')}>
                 Beacon {getSortIcon('beaconName')}
               </th>
