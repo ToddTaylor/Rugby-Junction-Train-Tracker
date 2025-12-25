@@ -283,6 +283,7 @@ const AdminBeaconRailroads = () => {
         <table className="beacon-railroads-table">
           <thead>
             <tr>
+              <th>ID</th>
               <th className="sortable" onClick={() => handleSort('beaconName')}>
                 Beacon {getSortIcon('beaconName')}
               </th>
@@ -301,6 +302,7 @@ const AdminBeaconRailroads = () => {
           <tbody>
             {paginatedBeaconRailroads.map(br => (
               <tr key={`${br.beaconID}-${br.subdivisionID}`}>
+                <td>{br.beaconID}</td>
                 <td>{br.beaconName}</td>
                 <td>{br.railroadName}</td>
                 <td>{br.subdivisionName}</td>
