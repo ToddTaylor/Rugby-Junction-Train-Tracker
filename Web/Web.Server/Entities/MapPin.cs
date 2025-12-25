@@ -22,6 +22,11 @@ namespace Web.Server.Entities
 
         public bool? Moving { get; set; }
 
+        /// <summary>
+        /// Indicates if this map pin represents a local train based on the subdivision's local address ID list.
+        /// </summary>
+        public bool IsLocal { get; set; } = false;
+
         public ICollection<Address> Addresses { get; set; } = [];
 
         public MapPin Clone()
@@ -45,6 +50,7 @@ namespace Web.Server.Entities
                    EqualityComparer<BeaconRailroad?>.Default.Equals(BeaconRailroad, other.BeaconRailroad) &&
                    Direction == other.Direction &&
                    Moving == other.Moving &&
+                   IsLocal == other.IsLocal &&
                    Addresses.SequenceEqual(other.Addresses);    // Custom comparer that works.
         }
 
@@ -58,6 +64,7 @@ namespace Web.Server.Entities
             hash.Add(SubdivisionId);
             hash.Add(BeaconRailroad);
             hash.Add(Direction);
+            hash.Add(IsLocal);
             hash.Add(Moving);
             hash.Add(Addresses);
             return hash.ToHashCode();

@@ -10,6 +10,7 @@ export type MapPin = {
     milepost: number;
     direction: string;
     moving: Boolean;
+    isLocal: boolean;
     railroad: string;
     subdivision: string;
     lastUpdate: string;

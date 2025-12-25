@@ -24,6 +24,7 @@ export const AdminSubdivisions: React.FC = () => {
     name: '',
     railroadID: 0,
     dpuCapable: false,
+    localTrainAddressIDs: '',
   });
   const [formErrors, setFormErrors] = useState<string[]>([]);
 
@@ -107,6 +108,7 @@ export const AdminSubdivisions: React.FC = () => {
       name: '',
       railroadID: railroads.length > 0 ? railroads[0].id : 0,
       dpuCapable: false,
+      localTrainAddressIDs: '',
     });
     setFormErrors([]);
     setShowModal(true);
@@ -119,6 +121,7 @@ export const AdminSubdivisions: React.FC = () => {
       name: subdivision.name,
       railroadID: subdivision.railroadID,
       dpuCapable: subdivision.dpuCapable,
+      localTrainAddressIDs: subdivision.localTrainAddressIDs || '',
     });
     setFormErrors([]);
     setShowModal(true);
@@ -149,6 +152,24 @@ export const AdminSubdivisions: React.FC = () => {
     if (formData.railroadID === 0) {
       setFormErrors(['Railroad is required']);
       return;
+    }
+
+    // Validate Local Train Address IDs
+    if (formData.localTrainAddressIDs && formData.localTrainAddressIDs.trim()) {
+      const addressIDs = formData.localTrainAddressIDs
+        .split(/[\r\n,]+/)
+        .map(id => id.trim())
+        .filter(id => id.length > 0);
+
+      const invalidIDs = addressIDs.filter(id => {
+        // Check if it's numeric and no longer than 6 digits
+        return !/^\d{1,6}$/.test(id);
+      });
+
+      if (invalidIDs.length > 0) {
+        setFormErrors([`Invalid Address IDs: ${invalidIDs.join(', ')}. Each ID must be numeric and no longer than 6 digits.`]);
+        return;
+      }
     }
 
     if (modalMode === 'create') {
@@ -318,6 +339,19 @@ export const AdminSubdivisions: React.FC = () => {
                   />
                   DPU Capable
                 </label>
+              </div>
+              <div className="form-group">
+                <label htmlFor="localTrainAddressIDs">Local Train Address IDs:</label>
+                <div className="form-help">Enter Address IDs that are considered local trains in this subdivision. Separate with commas or new lines.</div>
+                <textarea
+                  id="localTrainAddressIDs"
+                  value={formData.localTrainAddressIDs || ''}
+                  onChange={(e) =>
+                    setFormData({ ...formData, localTrainAddressIDs: e.target.value })
+                  }
+                  placeholder="Enter comma or line-separated Address IDs (e.g., 1234, 5678 or one per line)"
+                  rows={4}
+                />
               </div>
               <div className="modal-actions">
                 <button type="submit" className="btn-primary">

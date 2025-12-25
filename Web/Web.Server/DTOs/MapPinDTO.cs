@@ -22,6 +22,8 @@
 
         public bool? Moving { get; set; }
 
+        public bool IsLocal { get; set; }
+
         public string? Railroad { get; set; }
 
         public string? Subdivision { get; set; }
@@ -48,6 +50,7 @@
                    Longitude == other.Longitude &&
                    Milepost == other.Milepost &&
                    Moving == other.Moving &&
+                   IsLocal == other.IsLocal &&
                    Railroad == other.Railroad &&
                    Subdivision == other.Subdivision &&
                    SubdivisionID == other.SubdivisionID &&
@@ -67,6 +70,7 @@
             hash.Add(Longitude);
             hash.Add(Milepost);
             hash.Add(Moving);
+            hash.Add(IsLocal);
             hash.Add(Railroad);
             hash.Add(Subdivision);
             hash.Add(SubdivisionID);

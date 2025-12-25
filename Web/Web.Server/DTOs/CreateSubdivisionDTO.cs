@@ -9,6 +9,8 @@ namespace Web.Server.DTOs
 
         public required string Name { get; set; }
 
+        public string? LocalTrainAddressIDs { get; set; }
+
         public override bool Equals(object? obj)
         {
             return Equals(obj as CreateSubdivisionDTO);
@@ -19,12 +21,13 @@ namespace Web.Server.DTOs
             return other is not null &&
                    RailroadID == other.RailroadID &&
                    DpuCapable == other.DpuCapable &&
-                   Name == other.Name;
+                   Name == other.Name &&
+                   LocalTrainAddressIDs == other.LocalTrainAddressIDs;
         }
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(RailroadID, DpuCapable, Name);
+            return HashCode.Combine(RailroadID, DpuCapable, Name, LocalTrainAddressIDs);
         }
 
         public static bool operator ==(CreateSubdivisionDTO? left, CreateSubdivisionDTO? right)

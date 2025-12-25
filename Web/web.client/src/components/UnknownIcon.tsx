@@ -6,7 +6,8 @@ export const UnknownIcon: React.FC<{
   brightness: number;
   trackColor?: string;
   size: number;
-}> = ({ iconSrc, brightness, trackColor, size }) => (
+  isLocal?: boolean;
+}> = ({ iconSrc, brightness, trackColor, size, isLocal }) => (
   <div
     style={{
       width: size,
@@ -35,6 +36,30 @@ export const UnknownIcon: React.FC<{
           marginLeft: -6,
         }}
       />
+    )}
+    {isLocal && (
+      <div
+        style={{
+          position: 'absolute',
+          bottom: -2,
+          right: 0,
+          width: 10,
+          height: 10,
+          backgroundColor: '#FFD700',
+          borderRadius: '50%',
+          border: '1px solid rgba(0, 0, 0, 0.5)',
+          zIndex: 10,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '9px',
+          fontWeight: '900',
+          color: '#000',
+          lineHeight: '12px',
+        }}
+      >
+        L
+      </div>
     )}
     <img
       src={iconSrc}

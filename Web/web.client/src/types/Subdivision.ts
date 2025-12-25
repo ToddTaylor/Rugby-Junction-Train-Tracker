@@ -4,6 +4,7 @@ export interface Subdivision {
   railroad: string;
   dpuCapable: boolean;
   name: string;
+  localTrainAddressIDs?: string;
   createdAt: string;
   lastUpdate: string;
 }
@@ -12,6 +13,7 @@ export interface CreateSubdivision {
   railroadID: number;
   dpuCapable: boolean;
   name: string;
+  localTrainAddressIDs?: string;
 }
 
 export interface UpdateSubdivision {
@@ -19,4 +21,5 @@ export interface UpdateSubdivision {
   railroadID: number;
   dpuCapable: boolean;
   name: string;
+  localTrainAddressIDs?: string;
 }

@@ -20,6 +20,11 @@ namespace Web.Server.Entities
         [Required]
         public string Name { get; set; }
 
+        /// <summary>
+        /// Comma or line-separated list of Address IDs that are considered local trains in this subdivision.
+        /// </summary>
+        public string? LocalTrainAddressIDs { get; set; }
+
         [NotMapped]
         public ICollection<BeaconRailroad> BeaconRailroads { get; set; } = [];
 
@@ -38,12 +43,13 @@ namespace Web.Server.Entities
                    EqualityComparer<Railroad>.Default.Equals(Railroad, other.Railroad) &&
                    DpuCapable == other.DpuCapable &&
                    Name == other.Name &&
+                   LocalTrainAddressIDs == other.LocalTrainAddressIDs &&
                    BeaconRailroads.SequenceEqual(other.BeaconRailroads); // Custom comparer that works.
         }
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(CreatedAt, LastUpdate, ID, RailroadID, Railroad, DpuCapable, Name, BeaconRailroads);
+            return HashCode.Combine(CreatedAt, LastUpdate, ID, RailroadID, Railroad, DpuCapable, Name, LocalTrainAddressIDs);
         }
 
         public static bool operator ==(Subdivision? left, Subdivision? right)

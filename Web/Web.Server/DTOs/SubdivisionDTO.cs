@@ -8,6 +8,8 @@
 
         public required string Name { get; set; }
 
+        public string? LocalTrainAddressIDs { get; set; }
+
         public int RailroadID { get; set; }
 
         public required string Railroad { get; set; }

@@ -54,6 +54,7 @@ namespace Web.Server.Repositories
             existingSubdivision.Name = sudivision.Name;
             existingSubdivision.RailroadID = sudivision.RailroadID;
             existingSubdivision.DpuCapable = sudivision.DpuCapable;
+            existingSubdivision.LocalTrainAddressIDs = sudivision.LocalTrainAddressIDs;
             existingSubdivision.LastUpdate = _timeProvider.UtcNow;
 
             await _context.SaveChangesAsync();

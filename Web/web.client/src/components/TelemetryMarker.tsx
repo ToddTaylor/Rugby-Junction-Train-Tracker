@@ -210,6 +210,7 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
                         brightness={brightness}
                         trackColor={trackColor}
                         size={size}
+                        isLocal={pin.isLocal}
                     />
                 ),
                 iconSize: [size, size],
@@ -227,6 +228,7 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
                     trackColor={trackColor}
                     size={size}
                     rotation={getRotation(pin.direction)}
+                    isLocal={pin.isLocal}
                 />
             ),
             iconSize: [size, size],
