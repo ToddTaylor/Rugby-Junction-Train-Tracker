@@ -27,7 +27,7 @@ namespace Services.Subscribers.LiveTrainTrackingAPI
 
         private async Task SendHealthAsync()
         {
-            var timestamp = DateTime.UtcNow.ToString("yyyy/MM/dd-HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
+            var timestamp = DateTime.Now.ToString("yyyy/MM/dd-HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
 
             try
             {

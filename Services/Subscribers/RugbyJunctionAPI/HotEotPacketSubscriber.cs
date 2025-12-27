@@ -33,11 +33,17 @@ namespace Services.Subscribers.RugbyJunctionAPI
             // Check if this message should be throttled based on AddressID
             if (!_throttleService.ShouldSendMessage(addressId))
             {
-                var timestamp = e.Packet.TimeReceived.ToString("yyyy/MM/dd-HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
+                var utc = e.Packet.TimeReceived.Kind == DateTimeKind.Unspecified
+                    ? DateTime.SpecifyKind(e.Packet.TimeReceived, DateTimeKind.Utc)
+                    : e.Packet.TimeReceived;
+
+                var localTimestamp = utc.ToLocalTime()
+                    .ToString("yyyy/MM/dd-HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
+
                 var source = e.Packet.SRC;
 
-                Console.ForegroundColor = ConsoleColor.DarkGray; 
-                Console.WriteLine($"{timestamp}  0.0 {source} {addressId} << Throttled");
+                Console.ForegroundColor = ConsoleColor.DarkGray;
+                Console.WriteLine($"{localTimestamp}  0.0 {source} {addressId} << Throttled");
                 Console.ResetColor();
 
                 return;

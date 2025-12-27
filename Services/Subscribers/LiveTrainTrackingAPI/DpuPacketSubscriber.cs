@@ -28,12 +28,17 @@ namespace Services.Subscribers.LiveTrainTrackingAPI
             // Check if this message should be throttled based on AddressID
             if (!_throttleService.ShouldSendMessage(addressId))
             {
-                var timestamp = e.Packet.TimeReceived.ToString("yyyy/MM/dd-HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
+                var utc = e.Packet.TimeReceived.Kind == DateTimeKind.Unspecified
+                    ? DateTime.SpecifyKind(e.Packet.TimeReceived, DateTimeKind.Utc)
+                    : e.Packet.TimeReceived;
 
-                Console.ForegroundColor = ConsoleColor.DarkGray; 
-                Console.WriteLine($"{timestamp}  0.0 {addressId} << Throttled");
+                var localTimestamp = utc.ToLocalTime()
+                    .ToString("yyyy/MM/dd-HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
+
+                Console.ForegroundColor = ConsoleColor.DarkGray;
+                Console.WriteLine($"{localTimestamp}  0.0 {addressId} << Throttled");
                 Console.ResetColor();
-                
+
                 return;
             }
 
