@@ -1,5 +1,6 @@
 using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 using Web.Server.DTOs;
 using Web.Server.Services;
 
@@ -11,17 +12,20 @@ namespace Web.Server.Controllers.v1
     {
         private readonly IMapPinService _mapPinsService;
         private readonly IBeaconRailroadService _beaconRailroadService;
+        private readonly IMapPinHistoryService _mapPinHistoryService;
         private readonly ILogger<MapPinsController> _logger;
         private readonly IMapper _mapper;
 
         public MapPinsController(
             IBeaconRailroadService beaconRailroadService,
             IMapPinService mapPinsService,
+            IMapPinHistoryService mapPinHistoryService,
             ILogger<MapPinsController> logger,
             IMapper mapper)
         {
             _beaconRailroadService = beaconRailroadService;
             _mapPinsService = mapPinsService;
+            _mapPinHistoryService = mapPinHistoryService;
             _logger = logger;
             _mapper = mapper;
         }
@@ -71,6 +75,67 @@ namespace Web.Server.Controllers.v1
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while fetching map pins.");
+                response.Errors.Add(ex.Message);
+                return StatusCode(StatusCodes.Status500InternalServerError, response);
+            }
+        }
+
+        [HttpGet("History/{beaconId}")]
+        public async Task<ActionResult> GetHistory(int beaconId, [FromQuery] int? limit = 100)
+        {
+            var response = new MessageEnvelope<IEnumerable<MapPinHistoryDTO>>(null, []);
+            try
+            {
+                var histories = await _mapPinHistoryService.GetHistoryByBeaconIdAsync(beaconId, limit);
+                var historyDTOs = new List<MapPinHistoryDTO>();
+
+                foreach (var history in histories)
+                {
+                    var dto = new MapPinHistoryDTO
+                    {
+                        ID = history.ID,
+                        BeaconID = history.BeaconID,
+                        SubdivisionID = history.SubdivisionId,
+                        Direction = history.Direction,
+                        Moving = history.Moving,
+                        IsLocal = history.IsLocal,
+                        CreatedAt = history.CreatedAt.ToString("O"),
+                        LastUpdate = history.LastUpdate.ToString("O")
+                    };
+
+                    // Populate beacon railroad data
+                    if (history.BeaconRailroad != null)
+                    {
+                        dto.BeaconName = history.BeaconRailroad.Beacon?.Name;
+                        dto.Latitude = history.BeaconRailroad.Latitude;
+                        dto.Longitude = history.BeaconRailroad.Longitude;
+                        dto.Milepost = history.BeaconRailroad.Milepost;
+                        dto.Subdivision = history.BeaconRailroad.Subdivision?.Name;
+                        dto.Railroad = history.BeaconRailroad.Subdivision?.Railroad?.Name;
+                    }
+
+                    // Deserialize addresses from JSON
+                    if (!string.IsNullOrEmpty(history.AddressesJson))
+                    {
+                        try
+                        {
+                            dto.Addresses = JsonSerializer.Deserialize<List<AddressSnapshotDTO>>(history.AddressesJson);
+                        }
+                        catch
+                        {
+                            dto.Addresses = new List<AddressSnapshotDTO>();
+                        }
+                    }
+
+                    historyDTOs.Add(dto);
+                }
+
+                response.Data = historyDTOs;
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while fetching map pin history for beacon {BeaconId}.", beaconId);
                 response.Errors.Add(ex.Message);
                 return StatusCode(StatusCodes.Status500InternalServerError, response);
             }

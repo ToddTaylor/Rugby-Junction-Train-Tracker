@@ -10,7 +10,13 @@ const OUTLINE_DIAMETER_METERS = 7080;
 const MIN_OUTLINE_PX = 8; // allow smaller for high zoom
 const MAX_OUTLINE_PX = 2048; // allow very large for low zoom
 
-const BeaconMarker: React.FC<{ pin: Beacon; zoom: number; idx: number }> = ({ pin: beaconPin, zoom, idx }) => {
+interface BeaconMarkerProps {
+    pin: Beacon;
+    zoom: number;
+    idx: number;
+}
+
+const BeaconMarker: React.FC<BeaconMarkerProps> = ({ pin: beaconPin, zoom, idx }) => {
     const beaconName = beaconPin.beaconName;
     const color = beaconPin.online === false ? '#888888' : '#005aa9';
     const title = beaconPin.online === true ? 'online' : 'offline';
@@ -68,7 +74,7 @@ const BeaconMarker: React.FC<{ pin: Beacon; zoom: number; idx: number }> = ({ pi
             icon={L.divIcon({
                 className: 'beacon-marker-z',
                 html: `
-                    <div class=\"beacon-container\" style=\"position: relative; width: ${outlineSize}px; height: ${outlineSize}px;\">
+                    <div class=\"beacon-container\" style=\"position: relative; width: ${outlineSize}px; height: ${outlineSize}px; cursor: pointer;\">
                         ${dottedOutline}
                         <div class=\"beacon-dot\" title=\"${beaconName} ${title}\" style=\"
                             width:${beaconDotSizePx}px;
@@ -79,6 +85,7 @@ const BeaconMarker: React.FC<{ pin: Beacon; zoom: number; idx: number }> = ({ pi
                             top:${beaconDotOffsetPx}px;
                             left:${beaconDotOffsetPx}px;
                             z-index:2;
+                            cursor: pointer;
                         \" ></div>
                         ${pingDiv}
                     </div>

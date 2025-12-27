@@ -9,9 +9,10 @@ interface BeaconMarkersProps {
     zoom: number;
     mapTheme: 'dark' | 'light';
     beaconLastUpdateMap?: { [beaconID: string]: { lastUpdate: string, direction: string | null } };
+    onBeaconClick?: (beaconID: string, beaconName: string) => void;
 }
 
-const BeaconMarkers: React.FC<BeaconMarkersProps> = ({ pins: beaconPins, zoom, mapTheme, beaconLastUpdateMap }) => {
+const BeaconMarkers: React.FC<BeaconMarkersProps> = ({ pins: beaconPins, zoom, mapTheme, beaconLastUpdateMap, onBeaconClick }) => {
     // Vertical offset for label marker (in degrees latitude, approx 7px)
     const getLabelOffsetLat = (lat: number, zoom: number) => {
         // Pointer is 1/3 smaller, so 7px at current zoom
@@ -69,6 +70,7 @@ const BeaconMarkers: React.FC<BeaconMarkersProps> = ({ pins: beaconPins, zoom, m
                                 getLabelOffsetLat={getLabelOffsetLat}
                                 lastUpdateTime={lastUpdateTime}
                                 direction={direction}
+                                onClick={onBeaconClick}
                             />
                         )}
                     </React.Fragment>

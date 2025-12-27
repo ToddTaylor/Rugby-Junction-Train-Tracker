@@ -11,9 +11,10 @@ interface BeaconLabelPinProps {
     getLabelOffsetLat: (lat: number, zoom: number) => number;
     lastUpdateTime?: string | null;
     direction?: string | null;
+    onClick?: (beaconID: string, beaconName: string) => void;
 }
 
-const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({ beaconPin, idx, zoom, mapTheme, getLabelOffsetLat, lastUpdateTime, direction }) => {
+const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({ beaconPin, idx, zoom, mapTheme, getLabelOffsetLat, lastUpdateTime, direction, onClick }) => {
     // Sizing and style logic
     const base = 1 + (zoom - 7) * 0.09;
     const labelFontSize = 13;
@@ -60,19 +61,36 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({ beaconPin, idx, zoom, m
         : '0 1px 4px #fff, 0 0 2px #005aa9';
     const statusPadding = `${labelPadding / 2}px 8px`;
     const statusRadius = `${labelRadius / 1.5}px`;
+    
+    const handleStatusClick = () => {
+        if (onClick && beaconPin.beaconID && beaconPin.beaconName) {
+            onClick(beaconPin.beaconID, beaconPin.beaconName);
+        }
+    };
+    
     return (
         <Marker
             key={`beacon-label-${beaconPin.beaconID ?? idx}`}
             position={[getLabelOffsetLat(beaconPin.latitude, zoom), beaconPin.longitude]}
             pane="beaconPane"
+            eventHandlers={{
+                click: (e) => {
+                    // Check if click target is the beacon name or status div
+                    const target = e.originalEvent.target as HTMLElement;
+                    if (target && (target.closest('.beacon-status') || target.closest('.beacon-name'))) {
+                        handleStatusClick();
+                        L.DomEvent.stopPropagation(e.originalEvent);
+                    }
+                }
+            }}
             icon={L.divIcon({
                 className: 'beacon-label-marker',
                 html: `
-                    <div style=\"position: relative; display: flex; flex-direction: column; align-items: center; cursor: grab;\">
+                    <div style=\"position: relative; display: flex; flex-direction: column; align-items: center;\">
                         <div style=\"position: absolute; top: 0; left: 50%; transform: translateX(-50%); z-index: 0; width:0;height:0;border-left:${pointerBorderWidth}px solid transparent;border-right:${pointerBorderWidth}px solid transparent;border-bottom:${pointerBorderHeight}px solid ${borderColor};\"></div>
                         <div style=\"position: relative; z-index: 1; width:0;height:0;border-left:${pointerWidth}px solid transparent;border-right:${pointerWidth}px solid transparent;border-bottom:${pointerHeight}px solid ${pointerColor};margin-top:2px;\"></div>
-                        <div style=\"background:${labelBg};color:${labelColor};font-size:${labelFontSize}px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-weight:500;padding:${labelPadding}px 12px;border-radius:${labelRadius}px;box-shadow:0 1px 6px rgba(0,0,0,0.13);margin-top:-2px;white-space:nowrap;text-transform:uppercase;border:1px solid ${borderColor};cursor:grab;\">${beaconPin.beaconName || ''}</div>
-                        ${statusText ? `<div style="
+                        <div class=\"beacon-name\" style=\"background:${labelBg};color:${labelColor};font-size:${labelFontSize}px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-weight:500;padding:${labelPadding}px 12px;border-radius:${labelRadius}px;box-shadow:0 1px 6px rgba(0,0,0,0.13);margin-top:-2px;white-space:nowrap;text-transform:uppercase;border:1px solid ${borderColor};cursor:pointer;\">${beaconPin.beaconName || ''}</div>
+                        ${statusText ? `<div class=\"beacon-status\" style=\"
                             background:${statusBg};
                             color:${statusTextColor};
                             font-size:${statusFontSize}px;
@@ -84,7 +102,8 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({ beaconPin, idx, zoom, m
                             text-shadow:${statusTextShadow};
                             padding:${statusPadding};
                             border-radius:${statusRadius};
-                        ">${statusText}</div>` : ''}
+                            cursor:pointer;
+                        \">${statusText}</div>` : ''}
                     </div>
                 `,
                 iconSize: [iconWidth, iconHeight + (statusText ? 18 : 0)],

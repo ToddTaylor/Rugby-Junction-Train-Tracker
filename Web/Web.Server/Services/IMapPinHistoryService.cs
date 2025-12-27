@@ -1,0 +1,10 @@
+using Web.Server.Entities;
+
+namespace Web.Server.Services
+{
+    public interface IMapPinHistoryService
+    {
+        Task<IEnumerable<MapPinHistory>> GetHistoryByBeaconIdAsync(int beaconId, int? limit = null);
+        Task CreateOrUpdateHistoryFromMapPin(MapPin mapPin, bool isNewMapPin);
+    }
+}

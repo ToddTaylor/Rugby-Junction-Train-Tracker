@@ -99,6 +99,7 @@ builder.Services.AddSwaggerGen(options =>
 builder.Services.AddScoped<IBeaconRepository, BeaconRepository>();
 builder.Services.AddScoped<IBeaconRailroadRepository, BeaconRailroadRepository>();
 builder.Services.AddScoped<IMapPinRepository, MapPinRepository>();
+builder.Services.AddScoped<IMapPinHistoryRepository, MapPinHistoryRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IRailroadRepository, RailroadRepository>();
 builder.Services.AddScoped<ISubdivisionRepository, SubdivisionRepository>();
@@ -108,6 +109,7 @@ builder.Services.AddScoped<ITelemetryRepository, TelemetryRepository>();
 builder.Services.AddScoped<IBeaconService, BeaconService>();
 builder.Services.AddScoped<IBeaconRailroadService, BeaconRailroadService>();
 builder.Services.AddScoped<IMapPinService, MapPinService>();
+builder.Services.AddScoped<IMapPinHistoryService, MapPinHistoryService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IRailroadService, RailroadService>();
 builder.Services.AddScoped<ISubdivisionService, SubdivisionService>();

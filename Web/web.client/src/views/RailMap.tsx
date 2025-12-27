@@ -12,6 +12,7 @@ import { Beacon } from '../types/Beacon';
 import { MapPin } from '../types/MapPin';
 import BeaconMarkers from '../components/BeaconMarkers';
 import TelemetryMarkers from '../components/TelemetryMarkers';
+import { BeaconHistoryModal } from '../components/BeaconHistoryModal';
 import { getTrackedMapPins } from '../services/trackedPins';
 import { metersToLongitudeDegrees, pixelsToMeters } from '../utils/geo';
 import { updateMapPins, updateBeacon } from '../utils/updateHelpers';
@@ -32,6 +33,11 @@ const RailMap: React.FC = () => {
     const savedMapState = JSON.parse(localStorage.getItem('mapState') || 'null');
     const [mapZoom, setMapZoom] = useState<number>(savedMapState?.zoom || 7);
     const [mapCenter, setMapCenter] = useState<LatLngTuple>(savedMapState?.center || fallbackCenter);
+
+    // Modal state for beacon history
+    const [historyModalOpen, setHistoryModalOpen] = useState(false);
+    const [selectedBeaconID, setSelectedBeaconID] = useState<string>('');
+    const [selectedBeaconName, setSelectedBeaconName] = useState<string>('');
 
     // Auth for admin button
     const { session } = useAuth();
@@ -454,7 +460,7 @@ const RailMap: React.FC = () => {
             <MapContainer
                 center={mapCenter}
                 zoom={mapZoom}
-                style={{ height: '100%', width: '100%' }}
+                style={{ height: historyModalOpen ? '60vh' : '100%', width: '100%', transition: 'height 0.3s' }}
                 scrollWheelZoom={true}
                 ref={mapRef}
             >
@@ -485,7 +491,17 @@ const RailMap: React.FC = () => {
                 )}
 
                 {/* Beacon markers */}
-                {trackDataLoaded && <BeaconMarkers pins={beacons} zoom={mapZoom} mapTheme={mapTheme as 'dark' | 'light'} beaconLastUpdateMap={beaconLastUpdateMap} />}
+                {trackDataLoaded && <BeaconMarkers 
+                    pins={beacons} 
+                    zoom={mapZoom} 
+                    mapTheme={mapTheme as 'dark' | 'light'} 
+                    beaconLastUpdateMap={beaconLastUpdateMap}
+                    onBeaconClick={(beaconID, beaconName) => {
+                        setSelectedBeaconID(beaconID);
+                        setSelectedBeaconName(beaconName);
+                        setHistoryModalOpen(true);
+                    }}
+                />}
 
                 {/* Telemetry markers */}
                 {trackDataLoaded && beaconsLoaded && <TelemetryMarkers
@@ -496,6 +512,16 @@ const RailMap: React.FC = () => {
                 />}
 
             </MapContainer>
+
+            {/* Beacon History Modal */}
+            <BeaconHistoryModal
+                open={historyModalOpen}
+                onClose={() => setHistoryModalOpen(false)}
+                beaconID={selectedBeaconID}
+                beaconName={selectedBeaconName}
+                theme={mapTheme as 'dark' | 'light'}
+                lastUpdate={beaconLastUpdateMap?.[selectedBeaconID]?.lastUpdate}
+            />
         </>
     );
 };
