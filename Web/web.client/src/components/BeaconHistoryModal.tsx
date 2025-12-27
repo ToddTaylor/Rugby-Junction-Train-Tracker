@@ -100,10 +100,40 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, theme,
             maxWidth: 400,
             renderCell: (params: any) => {
                 const addresses = params.row?.addresses;
+                const isLocal = params.row?.isLocal;
                 if (!Array.isArray(addresses) || addresses.length === 0) return '';
-                return addresses
+                
+                const addressText = addresses
                     .map((a: { source: string; addressID: number }) => `${a.addressID} ${a.source}`)
                     .join(', ');
+                
+                return (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        {isLocal && (
+                            <Box
+                                sx={{
+                                    width: 14,
+                                    height: 14,
+                                    backgroundColor: '#FFD700',
+                                    borderRadius: '50%',
+                                    border: '1px solid rgba(0, 0, 0, 0.5)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: '9px',
+                                    fontWeight: '900',
+                                    color: '#000',
+                                    flexShrink: 0,
+                                }}
+                            >
+                                L
+                            </Box>
+                        )}
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {addressText}
+                        </span>
+                    </Box>
+                );
             },
         },
     ];
