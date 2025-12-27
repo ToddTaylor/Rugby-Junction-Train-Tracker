@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using System.Text.Json;
 using Web.Server.Entities;
 using Web.Server.Providers;
@@ -7,7 +8,8 @@ namespace Web.Server.Services
 {
     public class MapPinHistoryService : IMapPinHistoryService
     {
-        private const int HISTORY_TIME_THRESHOLD_MINUTES = 360; // 6 hours - telemetry at same beacon within this time is considered the same train
+        private readonly int _historyTimeThresholdMinutes;
+        private readonly int _stationaryDirectionNullThresholdMinutes;
         
         private readonly IMapPinHistoryRepository _repository;
         private readonly IBeaconRailroadService _beaconRailroadService;
@@ -16,11 +18,14 @@ namespace Web.Server.Services
         public MapPinHistoryService(
             IMapPinHistoryRepository repository,
             IBeaconRailroadService beaconRailroadService,
-            ITimeProvider timeProvider)
+            ITimeProvider timeProvider,
+            IConfiguration configuration)
         {
             _repository = repository;
             _beaconRailroadService = beaconRailroadService;
             _timeProvider = timeProvider;
+            _historyTimeThresholdMinutes = configuration.GetValue<int>("ApplicationSettings:StationaryDirectionNullThresholdMinutes", 360);
+            _stationaryDirectionNullThresholdMinutes = configuration.GetValue<int>("ApplicationSettings:StationaryDirectionNullThresholdMinutes", 360);
         }
 
         public async Task<IEnumerable<MapPinHistory>> GetHistoryByBeaconIdAsync(int beaconId, int? limit = null)
@@ -95,7 +100,7 @@ namespace Web.Server.Services
                         // Same beacon - check if enough time has passed to warrant a new history entry
                         var timeSinceLastUpdate = _timeProvider.UtcNow - existingHistory.LastUpdate;
                         
-                        if (timeSinceLastUpdate.TotalMinutes >= HISTORY_TIME_THRESHOLD_MINUTES)
+                        if (timeSinceLastUpdate.TotalMinutes >= _historyTimeThresholdMinutes)
                         {
                             // Enough time has passed (15+ minutes) - create NEW history record
                             // This represents a new train passage through the same beacon
@@ -114,10 +119,21 @@ namespace Web.Server.Services
                         }
                         else
                         {
-                            // Less than 15 minutes - update the existing history with the latest addresses
+                            // Less than threshold - update the existing history with the latest addresses
                             // This is likely telemetry from the same train
                             existingHistory.AddressesJson = addressesJson;
-                            existingHistory.Direction = mapPin.Direction;
+                            
+                            // Check if the map pin has been stationary for threshold time at same beacon
+                            var timeSinceCreated = _timeProvider.UtcNow - existingHistory.CreatedAt;
+                            if (timeSinceCreated.TotalMinutes >= _stationaryDirectionNullThresholdMinutes)
+                            {
+                                // Map pin has been at the same beacon for threshold time - set direction to null
+                                existingHistory.Direction = null;
+                            }
+                            else
+                            {
+                                existingHistory.Direction = mapPin.Direction;
+                            }
                             existingHistory.Moving = mapPin.Moving;
                             existingHistory.IsLocal = mapPin.IsLocal;
                             

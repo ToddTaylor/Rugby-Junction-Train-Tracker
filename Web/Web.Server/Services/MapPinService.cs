@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Configuration;
 using Web.Server.DTOs;
 using Web.Server.Entities;
 using Web.Server.Enums;
@@ -12,6 +13,7 @@ namespace Web.Server.Services
     public class MapPinService : IMapPinService
     {
         public const int TIME_THRESHOLD_MINUTES = 2;
+        private readonly int _stationaryDirectionNullThresholdMinutes;
 
         private readonly IBeaconRailroadService _beaconRailroadService;
         private readonly IHubContext<NotificationHub> _hubContext;
@@ -26,7 +28,8 @@ namespace Web.Server.Services
             IMapper mapper,
             IMapPinRepository mapPinRepository,
             ITimeProvider timeProvider,
-            IMapPinHistoryService mapPinHistoryService)
+            IMapPinHistoryService mapPinHistoryService,
+            IConfiguration configuration)
         {
             _beaconRailroadService = beaconRailroadService;
             _hubContext = hubContext;
@@ -34,6 +37,7 @@ namespace Web.Server.Services
             _mapPinRepository = mapPinRepository;
             _timeProvider = timeProvider;
             _mapPinHistoryService = mapPinHistoryService;
+            _stationaryDirectionNullThresholdMinutes = configuration.GetValue<int>("ApplicationSettings:StationaryDirectionNullThresholdMinutes", 360);
         }
 
         public async Task<bool> DeleteMapPinAsync(int id)
@@ -477,6 +481,16 @@ namespace Web.Server.Services
 
                 // Don't assume previous beacon's moving status.
                 previousMapPin.Moving = null;
+            }
+            else
+            {
+                // Same beacon - check if the map pin has been stationary for configured threshold
+                var timeSinceCreated = _timeProvider.UtcNow - previousMapPin.CreatedAt;
+                if (timeSinceCreated.TotalMinutes >= _stationaryDirectionNullThresholdMinutes)
+                {
+                    // Map pin has been at the same beacon for threshold time - set direction to null
+                    previousMapPin.Direction = null;
+                }
             }
 
             previousMapPin.BeaconRailroad = toBeaconRailroad;
