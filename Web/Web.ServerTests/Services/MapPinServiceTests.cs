@@ -1,5 +1,6 @@
 using AutoMapper;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Configuration;
 using Moq;
 using System.Diagnostics.CodeAnalysis;
 using Web.Server.DTOs;
@@ -23,6 +24,8 @@ namespace Web.ServerTests.Services
         private readonly Mock<IMapPinRepository> _mapPinRepositoryMock = new();
         private readonly Mock<ITimeProvider> _timeProviderMock = new();
         private readonly Mock<IClientProxy> _clientProxyMock = new();
+        private readonly Mock<IMapPinHistoryService> _mapPinHistoryServiceMock = new();
+        private readonly Mock<IConfiguration> _configurationMock = new();
 
         private MapPinService _service;
         private IMapper _mapper;
@@ -41,12 +44,17 @@ namespace Web.ServerTests.Services
             });
             _mapper = config.CreateMapper();
 
+            _configurationMock.Setup(c => c.GetSection("ApplicationSettings:StationaryDirectionNullThresholdMinutes").Value)
+                .Returns("360");
+
             _service = new MapPinService(
                 _beaconRailroadServiceMock.Object,
                 _hubContextMock.Object,
                 _mapper,
                 _mapPinRepositoryMock.Object,
-                _timeProviderMock.Object
+                _timeProviderMock.Object,
+                _mapPinHistoryServiceMock.Object,
+                _configurationMock.Object
             );
         }
 
@@ -571,11 +579,11 @@ namespace Web.ServerTests.Services
                 .ReturnsAsync((MapPin?)null);
             _beaconRailroadServiceMock.Setup(s => s.GetByIdAsync(fromMapPin.BeaconID, fromMapPin.SubdivisionId))
                 .ReturnsAsync(fromBeaconRailroads[0]); // Not the same beacon as new telemetry.
-            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(toMapPinBeforeUpdate))
+            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(It.IsAny<MapPin>()))
                 .ReturnsAsync(toMapPinAfterUpdate);
 
             _clientProxyMock.Setup(proxy => proxy.SendCoreAsync(
-                NotificationMethods.MapPinUpdate, toMapPinObjects, default))
+                NotificationMethods.MapPinUpdate, It.IsAny<object[]>(), default))
                     .Returns(Task.CompletedTask);
             _hubContextMock.Setup(h => h.Clients).Returns(_hubClientsMock.Object);
             _hubClientsMock.Setup(h => h.All).Returns(_clientProxyMock.Object);
@@ -583,13 +591,23 @@ namespace Web.ServerTests.Services
             // Act
             await _service.UpsertMapPin(telemetry, toBeaconRailroads);
 
-            // Assert
-            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(toMapPinBeforeUpdate), Times.Never);
+            // Assert - only EOT should be added (no automatic HOT pairing)
+            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(It.Is<MapPin>(mp =>
+                mp.Addresses.Count == 2 &&
+                mp.Addresses.Any(a => a.Source == fromSource && a.AddressID == telemetry.AddressID) &&
+                mp.Addresses.Any(a => a.Source == toSource && a.AddressID == telemetry.AddressID)
+            )), Times.Once);
 
             _clientProxyMock?.Verify(proxy => proxy.SendCoreAsync(
                 NotificationMethods.MapPinUpdate,
-                It.Is<object[]>(args => args[0].Equals(toMapPinObjects[0])),
-                default), Times.Never);
+                It.Is<object[]>(args => 
+                    args.Length > 0 && 
+                    args[0] != null &&
+                    ((MapPinDTO)args[0]).Addresses.Count == 2 &&
+                    ((MapPinDTO)args[0]).Addresses.Any(a => a.Source == fromSource) &&
+                    ((MapPinDTO)args[0]).Addresses.Any(a => a.Source == toSource)
+                ),
+                default), Times.Once);
         }
 
         /// <summary>
@@ -1568,6 +1586,231 @@ namespace Web.ServerTests.Services
                 NotificationMethods.MapPinUpdate,
                 It.Is<object[]>(args => args[0].Equals(expectedMapPinObjects[0])),
                 default), Times.Once);
+        }
+
+        /// <summary>
+        /// Test that when DPU telemetry arrives with new address, it's added to the map pin.
+        /// </summary>
+        [TestMethod]
+        public async Task UpdateMapPin_DPU_NewAddress_OnlyDPUAdded()
+        {
+            // Arrange
+            var beacon = TestData.CN_RugbyJunction_WI(_currentDateTime);
+            var telemetry = new Telemetry
+            {
+                BeaconID = beacon.BeaconID,
+                AddressID = 54321,
+                TrainID = 9999,
+                Source = SourceEnum.DPU,
+                Moving = true,
+                CreatedAt = _currentDateTime,
+                LastUpdate = _currentDateTime.AddMinutes(1)
+            };
+
+            var previousMapPin = new MapPin
+            {
+                ID = 100,
+                BeaconID = beacon.BeaconID,
+                SubdivisionId = beacon.Subdivision.ID,
+                Direction = "N",
+                CreatedAt = _currentDateTime.AddMinutes(-10),
+                LastUpdate = _currentDateTime,
+                BeaconRailroad = beacon,
+                Moving = true,
+                Addresses =
+                [
+                    new Address { AddressID = 12345, Source = SourceEnum.HOT, CreatedAt = _currentDateTime.AddMinutes(-10), LastUpdate = _currentDateTime }
+                ]
+            };
+
+            var beaconRailroads = new List<BeaconRailroad> { beacon };
+
+            _mapPinRepositoryMock.Setup(r => r.GetByAddressIdAsync(telemetry.AddressID))
+                .ReturnsAsync(previousMapPin);
+            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(It.IsAny<MapPin>()))
+                .ReturnsAsync((MapPin mp) => mp);
+            _hubContextMock.Setup(h => h.Clients).Returns(_hubClientsMock.Object);
+            _hubClientsMock.Setup(h => h.All).Returns(_clientProxyMock.Object);
+            _clientProxyMock.Setup(proxy => proxy.SendCoreAsync(It.IsAny<string>(), It.IsAny<object[]>(), default))
+                .Returns(Task.CompletedTask);
+
+            // Act
+            await _service.UpsertMapPin(telemetry, beaconRailroads);
+
+            // Assert - should have 2 addresses: original HOT + new DPU
+            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(It.Is<MapPin>(mp =>
+                mp.Addresses.Count == 2 &&
+                mp.Addresses.Any(a => a.Source == SourceEnum.HOT && a.AddressID == 12345) &&
+                mp.Addresses.Any(a => a.Source == SourceEnum.DPU && a.AddressID == 54321)
+            )), Times.Once);
+        }
+
+        /// <summary>
+        /// Test that when telemetry arrives with same address and source (timestamp update only), no new address is added.
+        /// </summary>
+        [TestMethod]
+        public async Task UpdateMapPin_SameAddressAndSource_TimestampUpdateOnly()
+        {
+            // Arrange
+            var beacon = TestData.CN_RugbyJunction_WI(_currentDateTime);
+            var telemetry = new Telemetry
+            {
+                BeaconID = beacon.BeaconID,
+                AddressID = 12345,
+                Source = SourceEnum.HOT,
+                Moving = true,
+                CreatedAt = _currentDateTime,
+                LastUpdate = _currentDateTime.AddMinutes(5)
+            };
+
+            var previousMapPin = new MapPin
+            {
+                ID = 100,
+                BeaconID = beacon.BeaconID,
+                SubdivisionId = beacon.Subdivision.ID,
+                Direction = "N",
+                CreatedAt = _currentDateTime.AddMinutes(-10),
+                LastUpdate = _currentDateTime,
+                BeaconRailroad = beacon,
+                Moving = true,
+                Addresses =
+                [
+                    new Address { AddressID = 12345, Source = SourceEnum.HOT, CreatedAt = _currentDateTime.AddMinutes(-10), LastUpdate = _currentDateTime }
+                ]
+            };
+
+            var beaconRailroads = new List<BeaconRailroad> { beacon };
+
+            _mapPinRepositoryMock.Setup(r => r.GetByAddressIdAsync(telemetry.AddressID))
+                .ReturnsAsync(previousMapPin);
+            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(It.IsAny<MapPin>()))
+                .ReturnsAsync((MapPin mp) => mp);
+            _hubContextMock.Setup(h => h.Clients).Returns(_hubClientsMock.Object);
+            _hubClientsMock.Setup(h => h.All).Returns(_clientProxyMock.Object);
+            _clientProxyMock.Setup(proxy => proxy.SendCoreAsync(It.IsAny<string>(), It.IsAny<object[]>(), default))
+                .Returns(Task.CompletedTask);
+
+            // Act
+            await _service.UpsertMapPin(telemetry, beaconRailroads);
+
+            // Assert - should still have exactly 1 address with updated timestamp
+            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(It.Is<MapPin>(mp =>
+                mp.Addresses.Count == 1 &&
+                mp.Addresses.First().AddressID == 12345 &&
+                mp.Addresses.First().Source == SourceEnum.HOT &&
+                mp.LastUpdate == telemetry.LastUpdate
+            )), Times.Once);
+        }
+
+        /// <summary>
+        /// Test that when telemetry arrives at same beacon within threshold time, direction is preserved.
+        /// </summary>
+        [TestMethod]
+        public async Task UpdateMapPin_SameBeacon_WithinThreshold_DirectionPreserved()
+        {
+            // Arrange
+            var beacon = TestData.CN_RugbyJunction_WI(_currentDateTime);
+            var telemetry = new Telemetry
+            {
+                BeaconID = beacon.BeaconID,
+                AddressID = 12345,
+                Source = SourceEnum.HOT,
+                Moving = true,
+                CreatedAt = _currentDateTime,
+                LastUpdate = _currentDateTime.AddMinutes(5) // Only 5 minutes after creation
+            };
+
+            var previousMapPin = new MapPin
+            {
+                ID = 100,
+                BeaconID = beacon.BeaconID,
+                SubdivisionId = beacon.Subdivision.ID,
+                Direction = "N", // Should be preserved
+                CreatedAt = _currentDateTime, // Just created
+                LastUpdate = _currentDateTime,
+                BeaconRailroad = beacon,
+                Moving = true,
+                Addresses =
+                [
+                    new Address { AddressID = 12345, Source = SourceEnum.HOT, CreatedAt = _currentDateTime, LastUpdate = _currentDateTime }
+                ]
+            };
+
+            var beaconRailroads = new List<BeaconRailroad> { beacon };
+
+            _mapPinRepositoryMock.Setup(r => r.GetByAddressIdAsync(telemetry.AddressID))
+                .ReturnsAsync(previousMapPin);
+            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(It.IsAny<MapPin>()))
+                .ReturnsAsync((MapPin mp) => mp);
+            _hubContextMock.Setup(h => h.Clients).Returns(_hubClientsMock.Object);
+            _hubClientsMock.Setup(h => h.All).Returns(_clientProxyMock.Object);
+            _clientProxyMock.Setup(proxy => proxy.SendCoreAsync(It.IsAny<string>(), It.IsAny<object[]>(), default))
+                .Returns(Task.CompletedTask);
+
+            // Setup time to be 5 minutes after creation (under 360 minute threshold)
+            _timeProviderMock.Setup(tp => tp.UtcNow).Returns(_currentDateTime.AddMinutes(5));
+
+            // Act
+            await _service.UpsertMapPin(telemetry, beaconRailroads);
+
+            // Assert - direction should still be "N"
+            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(It.Is<MapPin>(mp =>
+                mp.Direction == "N"
+            )), Times.Once);
+        }
+
+        /// <summary>
+        /// Test that when telemetry has no Moving value, map pin Moving is not updated.
+        /// </summary>
+        [TestMethod]
+        public async Task UpdateMapPin_NoMovingValue_MovingNotUpdated()
+        {
+            // Arrange
+            var beacon = TestData.CN_RugbyJunction_WI(_currentDateTime);
+            var telemetry = new Telemetry
+            {
+                BeaconID = beacon.BeaconID,
+                AddressID = 12345,
+                Source = SourceEnum.HOT,
+                Moving = null, // No moving value
+                CreatedAt = _currentDateTime,
+                LastUpdate = _currentDateTime.AddMinutes(1)
+            };
+
+            var previousMapPin = new MapPin
+            {
+                ID = 100,
+                BeaconID = beacon.BeaconID,
+                SubdivisionId = beacon.Subdivision.ID,
+                Direction = "N",
+                CreatedAt = _currentDateTime.AddMinutes(-10),
+                LastUpdate = _currentDateTime,
+                BeaconRailroad = beacon,
+                Moving = true, // Should remain true
+                Addresses =
+                [
+                    new Address { AddressID = 12345, Source = SourceEnum.HOT, CreatedAt = _currentDateTime.AddMinutes(-10), LastUpdate = _currentDateTime }
+                ]
+            };
+
+            var beaconRailroads = new List<BeaconRailroad> { beacon };
+
+            _mapPinRepositoryMock.Setup(r => r.GetByAddressIdAsync(telemetry.AddressID))
+                .ReturnsAsync(previousMapPin);
+            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(It.IsAny<MapPin>()))
+                .ReturnsAsync((MapPin mp) => mp);
+            _hubContextMock.Setup(h => h.Clients).Returns(_hubClientsMock.Object);
+            _hubClientsMock.Setup(h => h.All).Returns(_clientProxyMock.Object);
+            _clientProxyMock.Setup(proxy => proxy.SendCoreAsync(It.IsAny<string>(), It.IsAny<object[]>(), default))
+                .Returns(Task.CompletedTask);
+
+            // Act
+            await _service.UpsertMapPin(telemetry, beaconRailroads);
+
+            // Assert - Moving should still be true (not updated to null)
+            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(It.Is<MapPin>(mp =>
+                mp.Moving == true
+            )), Times.Once);
         }
 
         private static class TestData

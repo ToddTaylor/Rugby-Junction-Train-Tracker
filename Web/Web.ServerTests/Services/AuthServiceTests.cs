@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 using Web.Server.Providers;
+using Web.Server.Repositories;
 using Web.Server.Services;
 using System.Linq;
 
@@ -16,7 +18,8 @@ public class AuthServiceTests
 
     private AuthService CreateService(TestTimeProvider timeProvider)
     {
-        return new AuthService(timeProvider, new NullLogger<AuthService>());
+        var userRepositoryMock = new Mock<IUserRepository>();
+        return new AuthService(timeProvider, new NullLogger<AuthService>(), userRepositoryMock.Object);
     }
 
     [TestMethod]
