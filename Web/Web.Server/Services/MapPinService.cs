@@ -286,7 +286,7 @@ namespace Web.Server.Services
                                     else
                                     {
                                         var newMapPin = previousMapPinByTimeThreshold;
-                                        newMapPin.CreatedAt = telemetry.CreatedAt;
+                                        // Only update LastUpdate, keep CreatedAt to track how long at this beacon
                                         newMapPin.LastUpdate = telemetry.LastUpdate;
 
                                         newMapPin.Addresses.Add(
@@ -304,6 +304,13 @@ namespace Web.Server.Services
                                         if (telemetry.Moving.HasValue)
                                         {
                                             newMapPin.Moving = telemetry.Moving;
+                                        }
+
+                                        // Check if the map pin has been stationary for threshold time
+                                        var timeSinceCreated = _timeProvider.UtcNow - newMapPin.CreatedAt;
+                                        if (timeSinceCreated.TotalMinutes >= _stationaryDirectionNullThresholdMinutes)
+                                        {
+                                            newMapPin.Direction = null;
                                         }
 
                                         mapPin = newMapPin;

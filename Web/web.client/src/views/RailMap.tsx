@@ -188,7 +188,7 @@ const RailMap: React.FC = () => {
                 items.forEach(item => {
                     const key = String(item.beaconID);
                     const existing = updated[key];
-                    if (!existing || new Date(item.lastUpdate) > new Date(existing.lastUpdate)) {
+                    if (!existing || new Date(item.lastUpdate) >= new Date(existing.lastUpdate)) {
                         updated[key] = { lastUpdate: item.lastUpdate, direction: item.direction };
                     }
                 });
@@ -221,7 +221,7 @@ const RailMap: React.FC = () => {
             mapPins.forEach(pin => {
                 if (pin.beaconID && pin.lastUpdate) {
                     const prevEntry = updated[pin.beaconID];
-                    if (!prevEntry || new Date(pin.lastUpdate) > new Date(prevEntry.lastUpdate)) {
+                    if (!prevEntry || new Date(pin.lastUpdate) >= new Date(prevEntry.lastUpdate)) {
                         updated[pin.beaconID] = {
                             lastUpdate: pin.lastUpdate,
                             direction: pin.direction ?? null

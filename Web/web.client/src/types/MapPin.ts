@@ -8,7 +8,7 @@ export type MapPin = {
     latitude: number;
     longitude: number;
     milepost: number;
-    direction: string;
+    direction: string | null;
     moving: Boolean;
     isLocal: boolean;
     railroad: string;

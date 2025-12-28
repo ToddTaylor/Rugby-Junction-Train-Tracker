@@ -30,7 +30,7 @@ interface TelemetryMarkerProps {
     maxPinAgeMinutes?: number;
 }
 
-const formatDirection = (dir?: string): string => {
+const formatDirection = (dir?: string | null): string => {
     if (!dir) return 'Unknown Direction';
 
     const map: Record<string, string> = {
@@ -249,7 +249,7 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
     );
 };
 
-function getArrowIconSrc(direction?: string, moving?: boolean, mapTheme: 'dark' | 'light' = 'dark'): string {
+function getArrowIconSrc(direction?: string | null, moving?: boolean, mapTheme: 'dark' | 'light' = 'dark'): string {
     const suffix = mapTheme === 'dark' ? '-dark' : '-light';
     const cacheBuster = import.meta.env.VITE_APP_VERSION
         ? `?v=${import.meta.env.VITE_APP_VERSION}`
@@ -265,7 +265,7 @@ function getArrowIconSrc(direction?: string, moving?: boolean, mapTheme: 'dark' 
     return `/icons/arrow${suffix}.svg${cacheBuster}`;
 }
 
-function getRotation(direction?: string): number {
+function getRotation(direction?: string | null): number {
     switch ((direction || '').toUpperCase()) {
         case 'N': return 0;
         case 'NE': return 45;

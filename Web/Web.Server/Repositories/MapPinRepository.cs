@@ -112,8 +112,17 @@ namespace Web.Server.Repositories
             }
             else
             {
-                existingMapPin.CreatedAt = _timeProvider.UtcNow;
-                existingMapPin.LastUpdate = _timeProvider.UtcNow;
+                // Keep the existing CreatedAt to track how long pin has been at this beacon
+                // Only update LastUpdate and other properties
+                existingMapPin.LastUpdate = mapPin.LastUpdate;
+                existingMapPin.BeaconID = mapPin.BeaconID;
+                existingMapPin.SubdivisionId = mapPin.SubdivisionId;
+                existingMapPin.Direction = mapPin.Direction;
+                existingMapPin.Moving = mapPin.Moving;
+                existingMapPin.IsLocal = mapPin.IsLocal;
+                
+                // Update addresses collection
+                existingMapPin.Addresses = mapPin.Addresses;
 
                 _context.MapPins.Update(existingMapPin);
 
