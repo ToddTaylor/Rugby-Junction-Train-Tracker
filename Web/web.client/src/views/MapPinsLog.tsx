@@ -1,13 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import '../App.css';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { Box, Typography, FormControl, InputLabel, Select, MenuItem, Checkbox, ListItemText } from '@mui/material';
 import { MapPin } from '../types/MapPin';
 import { format, parseISO } from "date-fns";
+import { getTrackedMapPins, TrackedPin } from '../services/trackedPins';
 
 function MapPinsLog() {
     const [mapPins, setMapPins] = useState<MapPin[]>([]);
     const [beaconNameFilter, setBeaconNameFilter] = useState<string[]>([]);
+    const [trackedPins, setTrackedPins] = useState<TrackedPin[]>([]);
 
     useEffect(() => {
         const fetchMapPins = async () => {
@@ -31,6 +33,26 @@ function MapPinsLog() {
         fetchMapPins();
     }, []);
 
+    // Track changes to tracked pins
+    useEffect(() => {
+        const updateTrackedPins = () => {
+            setTrackedPins(getTrackedMapPins());
+        };
+        
+        updateTrackedPins();
+        
+        // Listen for storage events (changes in other tabs/windows)
+        window.addEventListener('storage', updateTrackedPins);
+        
+        // Poll for changes every 100ms (for same-tab updates)
+        const interval = setInterval(updateTrackedPins, 100);
+        
+        return () => {
+            window.removeEventListener('storage', updateTrackedPins);
+            clearInterval(interval);
+        };
+    }, []);
+
     const sortedData: MapPin[] = mapPins
         .sort((a, b) => new Date(b.lastUpdate).getTime() - new Date(a.lastUpdate).getTime())
         .map((pin) => ({
@@ -40,7 +62,7 @@ function MapPinsLog() {
 
     console.log('sortedData', sortedData);
 
-    const columns: GridColDef[] = [
+    const columns: GridColDef[] = useMemo(() => [
         { field: 'id', headerName: 'ID' },
         {
             field: 'lastUpdate',
@@ -58,15 +80,80 @@ function MapPinsLog() {
             width: 300,
             renderCell: (params: any) => {
                 const addresses = params.row?.addresses;
+                const isLocal = params.row?.isLocal;
                 if (!Array.isArray(addresses)) return '';
-                return addresses
+                
+                const addressText = addresses
                     .map((a: { source: string; addressID: number }) => `${a.addressID} ${a.source}`)
                     .join(', ');
+                
+                // Check if this train is currently tracked (using state)
+                const tracked = trackedPins.find(tp => String(tp.id) === String(params.row.id));
+                const isTracked = !!tracked;
+                const trackedColor = tracked?.color;
+                const symbol = tracked?.symbol;
+                
+                return (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        {isTracked && trackedColor && (
+                            <Box
+                                sx={{
+                                    width: 14,
+                                    height: 14,
+                                    backgroundColor: trackedColor,
+                                    borderRadius: '50%',
+                                    border: '1px solid rgba(0, 0, 0, 0.5)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: '9px',
+                                    fontWeight: '900',
+                                    color: '#000',
+                                    flexShrink: 0,
+                                }}
+                            >
+                                T
+                            </Box>
+                        )}
+                        {isLocal && (
+                            <Box
+                                sx={{
+                                    width: 14,
+                                    height: 14,
+                                    backgroundColor: '#FFD700',
+                                    borderRadius: '50%',
+                                    border: '1px solid rgba(0, 0, 0, 0.5)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: '9px',
+                                    fontWeight: '900',
+                                    color: '#000',
+                                    flexShrink: 0,
+                                }}
+                            >
+                                L
+                            </Box>
+                        )}
+                        {symbol && (
+                            <span style={{ 
+                                fontWeight: 'bold', 
+                                marginRight: '4px',
+                                color: trackedColor || '#FFD700'
+                            }}>
+                                {symbol}
+                            </span>
+                        )}
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {addressText}
+                        </span>
+                    </Box>
+                );
             },
         },
         { field: 'direction', headerName: 'Direction', width: 100 },
         { field: 'moving', headerName: 'Moving', width: 90 },
-    ];
+    ], [trackedPins]);
 
     // Get unique beacon names for dropdown
     const beaconNames = Array.from(new Set(sortedData.map(row => row.beaconName).filter(Boolean))).sort();
@@ -126,6 +213,7 @@ function MapPinsLog() {
                 </Select>
             </FormControl>
             <DataGrid
+                key={JSON.stringify(trackedPins.map(t => ({ id: t.id, symbol: t.symbol })))}
                 rows={filteredData}
                 columns={columns}
                 pageSizeOptions={[5, 10, 25]}

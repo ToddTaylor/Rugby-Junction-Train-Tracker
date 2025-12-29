@@ -146,7 +146,14 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
                 setIsTracked(false);
                 setTrackColor(undefined);
             } else {
-                addTrackedMapPin(String(pin.id), pin.beaconID, pin.beaconName);
+                // Prompt for symbol when starting to track
+                const symbolInput = prompt('Enter a Symbol for this train (optional, max 10 characters, all caps):');
+                let symbol: string | undefined = undefined;
+                if (symbolInput && symbolInput.trim()) {
+                    // Validate: max 10 chars, convert to uppercase
+                    symbol = symbolInput.trim().toUpperCase().substring(0, 10);
+                }
+                addTrackedMapPin(String(pin.id), pin.beaconID, pin.beaconName, symbol);
                 setIsTracked(true);
                 setTrackColor(getTrackedColor(String(pin.id)));
             }

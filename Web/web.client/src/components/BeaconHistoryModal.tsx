@@ -114,6 +114,7 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, theme,
                 const trackedPins = getTrackedMapPins();
                 let isTracked = false;
                 let trackedColor = undefined;
+                let symbol = undefined;
                 
                 // Find if any address in history matches a tracked MapPin
                 for (const addr of addresses) {
@@ -125,6 +126,7 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, theme,
                         if (tracked) {
                             isTracked = true;
                             trackedColor = tracked.color;
+                            symbol = tracked.symbol;
                             break;
                         }
                     }
@@ -171,6 +173,15 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, theme,
                             >
                                 L
                             </Box>
+                        )}
+                        {symbol && (
+                            <span style={{ 
+                                fontWeight: 'bold', 
+                                marginRight: '4px',
+                                color: trackedColor || '#FFD700'
+                            }}>
+                                {symbol}
+                            </span>
                         )}
                         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {addressText}
