@@ -2,6 +2,8 @@ import React from 'react';
 import L from 'leaflet';
 import { Marker } from 'react-leaflet';
 import { Beacon } from '../types/Beacon';
+import { MapPin } from '../types/MapPin';
+import { TrackedPin } from '../services/trackedPins';
 
 interface BeaconLabelPinProps {
     beaconPin: Beacon;
@@ -12,9 +14,24 @@ interface BeaconLabelPinProps {
     lastUpdateTime?: string | null;
     direction?: string | null;
     onClick?: (beaconID: string, beaconName: string) => void;
+    trackedPins?: TrackedPin[];
+    mapPins?: MapPin[];
+    maxPinAgeMinutes?: number;
 }
 
-const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({ beaconPin, idx, zoom, mapTheme, getLabelOffsetLat, lastUpdateTime, direction, onClick }) => {
+const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({ 
+    beaconPin, 
+    idx, 
+    zoom, 
+    mapTheme, 
+    getLabelOffsetLat, 
+    lastUpdateTime, 
+    direction, 
+    onClick, 
+    trackedPins = [], 
+    mapPins = [],
+    maxPinAgeMinutes = 60
+}) => {
     // Sizing and style logic
     const base = 1 + (zoom - 7) * 0.09;
     const labelFontSize = 13;
@@ -62,6 +79,36 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({ beaconPin, idx, zoom, m
     const statusPadding = `${labelPadding / 2}px 8px`;
     const statusRadius = `${labelRadius / 1.5}px`;
     
+    // Calculate brightness for a given lastUpdate time
+    function getPinBrightness(lastUpdate: string): number {
+        const now = new Date();
+        const lastUpdateDate = new Date(lastUpdate);
+        const ageMinutes = (now.getTime() - lastUpdateDate.getTime()) / 60000;
+        if (ageMinutes > maxPinAgeMinutes) return 0;
+        const normalizedTime = Math.min(1, ageMinutes / maxPinAgeMinutes);
+        const minBrightness = 0.3;
+        const brightness = minBrightness + (1.0 - minBrightness) * Math.pow(1 - normalizedTime, 4);
+        return brightness;
+    }
+    
+    // Find tracked trains at this beacon (only expired/not visible)
+    const expiredTrackedTrains = trackedPins
+        .map(trackedPin => {
+            // Find the map pin for this tracked train
+            const mapPin = mapPins.find(pin => String(pin.id) === String(trackedPin.id));
+            
+            // Only show indicator if pin doesn't exist but was last seen at this beacon
+            if (!mapPin && trackedPin.lastBeaconID === beaconPin.beaconID) {
+                return {
+                    id: trackedPin.id,
+                    color: trackedPin.color
+                };
+            }
+            
+            return null;
+        })
+        .filter(item => item !== null);
+    
     const handleStatusClick = () => {
         if (onClick && beaconPin.beaconID && beaconPin.beaconName) {
             onClick(beaconPin.beaconID, beaconPin.beaconName);
@@ -104,9 +151,27 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({ beaconPin, idx, zoom, m
                             border-radius:${statusRadius};
                             cursor:pointer;
                         \">${statusText}</div>` : ''}
+                        ${expiredTrackedTrains.length > 0 ? `<div style=\"display: flex; flex-direction: row; gap: 4px; margin-top: 4px;\">
+                            ${expiredTrackedTrains.map(train => `
+                                <div style=\"
+                                    width: 14px;
+                                    height: 14px;
+                                    background-color: ${train.color};
+                                    border-radius: 50%;
+                                    border: 1px solid rgba(0, 0, 0, 0.5);
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                    font-size: 10px;
+                                    font-weight: 900;
+                                    color: #000;
+                                    line-height: 14px;
+                                \">T</div>
+                            `).join('')}
+                        </div>` : ''}
                     </div>
                 `,
-                iconSize: [iconWidth, iconHeight + (statusText ? 18 : 0)],
+                iconSize: [iconWidth, iconHeight + (statusText ? 18 : 0) + (expiredTrackedTrains.length > 0 ? 20 : 0)],
                 iconAnchor: [iconAnchorX, iconAnchorY],
             })}
         />

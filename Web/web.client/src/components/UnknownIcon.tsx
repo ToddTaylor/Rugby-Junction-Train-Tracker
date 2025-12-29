@@ -24,18 +24,26 @@ export const UnknownIcon: React.FC<{
       <div
         style={{
           position: 'absolute',
-          top: 0,
-          left: '50%',
+          bottom: -2,
+          left: 0,
           width: 10,
           height: 10,
           backgroundColor: trackColor,
           borderRadius: '50%',
-          border: '1px solid rgba(0, 0, 0, 0.3)',
+          border: '1px solid rgba(0, 0, 0, 0.5)',
           zIndex: 10,
           animation: 'pulse 1.5s ease-in-out infinite',
-          marginLeft: -6,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '9px',
+          fontWeight: '900',
+          color: '#000',
+          lineHeight: '12px',
         }}
-      />
+      >
+        T
+      </div>
     )}
     {isLocal && (
       <div

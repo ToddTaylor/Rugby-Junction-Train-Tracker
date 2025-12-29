@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react';
 // import { Popup } from 'react-leaflet';
 import { Beacon } from '../types/Beacon';
+import { MapPin } from '../types/MapPin';
+import { TrackedPin } from '../services/trackedPins';
 import BeaconMarker from './BeaconMarker';
 import BeaconLabelPin from './BeaconLabelPin';
 
@@ -10,9 +12,21 @@ interface BeaconMarkersProps {
     mapTheme: 'dark' | 'light';
     beaconLastUpdateMap?: { [beaconID: string]: { lastUpdate: string, direction: string | null } };
     onBeaconClick?: (beaconID: string, beaconName: string) => void;
+    trackedPins?: TrackedPin[];
+    mapPins?: MapPin[];
+    maxPinAgeMinutes?: number;
 }
 
-const BeaconMarkers: React.FC<BeaconMarkersProps> = ({ pins: beaconPins, zoom, mapTheme, beaconLastUpdateMap, onBeaconClick }) => {
+const BeaconMarkers: React.FC<BeaconMarkersProps> = ({ 
+    pins: beaconPins, 
+    zoom, 
+    mapTheme, 
+    beaconLastUpdateMap, 
+    onBeaconClick,
+    trackedPins = [],
+    mapPins = [],
+    maxPinAgeMinutes = 60
+}) => {
     // Vertical offset for label marker (in degrees latitude, approx 7px)
     const getLabelOffsetLat = (lat: number, zoom: number) => {
         // Pointer is 1/3 smaller, so 7px at current zoom
@@ -71,6 +85,9 @@ const BeaconMarkers: React.FC<BeaconMarkersProps> = ({ pins: beaconPins, zoom, m
                                 lastUpdateTime={lastUpdateTime}
                                 direction={direction}
                                 onClick={onBeaconClick}
+                                trackedPins={trackedPins}
+                                mapPins={mapPins}
+                                maxPinAgeMinutes={maxPinAgeMinutes}
                             />
                         )}
                     </React.Fragment>

@@ -13,7 +13,7 @@ import { MapPin } from '../types/MapPin';
 import BeaconMarkers from '../components/BeaconMarkers';
 import TelemetryMarkers from '../components/TelemetryMarkers';
 import { BeaconHistoryModal } from '../components/BeaconHistoryModal';
-import { getTrackedMapPins } from '../services/trackedPins';
+import { getTrackedMapPins, updateTrackedPinLocation } from '../services/trackedPins';
 import { metersToLongitudeDegrees, pixelsToMeters } from '../utils/geo';
 import { updateMapPins, updateBeacon } from '../utils/updateHelpers';
 import { useRailways } from '../hooks/useRailways';
@@ -48,9 +48,51 @@ const RailMap: React.FC = () => {
     const { beacons, beaconsLoaded, setBeacons } = useBeacons();
     const { mapPins, setMapPins } = useTelemetryPins();
 
+    // Track the current tracked pins in state to trigger re-renders when they change
+    const [trackedPinsState, setTrackedPinsState] = useState(() => getTrackedMapPins());
+
+    // Periodically refresh tracked pins state (to handle expiration and updates)
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setTrackedPinsState(getTrackedMapPins());
+        }, 5000); // Refresh every 5 seconds
+        return () => clearInterval(interval);
+    }, []);
+
+    // Sync tracked pin locations with current mapPins on load and when mapPins change
+    useEffect(() => {
+        const trackedPins = getTrackedMapPins();
+        if (trackedPins.length === 0 || mapPins.length === 0) return;
+        
+        let updated = false;
+        trackedPins.forEach(tracked => {
+            const mapPin = mapPins.find(p => String(p.id) === String(tracked.id));
+            if (mapPin && mapPin.beaconID && mapPin.beaconName) {
+                if (tracked.lastBeaconID !== mapPin.beaconID) {
+                    updateTrackedPinLocation(tracked.id, mapPin.beaconID, mapPin.beaconName);
+                    updated = true;
+                }
+            }
+        });
+        
+        if (updated) {
+            setTrackedPinsState(getTrackedMapPins());
+        }
+    }, [mapPins]);
+
     // SignalR updates (retain reference to connection if needed for future reconnect logic)
     useSignalR({
         MapPinUpdate: (mapPin: MapPin) => {
+            // Update tracked pin location if this is a tracked pin
+            const trackedPins = getTrackedMapPins();
+            const tracked = trackedPins.find(tp => String(tp.id) === String(mapPin.id));
+            if (tracked && mapPin.beaconID && mapPin.beaconName) {
+                if (tracked.lastBeaconID !== mapPin.beaconID) {
+                    updateTrackedPinLocation(mapPin.id, mapPin.beaconID, mapPin.beaconName);
+                    setTrackedPinsState(getTrackedMapPins());
+                }
+            }
+            
             setMapPins((prevPins: MapPin[]) => updateMapPins(prevPins, mapPin));
         },
         BeaconUpdate: (beaconBatch: Beacon[]) => {
@@ -215,7 +257,8 @@ const RailMap: React.FC = () => {
 
     // Update last train time and direction for each beacon when telemetry pins change
     useEffect(() => {
-        if (!mapPins.length) return; // avoid unnecessary state set when empty batch
+        if (!mapPins.length) return;
+        
         setBeaconLastUpdateMap(prev => {
             const updated = { ...prev };
             mapPins.forEach(pin => {
@@ -501,6 +544,9 @@ const RailMap: React.FC = () => {
                         setSelectedBeaconName(beaconName);
                         setHistoryModalOpen(true);
                     }}
+                    trackedPins={trackedPinsState}
+                    mapPins={filteredPins}
+                    maxPinAgeMinutes={MAX_PIN_AGE_MINUTES}
                 />}
 
                 {/* Telemetry markers */}

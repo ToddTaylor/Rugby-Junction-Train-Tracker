@@ -53,11 +53,12 @@ const formatDirection = (dir?: string | null): string => {
 
 const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'light' }> = ({ pin, size, maxPinAgeMinutes, mapTheme }) => {
     const markerRef = useRef<L.Marker>(null);
+    const shouldReopenPopupRef = useRef(false);
     const [brightness, setBrightness] = useState(() =>
         getPinBrightness(pin.lastUpdate, maxPinAgeMinutes)
     );
     const [isTracked, setIsTracked] = useState(() =>
-        !!getTrackedMapPins().find(tp => tp.id === String(pin.id))
+        !!getTrackedMapPins().find(tp => String(tp.id) === String(pin.id))
     );
     const [trackColor, setTrackColor] = useState<string | undefined>(() =>
         getTrackedColor(String(pin.id))
@@ -65,7 +66,7 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
 
     useEffect(() => {
         const checkTracked = () => {
-            const tracked = getTrackedMapPins().find(tp => tp.id === String(pin.id));
+            const tracked = getTrackedMapPins().find(tp => String(tp.id) === String(pin.id));
             setIsTracked(!!tracked);
             setTrackColor(tracked?.color);
         };
@@ -138,20 +139,17 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
         let observer: MutationObserver | null = null;
         const handleTrackTextClick = (e: any) => {
             e.preventDefault();
+            e.stopPropagation();
+            shouldReopenPopupRef.current = true;
             if (isTracked) {
                 removeTrackedMapPin(String(pin.id));
                 setIsTracked(false);
                 setTrackColor(undefined);
             } else {
-                addTrackedMapPin(String(pin.id));
+                addTrackedMapPin(String(pin.id), pin.beaconID, pin.beaconName);
                 setIsTracked(true);
                 setTrackColor(getTrackedColor(String(pin.id)));
             }
-            setTimeout(() => {
-                marker.closePopup();
-                marker.openPopup();
-                popupOpen = true;
-            }, 0);
         };
         const attachHandler = () => {
             trackTextEl = document.getElementById(trackTextId);
@@ -186,6 +184,20 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
         };
         marker.on('popupopen', onPopupOpen);
         marker.on('popupclose', onPopupClose);
+
+        // Reopen popup after tracking state changes to show updated content
+        if (shouldReopenPopupRef.current) {
+            shouldReopenPopupRef.current = false;
+            const isPopupOpen = marker.isPopupOpen();
+            if (isPopupOpen) {
+                setTimeout(() => {
+                    marker.closePopup();
+                    setTimeout(() => {
+                        marker.openPopup();
+                    }, 100);
+                }, 50);
+            }
+        }
 
         return () => {
             marker.off('click', handleMarkerClick);

@@ -198,6 +198,14 @@ body:has(.admin-layout) .app-footer {
   z-index: 500;
 }
 
+/* ---------- Leaflet Popup Z-Index Fix ---------- */
+.leaflet-popup {
+  z-index: 600 !important;
+}
+.leaflet-popup-pane {
+  z-index: 600 !important;
+}
+
 /* ---------- Tracking Dot Pulse Animation ---------- */
 @keyframes pulse {
   0%, 100% {

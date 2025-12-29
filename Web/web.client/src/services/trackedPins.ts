@@ -12,7 +12,13 @@ export const TRACK_COLORS = [
     '#66FF00', // Chartreuse
     '#0099FF', // Sky blue
 ];
-export type TrackedPin = { id: string, expires: number, color: string };
+export type TrackedPin = { 
+    id: string;
+    expires: number;
+    color: string;
+    lastBeaconID?: string;
+    lastBeaconName?: string;
+};
 
 export function getTrackedMapPins(): TrackedPin[] {
     const raw = localStorage.getItem(TRACKED_KEY);
@@ -28,13 +34,19 @@ export function getTrackedMapPins(): TrackedPin[] {
     return [];
 }
 
-export function addTrackedMapPin(id: string) {
+export function addTrackedMapPin(id: string, beaconID?: string, beaconName?: string) {
     const now = Date.now();
     const expires = now + 12 * 60 * 60 * 1000; // 12 hours
     const arr = getTrackedMapPins();
     const usedColors = arr.map(item => item.color);
     const color = TRACK_COLORS.find(c => !usedColors.includes(c)) || 'orange';
-    arr.push({ id, expires, color });
+    arr.push({ 
+        id, 
+        expires, 
+        color,
+        lastBeaconID: beaconID,
+        lastBeaconName: beaconName
+    });
     localStorage.setItem(TRACKED_KEY, JSON.stringify(arr));
 }
 
@@ -46,4 +58,14 @@ export function removeTrackedMapPin(id: string) {
 export function getTrackedColor(id: string): string | undefined {
     const arr = getTrackedMapPins();
     return arr.find(item => item.id === id)?.color;
+}
+
+export function updateTrackedPinLocation(id: string, beaconID: string, beaconName: string) {
+    const arr = getTrackedMapPins();
+    const tracked = arr.find(item => item.id === id);
+    if (tracked) {
+        tracked.lastBeaconID = beaconID;
+        tracked.lastBeaconName = beaconName;
+        localStorage.setItem(TRACKED_KEY, JSON.stringify(arr));
+    }
 }
