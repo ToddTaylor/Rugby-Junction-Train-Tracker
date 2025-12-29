@@ -56,6 +56,7 @@ export const ArrowIcon: React.FC<{
           borderRadius: '50%',
           border: '1px solid rgba(0, 0, 0, 0.5)',
           zIndex: 10,
+          animation: 'pulse 1.5s ease-in-out infinite',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',

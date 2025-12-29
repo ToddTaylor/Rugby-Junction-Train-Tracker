@@ -546,7 +546,6 @@ const RailMap: React.FC = () => {
                     }}
                     trackedPins={trackedPinsState}
                     mapPins={filteredPins}
-                    maxPinAgeMinutes={MAX_PIN_AGE_MINUTES}
                 />}
 
                 {/* Telemetry markers */}

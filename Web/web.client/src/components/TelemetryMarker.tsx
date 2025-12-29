@@ -208,7 +208,7 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
                 observer.disconnect();
             }
         };
-    }, [pin, brightness, isTracked]);
+    }, [pin.id, pin.beaconID, pin.beaconName, pin.railroad, pin.subdivision, pin.milepost, pin.direction, pin.moving, pin.lastUpdate, pin.addresses, isTracked, trackColor]);
 
     // Use ArrowMapPin as the icon, with rotation and border color
     const createCustomIcon = () => {

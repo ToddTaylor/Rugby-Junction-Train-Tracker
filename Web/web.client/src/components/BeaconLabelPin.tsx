@@ -16,7 +16,6 @@ interface BeaconLabelPinProps {
     onClick?: (beaconID: string, beaconName: string) => void;
     trackedPins?: TrackedPin[];
     mapPins?: MapPin[];
-    maxPinAgeMinutes?: number;
 }
 
 const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({ 
@@ -29,8 +28,7 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
     direction, 
     onClick, 
     trackedPins = [], 
-    mapPins = [],
-    maxPinAgeMinutes = 60
+    mapPins = []
 }) => {
     // Sizing and style logic
     const base = 1 + (zoom - 7) * 0.09;
@@ -78,18 +76,6 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
         : '0 1px 4px #fff, 0 0 2px #005aa9';
     const statusPadding = `${labelPadding / 2}px 8px`;
     const statusRadius = `${labelRadius / 1.5}px`;
-    
-    // Calculate brightness for a given lastUpdate time
-    function getPinBrightness(lastUpdate: string): number {
-        const now = new Date();
-        const lastUpdateDate = new Date(lastUpdate);
-        const ageMinutes = (now.getTime() - lastUpdateDate.getTime()) / 60000;
-        if (ageMinutes > maxPinAgeMinutes) return 0;
-        const normalizedTime = Math.min(1, ageMinutes / maxPinAgeMinutes);
-        const minBrightness = 0.3;
-        const brightness = minBrightness + (1.0 - minBrightness) * Math.pow(1 - normalizedTime, 4);
-        return brightness;
-    }
     
     // Find tracked trains at this beacon (only expired/not visible)
     const expiredTrackedTrains = trackedPins
