@@ -10,6 +10,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { MapPinHistory } from '../types/MapPinHistory';
 import { format, parseISO } from 'date-fns';
+import { getTrackedMapPins } from '../services/trackedPins';
 
 interface BeaconHistoryModalProps {
     open: boolean;
@@ -18,9 +19,10 @@ interface BeaconHistoryModalProps {
     beaconName: string;
     theme: 'dark' | 'light';
     lastUpdate?: string | null;
+    mapPins?: any[];
 }
 
-export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, theme, lastUpdate }: BeaconHistoryModalProps) {
+export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, theme, lastUpdate, mapPins = [] }: BeaconHistoryModalProps) {
     const [loading, setLoading] = useState(false);
     const [history, setHistory] = useState<MapPinHistory[]>([]);
     const [error, setError] = useState<string | null>(null);
@@ -107,8 +109,49 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, theme,
                     .map((a: { source: string; addressID: number }) => `${a.addressID} ${a.source}`)
                     .join(', ');
                 
+                // Check if this train is currently tracked
+                // Match history addresses with current MapPins, then check if those MapPins are tracked
+                const trackedPins = getTrackedMapPins();
+                let isTracked = false;
+                let trackedColor = undefined;
+                
+                // Find if any address in history matches a tracked MapPin
+                for (const addr of addresses) {
+                    const matchingMapPin = mapPins.find((mp: any) => 
+                        mp.addresses?.some((a: any) => a.addressID === addr.addressID && a.source === addr.source)
+                    );
+                    if (matchingMapPin) {
+                        const tracked = trackedPins.find(tp => String(tp.id) === String(matchingMapPin.id));
+                        if (tracked) {
+                            isTracked = true;
+                            trackedColor = tracked.color;
+                            break;
+                        }
+                    }
+                }
+                
                 return (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        {isTracked && trackedColor && (
+                            <Box
+                                sx={{
+                                    width: 14,
+                                    height: 14,
+                                    backgroundColor: trackedColor,
+                                    borderRadius: '50%',
+                                    border: '1px solid rgba(0, 0, 0, 0.5)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: '9px',
+                                    fontWeight: '900',
+                                    color: '#000',
+                                    flexShrink: 0,
+                                }}
+                            >
+                                T
+                            </Box>
+                        )}
                         {isLocal && (
                             <Box
                                 sx={{

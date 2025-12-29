@@ -567,6 +567,7 @@ const RailMap: React.FC = () => {
                 beaconName={selectedBeaconName}
                 theme={mapTheme as 'dark' | 'light'}
                 lastUpdate={beaconLastUpdateMap?.[selectedBeaconID]?.lastUpdate}
+                mapPins={mapPins}
             />
         </>
     );
