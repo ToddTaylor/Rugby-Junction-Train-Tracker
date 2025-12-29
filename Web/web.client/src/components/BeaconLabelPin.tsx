@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import L from 'leaflet';
 import { Marker } from 'react-leaflet';
 import { Beacon } from '../types/Beacon';
 import { MapPin } from '../types/MapPin';
-import { TrackedPin } from '../services/trackedPins';
+import { TrackedPin, updateTrackedPinSymbol } from '../services/trackedPins';
 
 interface BeaconLabelPinProps {
     beaconPin: Beacon;
@@ -87,7 +87,8 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
             if (!mapPin && trackedPin.lastBeaconID === beaconPin.beaconID) {
                 return {
                     id: trackedPin.id,
-                    color: trackedPin.color
+                    color: trackedPin.color,
+                    symbol: trackedPin.symbol
                 };
             }
             
@@ -100,9 +101,49 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
             onClick(beaconPin.beaconID, beaconPin.beaconName);
         }
     };
+
+    const markerRef = useRef<L.Marker>(null);
+
+    useEffect(() => {
+        const marker = markerRef.current;
+        if (!marker) return;
+
+        const handleSymbolClick = (e: MouseEvent) => {
+            const target = e.target as HTMLElement;
+            const trackIndicator = target.closest('.track-indicator');
+            if (trackIndicator) {
+                const trainId = trackIndicator.getAttribute('data-train-id');
+                const currentSymbol = trackIndicator.getAttribute('data-symbol');
+                if (trainId) {
+                    e.stopPropagation();
+                    const newSymbol = prompt('Enter a new Symbol (optional, max 10 characters, all caps):', currentSymbol || '');
+                    if (newSymbol !== null) {
+                        const trimmedSymbol = newSymbol.trim();
+                        if (trimmedSymbol) {
+                            updateTrackedPinSymbol(trainId, trimmedSymbol.toUpperCase().substring(0, 10));
+                        } else {
+                            updateTrackedPinSymbol(trainId, '');
+                        }
+                    }
+                }
+            }
+        };
+
+        const markerElement = marker.getElement();
+        if (markerElement) {
+            markerElement.addEventListener('click', handleSymbolClick);
+        }
+
+        return () => {
+            if (markerElement) {
+                markerElement.removeEventListener('click', handleSymbolClick);
+            }
+        };
+    }, [expiredTrackedTrains]);
     
     return (
         <Marker
+            ref={markerRef}
             key={`beacon-label-${beaconPin.beaconID ?? idx}`}
             position={[getLabelOffsetLat(beaconPin.latitude, zoom), beaconPin.longitude]}
             pane="beaconPane"
@@ -119,11 +160,11 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
             icon={L.divIcon({
                 className: 'beacon-label-marker',
                 html: `
-                    <div style=\"position: relative; display: flex; flex-direction: column; align-items: center;\">
-                        <div style=\"position: absolute; top: 0; left: 50%; transform: translateX(-50%); z-index: 0; width:0;height:0;border-left:${pointerBorderWidth}px solid transparent;border-right:${pointerBorderWidth}px solid transparent;border-bottom:${pointerBorderHeight}px solid ${borderColor};\"></div>
-                        <div style=\"position: relative; z-index: 1; width:0;height:0;border-left:${pointerWidth}px solid transparent;border-right:${pointerWidth}px solid transparent;border-bottom:${pointerHeight}px solid ${pointerColor};margin-top:2px;\"></div>
-                        <div class=\"beacon-name\" style=\"background:${labelBg};color:${labelColor};font-size:${labelFontSize}px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-weight:500;padding:${labelPadding}px 12px;border-radius:${labelRadius}px;box-shadow:0 1px 6px rgba(0,0,0,0.13);margin-top:-2px;white-space:nowrap;text-transform:uppercase;border:1px solid ${borderColor};cursor:pointer;\">${beaconPin.beaconName || ''}</div>
-                        ${statusText ? `<div class=\"beacon-status\" style=\"
+                    <div style="position: relative; display: flex; flex-direction: column; align-items: center;">
+                        <div style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); z-index: 0; width:0;height:0;border-left:${pointerBorderWidth}px solid transparent;border-right:${pointerBorderWidth}px solid transparent;border-bottom:${pointerBorderHeight}px solid ${borderColor};"></div>
+                        <div style="position: relative; z-index: 1; width:0;height:0;border-left:${pointerWidth}px solid transparent;border-right:${pointerWidth}px solid transparent;border-bottom:${pointerHeight}px solid ${pointerColor};margin-top:2px;"></div>
+                        <div class="beacon-name" style="background:${labelBg};color:${labelColor};font-size:${labelFontSize}px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-weight:500;padding:${labelPadding}px 12px;border-radius:${labelRadius}px;box-shadow:0 1px 6px rgba(0,0,0,0.13);margin-top:-2px;white-space:nowrap;text-transform:uppercase;border:1px solid ${borderColor};cursor:pointer;">${beaconPin.beaconName || ''}</div>
+                        ${statusText ? `<div class="beacon-status" style="
                             background:${statusBg};
                             color:${statusTextColor};
                             font-size:${statusFontSize}px;
@@ -136,23 +177,36 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
                             padding:${statusPadding};
                             border-radius:${statusRadius};
                             cursor:pointer;
-                        \">${statusText}</div>` : ''}
-                        ${expiredTrackedTrains.length > 0 ? `<div style=\"display: flex; flex-direction: row; gap: 4px; margin-top: 4px;\">
+                        ">${statusText}</div>` : ''}
+                        ${expiredTrackedTrains.length > 0 ? `<div style="display: flex; flex-direction: row; gap: 4px; margin-top: 4px; align-items: center;">
                             ${expiredTrackedTrains.map(train => `
-                                <div style=\"
-                                    width: 14px;
-                                    height: 14px;
-                                    background-color: ${train.color};
-                                    border-radius: 50%;
-                                    border: 1px solid rgba(0, 0, 0, 0.5);
+                                <div class="track-indicator" data-train-id="${train.id}" data-symbol="${train.symbol || ''}" style="
                                     display: flex;
                                     align-items: center;
-                                    justify-content: center;
-                                    font-size: 10px;
-                                    font-weight: 900;
-                                    color: #000;
-                                    line-height: 14px;
-                                \">T</div>
+                                    gap: 2px;
+                                    cursor: pointer;
+                                " title="Click to edit symbol">
+                                    <div style="
+                                        width: 14px;
+                                        height: 14px;
+                                        background-color: ${train.color};
+                                        border-radius: 50%;
+                                        border: 1px solid rgba(0, 0, 0, 0.5);
+                                        display: flex;
+                                        align-items: center;
+                                        justify-content: center;
+                                        font-size: 10px;
+                                        font-weight: 900;
+                                        color: #000;
+                                        line-height: 14px;
+                                    ">T</div>
+                                    ${train.symbol ? `<span style="
+                                        font-size: 13px;
+                                        font-weight: bold;
+                                        color: ${train.color};
+                                        text-decoration: underline;
+                                    ">${train.symbol}</span>` : ''}
+                                </div>
                             `).join('')}
                         </div>` : ''}
                     </div>

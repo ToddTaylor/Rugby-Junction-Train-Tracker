@@ -4,7 +4,7 @@ import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { Box, Typography, FormControl, InputLabel, Select, MenuItem, Checkbox, ListItemText } from '@mui/material';
 import { MapPin } from '../types/MapPin';
 import { format, parseISO } from "date-fns";
-import { getTrackedMapPins, TrackedPin } from '../services/trackedPins';
+import { getTrackedMapPins, TrackedPin, updateTrackedPinSymbol } from '../services/trackedPins';
 
 function MapPinsLog() {
     const [mapPins, setMapPins] = useState<MapPin[]>([]);
@@ -92,6 +92,21 @@ function MapPinsLog() {
                 const isTracked = !!tracked;
                 const trackedColor = tracked?.color;
                 const symbol = tracked?.symbol;
+
+                const handleSymbolClick = (e: React.MouseEvent) => {
+                    e.stopPropagation();
+                    const newSymbol = prompt('Enter a new Symbol (optional, max 10 characters, all caps):', symbol || '');
+                    if (newSymbol !== null) {
+                        const trimmedSymbol = newSymbol.trim();
+                        if (trimmedSymbol) {
+                            updateTrackedPinSymbol(String(params.row.id), trimmedSymbol.toUpperCase().substring(0, 10));
+                        } else {
+                            updateTrackedPinSymbol(String(params.row.id), '');
+                        }
+                        // Force state update
+                        setTrackedPins(getTrackedMapPins());
+                    }
+                };
                 
                 return (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -136,11 +151,17 @@ function MapPinsLog() {
                             </Box>
                         )}
                         {symbol && (
-                            <span style={{ 
-                                fontWeight: 'bold', 
-                                marginRight: '4px',
-                                color: trackedColor || '#FFD700'
-                            }}>
+                            <span 
+                                onClick={handleSymbolClick}
+                                style={{ 
+                                    fontWeight: 'bold', 
+                                    marginRight: '4px',
+                                    color: trackedColor || '#FFD700',
+                                    cursor: 'pointer',
+                                    textDecoration: 'underline'
+                                }}
+                                title="Click to edit symbol"
+                            >
                                 {symbol}
                             </span>
                         )}

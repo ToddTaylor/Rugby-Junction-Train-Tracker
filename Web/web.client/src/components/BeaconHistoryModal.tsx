@@ -10,7 +10,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { MapPinHistory } from '../types/MapPinHistory';
 import { format, parseISO } from 'date-fns';
-import { getTrackedMapPins } from '../services/trackedPins';
+import { getTrackedMapPins, updateTrackedPinSymbol } from '../services/trackedPins';
 
 interface BeaconHistoryModalProps {
     open: boolean;
@@ -117,6 +117,7 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, theme,
                 let symbol = undefined;
                 
                 // Find if any address in history matches a tracked MapPin
+                let matchedMapPinId: string | undefined;
                 for (const addr of addresses) {
                     const matchingMapPin = mapPins.find((mp: any) => 
                         mp.addresses?.some((a: any) => a.addressID === addr.addressID && a.source === addr.source)
@@ -127,10 +128,28 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, theme,
                             isTracked = true;
                             trackedColor = tracked.color;
                             symbol = tracked.symbol;
+                            matchedMapPinId = String(matchingMapPin.id);
                             break;
                         }
                     }
                 }
+
+                const handleSymbolClick = (e: React.MouseEvent) => {
+                    e.stopPropagation();
+                    if (matchedMapPinId) {
+                        const newSymbol = prompt('Enter a new Symbol (optional, max 10 characters, all caps):', symbol || '');
+                        if (newSymbol !== null) {
+                            const trimmedSymbol = newSymbol.trim();
+                            if (trimmedSymbol) {
+                                updateTrackedPinSymbol(matchedMapPinId, trimmedSymbol.toUpperCase().substring(0, 10));
+                            } else {
+                                updateTrackedPinSymbol(matchedMapPinId, '');
+                            }
+                            // Force refresh by triggering a re-fetch
+                            window.dispatchEvent(new Event('storage'));
+                        }
+                    }
+                };
                 
                 return (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -175,11 +194,17 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, theme,
                             </Box>
                         )}
                         {symbol && (
-                            <span style={{ 
-                                fontWeight: 'bold', 
-                                marginRight: '4px',
-                                color: trackedColor || '#FFD700'
-                            }}>
+                            <span 
+                                onClick={handleSymbolClick}
+                                style={{ 
+                                    fontWeight: 'bold', 
+                                    marginRight: '4px',
+                                    color: trackedColor || '#FFD700',
+                                    cursor: 'pointer',
+                                    textDecoration: 'underline'
+                                }}
+                                title="Click to edit symbol"
+                            >
                                 {symbol}
                             </span>
                         )}
