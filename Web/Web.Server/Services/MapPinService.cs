@@ -1,6 +1,5 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Configuration;
 using Web.Server.DTOs;
 using Web.Server.Entities;
 using Web.Server.Enums;
@@ -13,7 +12,7 @@ namespace Web.Server.Services
     public class MapPinService : IMapPinService
     {
         public const int TIME_THRESHOLD_MINUTES = 2;
-        private readonly int _stationaryDirectionNullThresholdMinutes;
+        private readonly int _stationaryDirectionNullThresholdHours;
 
         private readonly IBeaconRailroadService _beaconRailroadService;
         private readonly IHubContext<NotificationHub> _hubContext;
@@ -37,7 +36,7 @@ namespace Web.Server.Services
             _mapPinRepository = mapPinRepository;
             _timeProvider = timeProvider;
             _mapPinHistoryService = mapPinHistoryService;
-            _stationaryDirectionNullThresholdMinutes = configuration.GetValue<int>("ApplicationSettings:StationaryDirectionNullThresholdMinutes", 360);
+            _stationaryDirectionNullThresholdHours = configuration.GetValue<int>("ApplicationSettings:StationaryDirectionNullThresholdHours", 6);
         }
 
         public async Task<bool> DeleteMapPinAsync(int id)
@@ -48,7 +47,7 @@ namespace Web.Server.Services
         public async Task<IEnumerable<MapPin>> GetMapPinsAsync(int? minutes)
         {
             var mapPins = await _mapPinRepository.GetAllAsync(minutes);
-            
+
             // Recalculate IsLocal flag for each map pin based on current subdivision settings
             foreach (var mapPin in mapPins)
             {
@@ -58,13 +57,13 @@ namespace Web.Server.Services
                     mapPin.IsLocal = IsLocalTrain(primaryAddressID, mapPin.BeaconRailroad.Subdivision);
                 }
             }
-            
+
             return mapPins;
         }
         public async Task<IEnumerable<MapPin>> GetMapPinsLatestAsync()
         {
             var mapPins = await _mapPinRepository.GetLatestAsync();
-            
+
             // Recalculate IsLocal flag for each map pin based on current subdivision settings
             foreach (var mapPin in mapPins)
             {
@@ -74,7 +73,7 @@ namespace Web.Server.Services
                     mapPin.IsLocal = IsLocalTrain(primaryAddressID, mapPin.BeaconRailroad.Subdivision);
                 }
             }
-            
+
             return mapPins;
         }
 
@@ -308,7 +307,7 @@ namespace Web.Server.Services
 
                                         // Check if the map pin has been stationary for threshold time
                                         var timeSinceCreated = _timeProvider.UtcNow - newMapPin.CreatedAt;
-                                        if (timeSinceCreated.TotalMinutes >= _stationaryDirectionNullThresholdMinutes)
+                                        if (timeSinceCreated.TotalHours >= _stationaryDirectionNullThresholdHours)
                                         {
                                             newMapPin.Direction = null;
                                         }
@@ -493,7 +492,7 @@ namespace Web.Server.Services
             {
                 // Same beacon - check if the map pin has been stationary for configured threshold
                 var timeSinceCreated = _timeProvider.UtcNow - previousMapPin.CreatedAt;
-                if (timeSinceCreated.TotalMinutes >= _stationaryDirectionNullThresholdMinutes)
+                if (timeSinceCreated.TotalHours >= _stationaryDirectionNullThresholdHours)
                 {
                     // Map pin has been at the same beacon for threshold time - set direction to null
                     previousMapPin.Direction = null;

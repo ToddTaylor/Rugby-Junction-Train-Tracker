@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Configuration;
 using System.Text.Json;
 using Web.Server.Entities;
 using Web.Server.Providers;
@@ -9,8 +8,8 @@ namespace Web.Server.Services
     public class MapPinHistoryService : IMapPinHistoryService
     {
         private readonly int _historyTimeThresholdMinutes;
-        private readonly int _stationaryDirectionNullThresholdMinutes;
-        
+        private readonly int _stationaryDirectionNullThresholdHours;
+
         private readonly IMapPinHistoryRepository _repository;
         private readonly IBeaconRailroadService _beaconRailroadService;
         private readonly ITimeProvider _timeProvider;
@@ -24,20 +23,20 @@ namespace Web.Server.Services
             _repository = repository;
             _beaconRailroadService = beaconRailroadService;
             _timeProvider = timeProvider;
-            _historyTimeThresholdMinutes = configuration.GetValue<int>("ApplicationSettings:StationaryDirectionNullThresholdMinutes", 360);
-            _stationaryDirectionNullThresholdMinutes = configuration.GetValue<int>("ApplicationSettings:StationaryDirectionNullThresholdMinutes", 360);
+            _historyTimeThresholdMinutes = configuration.GetValue<int>("ApplicationSettings:HistoryTimeThresholdMinutes", 360);
+            _stationaryDirectionNullThresholdHours = configuration.GetValue<int>("ApplicationSettings:StationaryDirectionNullThresholdHours", 6);
         }
 
         public async Task<IEnumerable<MapPinHistory>> GetHistoryByBeaconIdAsync(int beaconId, int? limit = null)
         {
             var histories = await _repository.GetByBeaconIdAsync(beaconId, limit);
-            
+
             // Populate BeaconRailroad data for each history record
             foreach (var history in histories)
             {
                 history.BeaconRailroad = await _beaconRailroadService.GetByIdAsync(history.BeaconID, history.SubdivisionId);
             }
-            
+
             return histories;
         }
 
@@ -99,7 +98,7 @@ namespace Web.Server.Services
                     {
                         // Same beacon - check if enough time has passed to warrant a new history entry
                         var timeSinceLastUpdate = _timeProvider.UtcNow - existingHistory.LastUpdate;
-                        
+
                         if (timeSinceLastUpdate.TotalMinutes >= _historyTimeThresholdMinutes)
                         {
                             // Enough time has passed (15+ minutes) - create NEW history record
@@ -122,10 +121,10 @@ namespace Web.Server.Services
                             // Less than threshold - update the existing history with the latest addresses
                             // This is likely telemetry from the same train
                             existingHistory.AddressesJson = addressesJson;
-                            
+
                             // Check if the map pin has been stationary for threshold time at same beacon
                             var timeSinceCreated = _timeProvider.UtcNow - existingHistory.CreatedAt;
-                            if (timeSinceCreated.TotalMinutes >= _stationaryDirectionNullThresholdMinutes)
+                            if (timeSinceCreated.TotalHours >= _stationaryDirectionNullThresholdHours)
                             {
                                 // Map pin has been at the same beacon for threshold time - set direction to null
                                 existingHistory.Direction = null;
@@ -136,7 +135,7 @@ namespace Web.Server.Services
                             }
                             existingHistory.Moving = mapPin.Moving;
                             existingHistory.IsLocal = mapPin.IsLocal;
-                            
+
                             await _repository.UpdateAsync(existingHistory);
                         }
                     }

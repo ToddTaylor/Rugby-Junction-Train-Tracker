@@ -44,8 +44,8 @@ namespace Web.ServerTests.Services
             });
             _mapper = config.CreateMapper();
 
-            _configurationMock.Setup(c => c.GetSection("ApplicationSettings:StationaryDirectionNullThresholdMinutes").Value)
-                .Returns("360");
+            _configurationMock.Setup(c => c.GetSection("ApplicationSettings:StationaryDirectionNullThresholdHours").Value)
+                .Returns("6");
 
             _service = new MapPinService(
                 _beaconRailroadServiceMock.Object,
@@ -600,8 +600,8 @@ namespace Web.ServerTests.Services
 
             _clientProxyMock?.Verify(proxy => proxy.SendCoreAsync(
                 NotificationMethods.MapPinUpdate,
-                It.Is<object[]>(args => 
-                    args.Length > 0 && 
+                It.Is<object[]>(args =>
+                    args.Length > 0 &&
                     args[0] != null &&
                     ((MapPinDTO)args[0]).Addresses.Count == 2 &&
                     ((MapPinDTO)args[0]).Addresses.Any(a => a.Source == fromSource) &&
