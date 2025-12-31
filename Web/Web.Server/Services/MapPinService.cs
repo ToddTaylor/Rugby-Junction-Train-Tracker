@@ -306,11 +306,7 @@ namespace Web.Server.Services
                                         }
 
                                         // Check if the map pin has been stationary for threshold time
-                                        var timeSinceCreated = _timeProvider.UtcNow - newMapPin.CreatedAt;
-                                        if (timeSinceCreated.TotalHours >= _stationaryDirectionNullThresholdHours)
-                                        {
-                                            newMapPin.Direction = null;
-                                        }
+                                        await ResetStationaryTrainDirection(newMapPin);
 
                                         mapPin = newMapPin;
                                     }
@@ -444,6 +440,25 @@ namespace Web.Server.Services
             return mapPin;
         }
 
+
+        /// <summary>
+        /// If a train has been at the same beacon for longer than the configured threshold,
+        /// its direction should be removed (set to null).
+        /// </summary>
+        private async Task ResetStationaryTrainDirection(MapPin mapPin)
+        {
+            var currentMapPinHistory = await _mapPinHistoryService.GetHistoryByOriginalMapPinIdAsync(mapPin.ID);
+
+            if (currentMapPinHistory == null) return;
+
+            var timeSinceCreated = _timeProvider.UtcNow - currentMapPinHistory.CreatedAt;
+
+            if (timeSinceCreated.TotalHours >= _stationaryDirectionNullThresholdHours)
+            {
+                mapPin.Direction = null;
+            }
+        }
+
         private async Task<MapPin> UpdateMapPin(Telemetry telemetry, MapPin previousMapPin, ICollection<BeaconRailroad> beaconRailroads)
         {
             var matchingAddressIDAndSourceNotFound = !(
@@ -491,12 +506,7 @@ namespace Web.Server.Services
             else
             {
                 // Same beacon - check if the map pin has been stationary for configured threshold
-                var timeSinceCreated = _timeProvider.UtcNow - previousMapPin.CreatedAt;
-                if (timeSinceCreated.TotalHours >= _stationaryDirectionNullThresholdHours)
-                {
-                    // Map pin has been at the same beacon for threshold time - set direction to null
-                    previousMapPin.Direction = null;
-                }
+                await ResetStationaryTrainDirection(previousMapPin);
             }
 
             previousMapPin.BeaconRailroad = toBeaconRailroad;

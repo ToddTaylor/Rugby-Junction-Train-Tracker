@@ -27,6 +27,11 @@ namespace Web.Server.Services
             _stationaryDirectionNullThresholdHours = configuration.GetValue<int>("ApplicationSettings:StationaryDirectionNullThresholdHours", 6);
         }
 
+        public async Task<MapPinHistory?> GetHistoryByOriginalMapPinIdAsync(int mapPinId)
+        {
+            return await _repository.GetByOriginalMapPinIdAsync(mapPinId);
+        }
+
         public async Task<IEnumerable<MapPinHistory>> GetHistoryByBeaconIdAsync(int beaconId, int? limit = null)
         {
             var histories = await _repository.GetByBeaconIdAsync(beaconId, limit);
