@@ -78,7 +78,7 @@ namespace Web.Server.Controllers.v1
             try
             {
                 var telemetry = _mapper.Map<Telemetry>(telemetryDTO);
-                var createdTelemetry = await _telemetryService.CreateTelemetryAsync(telemetry);
+                var createdTelemetry = await _telemetryService.CreateMapPinAsync(telemetry);
                 response.Data = _mapper.Map<TelemetryDTO>(createdTelemetry);
                 return CreatedAtAction("GetTelemetry", new { id = response.Data.ID }, response);
             }

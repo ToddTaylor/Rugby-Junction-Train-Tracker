@@ -8,4 +8,5 @@ export type Telemetry = {
     source: string;
     createdAt: string;
     lastUpdate: string;
+    discarded: boolean;
 };

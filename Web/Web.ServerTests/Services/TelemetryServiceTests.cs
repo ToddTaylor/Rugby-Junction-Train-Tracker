@@ -8,6 +8,7 @@ using Web.Server.Hubs;
 using Web.Server.Providers;
 using Web.Server.Repositories;
 using Web.Server.Services;
+using Web.Server.Services.Rules;
 
 namespace Web.ServerTests.Services
 {
@@ -22,6 +23,7 @@ namespace Web.ServerTests.Services
         private Mock<IMapPinService> _mapPinServiceMock;
         private Mock<ITimeProvider> _timeProviderMock;
         private TelemetryService _service;
+        private TelemetryRuleEngine _ruleEngine;
 
         [TestInitialize]
         public void Setup()
@@ -31,7 +33,6 @@ namespace Web.ServerTests.Services
             _beaconRailroadServiceMock = new Mock<IBeaconRailroadService>();
             _hubContextMock = new Mock<IHubContext<NotificationHub>>();
             _mapperMock = new Mock<IMapper>();
-            _mapPinServiceMock = new Mock<IMapPinService>();
             _timeProviderMock = new Mock<ITimeProvider>();
 
             // Setup SignalR Clients.All.SendAsync
@@ -46,7 +47,9 @@ namespace Web.ServerTests.Services
                 _hubContextMock.Object,
                 _mapperMock.Object,
                 _mapPinServiceMock.Object,
-                _telemetryRepositoryMock.Object
+                _telemetryRepositoryMock.Object,
+                _timeProviderMock.Object,
+                _ruleEngine
             );
         }
 
@@ -98,7 +101,7 @@ namespace Web.ServerTests.Services
             var telemetry = new Telemetry { BeaconID = 1, AddressID = 0, Source = "HOT", CreatedAt = DateTime.UtcNow };
 
             // Act & Assert
-            await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => _service.CreateTelemetryAsync(telemetry));
+            await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => _service.CreateMapPinAsync(telemetry));
         }
 
         [TestMethod]
@@ -109,7 +112,7 @@ namespace Web.ServerTests.Services
             _beaconServiceMock.Setup(s => s.GetBeaconByIdAsync(1)).ReturnsAsync((Beacon?)null);
 
             // Act & Assert
-            await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => _service.CreateTelemetryAsync(telemetry));
+            await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => _service.CreateMapPinAsync(telemetry));
         }
 
         [TestMethod]
@@ -156,7 +159,7 @@ namespace Web.ServerTests.Services
             _timeProviderMock.Setup(t => t.UtcNow).Returns(DateTime.UtcNow);
 
             // Act
-            var result = await _service.CreateTelemetryAsync(telemetry);
+            var result = await _service.CreateMapPinAsync(telemetry);
 
             // Assert
             Assert.AreEqual(addedTelemetry, result);

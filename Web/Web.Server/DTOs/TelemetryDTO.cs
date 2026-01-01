@@ -23,6 +23,11 @@ namespace Web.Server.DTOs
         /// </summary>
         public required string Source { get; set; }
 
+        /// <summary>
+        /// Indicates whether this telemetry record has been discarded and not to be used in processing.
+        /// </summary>
+        public bool Discarded { get; set; }
+
         public required DateTime CreatedAt { get; set; }
 
         public required DateTime LastUpdate { get; set; }
@@ -42,6 +47,7 @@ namespace Web.Server.DTOs
                    TrainID == other.TrainID &&
                    Moving == other.Moving &&
                    Source == other.Source &&
+                   Discarded == other.Discarded &&
                    CreatedAt == other.CreatedAt &&
                    LastUpdate == other.LastUpdate;
         }
@@ -56,6 +62,7 @@ namespace Web.Server.DTOs
             hash.Add(TrainID);
             hash.Add(Moving);
             hash.Add(Source);
+            hash.Add(Discarded);
             hash.Add(CreatedAt);
             hash.Add(LastUpdate);
             return hash.ToHashCode();

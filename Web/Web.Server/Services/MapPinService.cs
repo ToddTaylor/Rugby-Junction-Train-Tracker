@@ -23,11 +23,11 @@ namespace Web.Server.Services
 
         public MapPinService(
             IBeaconRailroadService beaconRailroadService,
+            IMapPinHistoryService mapPinHistoryService,
+            IMapPinRepository mapPinRepository,
             IHubContext<NotificationHub> hubContext,
             IMapper mapper,
-            IMapPinRepository mapPinRepository,
             ITimeProvider timeProvider,
-            IMapPinHistoryService mapPinHistoryService,
             IConfiguration configuration)
         {
             _beaconRailroadService = beaconRailroadService;
@@ -60,6 +60,7 @@ namespace Web.Server.Services
 
             return mapPins;
         }
+
         public async Task<IEnumerable<MapPin>> GetMapPinsLatestAsync()
         {
             var mapPins = await _mapPinRepository.GetLatestAsync();

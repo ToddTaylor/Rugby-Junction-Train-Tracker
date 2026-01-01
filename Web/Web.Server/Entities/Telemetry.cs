@@ -27,6 +27,11 @@ namespace Web.Server.Entities
         [Required]
         public string Source { get; set; }
 
+        /// <summary>
+        /// Indicates whether this telemetry record has been discarded and not to be used in processing.
+        /// </summary>
+        public bool Discarded { get; set; }
+
         public override bool Equals(object? obj)
         {
             return Equals(obj as Telemetry);
@@ -43,7 +48,8 @@ namespace Web.Server.Entities
                    AddressID == other.AddressID &&
                    TrainID == other.TrainID &&
                    Moving == other.Moving &&
-                   Source == other.Source;
+                   Source == other.Source &&
+                   Discarded == other.Discarded;
         }
 
         public override int GetHashCode()
@@ -58,6 +64,7 @@ namespace Web.Server.Entities
             hash.Add(TrainID);
             hash.Add(Moving);
             hash.Add(Source);
+            hash.Add(Discarded);
             return hash.ToHashCode();
         }
 

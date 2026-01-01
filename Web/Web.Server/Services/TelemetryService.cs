@@ -3,7 +3,9 @@ using Microsoft.AspNetCore.SignalR;
 using Web.Server.DTOs;
 using Web.Server.Entities;
 using Web.Server.Hubs;
+using Web.Server.Providers;
 using Web.Server.Repositories;
+using Web.Server.Services.Rules;
 
 namespace Web.Server.Services
 {
@@ -15,6 +17,8 @@ namespace Web.Server.Services
         private readonly IHubContext<NotificationHub> _hubContext;
         private readonly IMapper _mapper;
         private readonly IMapPinService _mapPinsService;
+        private readonly ITimeProvider _timeProvider;
+        private readonly TelemetryRuleEngine _ruleEngine;
 
         public TelemetryService(
             IBeaconRailroadService beaconRailroadService,
@@ -22,7 +26,9 @@ namespace Web.Server.Services
             IHubContext<NotificationHub> hubContext,
             IMapper mapper,
             IMapPinService mapPinsService,
-            ITelemetryRepository telemetryRepository)
+            ITelemetryRepository telemetryRepository,
+            ITimeProvider timeProvider,
+            TelemetryRuleEngine ruleEngine)
         {
             _beaconRailroadService = beaconRailroadService;
             _beaconService = beaconService;
@@ -30,19 +36,11 @@ namespace Web.Server.Services
             _mapper = mapper;
             _mapPinsService = mapPinsService;
             _telemetryRepository = telemetryRepository;
+            _timeProvider = timeProvider;
+            _ruleEngine = ruleEngine;
         }
 
-        public async Task<IEnumerable<Telemetry>> GetTelemetriesAsync()
-        {
-            return await _telemetryRepository.GetAllAsync();
-        }
-
-        public async Task<Telemetry?> GetTelemetryByIdAsync(int id)
-        {
-            return await _telemetryRepository.GetByIdAsync(id);
-        }
-
-        public async Task<Telemetry> CreateTelemetryAsync(Telemetry telemetry)
+        public async Task<Telemetry> CreateMapPinAsync(Telemetry telemetry)
         {
             if (telemetry.AddressID <= 0)
             {
@@ -66,14 +64,44 @@ namespace Web.Server.Services
             // Notify clients about the updated beacon railroads.
             await _hubContext.Clients.All.SendAsync(NotificationMethods.BeaconUpdate, beaconRailroadDTOs);
 
+            // Set telemetry timestamps and default state
+            telemetry.CreatedAt = _timeProvider.UtcNow;
+            telemetry.Discarded = false;
+
+            // Evaluate rules to determine if telemetry should be discarded
+            var context = new TelemetryRuleContext
+            {
+                Telemetry = telemetry,
+                RailroadBeacons = beacon.BeaconRailroads,
+                RailroadId = beacon.BeaconRailroads.First().Subdivision.RailroadID
+            };
+
+            if (await _ruleEngine.ShouldDiscardAsync(context))
+            {
+                // Mark telemetry as discarded and save to database
+                telemetry.Discarded = true;
+                await _telemetryRepository.AddAsync(telemetry);
+
+                return telemetry;
+            }
+
             // Insert new telemetry for historical logging purposes.
             telemetry = await _telemetryRepository.AddAsync(telemetry);
 
-            // Upsert map pin via Map Pin service.
+            // Upsert map pin via Map Pin service (telemetry will be saved within)
             await _mapPinsService.UpsertMapPin(telemetry, beacon.BeaconRailroads);
 
-            // Notify clients about the new telemetry.
             return telemetry;
+        }
+
+        public async Task<IEnumerable<Telemetry>> GetTelemetriesAsync()
+        {
+            return await _telemetryRepository.GetAllAsync();
+        }
+
+        public async Task<Telemetry?> GetTelemetryByIdAsync(int id)
+        {
+            return await _telemetryRepository.GetByIdAsync(id);
         }
     }
 }

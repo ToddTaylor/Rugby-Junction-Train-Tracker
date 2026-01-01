@@ -11,6 +11,7 @@ using Web.Server.Mappers;
 using Web.Server.Providers;
 using Web.Server.Repositories;
 using Web.Server.Services;
+using Web.Server.Services.Rules;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -115,6 +116,11 @@ builder.Services.AddScoped<IRailroadService, RailroadService>();
 builder.Services.AddScoped<ISubdivisionService, SubdivisionService>();
 builder.Services.AddScoped<ITelemetryService, TelemetryService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+
+// Register telemetry rules
+builder.Services.AddScoped<ITelemetryRule, DpuAntiPingPongRule>();
+builder.Services.AddScoped<ITelemetryRule, EotHotAntiPingPongRule>();
+builder.Services.AddScoped<TelemetryRuleEngine>();
 
 builder.Services.AddScoped<ITimeProvider, SystemTimeProvider>();
 

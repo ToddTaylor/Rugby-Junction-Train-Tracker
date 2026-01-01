@@ -9,5 +9,8 @@ namespace Web.Server.Repositories
         Task<Telemetry?> GetByIdAsync(int id);
         Task<Telemetry> UpdateAsync(Telemetry telemetry);
         Task<bool> DeleteAsync(int id);
+        Task<Telemetry?> GetRecentWithinTimeOffsetAsync(int trainId, int beaconId, int railroadId, DateTime sinceUtc);
+        Task<List<Telemetry>> GetRecentsWithinTimeOffsetAsync(int addressId, int railroadId, DateTime sinceUtc);
+        Task<Telemetry?> GetRecentForOtherBeaconWithinTimeOffsetAsync(int trainId, int currentBeaconId, int railroadId, DateTime sinceUtc);
     }
 }

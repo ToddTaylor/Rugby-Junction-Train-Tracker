@@ -19,12 +19,12 @@ namespace Web.ServerTests.Services
     public class MapPinServiceTests
     {
         private readonly Mock<IBeaconRailroadService> _beaconRailroadServiceMock = new();
+        private readonly Mock<IMapPinHistoryService> _mapPinHistoryServiceMock = new();
         private readonly Mock<IHubClients> _hubClientsMock = new();
         private readonly Mock<IHubContext<NotificationHub>> _hubContextMock = new();
         private readonly Mock<IMapPinRepository> _mapPinRepositoryMock = new();
         private readonly Mock<ITimeProvider> _timeProviderMock = new();
         private readonly Mock<IClientProxy> _clientProxyMock = new();
-        private readonly Mock<IMapPinHistoryService> _mapPinHistoryServiceMock = new();
         private readonly Mock<IConfiguration> _configurationMock = new();
 
         private MapPinService _service;
@@ -49,13 +49,12 @@ namespace Web.ServerTests.Services
 
             _service = new MapPinService(
                 _beaconRailroadServiceMock.Object,
+                _mapPinHistoryServiceMock.Object,
+                _mapPinRepositoryMock.Object,
                 _hubContextMock.Object,
                 _mapper,
-                _mapPinRepositoryMock.Object,
                 _timeProviderMock.Object,
-                _mapPinHistoryServiceMock.Object,
-                _configurationMock.Object
-            );
+                _configurationMock.Object);
         }
 
         [TestMethod]

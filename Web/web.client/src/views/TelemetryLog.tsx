@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import '../App.css';
+import './TelemetryLog.css';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { Box, Typography, TextField, FormControl, InputLabel, Select, MenuItem, IconButton, Tooltip, Checkbox, ListItemText } from '@mui/material';
 import ClearIcon from '@mui/icons-material/Clear';
@@ -64,12 +65,20 @@ function TelemetryLog() {
 
     const columns: GridColDef[] = [
         { field: 'id', headerName: 'ID' },
-        { field: 'id', headerName: 'ID' },
         { field: 'beaconName', headerName: 'Beacon Name', width: 160 },
         { field: 'addressID', headerName: 'Address ID', width: 100 },
         { field: 'trainID', headerName: 'Train ID', width: 100 },
         { field: 'moving', headerName: 'Moving', width: 100, type: 'boolean' },
         { field: 'source', headerName: 'Source', width: 100 },
+        {
+            field: 'createdAt',
+            headerName: 'Created At',
+            width: 200,
+            renderCell: (params: any) =>
+                params.row?.createdAt
+                    ? format(parseISO(params.row.createdAt), 'yyyy-MM-dd h:mm:ss aa')
+                    : '',
+        },
         {
             field: 'lastUpdate',
             headerName: 'Last Update',
@@ -78,6 +87,17 @@ function TelemetryLog() {
                 params.row?.lastUpdate
                     ? format(parseISO(params.row.lastUpdate), 'yyyy-MM-dd h:mm:ss aa')
                     : '',
+        },
+        {
+            field: 'discarded',
+            headerName: 'Discarded',
+            width: 120,
+            type: 'boolean',
+            renderCell: (params: any) => (
+                <span>
+                    {params.row?.discarded ? 'Yes' : 'No'}
+                </span>
+            ),
         },
     ];
 
@@ -219,6 +239,7 @@ function TelemetryLog() {
                     maxHeight: 600,
                     minHeight: 400,
                 }}
+                getRowClassName={(params) => params.row.discarded ? 'discarded-row' : ''}
             />
         </Box>
     );
