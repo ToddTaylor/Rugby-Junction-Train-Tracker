@@ -1,9 +1,10 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import L from 'leaflet';
 import { Marker } from 'react-leaflet';
 import { Beacon } from '../types/Beacon';
 import { MapPin } from '../types/MapPin';
-import { TrackedPin, updateTrackedPinSymbol } from '../services/trackedPins';
+import { TrackedPin, updateTrackedPinSymbol, removeTrackedMapPin } from '../services/trackedPins';
+import TrackSymbolModal from './TrackSymbolModal';
 
 interface BeaconLabelPinProps {
     beaconPin: Beacon;
@@ -103,6 +104,9 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
     };
 
     const markerRef = useRef<L.Marker>(null);
+    const [modalOpen, setModalOpen] = useState(false);
+    const [selectedTrainId, setSelectedTrainId] = useState<string | null>(null);
+    const [selectedSymbol, setSelectedSymbol] = useState('');
 
     useEffect(() => {
         const marker = markerRef.current;
@@ -116,15 +120,9 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
                 const currentSymbol = trackIndicator.getAttribute('data-symbol');
                 if (trainId) {
                     e.stopPropagation();
-                    const newSymbol = prompt('Enter a new Symbol (optional, max 10 characters, all caps):', currentSymbol || '');
-                    if (newSymbol !== null) {
-                        const trimmedSymbol = newSymbol.trim();
-                        if (trimmedSymbol) {
-                            updateTrackedPinSymbol(trainId, trimmedSymbol.toUpperCase().substring(0, 10));
-                        } else {
-                            updateTrackedPinSymbol(trainId, '');
-                        }
-                    }
+                    setSelectedTrainId(trainId);
+                    setSelectedSymbol(currentSymbol || '');
+                    setModalOpen(true);
                 }
             }
         };
@@ -141,8 +139,25 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
         };
     }, [expiredTrackedTrains]);
     
+    const handleSaveSymbol = (newSymbol: string) => {
+        if (selectedTrainId) {
+            if (newSymbol) {
+                updateTrackedPinSymbol(selectedTrainId, newSymbol);
+            } else {
+                updateTrackedPinSymbol(selectedTrainId, '');
+            }
+        }
+    };
+
+    const handleUntrackTrain = () => {
+        if (selectedTrainId) {
+            removeTrackedMapPin(selectedTrainId);
+        }
+    };
+
     return (
-        <Marker
+        <>
+            <Marker
             ref={markerRef}
             key={`beacon-label-${beaconPin.beaconID ?? idx}`}
             position={[getLabelOffsetLat(beaconPin.latitude, zoom), beaconPin.longitude]}
@@ -215,6 +230,15 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
                 iconAnchor: [iconAnchorX, iconAnchorY],
             })}
         />
+        <TrackSymbolModal
+            open={modalOpen}
+            currentSymbol={selectedSymbol}
+            onSave={handleSaveSymbol}
+            onUntrack={handleUntrackTrain}
+            onClose={() => setModalOpen(false)}
+            theme={mapTheme}
+        />
+        </>
     );
 };
 

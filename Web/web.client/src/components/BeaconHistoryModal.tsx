@@ -10,7 +10,8 @@ import CloseIcon from '@mui/icons-material/Close';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { MapPinHistory } from '../types/MapPinHistory';
 import { format, parseISO } from 'date-fns';
-import { getTrackedMapPins, updateTrackedPinSymbol } from '../services/trackedPins';
+import { getTrackedMapPins, updateTrackedPinSymbol, removeTrackedMapPin, getTrackedPinSymbol } from '../services/trackedPins';
+import TrackSymbolModal from './TrackSymbolModal';
 
 interface BeaconHistoryModalProps {
     open: boolean;
@@ -26,6 +27,9 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, theme,
     const [loading, setLoading] = useState(false);
     const [history, setHistory] = useState<MapPinHistory[]>([]);
     const [error, setError] = useState<string | null>(null);
+    const [modalOpen, setModalOpen] = useState(false);
+    const [modalSymbol, setModalSymbol] = useState('');
+    const [selectedMapPinId, setSelectedMapPinId] = useState<string | null>(null);
 
     useEffect(() => {
         if (open && beaconID) {
@@ -137,17 +141,10 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, theme,
                 const handleSymbolClick = (e: React.MouseEvent) => {
                     e.stopPropagation();
                     if (matchedMapPinId) {
-                        const newSymbol = prompt('Enter a new Symbol (optional, max 10 characters, all caps):', symbol || '');
-                        if (newSymbol !== null) {
-                            const trimmedSymbol = newSymbol.trim();
-                            if (trimmedSymbol) {
-                                updateTrackedPinSymbol(matchedMapPinId, trimmedSymbol.toUpperCase().substring(0, 10));
-                            } else {
-                                updateTrackedPinSymbol(matchedMapPinId, '');
-                            }
-                            // Force refresh by triggering a re-fetch
-                            window.dispatchEvent(new Event('storage'));
-                        }
+                        const currentSymbol = getTrackedPinSymbol(matchedMapPinId) || '';
+                        setSelectedMapPinId(matchedMapPinId);
+                        setModalSymbol(currentSymbol);
+                        setModalOpen(true);
                     }
                 };
                 
@@ -218,18 +215,35 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, theme,
     ];
 
     const isDark = theme === 'dark';
+
+    const handleModalSave = (newSymbol: string) => {
+        if (selectedMapPinId) {
+            updateTrackedPinSymbol(selectedMapPinId, newSymbol);
+            // Force refresh by triggering a re-fetch
+            window.dispatchEvent(new Event('storage'));
+        }
+    };
+
+    const handleModalUntrack = () => {
+        if (selectedMapPinId) {
+            removeTrackedMapPin(selectedMapPinId);
+            // Force refresh by triggering a re-fetch
+            window.dispatchEvent(new Event('storage'));
+        }
+    };
     
     if (!open) return null;
     
     return (
-        <Paper
-            elevation={8}
-            sx={{
-                position: 'fixed',
-                bottom: 0,
-                left: 0,
-                right: { xs: 0, md: 'auto' },
-                width: { xs: '100%', md: '450px' },
+        <>
+            <Paper
+                elevation={8}
+                sx={{
+                    position: 'fixed',
+                    bottom: 0,
+                    left: 0,
+                    right: { xs: 0, md: 'auto' },
+                    width: { xs: '100%', md: '450px' },
                 maxHeight: '40vh',
                 zIndex: 1000,
                 backgroundColor: isDark ? '#2a2a2a' : '#ffffff',
@@ -409,6 +423,22 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, theme,
                     </Box>
                 )}
             </Box>
-        </Paper>
+            </Paper>
+            <TrackSymbolModal
+                open={modalOpen}
+                currentSymbol={modalSymbol}
+                onSave={(symbol) => {
+                    handleModalSave(symbol);
+                    setModalOpen(false);
+                }}
+                onUntrack={() => {
+                    handleModalUntrack();
+                    setModalOpen(false);
+                }}
+                onClose={() => setModalOpen(false)}
+                theme={theme}
+                showUntrackButton={true}
+            />
+        </>
     );
 }

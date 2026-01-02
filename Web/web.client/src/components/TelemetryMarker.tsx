@@ -3,10 +3,11 @@ import L from 'leaflet';
 import { useEffect, useRef, useState } from 'react';
 import { parseISO } from 'date-fns/parseISO';
 import { format } from 'date-fns';
-import { getTrackedMapPins, addTrackedMapPin, removeTrackedMapPin, getTrackedColor } from '../services/trackedPins';
+import { getTrackedMapPins, addTrackedMapPin, removeTrackedMapPin, getTrackedColor, getTrackedPinSymbol, updateTrackedPinSymbol } from '../services/trackedPins';
 import ReactDOMServer from 'react-dom/server';
 import { ArrowIcon } from './ArrowIcon'; // adjust import as needed
-import { UnknownIcon } from './UnknownIcon'; 
+import { UnknownIcon } from './UnknownIcon';
+import TrackSymbolModal from './TrackSymbolModal';
 import { MapPin } from '../types/MapPin';
 
 function getPinBrightness(lastUpdate: string, maxPinAgeMinutes?: number): number {
@@ -63,6 +64,27 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
     const [trackColor, setTrackColor] = useState<string | undefined>(() =>
         getTrackedColor(String(pin.id))
     );
+    const [modalOpen, setModalOpen] = useState(false);
+    const [modalSymbol, setModalSymbol] = useState('');
+    const [isEditingTrack, setIsEditingTrack] = useState(false);
+
+    const handleModalSave = (symbol: string) => {
+        if (isEditingTrack) {
+            // Update existing tracked pin's symbol
+            updateTrackedPinSymbol(String(pin.id), symbol);
+        } else {
+            // Add new tracked pin
+            addTrackedMapPin(String(pin.id), pin.beaconID, pin.beaconName, symbol || undefined);
+            setIsTracked(true);
+            setTrackColor(getTrackedColor(String(pin.id)));
+        }
+    };
+
+    const handleModalUntrack = () => {
+        removeTrackedMapPin(String(pin.id));
+        setIsTracked(false);
+        setTrackColor(undefined);
+    };
 
     useEffect(() => {
         const checkTracked = () => {
@@ -142,20 +164,16 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
             e.stopPropagation();
             shouldReopenPopupRef.current = true;
             if (isTracked) {
-                removeTrackedMapPin(String(pin.id));
-                setIsTracked(false);
-                setTrackColor(undefined);
+                // Open modal to edit or untrack existing track
+                const currentSymbol = getTrackedPinSymbol(String(pin.id)) || '';
+                setModalSymbol(currentSymbol);
+                setIsEditingTrack(true);
+                setModalOpen(true);
             } else {
-                // Prompt for symbol when starting to track
-                const symbolInput = prompt('Enter a Symbol for this train (optional, max 10 characters, all caps):');
-                let symbol: string | undefined = undefined;
-                if (symbolInput && symbolInput.trim()) {
-                    // Validate: max 10 chars, convert to uppercase
-                    symbol = symbolInput.trim().toUpperCase().substring(0, 10);
-                }
-                addTrackedMapPin(String(pin.id), pin.beaconID, pin.beaconName, symbol);
-                setIsTracked(true);
-                setTrackColor(getTrackedColor(String(pin.id)));
+                // Open modal to add symbol when starting to track
+                setModalSymbol('');
+                setIsEditingTrack(false);
+                setModalOpen(true);
             }
         };
         const attachHandler = () => {
@@ -258,13 +276,30 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
     };
 
     return (
-        <Marker
-            key={pin.id}
-            ref={markerRef}
-            position={[pin.latitude, pin.longitude]}
-            icon={createCustomIcon()}
-            pane="telemetryPane"
-        />
+        <>
+            <Marker
+                key={pin.id}
+                ref={markerRef}
+                position={[pin.latitude, pin.longitude]}
+                icon={createCustomIcon()}
+                pane="telemetryPane"
+            />
+            <TrackSymbolModal
+                open={modalOpen}
+                currentSymbol={modalSymbol}
+                onSave={(symbol) => {
+                    handleModalSave(symbol);
+                    setModalOpen(false);
+                }}
+                onUntrack={() => {
+                    handleModalUntrack();
+                    setModalOpen(false);
+                }}
+                onClose={() => setModalOpen(false)}
+                theme={mapTheme}
+                showUntrackButton={isEditingTrack}
+            />
+        </>
     );
 };
 
