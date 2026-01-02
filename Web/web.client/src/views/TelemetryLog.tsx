@@ -10,6 +10,7 @@ import { format, parseISO } from "date-fns";
 function TelemetryLog() {
     const [telemetries, setTelemetries] = useState<Telemetry[]>([]);
     const [addressIdFilter, setAddressIdFilter] = useState<string>('');
+    const [trainIdFilter, setTrainIdFilter] = useState<string>('');
     const [beaconNameFilter, setBeaconNameFilter] = useState<string[]>([]);
     const [sourceFilter, setSourceFilter] = useState<string[]>([]);
 
@@ -45,12 +46,17 @@ function TelemetryLog() {
     // Get unique beacon names for dropdown
     const beaconNames = Array.from(new Set(sortedData.map(row => row.beaconName).filter(Boolean))).sort();
 
-    // Filter rows by addressID, beaconName, and source (multi-select)
+    // Filter rows by addressID, trainID, beaconName, and source (multi-select)
     const filteredData = sortedData.filter(row => {
         // Address ID filter
         if (addressIdFilter.trim()) {
             const addrTokens = addressIdFilter.split(',').map(v => v.trim()).filter(Boolean);
             if (!addrTokens.includes(String(row.addressID))) return false;
+        }
+        // Train ID filter
+        if (trainIdFilter.trim()) {
+            const trainTokens = trainIdFilter.split(',').map(v => v.trim()).filter(Boolean);
+            if (!trainTokens.includes(String(row.trainID))) return false;
         }
         // Beacon Name filter (multi-select)
         if (beaconNameFilter.length > 0) {
@@ -208,12 +214,34 @@ function TelemetryLog() {
                         '& label.Mui-focused': { color: '#1976d2', backgroundColor: '#fff' },
                     }}
                 />
+                <TextField
+                    label="Filter by Train ID"
+                    variant="outlined"
+                    size="small"
+                    value={trainIdFilter}
+                    onChange={e => setTrainIdFilter(e.target.value)}
+                    sx={{
+                        backgroundColor: '#fff',
+                        borderRadius: 1,
+                        boxShadow: 1,
+                        '& .MuiOutlinedInput-root': {
+                            color: '#222',
+                            backgroundColor: '#fff',
+                            '& fieldset': { borderColor: '#1976d2' },
+                            '&:hover fieldset': { borderColor: '#1565c0' },
+                            '&.Mui-focused fieldset': { borderColor: '#1976d2' },
+                        },
+                        '& label': { color: '#222', backgroundColor: '#fff', padding: '0 4px' },
+                        '& label.Mui-focused': { color: '#1976d2', backgroundColor: '#fff' },
+                    }}
+                />
                 <Tooltip title="Clear filters">
                     <IconButton
                         aria-label="clear filters"
                         onClick={() => {
                             setBeaconNameFilter([]);
                             setAddressIdFilter('');
+                            setTrainIdFilter('');
                             setSourceFilter([]);
                         }}
                         sx={{ ml: 1, color: '#fff', backgroundColor: '#222', '&:hover': { backgroundColor: '#444' } }}
