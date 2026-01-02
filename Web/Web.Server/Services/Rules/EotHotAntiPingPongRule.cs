@@ -9,7 +9,7 @@ namespace Web.Server.Services.Rules
     /// </summary>
     public class EotHotAntiPingPongRule : ITelemetryRule
     {
-        private const int TIME_WINDOW_MINUTES = 60;
+        public const int TIME_WINDOW_MINUTES = 15;
 
         private readonly ITelemetryRepository _telemetryRepository;
 
@@ -20,7 +20,6 @@ namespace Web.Server.Services.Rules
 
         public async Task<bool> ShouldDiscardAsync(TelemetryRuleContext context)
         {
-            // Only applies to EOT or HOT telemetry.
             if (context.Telemetry.Source != SourceEnum.EOT && context.Telemetry.Source != SourceEnum.HOT)
             {
                 return false;
@@ -28,7 +27,7 @@ namespace Web.Server.Services.Rules
 
             var minutesAgo = context.Telemetry.CreatedAt.AddMinutes(-TIME_WINDOW_MINUTES);
 
-            // Check if address ID exists at another beacon within alloted time.
+            // Check to see if there is any recent telemetry for this address within the time window.
             var recentTelemetry = await _telemetryRepository
                 .GetRecentsWithinTimeOffsetAsync(context.Telemetry.AddressID, context.RailroadId, minutesAgo);
 
@@ -39,14 +38,21 @@ namespace Web.Server.Services.Rules
                 return false;
             }
 
-            var newestLoggedTelemetry = recentTelemetry.First();
-            var oldestLoggedTelemetry = recentTelemetry.Last();
+            var firstNewestLoggedTelemetry = recentTelemetry[0];
 
-            var trainSwitchingBeacons = newestLoggedTelemetry.BeaconID != oldestLoggedTelemetry.BeaconID;
-            var mostRecentBeaconNotNewBeacon = newestLoggedTelemetry.BeaconID != context.Telemetry.BeaconID;
+            var trainNotSwitchingBeacons = context.Telemetry.BeaconID == firstNewestLoggedTelemetry.BeaconID;
+
+            if (trainNotSwitchingBeacons)
+            {
+                return false;
+            }
+
+            var secondNewestLoggedTelemetry = recentTelemetry[1];
+
+            var trainPingPongingBackToBeacon = context.Telemetry.BeaconID == secondNewestLoggedTelemetry.BeaconID;
 
             // Discard if the train is switching beacons and trying to return to a previous beacon.
-            return trainSwitchingBeacons && mostRecentBeaconNotNewBeacon;
+            return trainPingPongingBackToBeacon;
         }
     }
 }

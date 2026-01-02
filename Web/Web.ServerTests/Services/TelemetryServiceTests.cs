@@ -33,7 +33,12 @@ namespace Web.ServerTests.Services
             _beaconRailroadServiceMock = new Mock<IBeaconRailroadService>();
             _hubContextMock = new Mock<IHubContext<NotificationHub>>();
             _mapperMock = new Mock<IMapper>();
+            _mapPinServiceMock = new Mock<IMapPinService>();
             _timeProviderMock = new Mock<ITimeProvider>();
+            _ruleEngine = new TelemetryRuleEngine(new List<ITelemetryRule>
+            {
+                new EotHotAntiPingPongRule(_telemetryRepositoryMock.Object)
+            });
 
             // Setup SignalR Clients.All.SendAsync
             var clientsMock = new Mock<IHubClients>();
@@ -119,11 +124,17 @@ namespace Web.ServerTests.Services
         public async Task CreateTelemetryAsync_Successful()
         {
             // Arrange
+            var currentTime = DateTime.UtcNow;
+
             var beaconRailroad = new BeaconRailroad
             {
                 BeaconID = 1,
                 Direction = Direction.NorthSouth,
                 SubdivisionID = 1,
+                Subdivision = new Subdivision
+                {
+                    RailroadID = 1
+                },
                 Latitude = 0,
                 Longitude = 0,
                 Milepost = 0,
@@ -150,6 +161,16 @@ namespace Web.ServerTests.Services
 
             _beaconServiceMock.Setup(s => s.GetBeaconByIdAsync(1)).ReturnsAsync(beacon);
             _telemetryRepositoryMock.Setup(r => r.AddAsync(telemetry)).ReturnsAsync(addedTelemetry);
+
+            var recentTelemetry = new List<Telemetry>
+            {
+                new Telemetry { BeaconID = 2, AddressID = 1, Source = SourceEnum.EOT, CreatedAt = currentTime.AddMinutes(-1) },
+                new Telemetry { BeaconID = 3, AddressID = 1, Source = SourceEnum.EOT, CreatedAt = currentTime.AddMinutes(-360) }
+            };
+
+            _telemetryRepositoryMock.Setup(s => s.GetRecentsWithinTimeOffsetAsync(1, 1, It.IsAny<DateTime>()))
+                .ReturnsAsync(recentTelemetry);
+
             _mapPinServiceMock.Setup(m => m.UpsertMapPin(It.IsAny<Telemetry>(), It.IsAny<ICollection<BeaconRailroad>>()))
                 .Returns(Task.CompletedTask);
             _beaconRailroadServiceMock.Setup(b => b.UpdateAsync(It.IsAny<ICollection<BeaconRailroad>>()))
