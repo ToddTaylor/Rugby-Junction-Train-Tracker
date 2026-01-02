@@ -95,6 +95,7 @@ namespace Web.Server.Repositories
                 .OrderByDescending(t => t.CreatedAt)
                 .FirstOrDefaultAsync();
         }
+
         public async Task<List<Telemetry>> GetRecentsWithinTimeOffsetAsync(int addressId, int railroadId, DateTime sinceUtc)
         {
             return await _context.Telemetries
