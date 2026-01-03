@@ -28,6 +28,16 @@ namespace Web.Server.Entities
         [NotMapped]
         public ICollection<BeaconRailroad> BeaconRailroads { get; set; } = [];
 
+        /// <summary>
+        /// Trackage rights this subdivision grants to other subdivisions.
+        /// </summary>
+        public ICollection<SubdivisionTrackageRight> GrantedTrackageRights { get; set; } = [];
+
+        /// <summary>
+        /// Trackage rights this subdivision has on other subdivisions.
+        /// </summary>
+        public ICollection<SubdivisionTrackageRight> HasTrackageRights { get; set; } = [];
+
         public override bool Equals(object? obj)
         {
             return Equals(obj as Subdivision);

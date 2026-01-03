@@ -3,6 +3,7 @@ import { Subdivision, CreateSubdivision, UpdateSubdivision } from '../types/Subd
 import { Railroad } from '../types/Railroad';
 import { getSubdivisions, createSubdivision, updateSubdivision, deleteSubdivision } from '../api/subdivisions';
 import { getRailroads } from '../api/railroads';
+import { getTrackageRights, replaceTrackageRights } from '../api/subdivisionTrackageRights';
 import './AdminSubdivisions.css';
 
 type SortField = 'name' | 'railroad';
@@ -27,6 +28,8 @@ export const AdminSubdivisions: React.FC = () => {
     localTrainAddressIDs: '',
   });
   const [formErrors, setFormErrors] = useState<string[]>([]);
+  const [selectedTrackageRailroad, setSelectedTrackageRailroad] = useState<number>(0);
+  const [selectedTrackageSubdivisions, setSelectedTrackageSubdivisions] = useState<number[]>([]);
 
   const itemsPerPage = 10;
 
@@ -111,10 +114,12 @@ export const AdminSubdivisions: React.FC = () => {
       localTrainAddressIDs: '',
     });
     setFormErrors([]);
+    setSelectedTrackageRailroad(0);
+    setSelectedTrackageSubdivisions([]);
     setShowModal(true);
   };
 
-  const handleEdit = (subdivision: Subdivision) => {
+  const handleEdit = async (subdivision: Subdivision) => {
     setModalMode('edit');
     setSelectedSubdivision(subdivision);
     setFormData({
@@ -124,6 +129,25 @@ export const AdminSubdivisions: React.FC = () => {
       localTrainAddressIDs: subdivision.localTrainAddressIDs || '',
     });
     setFormErrors([]);
+    
+    // Load trackage rights for this subdivision
+    const result = await getTrackageRights(subdivision.id);
+    if (result.errors.length === 0 && result.data) {
+      setSelectedTrackageSubdivisions(result.data.map(tr => tr.toSubdivisionID));
+      // Set initial railroad if trackage rights exist
+      if (result.data.length > 0) {
+        const firstRailroad = railroads.find(r => r.name === result.data[0].toRailroadName);
+        if (firstRailroad) {
+          setSelectedTrackageRailroad(firstRailroad.id);
+        }
+      } else {
+        setSelectedTrackageRailroad(0);
+      }
+    } else {
+      setSelectedTrackageRailroad(0);
+      setSelectedTrackageSubdivisions([]);
+    }
+    
     setShowModal(true);
   };
 
@@ -177,6 +201,10 @@ export const AdminSubdivisions: React.FC = () => {
       if (result.errors.length > 0) {
         setFormErrors(result.errors);
       } else {
+        // If subdivision created successfully and trackage rights selected, save them
+        if (result.data && selectedTrackageSubdivisions.length > 0) {
+          await replaceTrackageRights(result.data.id, selectedTrackageSubdivisions);
+        }
         setShowModal(false);
         await loadData();
       }
@@ -189,10 +217,22 @@ export const AdminSubdivisions: React.FC = () => {
       if (result.errors.length > 0) {
         setFormErrors(result.errors);
       } else {
+        // Save trackage rights
+        await replaceTrackageRights(selectedSubdivision.id, selectedTrackageSubdivisions);
         setShowModal(false);
         await loadData();
       }
     }
+  };
+
+  const handleToggleTrackageSubdivision = (subdivisionID: number) => {
+    setSelectedTrackageSubdivisions((prev) => {
+      if (prev.includes(subdivisionID)) {
+        return prev.filter(id => id !== subdivisionID);
+      } else {
+        return [...prev, subdivisionID];
+      }
+    });
   };
 
   const getSortIcon = (field: SortField) => {
@@ -327,6 +367,50 @@ export const AdminSubdivisions: React.FC = () => {
                   ))}
                 </select>
               </div>
+              
+              <div className="form-group">
+                <label htmlFor="trackageRailroad">Trackage Rights on Railroad:</label>
+                <select
+                  id="trackageRailroad"
+                  value={selectedTrackageRailroad}
+                  onChange={(e) => {
+                    setSelectedTrackageRailroad(parseInt(e.target.value) || 0);
+                  }}
+                >
+                  <option value={0}>-- None / Select a railroad --</option>
+                  {railroads
+                    .filter(r => r.id !== formData.railroadID)
+                    .map(railroad => (
+                      <option key={railroad.id} value={railroad.id}>
+                        {railroad.name}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              {selectedTrackageRailroad > 0 && (
+                <div className="form-group">
+                  <label>Select Subdivisions to Grant Trackage Rights:</label>
+                  <div className="checkbox-list">
+                    {subdivisions
+                      .filter(s => s.railroadID === selectedTrackageRailroad)
+                      .map(subdivision => (
+                        <div key={subdivision.id} className="checkbox-item">
+                          <input
+                            type="checkbox"
+                            id={`trackage-${subdivision.id}`}
+                            checked={selectedTrackageSubdivisions.includes(subdivision.id)}
+                            onChange={() => handleToggleTrackageSubdivision(subdivision.id)}
+                          />
+                          <label htmlFor={`trackage-${subdivision.id}`}>
+                            {subdivision.name}
+                          </label>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+              
               <div className="form-group checkbox-group">
                 <label htmlFor="dpuCapable">
                   <input

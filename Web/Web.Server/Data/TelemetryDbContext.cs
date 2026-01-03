@@ -25,6 +25,7 @@ namespace Web.Server.Data
         public DbSet<Railroad> Railroads { get; set; }
         public DbSet<Telemetry> Telemetries { get; set; }
         public DbSet<UserTrackedPin> UserTrackedPins { get; set; }
+        public DbSet<SubdivisionTrackageRight> SubdivisionTrackageRights { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -108,6 +109,19 @@ namespace Web.Server.Data
                 .HasOne(utp => utp.MapPin)
                 .WithMany()
                 .HasForeignKey(utp => utp.MapPinId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Trackage Rights relationships
+            modelBuilder.Entity<SubdivisionTrackageRight>()
+                .HasOne(str => str.FromSubdivision)
+                .WithMany(s => s.HasTrackageRights)
+                .HasForeignKey(str => str.FromSubdivisionID)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<SubdivisionTrackageRight>()
+                .HasOne(str => str.ToSubdivision)
+                .WithMany(s => s.GrantedTrackageRights)
+                .HasForeignKey(str => str.ToSubdivisionID)
                 .OnDelete(DeleteBehavior.Cascade);
         }
     }
