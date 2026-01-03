@@ -15,7 +15,8 @@ public class AuthTokenMiddleware
     {
         // Check for auth token in Authorization header or X-Auth-Token header
         var token = context.Request.Headers["Authorization"].FirstOrDefault()?.Replace("Bearer ", "")
-                    ?? context.Request.Headers["X-Auth-Token"].FirstOrDefault();
+                ?? context.Request.Headers["X-Auth-Token"].FirstOrDefault()
+                ?? context.Request.Query["access_token"].FirstOrDefault();
 
         if (!string.IsNullOrWhiteSpace(token))
         {

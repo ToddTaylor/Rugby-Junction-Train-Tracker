@@ -4,7 +4,7 @@ import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { Box, Typography, FormControl, InputLabel, Select, MenuItem, Checkbox, ListItemText } from '@mui/material';
 import { MapPin } from '../types/MapPin';
 import { format, parseISO } from "date-fns";
-import { getTrackedMapPins, TrackedPin, updateTrackedPinSymbol } from '../services/trackedPins';
+import { getTrackedMapPins, TrackedPin, updateTrackedPinSymbol, refreshTrackedPinsFromApi } from '../services/trackedPins';
 
 function MapPinsLog() {
     const [mapPins, setMapPins] = useState<MapPin[]>([]);
@@ -35,10 +35,20 @@ function MapPinsLog() {
 
     // Track changes to tracked pins
     useEffect(() => {
+        let disposed = false;
+
         const updateTrackedPins = () => {
             setTrackedPins(getTrackedMapPins());
         };
-        
+
+        // On mount, pull latest from API to hydrate local cache
+        refreshTrackedPinsFromApi().then(pins => {
+            if (!disposed) {
+                setTrackedPins(pins);
+            }
+        }).catch(() => updateTrackedPins());
+
+        // Also set immediate local state
         updateTrackedPins();
         
         // Listen for storage events (changes in other tabs/windows)
@@ -48,6 +58,7 @@ function MapPinsLog() {
         const interval = setInterval(updateTrackedPins, 100);
         
         return () => {
+            disposed = true;
             window.removeEventListener('storage', updateTrackedPins);
             clearInterval(interval);
         };

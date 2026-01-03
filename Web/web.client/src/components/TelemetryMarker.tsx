@@ -3,7 +3,8 @@ import L from 'leaflet';
 import { useEffect, useRef, useState } from 'react';
 import { parseISO } from 'date-fns/parseISO';
 import { format } from 'date-fns';
-import { getTrackedMapPins, addTrackedMapPin, removeTrackedMapPin, getTrackedColor, getTrackedPinSymbol, updateTrackedPinSymbol } from '../services/trackedPins';
+import { addTrackedMapPin, removeTrackedMapPin, getTrackedColor, getTrackedPinSymbol, updateTrackedPinSymbol } from '../services/trackedPins';
+import type { TrackedPin } from '../services/trackedPins';
 import ReactDOMServer from 'react-dom/server';
 import { ArrowIcon } from './ArrowIcon'; // adjust import as needed
 import { UnknownIcon } from './UnknownIcon';
@@ -29,6 +30,7 @@ interface TelemetryMarkerProps {
     pin: MapPin;
     size: number;
     maxPinAgeMinutes?: number;
+    trackedPins: TrackedPin[];
 }
 
 const formatDirection = (dir?: string | null): string => {
@@ -52,17 +54,17 @@ const formatDirection = (dir?: string | null): string => {
     return map[dir.toUpperCase()] || 'Unknown Direction';
 };
 
-const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'light' }> = ({ pin, size, maxPinAgeMinutes, mapTheme }) => {
+const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'light' }> = ({ pin, size, maxPinAgeMinutes, mapTheme, trackedPins }) => {
     const markerRef = useRef<L.Marker>(null);
     const shouldReopenPopupRef = useRef(false);
     const [brightness, setBrightness] = useState(() =>
         getPinBrightness(pin.lastUpdate, maxPinAgeMinutes)
     );
     const [isTracked, setIsTracked] = useState(() =>
-        !!getTrackedMapPins().find(tp => String(tp.id) === String(pin.id))
+        !!trackedPins.find(tp => String(tp.id) === String(pin.id))
     );
     const [trackColor, setTrackColor] = useState<string | undefined>(() =>
-        getTrackedColor(String(pin.id))
+        trackedPins.find(tp => String(tp.id) === String(pin.id))?.color
     );
     const [modalOpen, setModalOpen] = useState(false);
     const [modalSymbol, setModalSymbol] = useState('');
@@ -87,19 +89,10 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
     };
 
     useEffect(() => {
-        const checkTracked = () => {
-            const tracked = getTrackedMapPins().find(tp => String(tp.id) === String(pin.id));
-            setIsTracked(!!tracked);
-            setTrackColor(tracked?.color);
-        };
-        window.addEventListener('storage', checkTracked);
-        const interval = setInterval(checkTracked, 60 * 1000);
-        checkTracked();
-        return () => {
-            window.removeEventListener('storage', checkTracked);
-            clearInterval(interval);
-        };
-    }, [pin.id]);
+        const tracked = trackedPins.find(tp => String(tp.id) === String(pin.id));
+        setIsTracked(!!tracked);
+        setTrackColor(tracked?.color);
+    }, [trackedPins, pin.id]);
 
     useEffect(() => {
         const update = () => {

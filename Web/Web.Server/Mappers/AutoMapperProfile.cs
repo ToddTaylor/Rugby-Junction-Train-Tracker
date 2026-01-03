@@ -110,6 +110,9 @@ namespace Web.Server.Mappers
                 .ForPath(dest => dest.BeaconName, opt => opt.MapFrom(src => src.Beacon.Name));
 
             CreateMap<Telemetry, MapPin>();
+
+            CreateMap<UserTrackedPin, UserTrackedPinDTO>();
+            CreateMap<UserTrackedPinDTO, UserTrackedPin>();
         }
     }
 }

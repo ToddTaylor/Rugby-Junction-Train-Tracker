@@ -1,5 +1,6 @@
 import { MapPin } from '../types/MapPin';
 import TelemetryMarker from './TelemetryMarker';
+import type { TrackedPin } from '../services/trackedPins';
 
 // Add dynamic marker sizing based on zoom
 function getMarkerSize(zoom: number): number {
@@ -11,12 +12,14 @@ interface TelemetryMarkersProps {
     pins: { [id: string]: MapPin };
     zoom: number;
     maxPinAgeMinutes: number;
+    trackedPins: TrackedPin[];
 }
 
 const TelemetryMarkers: React.FC<TelemetryMarkersProps & { mapTheme: 'dark' | 'light' }> = ({
     pins: telemetryPins,
     zoom,
     maxPinAgeMinutes,
+    trackedPins,
     mapTheme,
 }) => {
     const size = getMarkerSize(zoom);
@@ -35,6 +38,7 @@ const TelemetryMarkers: React.FC<TelemetryMarkersProps & { mapTheme: 'dark' | 'l
                         pin={telemetryPin}
                         size={size}
                         maxPinAgeMinutes={maxPinAgeMinutes}
+                        trackedPins={trackedPins}
                         mapTheme={mapTheme}
                     />
                 ) : null

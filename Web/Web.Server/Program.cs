@@ -105,6 +105,7 @@ builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IRailroadRepository, RailroadRepository>();
 builder.Services.AddScoped<ISubdivisionRepository, SubdivisionRepository>();
 builder.Services.AddScoped<ITelemetryRepository, TelemetryRepository>();
+builder.Services.AddScoped<IUserTrackedPinRepository, UserTrackedPinRepository>();
 
 // Custom services
 builder.Services.AddScoped<IBeaconService, BeaconService>();
@@ -116,6 +117,7 @@ builder.Services.AddScoped<IRailroadService, RailroadService>();
 builder.Services.AddScoped<ISubdivisionService, SubdivisionService>();
 builder.Services.AddScoped<ITelemetryService, TelemetryService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IUserTrackedPinService, UserTrackedPinService>();
 
 // Register telemetry rules
 builder.Services.AddScoped<ITelemetryRule, DpuAntiPingPongRule>();

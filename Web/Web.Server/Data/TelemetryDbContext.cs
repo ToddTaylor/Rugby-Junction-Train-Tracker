@@ -24,6 +24,7 @@ namespace Web.Server.Data
         public DbSet<Subdivision> Subdivisions { get; set; }
         public DbSet<Railroad> Railroads { get; set; }
         public DbSet<Telemetry> Telemetries { get; set; }
+        public DbSet<UserTrackedPin> UserTrackedPins { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -96,6 +97,18 @@ namespace Web.Server.Data
                 .HasOne(ur => ur.Role)
                 .WithMany(r => r.UserRoles)
                 .HasForeignKey(ur => ur.RoleId);
+
+            modelBuilder.Entity<UserTrackedPin>()
+                .HasOne(utp => utp.User)
+                .WithMany()
+                .HasForeignKey(utp => utp.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<UserTrackedPin>()
+                .HasOne(utp => utp.MapPin)
+                .WithMany()
+                .HasForeignKey(utp => utp.MapPinId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

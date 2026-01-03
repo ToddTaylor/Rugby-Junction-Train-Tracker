@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
 // import { Popup } from 'react-leaflet';
 import { Beacon } from '../types/Beacon';
-import { MapPin } from '../types/MapPin';
 import { TrackedPin } from '../services/trackedPins';
 import BeaconMarker from './BeaconMarker';
 import BeaconLabelPin from './BeaconLabelPin';
@@ -13,7 +12,6 @@ interface BeaconMarkersProps {
     beaconLastUpdateMap?: { [beaconID: string]: { lastUpdate: string, direction: string | null } };
     onBeaconClick?: (beaconID: string, beaconName: string) => void;
     trackedPins?: TrackedPin[];
-    mapPins?: MapPin[];
 }
 
 const BeaconMarkers: React.FC<BeaconMarkersProps> = ({ 
@@ -22,8 +20,7 @@ const BeaconMarkers: React.FC<BeaconMarkersProps> = ({
     mapTheme, 
     beaconLastUpdateMap, 
     onBeaconClick,
-    trackedPins = [],
-    mapPins = []
+    trackedPins = []
 }) => {
     // Vertical offset for label marker (in degrees latitude, approx 7px)
     const getLabelOffsetLat = (lat: number, zoom: number) => {
@@ -84,7 +81,6 @@ const BeaconMarkers: React.FC<BeaconMarkersProps> = ({
                                 direction={direction}
                                 onClick={onBeaconClick}
                                 trackedPins={trackedPins}
-                                mapPins={mapPins}
                             />
                         )}
                     </React.Fragment>

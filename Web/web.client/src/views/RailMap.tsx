@@ -13,7 +13,7 @@ import { MapPin } from '../types/MapPin';
 import BeaconMarkers from '../components/BeaconMarkers';
 import TelemetryMarkers from '../components/TelemetryMarkers';
 import { BeaconHistoryModal } from '../components/BeaconHistoryModal';
-import { getTrackedMapPins, updateTrackedPinLocation } from '../services/trackedPins';
+import { getTrackedMapPins, updateTrackedPinLocation, refreshTrackedPinsFromApi, applyTrackedPinAddedOrUpdatedFromServer, applyTrackedPinRemovedFromServer } from '../services/trackedPins';
 import { metersToLongitudeDegrees, pixelsToMeters } from '../utils/geo';
 import { updateMapPins, updateBeacon } from '../utils/updateHelpers';
 import { useRailways } from '../hooks/useRailways';
@@ -51,11 +51,18 @@ const RailMap: React.FC = () => {
     // Track the current tracked pins in state to trigger re-renders when they change
     const [trackedPinsState, setTrackedPinsState] = useState(() => getTrackedMapPins());
 
+    // On mount, pull latest tracked pins from API (syncs cache + state)
+    useEffect(() => {
+        refreshTrackedPinsFromApi().then(setTrackedPinsState).catch(() => {
+            // fallback silently to cached state
+        });
+    }, []);
+
     // Periodically refresh tracked pins state (to handle expiration and updates)
     useEffect(() => {
         const interval = setInterval(() => {
             setTrackedPinsState(getTrackedMapPins());
-        }, 5000); // Refresh every 5 seconds
+        }, 5000); // Refresh cache view every 5 seconds
         return () => clearInterval(interval);
     }, []);
 
@@ -103,6 +110,18 @@ const RailMap: React.FC = () => {
                 });
                 return updated;
             });
+        },
+        TrackedPinAdded: (payload: any) => {
+            const updated = applyTrackedPinAddedOrUpdatedFromServer(payload);
+            setTrackedPinsState(updated);
+        },
+        TrackedPinUpdated: (payload: any) => {
+            const updated = applyTrackedPinAddedOrUpdatedFromServer(payload);
+            setTrackedPinsState(updated);
+        },
+        TrackedPinRemoved: (mapPinId: number) => {
+            const updated = applyTrackedPinRemovedFromServer(mapPinId);
+            setTrackedPinsState(updated);
         }
     });
 
@@ -545,7 +564,6 @@ const RailMap: React.FC = () => {
                         setHistoryModalOpen(true);
                     }}
                     trackedPins={trackedPinsState}
-                    mapPins={filteredPins}
                 />}
 
                 {/* Telemetry markers */}
@@ -553,6 +571,7 @@ const RailMap: React.FC = () => {
                     pins={telemetryPins}
                     zoom={mapZoom}
                     maxPinAgeMinutes={MAX_PIN_AGE_MINUTES}
+                    trackedPins={trackedPinsState}
                     mapTheme={mapTheme as 'dark' | 'light'}
                 />}
 

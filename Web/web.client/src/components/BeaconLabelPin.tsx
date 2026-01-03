@@ -2,7 +2,6 @@ import React, { useRef, useEffect, useState } from 'react';
 import L from 'leaflet';
 import { Marker } from 'react-leaflet';
 import { Beacon } from '../types/Beacon';
-import { MapPin } from '../types/MapPin';
 import { TrackedPin, updateTrackedPinSymbol, removeTrackedMapPin } from '../services/trackedPins';
 import TrackSymbolModal from './TrackSymbolModal';
 
@@ -16,7 +15,6 @@ interface BeaconLabelPinProps {
     direction?: string | null;
     onClick?: (beaconID: string, beaconName: string) => void;
     trackedPins?: TrackedPin[];
-    mapPins?: MapPin[];
 }
 
 const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({ 
@@ -28,8 +26,7 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
     lastUpdateTime, 
     direction, 
     onClick, 
-    trackedPins = [], 
-    mapPins = []
+    trackedPins = []
 }) => {
     // Sizing and style logic
     const base = 1 + (zoom - 7) * 0.09;
@@ -78,24 +75,14 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
     const statusPadding = `${labelPadding / 2}px 8px`;
     const statusRadius = `${labelRadius / 1.5}px`;
     
-    // Find tracked trains at this beacon (only expired/not visible)
-    const expiredTrackedTrains = trackedPins
-        .map(trackedPin => {
-            // Find the map pin for this tracked train
-            const mapPin = mapPins.find(pin => String(pin.id) === String(trackedPin.id));
-            
-            // Only show indicator if pin doesn't exist but was last seen at this beacon
-            if (!mapPin && trackedPin.lastBeaconID === beaconPin.beaconID) {
-                return {
-                    id: trackedPin.id,
-                    color: trackedPin.color,
-                    symbol: trackedPin.symbol
-                };
-            }
-            
-            return null;
-        })
-        .filter(item => item !== null);
+    // Tracked trains last seen at this beacon (whether or not the map pin is still visible)
+    const trackedTrainsAtBeacon = trackedPins
+        .filter(trackedPin => String(trackedPin.lastBeaconID || '') === String(beaconPin.beaconID || ''))
+        .map(trackedPin => ({
+            id: trackedPin.id,
+            color: trackedPin.color,
+            symbol: trackedPin.symbol
+        }));
     
     const handleStatusClick = () => {
         if (onClick && beaconPin.beaconID && beaconPin.beaconName) {
@@ -137,7 +124,7 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
                 markerElement.removeEventListener('click', handleSymbolClick);
             }
         };
-    }, [expiredTrackedTrains]);
+    }, [trackedTrainsAtBeacon]);
     
     const handleSaveSymbol = (newSymbol: string) => {
         if (selectedTrainId) {
@@ -193,8 +180,8 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
                             border-radius:${statusRadius};
                             cursor:pointer;
                         ">${statusText}</div>` : ''}
-                        ${expiredTrackedTrains.length > 0 ? `<div style="display: flex; flex-direction: row; gap: 4px; margin-top: 4px; align-items: center;">
-                            ${expiredTrackedTrains.map(train => `
+                        ${trackedTrainsAtBeacon.length > 0 ? `<div style="display: flex; flex-direction: row; gap: 4px; margin-top: 4px; align-items: center;">
+                            ${trackedTrainsAtBeacon.map(train => `
                                 <div class="track-indicator" data-train-id="${train.id}" data-symbol="${train.symbol || ''}" style="
                                     display: flex;
                                     align-items: center;
@@ -226,7 +213,7 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
                         </div>` : ''}
                     </div>
                 `,
-                iconSize: [iconWidth, iconHeight + (statusText ? 18 : 0) + (expiredTrackedTrains.length > 0 ? 20 : 0)],
+                iconSize: [iconWidth, iconHeight + (statusText ? 18 : 0) + (trackedTrainsAtBeacon.length > 0 ? 20 : 0)],
                 iconAnchor: [iconAnchorX, iconAnchorY],
             })}
         />
