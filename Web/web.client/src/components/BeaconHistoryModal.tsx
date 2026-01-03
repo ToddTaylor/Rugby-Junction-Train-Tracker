@@ -18,31 +18,43 @@ interface BeaconHistoryModalProps {
     onClose: () => void;
     beaconID: string;
     beaconName: string;
+    subdivisionID?: string;
+    railroad?: string;
+    subdivision?: string;
     theme: 'dark' | 'light';
     lastUpdate?: string | null;
     mapPins?: any[];
 }
 
-export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, theme, lastUpdate, mapPins = [] }: BeaconHistoryModalProps) {
+export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdivisionID, railroad: _railroad, subdivision: _subdivision, theme, lastUpdate }: BeaconHistoryModalProps) {
     const [loading, setLoading] = useState(false);
     const [history, setHistory] = useState<MapPinHistory[]>([]);
     const [error, setError] = useState<string | null>(null);
     const [modalOpen, setModalOpen] = useState(false);
     const [modalSymbol, setModalSymbol] = useState('');
     const [selectedMapPinId, setSelectedMapPinId] = useState<string | null>(null);
+    const [modalAddresses, setModalAddresses] = useState<Array<{id: string, source: string}>>([]);
 
     useEffect(() => {
         if (open && beaconID) {
+            setHistory([]); // Clear history when switching beacons
             fetchHistory();
+        } else if (!open) {
+            setHistory([]); // Clear history when modal closes
         }
-    }, [open, beaconID, lastUpdate]); // Added lastUpdate to trigger refresh on MapPin updates
+    }, [open, beaconID, subdivisionID, lastUpdate]); // Added subdivisionID and lastUpdate to trigger refresh
 
 
     const fetchHistory = async () => {
         setLoading(true);
         setError(null);
         try {
-            const apiUrl = `${import.meta.env.VITE_API_URL}/api/v1/MapPins/History/${beaconID}?limit=5`;
+            // Build query string - include subdivisionId if present
+            let apiUrl = `${import.meta.env.VITE_API_URL}/api/v1/MapPins/History/${beaconID}?limit=10`;
+            if (subdivisionID) {
+                apiUrl += `&subdivisionId=${subdivisionID}`;
+            }
+            
             const response = await fetch(apiUrl, {
                 headers: {
                     'X-Api-Key': import.meta.env.VITE_API_KEY,
@@ -120,21 +132,21 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, theme,
                 let trackedColor = undefined;
                 let symbol = undefined;
                 
-                // Find if any address in history matches a tracked MapPin
+                // Find if any address in history matches a tracked pin
                 let matchedMapPinId: string | undefined;
                 for (const addr of addresses) {
-                    const matchingMapPin = mapPins.find((mp: any) => 
-                        mp.addresses?.some((a: any) => a.addressID === addr.addressID && a.source === addr.source)
+                    // Check if this address is in any tracked pin's addresses
+                    const tracked = trackedPins.find(tp => 
+                        Array.isArray(tp.addresses) && tp.addresses.some(a => 
+                            a.id === String(addr.addressID) && a.source === addr.source
+                        )
                     );
-                    if (matchingMapPin) {
-                        const tracked = trackedPins.find(tp => String(tp.id) === String(matchingMapPin.id));
-                        if (tracked) {
-                            isTracked = true;
-                            trackedColor = tracked.color;
-                            symbol = tracked.symbol;
-                            matchedMapPinId = String(matchingMapPin.id);
-                            break;
-                        }
+                    if (tracked) {
+                        isTracked = true;
+                        trackedColor = tracked.color;
+                        symbol = tracked.symbol;
+                        matchedMapPinId = tracked.id;
+                        break;
                     }
                 }
 
@@ -142,8 +154,10 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, theme,
                     e.stopPropagation();
                     if (matchedMapPinId) {
                         const currentSymbol = getTrackedPinSymbol(matchedMapPinId) || '';
+                        const addressList = addresses.map((a: { source: string; addressID: number }) => ({id: String(a.addressID), source: a.source}));
                         setSelectedMapPinId(matchedMapPinId);
                         setModalSymbol(currentSymbol);
+                        setModalAddresses(addressList);
                         setModalOpen(true);
                     }
                 };
@@ -265,9 +279,11 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, theme,
                     <Typography variant="h6" sx={{ color: isDark ? '#e0e0e0' : '#333333' }}>
                         {beaconName}
                     </Typography>
-                    {history.length > 0 && (
+                    {(history.length > 0 || _railroad || _subdivision) && (
                         <Typography variant="body2" sx={{ color: isDark ? '#b0b0b0' : '#666666', mt: 0.25 }}>
-                            {history[0].railroad} - {history[0].subdivision} - MP {history[0].milepost}
+                            {history.length > 0 
+                                ? `${history[0].railroad} - ${history[0].subdivision} - MP ${history[0].milepost}`
+                                : [_railroad, _subdivision].filter(Boolean).join(' - ')}
                         </Typography>
                     )}
                 </Box>
@@ -327,7 +343,7 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, theme,
                 {history.length > 0 && (
                     <Box sx={{ width: '100%' }}>
                         <DataGrid
-                            rows={history}
+                            rows={history.slice(0, 10)}
                             columns={columns}
                             hideFooter
                             columnVisibilityModel={{
@@ -337,10 +353,11 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, theme,
                             disableColumnMenu
                             disableColumnSelector
                             disableDensitySelector
-                            autoHeight
                             rowHeight={36}
-                            columnHeaderHeight={40}
+                            columnHeaderHeight={0}
                             sx={{
+                                height: history.length > 5 ? '260px' : `${(history.length * 36)}px`,
+                                width: '100%',
                                 backgroundColor: isDark ? '#2a2a2a' : '#ffffff',
                                 color: isDark ? '#ccc' : '#333333',
                                 border: 'none',
@@ -359,36 +376,6 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, theme,
                                     padding: '0 8px',
                                 },
                                 '& .MuiDataGrid-columnHeaders': {
-                                    backgroundColor: isDark ? '#1a1a1a' : '#f5f5f5',
-                                    borderBottom: isDark ? '2px solid #444' : '2px solid #ddd',
-                                    minHeight: '40px !important',
-                                    maxHeight: '40px !important',
-                                },
-                                '& .MuiDataGrid-columnHeader': {
-                                    backgroundColor: isDark ? '#1a1a1a' : '#f5f5f5',
-                                    color: isDark ? '#e0e0e0' : '#333333',
-                                    padding: '0 8px',
-                                },
-                                '& .MuiDataGrid-columnHeaderTitle': {
-                                    color: isDark ? '#e0e0e0' : '#333333',
-                                    fontWeight: 600,
-                                },
-                                '& .MuiDataGrid-columnSeparator': {
-                                    color: isDark ? '#444' : '#ddd',
-                                },
-                                '& .MuiDataGrid-sortIcon': {
-                                    color: isDark ? '#e0e0e0' : '#333333',
-                                    opacity: 1,
-                                },
-                                '& .MuiDataGrid-iconButtonContainer': {
-                                    visibility: 'visible',
-                                    width: 'auto',
-                                },
-                                '& .MuiDataGrid-menuIcon': {
-                                    visibility: 'hidden',
-                                    width: 0,
-                                },
-                                '& .MuiDataGrid-filler': {
                                     display: 'none',
                                 },
                                 '& .MuiDataGrid-scrollbar': {
@@ -407,6 +394,9 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, theme,
                                 },
                                 '& .MuiDataGrid-virtualScroller': {
                                     backgroundColor: isDark ? '#2a2a2a' : '#ffffff',
+                                    overflowY: history.length > 5 ? 'scroll !important' : 'auto',
+                                    msOverflowStyle: 'scrollbar',
+                                    scrollbarWidth: 'thin',
                                 },
                                 '& .MuiDataGrid-virtualScrollerContent': {
                                     backgroundColor: isDark ? '#2a2a2a' : '#ffffff',
@@ -438,6 +428,7 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, theme,
                 onClose={() => setModalOpen(false)}
                 theme={theme}
                 showUntrackButton={true}
+                addresses={modalAddresses}
             />
         </>
     );

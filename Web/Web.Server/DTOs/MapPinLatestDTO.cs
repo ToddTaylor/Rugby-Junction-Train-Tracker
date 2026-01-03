@@ -5,6 +5,12 @@ namespace Web.Server.DTOs
     {
         public required int BeaconID { get; set; }
 
+        public required int SubdivisionID { get; set; }
+
+        public string? Railroad { get; set; }
+
+        public string? Subdivision { get; set; }
+
         public required DateTime LastUpdate { get; set; }
 
         public string? Direction { get; set; }
@@ -18,13 +24,16 @@ namespace Web.Server.DTOs
         {
             return other is not null &&
                    BeaconID == other.BeaconID &&
+                   SubdivisionID == other.SubdivisionID &&
+                   Railroad == other.Railroad &&
+                   Subdivision == other.Subdivision &&
                    LastUpdate == other.LastUpdate &&
                    Direction == other.Direction;
         }
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(BeaconID, LastUpdate, Direction);
+            return HashCode.Combine(BeaconID, SubdivisionID, Railroad, Subdivision, LastUpdate, Direction);
         }
 
         public static bool operator ==(MapPinLatestDTO? left, MapPinLatestDTO? right)

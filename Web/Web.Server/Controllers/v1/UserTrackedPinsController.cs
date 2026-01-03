@@ -67,6 +67,7 @@ namespace Web.Server.Controllers.v1
                     userId.Value,
                     request.MapPinId,
                     request.BeaconID,
+                    request.SubdivisionID,
                     request.BeaconName,
                     request.Symbol,
                     request.Color);
@@ -119,7 +120,7 @@ namespace Web.Server.Controllers.v1
                     return BadRequest(new MessageEnvelope<object>(null!, new List<string> { "User not authenticated." }));
                 }
 
-                await _userTrackedPinService.UpdateLocationAsync(userId.Value, mapPinId, request.BeaconID, request.BeaconName);
+                await _userTrackedPinService.UpdateLocationAsync(userId.Value, mapPinId, request.BeaconID, request.SubdivisionID, request.BeaconName);
                 return Ok(new MessageEnvelope<object>(new { success = true }, new List<string>()));
             }
             catch (Exception ex)

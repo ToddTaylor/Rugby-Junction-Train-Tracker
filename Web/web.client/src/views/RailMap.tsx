@@ -38,6 +38,9 @@ const RailMap: React.FC = () => {
     const [historyModalOpen, setHistoryModalOpen] = useState(false);
     const [selectedBeaconID, setSelectedBeaconID] = useState<string>('');
     const [selectedBeaconName, setSelectedBeaconName] = useState<string>('');
+    const [selectedSubdivisionID, setSelectedSubdivisionID] = useState<string | undefined>(undefined);
+    const [selectedRailroad, setSelectedRailroad] = useState<string | undefined>(undefined);
+    const [selectedSubdivision, setSelectedSubdivision] = useState<string | undefined>(undefined);
 
     // Auth for admin button
     const { session } = useAuth();
@@ -74,9 +77,18 @@ const RailMap: React.FC = () => {
         let updated = false;
         trackedPins.forEach(tracked => {
             const mapPin = mapPins.find(p => String(p.id) === String(tracked.id));
-            if (mapPin && mapPin.beaconID && mapPin.beaconName) {
-                if (tracked.lastBeaconID !== mapPin.beaconID) {
-                    updateTrackedPinLocation(tracked.id, mapPin.beaconID, mapPin.beaconName);
+            if (mapPin && mapPin.beaconID && mapPin.subdivisionID && mapPin.beaconName) {
+                const addresses = Array.isArray(mapPin.addresses)
+                    ? mapPin.addresses.map(addr => ({ id: String(addr.addressID), source: addr.source }))
+                    : undefined;
+                const locationChanged = tracked.lastBeaconID !== mapPin.beaconID || tracked.lastSubdivisionID !== mapPin.subdivisionID;
+                const addressesChanged = !!addresses && (
+                    !tracked.addresses ||
+                    tracked.addresses.length !== addresses.length ||
+                    tracked.addresses.some((a, idx) => a.id !== addresses[idx].id || a.source !== addresses[idx].source)
+                );
+                if (locationChanged || addressesChanged) {
+                    updateTrackedPinLocation(tracked.id, mapPin.beaconID, mapPin.subdivisionID, mapPin.beaconName, addresses);
                     updated = true;
                 }
             }
@@ -93,20 +105,47 @@ const RailMap: React.FC = () => {
             // Update tracked pin location if this is a tracked pin
             const trackedPins = getTrackedMapPins();
             const tracked = trackedPins.find(tp => String(tp.id) === String(mapPin.id));
-            if (tracked && mapPin.beaconID && mapPin.beaconName) {
-                if (tracked.lastBeaconID !== mapPin.beaconID) {
-                    updateTrackedPinLocation(mapPin.id, mapPin.beaconID, mapPin.beaconName);
+            const addresses = Array.isArray(mapPin.addresses)
+                ? mapPin.addresses.map(addr => ({ id: String(addr.addressID), source: addr.source }))
+                : undefined;
+            if (tracked && mapPin.beaconID && mapPin.subdivisionID && mapPin.beaconName) {
+                const locationChanged = tracked.lastBeaconID !== mapPin.beaconID || tracked.lastSubdivisionID !== mapPin.subdivisionID;
+                const addressesChanged = !!addresses && (
+                    !tracked.addresses ||
+                    tracked.addresses.length !== addresses.length ||
+                    tracked.addresses.some((a, idx) => a.id !== addresses[idx].id || a.source !== addresses[idx].source)
+                );
+                if (locationChanged || addressesChanged) {
+                    updateTrackedPinLocation(mapPin.id, mapPin.beaconID, mapPin.subdivisionID, mapPin.beaconName, addresses);
                     setTrackedPinsState(getTrackedMapPins());
                 }
             }
             
             setMapPins((prevPins: MapPin[]) => updateMapPins(prevPins, mapPin));
+            
+            // Update beacon last update map
+            if (mapPin.beaconID && mapPin.lastUpdate) {
+                setBeaconLastUpdateMap(prev => {
+                    const keyComposite = makeBeaconKey(mapPin.beaconID, mapPin.subdivisionID);
+                    const existingComposite = prev[keyComposite];
+                    if (!existingComposite || new Date(mapPin.lastUpdate) >= new Date(existingComposite.lastUpdate)) {
+                        return {
+                            ...prev,
+                            [keyComposite]: { lastUpdate: mapPin.lastUpdate, direction: mapPin.direction ?? null }
+                        };
+                    }
+                    return prev;
+                });
+            }
         },
         BeaconUpdate: (beaconBatch: Beacon[]) => {
             setBeacons((prevBeacons: Beacon[]) => {
                 let updated = prevBeacons;
                 beaconBatch.forEach(b => {
-                    updated = updateBeacon(updated, b);
+                    // Filter out beacons with invalid IDs (0 or null/undefined)
+                    if (b.beaconID && Number(b.beaconID) !== 0 && b.railroadID && Number(b.railroadID) !== 0) {
+                        updated = updateBeacon(updated, b);
+                    }
                 });
                 return updated;
             });
@@ -217,11 +256,12 @@ const RailMap: React.FC = () => {
 
     // Track last known update time and direction for each beacon, even after pin timeout.
     // Seed from localStorage so a full reload retains prior knowledge.
-    const [beaconLastUpdateMap, setBeaconLastUpdateMap] = useState<{ [beaconID: string]: { lastUpdate: string; direction: string | null } }>(() => {
+    // Clear old localStorage format (using railroad/subdivision names) to force refresh with new subdivisionID format
+    const [beaconLastUpdateMap, setBeaconLastUpdateMap] = useState<{ [key: string]: { lastUpdate: string; direction: string | null } }>(() => {
         try {
-            const raw = localStorage.getItem('beaconLastUpdateMap');
-            if (raw) return JSON.parse(raw);
-        } catch { /* ignore corrupt storage */ }
+            // Always clear old format on load to force refresh with new subdivisionID-based keys
+            localStorage.removeItem('beaconLastUpdateMap');
+        } catch { /* ignore */ }
         return {};
     });
 
@@ -231,6 +271,10 @@ const RailMap: React.FC = () => {
     }, [beaconLastUpdateMap]);
 
     // Helper to merge latest beacon timestamps from API
+    const makeBeaconKey = (beaconID: string | number, subdivisionID?: string | number) => {
+        return `${beaconID}${subdivisionID ? `|${subdivisionID}` : ''}`;
+    };
+
     async function mergeLatestBeaconUpdates() {
         try {
             const apiUrl = import.meta.env.VITE_API_URL + '/api/v1/MapPins/latest';
@@ -240,17 +284,33 @@ const RailMap: React.FC = () => {
                     'Content-Type': 'application/json'
                 }
             });
-            if (!response.ok) throw new Error('Failed to fetch latest map pins');
+            if (!response.ok) throw new Error(`Failed to fetch latest map pins: ${response.status}`);
             const json = await response.json();
-            const items: Array<{ beaconID: number | string; lastUpdate: string; direction: string | null }> = json?.data || [];
-            if (!Array.isArray(items)) return;
+            const items = (json?.data || []) as Array<any>;
+            if (!Array.isArray(items)) {
+                console.warn('Latest map pins response is not an array:', items);
+                return;
+            }
+            
             setBeaconLastUpdateMap(prev => {
                 const updated = { ...prev };
-                items.forEach(item => {
-                    const key = String(item.beaconID);
-                    const existing = updated[key];
-                    if (!existing || new Date(item.lastUpdate) >= new Date(existing.lastUpdate)) {
-                        updated[key] = { lastUpdate: item.lastUpdate, direction: item.direction };
+                items.forEach((item: any) => {
+                    // Handle both PascalCase (from .NET) and camelCase
+                    const beaconID = item.beaconID || item.BeaconID;
+                    const subdivisionID = item.subdivisionID || item.SubdivisionID;
+                    const lastUpdate = item.lastUpdate || item.LastUpdate;
+                    const direction = item.direction || item.Direction;
+                    
+                    // Skip items with invalid IDs (missing, null, or 0)
+                    if (!beaconID || beaconID === 0 || !subdivisionID || subdivisionID === 0 || !lastUpdate) {
+                        console.warn('Skipping item with invalid beaconID, subdivisionID, or lastUpdate:', item);
+                        return;
+                    }
+                    
+                    const keyComposite = makeBeaconKey(beaconID, subdivisionID);
+                    const existingComposite = updated[keyComposite];
+                    if (!existingComposite || new Date(lastUpdate) >= new Date(existingComposite.lastUpdate)) {
+                        updated[keyComposite] = { lastUpdate, direction: direction ?? null };
                     }
                 });
                 return updated;
@@ -282,9 +342,10 @@ const RailMap: React.FC = () => {
             const updated = { ...prev };
             mapPins.forEach(pin => {
                 if (pin.beaconID && pin.lastUpdate) {
-                    const prevEntry = updated[pin.beaconID];
-                    if (!prevEntry || new Date(pin.lastUpdate) >= new Date(prevEntry.lastUpdate)) {
-                        updated[pin.beaconID] = {
+                    const keyComposite = makeBeaconKey(pin.beaconID, pin.subdivisionID);
+                    const prevEntryComposite = updated[keyComposite];
+                    if (!prevEntryComposite || new Date(pin.lastUpdate) >= new Date(prevEntryComposite.lastUpdate)) {
+                        updated[keyComposite] = {
                             lastUpdate: pin.lastUpdate,
                             direction: pin.direction ?? null
                         };
@@ -358,12 +419,19 @@ const RailMap: React.FC = () => {
         const beaconPane = map.getPane('beaconPane');
         if (beaconPane && beaconPane.parentNode) beaconPane.parentNode.removeChild(beaconPane);
 
+        const beaconLabelPane = map.getPane('beaconLabelPane');
+        if (beaconLabelPane && beaconLabelPane.parentNode) beaconLabelPane.parentNode.removeChild(beaconLabelPane);
+
         const telemetryPane = map.getPane('telemetryPane');
         if (telemetryPane && telemetryPane.parentNode) telemetryPane.parentNode.removeChild(telemetryPane);
 
         map.createPane('beaconPane');
         const beaconPaneCreated = map.getPane('beaconPane');
         if (beaconPaneCreated) beaconPaneCreated.style.zIndex = '400';
+
+        map.createPane('beaconLabelPane');
+        const beaconLabelPaneCreated = map.getPane('beaconLabelPane');
+        if (beaconLabelPaneCreated) beaconLabelPaneCreated.style.zIndex = '450';
 
         map.createPane('telemetryPane');
         const telemetryPaneCreated = map.getPane('telemetryPane');
@@ -558,12 +626,16 @@ const RailMap: React.FC = () => {
                     zoom={mapZoom} 
                     mapTheme={mapTheme as 'dark' | 'light'} 
                     beaconLastUpdateMap={beaconLastUpdateMap}
-                    onBeaconClick={(beaconID, beaconName) => {
+                    onBeaconClick={(beaconID, beaconName, subdivisionID, railroad, subdivision) => {
                         setSelectedBeaconID(beaconID);
                         setSelectedBeaconName(beaconName);
+                        setSelectedSubdivisionID(subdivisionID);
+                        setSelectedRailroad(railroad);
+                        setSelectedSubdivision(subdivision);
                         setHistoryModalOpen(true);
                     }}
                     trackedPins={trackedPinsState}
+                    mapPins={mapPins}
                 />}
 
                 {/* Telemetry markers */}
@@ -583,8 +655,11 @@ const RailMap: React.FC = () => {
                 onClose={() => setHistoryModalOpen(false)}
                 beaconID={selectedBeaconID}
                 beaconName={selectedBeaconName}
+                subdivisionID={selectedSubdivisionID}
+                railroad={selectedRailroad}
+                subdivision={selectedSubdivision}
                 theme={mapTheme as 'dark' | 'light'}
-                lastUpdate={beaconLastUpdateMap?.[selectedBeaconID]?.lastUpdate}
+                lastUpdate={beaconLastUpdateMap?.[makeBeaconKey(selectedBeaconID, selectedSubdivisionID)]?.lastUpdate}
                 mapPins={mapPins}
             />
         </>

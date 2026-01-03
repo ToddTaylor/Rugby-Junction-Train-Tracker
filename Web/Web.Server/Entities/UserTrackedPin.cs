@@ -21,12 +21,12 @@ namespace Web.Server.Entities
         public int? BeaconID { get; set; }
 
         /// <summary>
-        /// The beacon name associated with this tracked pin at the time of tracking.
-        /// </summary>
-        public string? BeaconName { get; set; }
+    /// The subdivision ID associated with this tracked pin at the time of tracking.
+    /// Used to distinguish between multiple railroads at the same beacon.
+    /// </summary>
+    public int? SubdivisionID { get; set; }
 
-        /// <summary>
-        /// Optional user-defined symbol for this tracked pin (max 10 characters, uppercase).
+    /// <summary>
         /// </summary>
         public string? Symbol { get; set; }
 

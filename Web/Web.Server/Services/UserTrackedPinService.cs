@@ -53,7 +53,7 @@ namespace Web.Server.Services
             return entity != null ? _mapper.Map<UserTrackedPinDTO>(entity) : null;
         }
 
-        public async Task<UserTrackedPinDTO> AddAsync(int userId, int mapPinId, int? beaconId, string? beaconName, string? symbol, string color)
+        public async Task<UserTrackedPinDTO> AddAsync(int userId, int mapPinId, int? beaconId, int? subdivisionId, string? beaconName, string? symbol, string color)
         {
             try
             {
@@ -65,7 +65,7 @@ namespace Web.Server.Services
                     UserId = userId,
                     MapPinId = mapPinId,
                     BeaconID = beaconId,
-                    BeaconName = beaconName,
+                    SubdivisionID = subdivisionId,
                     Symbol = symbol,
                     Color = color,
                     ExpiresUtc = expiresUtc,
@@ -111,7 +111,7 @@ namespace Web.Server.Services
             }
         }
 
-        public async Task UpdateLocationAsync(int userId, int mapPinId, int? beaconId, string? beaconName)
+        public async Task UpdateLocationAsync(int userId, int mapPinId, int? beaconId, int? subdivisionId, string? beaconName)
         {
             try
             {
@@ -123,7 +123,7 @@ namespace Web.Server.Services
                 }
 
                 trackedPin.BeaconID = beaconId;
-                trackedPin.BeaconName = beaconName;
+                trackedPin.SubdivisionID = subdivisionId;
                 trackedPin.LastUpdate = _timeProvider.UtcNow;
                 await _repository.UpdateAsync(trackedPin);
                 _logger.LogInformation("Updated tracked pin location for user {UserId} and pin {MapPinId} to beacon {BeaconId}", userId, mapPinId, beaconId);

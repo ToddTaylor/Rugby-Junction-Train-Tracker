@@ -6,6 +6,7 @@ namespace Web.Server.DTOs
         public int UserId { get; set; }
         public int MapPinId { get; set; }
         public int? BeaconID { get; set; }
+        public int? SubdivisionID { get; set; }
         public string? BeaconName { get; set; }
         public string? Symbol { get; set; }
         public string Color { get; set; } = string.Empty;

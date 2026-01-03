@@ -16,11 +16,17 @@ namespace Web.Server.Repositories
             _timeProvider = timeProvider;
         }
 
-        public async Task<IEnumerable<MapPinHistory>> GetByBeaconIdAsync(int beaconId, int? limit = null)
+        public async Task<IEnumerable<MapPinHistory>> GetByBeaconIdAsync(int beaconId, int? subdivisionId = null, int? limit = null)
         {
             var query = _context.MapPinHistories
-                .Where(mph => mph.BeaconID == beaconId)
-                .OrderByDescending(mph => mph.LastUpdate);
+                .Where(mph => mph.BeaconID == beaconId);
+
+            if (subdivisionId.HasValue)
+            {
+                query = query.Where(mph => mph.SubdivisionId == subdivisionId.Value);
+            }
+
+            query = query.OrderByDescending(mph => mph.LastUpdate);
 
             if (limit.HasValue)
             {

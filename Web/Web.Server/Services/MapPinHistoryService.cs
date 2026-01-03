@@ -32,9 +32,9 @@ namespace Web.Server.Services
             return await _repository.GetByOriginalMapPinIdAsync(mapPinId);
         }
 
-        public async Task<IEnumerable<MapPinHistory>> GetHistoryByBeaconIdAsync(int beaconId, int? limit = null)
+        public async Task<IEnumerable<MapPinHistory>> GetHistoryByBeaconIdAsync(int beaconId, int? subdivisionId = null, int? limit = null)
         {
-            var histories = await _repository.GetByBeaconIdAsync(beaconId, limit);
+            var histories = await _repository.GetByBeaconIdAsync(beaconId, subdivisionId, limit);
 
             // Populate BeaconRailroad data for each history record
             foreach (var history in histories)

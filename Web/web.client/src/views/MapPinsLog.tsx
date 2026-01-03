@@ -5,6 +5,8 @@ import { Box, Typography, FormControl, InputLabel, Select, MenuItem, Checkbox, L
 import { MapPin } from '../types/MapPin';
 import { format, parseISO } from "date-fns";
 import { getTrackedMapPins, TrackedPin, updateTrackedPinSymbol, refreshTrackedPinsFromApi } from '../services/trackedPins';
+import { useSignalR } from '../hooks/useSignalR';
+import { updateMapPins } from '../utils/updateHelpers';
 
 function MapPinsLog() {
     const [mapPins, setMapPins] = useState<MapPin[]>([]);
@@ -32,6 +34,13 @@ function MapPinsLog() {
         
         fetchMapPins();
     }, []);
+
+    // SignalR real-time updates
+    useSignalR({
+        MapPinUpdate: (mapPin: MapPin) => {
+            setMapPins((prevPins: MapPin[]) => updateMapPins(prevPins, mapPin));
+        }
+    });
 
     // Track changes to tracked pins
     useEffect(() => {
@@ -246,20 +255,20 @@ function MapPinsLog() {
             </FormControl>
             <DataGrid
                 key={JSON.stringify(trackedPins.map(t => ({ id: t.id, symbol: t.symbol })))}
-                rows={filteredData}
+                rows={filteredData.slice(0, 10)}
                 columns={columns}
-                pageSizeOptions={[5, 10, 25]}
+                pageSizeOptions={[10]}
+                hideFooter
                 columnVisibilityModel={{
                     id: false,
                 }}
-                initialState={{
-                    pagination: {
-                        paginationModel: { pageSize: 25, page: 0 },
-                    },
-                }}
+                rowHeight={52}
                 sx={{
-                    maxHeight: 600, // or height: 600,
-                    minHeight: 400,
+                    height: filteredData.length > 5 ? 340 : 'auto',
+                    minHeight: 300,
+                    '& .MuiDataGrid-virtualScroller': {
+                        overflowY: filteredData.length > 5 ? 'scroll' : 'visible',
+                    },
                 }}
             />
         </Box>

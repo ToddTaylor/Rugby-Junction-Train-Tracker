@@ -81,12 +81,12 @@ namespace Web.Server.Controllers.v1
         }
 
         [HttpGet("History/{beaconId}")]
-        public async Task<ActionResult> GetHistory(int beaconId, [FromQuery] int? limit = 100)
+        public async Task<ActionResult> GetHistory(int beaconId, [FromQuery] int? subdivisionId = null, [FromQuery] int? limit = 100)
         {
             var response = new MessageEnvelope<IEnumerable<MapPinHistoryDTO>>(null, []);
             try
             {
-                var histories = await _mapPinHistoryService.GetHistoryByBeaconIdAsync(beaconId, limit);
+                var histories = await _mapPinHistoryService.GetHistoryByBeaconIdAsync(beaconId, subdivisionId, limit);
                 var historyDTOs = new List<MapPinHistoryDTO>();
 
                 foreach (var history in histories)

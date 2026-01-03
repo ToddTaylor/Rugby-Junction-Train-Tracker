@@ -52,7 +52,10 @@ namespace Web.Server.Repositories
         public async Task<IEnumerable<MapPin>> GetLatestAsync()
         {
             var mapPins = await _context.MapPins
-                .GroupBy(mp => mp.BeaconID)
+                .Include(mp => mp.BeaconRailroad)
+                    .ThenInclude(br => br.Subdivision)
+                        .ThenInclude(sub => sub.Railroad)
+                .GroupBy(mp => new { mp.BeaconID, mp.SubdivisionId })
                 .Select(g => g.OrderByDescending(mp => mp.LastUpdate).First())
                 .ToListAsync();
 

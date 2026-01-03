@@ -31,6 +31,7 @@ interface TelemetryMarkerProps {
     size: number;
     maxPinAgeMinutes?: number;
     trackedPins: TrackedPin[];
+    longitudeOffset?: number;
 }
 
 const formatDirection = (dir?: string | null): string => {
@@ -54,7 +55,7 @@ const formatDirection = (dir?: string | null): string => {
     return map[dir.toUpperCase()] || 'Unknown Direction';
 };
 
-const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'light' }> = ({ pin, size, maxPinAgeMinutes, mapTheme, trackedPins }) => {
+const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'light' }> = ({ pin, size, maxPinAgeMinutes, mapTheme, trackedPins, longitudeOffset = 0 }) => {
     const markerRef = useRef<L.Marker>(null);
     const shouldReopenPopupRef = useRef(false);
     const [brightness, setBrightness] = useState(() =>
@@ -70,13 +71,17 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
     const [modalSymbol, setModalSymbol] = useState('');
     const [isEditingTrack, setIsEditingTrack] = useState(false);
 
+    const addressesForModal = Array.isArray(pin.addresses)
+        ? pin.addresses.map(addr => ({ id: String(addr.addressID), source: addr.source }))
+        : [];
+
     const handleModalSave = (symbol: string) => {
         if (isEditingTrack) {
             // Update existing tracked pin's symbol
             updateTrackedPinSymbol(String(pin.id), symbol);
         } else {
             // Add new tracked pin
-            addTrackedMapPin(String(pin.id), pin.beaconID, pin.beaconName, symbol || undefined);
+            addTrackedMapPin(String(pin.id), pin.beaconID, pin.subdivisionID, pin.beaconName, symbol || undefined, addressesForModal);
             setIsTracked(true);
             setTrackColor(getTrackedColor(String(pin.id)));
         }
@@ -273,7 +278,7 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
             <Marker
                 key={pin.id}
                 ref={markerRef}
-                position={[pin.latitude, pin.longitude]}
+                position={[pin.latitude, pin.longitude + longitudeOffset]}
                 icon={createCustomIcon()}
                 pane="telemetryPane"
             />
@@ -290,6 +295,7 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
                 }}
                 onClose={() => setModalOpen(false)}
                 theme={mapTheme}
+                addresses={addressesForModal}
                 showUntrackButton={isEditingTrack}
             />
         </>

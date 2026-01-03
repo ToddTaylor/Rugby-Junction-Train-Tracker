@@ -74,7 +74,7 @@ const BeaconMarker: React.FC<BeaconMarkerProps> = ({ pin: beaconPin, zoom, idx }
             icon={L.divIcon({
                 className: 'beacon-marker-z',
                 html: `
-                    <div class=\"beacon-container\" style=\"position: relative; width: ${outlineSize}px; height: ${outlineSize}px; cursor: pointer;\">
+                    <div class=\"beacon-container\" style=\"position: relative; width: ${outlineSize}px; height: ${outlineSize}px; pointer-events: none;\">
                         ${dottedOutline}
                         <div class=\"beacon-dot\" title=\"${beaconName} ${title}\" style=\"
                             width:${beaconDotSizePx}px;
@@ -85,6 +85,7 @@ const BeaconMarker: React.FC<BeaconMarkerProps> = ({ pin: beaconPin, zoom, idx }
                             top:${beaconDotOffsetPx}px;
                             left:${beaconDotOffsetPx}px;
                             z-index:2;
+                            pointer-events: auto;
                             cursor: pointer;
                         \" ></div>
                         ${pingDiv}

@@ -8,6 +8,9 @@ interface TrackSymbolModalProps {
     onClose: () => void;
     theme?: 'dark' | 'light';
     showUntrackButton?: boolean;
+    trainId?: string | null;
+    mapPinId?: number;
+    addresses?: Array<{id: string, source: string}>;
 }
 
 const TrackSymbolModal: React.FC<TrackSymbolModalProps> = ({
@@ -17,7 +20,8 @@ const TrackSymbolModal: React.FC<TrackSymbolModalProps> = ({
     onUntrack,
     onClose,
     theme = 'light',
-    showUntrackButton = true
+    showUntrackButton = true,
+    addresses = []
 }) => {
     const [symbol, setSymbol] = useState(currentSymbol);
 
@@ -89,6 +93,24 @@ const TrackSymbolModal: React.FC<TrackSymbolModalProps> = ({
                 }}>
                     Enter a Symbol
                 </h2>
+                {addresses && addresses.length > 0 && (
+                    <div style={{
+                        marginBottom: '16px',
+                        padding: '12px',
+                        backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.03)',
+                        borderRadius: '4px',
+                        fontSize: '13px',
+                        color: isDark ? 'rgba(234, 243, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)',
+                        borderLeft: `3px solid ${isDark ? '#555' : '#ccc'}`
+                    }}>
+                        <strong style={{display: 'block', marginBottom: '8px', opacity: 0.8}}>Addresses:</strong>
+                        {addresses.map((addr, idx) => (
+                            <div key={idx} style={{marginBottom: idx < addresses.length - 1 ? '4px' : '0'}}>
+                                <span>{addr.id}</span> <span style={{opacity: 0.7}}>({addr.source})</span>
+                            </div>
+                        ))}
+                    </div>
+                )}
                 <input
                     type="text"
                     value={symbol}

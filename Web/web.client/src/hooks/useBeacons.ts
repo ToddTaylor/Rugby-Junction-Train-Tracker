@@ -67,7 +67,22 @@ export function useBeacons() {
           }
         });
         if (!response.ok) throw new Error('Failed to fetch map pins');
-        const { data: beacons } = await response.json();
+        const { data: beaconsData } = await response.json();
+        
+        // Map API field names to Beacon type field names
+        const beacons = (beaconsData as any[]).map((b: any) => ({
+          beaconID: b.beaconID,
+          beaconName: b.beaconName,
+          railroadID: b.railroadID,
+          subdivisionID: b.subdivisionID,
+          railroad: b.railroadName, // Map railroadName -> railroad
+          subdivision: b.subdivisionName, // Map subdivisionName -> subdivision
+          latitude: b.latitude,
+          longitude: b.longitude,
+          milepost: b.milepost,
+          online: b.online
+        }));
+        
         await db.put(STORE_NAME, beacons, 'beacons');
         const withStatus = (beacons as Beacon[]).map(b => {
           const stored = initialStatusMap[b.beaconID];

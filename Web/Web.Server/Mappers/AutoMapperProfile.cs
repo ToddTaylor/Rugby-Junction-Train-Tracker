@@ -28,15 +28,15 @@ namespace Web.Server.Mappers
 
             CreateMap<BeaconRailroad, BeaconRailroadDTO>()
                 .ForMember(dest => dest.BeaconName,
-                           opt => opt.MapFrom(src => src.Beacon.Name))
+                           opt => opt.MapFrom(src => src.Beacon != null ? src.Beacon.Name : string.Empty))
                 .ForMember(dest => dest.RailroadID,
-                           opt => opt.MapFrom(src => src.Subdivision.RailroadID))
+                           opt => opt.MapFrom(src => src.Subdivision != null ? src.Subdivision.RailroadID : 0))
                 .ForMember(dest => dest.RailroadName,
-                           opt => opt.MapFrom(src => src.Subdivision.Railroad.Name))
+                           opt => opt.MapFrom(src => src.Subdivision != null && src.Subdivision.Railroad != null ? src.Subdivision.Railroad.Name : string.Empty))
                 .ForMember(dest => dest.SubdivisionID,
                            opt => opt.MapFrom(src => src.SubdivisionID))
                 .ForMember(dest => dest.SubdivisionName,
-                           opt => opt.MapFrom(src => src.Subdivision.Name));
+                           opt => opt.MapFrom(src => src.Subdivision != null ? src.Subdivision.Name : string.Empty));
 
             CreateMap<MapPin, MapPinDTO>()
                 .ForMember(dest => dest.BeaconID,
@@ -66,7 +66,13 @@ namespace Web.Server.Mappers
                                }).ToList()
                                : new List<AddressDTO>()));
 
-            CreateMap<MapPin, MapPinLatestDTO>();
+            CreateMap<MapPin, MapPinLatestDTO>()
+                .ForMember(dest => dest.SubdivisionID,
+                           opt => opt.MapFrom(src => src.SubdivisionId))
+                .ForMember(dest => dest.Railroad,
+                           opt => opt.MapFrom(src => src.BeaconRailroad.Subdivision.Railroad.Name))
+                .ForMember(dest => dest.Subdivision,
+                           opt => opt.MapFrom(src => src.BeaconRailroad.Subdivision.Name));
 
             CreateMap<CreateUserDTO, User>()
                 .ForMember(dest => dest.ID, opt => opt.Ignore());

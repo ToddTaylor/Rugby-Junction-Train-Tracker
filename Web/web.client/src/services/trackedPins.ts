@@ -21,8 +21,10 @@ export type TrackedPin = {
     expires: number;       // Unix ms timestamp
     color: string;
     lastBeaconID?: string;
+    lastSubdivisionID?: string;
     lastBeaconName?: string;
     symbol?: string;
+    addresses?: Array<{ id: string; source: string }>;
 };
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -87,16 +89,22 @@ export async function refreshTrackedPinsFromApi(): Promise<TrackedPin[]> {
                 return getLocalTrackedPins();
             }
 
+            const cachedPins = getLocalTrackedPins();
+
             if (data?.data) {
-                const pins: TrackedPin[] = data.data.map((pin: any) => ({
-                    id: String(pin.mapPinId),
-                    mapPinId: pin.mapPinId,
-                    expires: new Date(pin.expiresUtc).getTime(),
-                    color: pin.color,
-                    lastBeaconID: pin.beaconID ? String(pin.beaconID) : undefined,
-                    lastBeaconName: pin.beaconName,
-                    symbol: pin.symbol
-                }));
+                const pins: TrackedPin[] = data.data.map((pin: any) => {
+                    const serverDto: TrackedPinServerDTO = {
+                        mapPinId: pin.mapPinId,
+                        beaconID: pin.beaconID,
+                        subdivisionID: pin.subdivisionID,
+                        beaconName: pin.beaconName,
+                        symbol: pin.symbol,
+                        color: pin.color,
+                        expiresUtc: pin.expiresUtc
+                    };
+                    const existing = cachedPins.find(p => p.id === String(pin.mapPinId));
+                    return mapServerDtoToTrackedPin(serverDto, existing);
+                });
                 saveLocalTrackedPins(pins);
                 return pins;
             }
@@ -107,7 +115,7 @@ export async function refreshTrackedPinsFromApi(): Promise<TrackedPin[]> {
     return getLocalTrackedPins();
 }
 
-export async function addTrackedMapPin(id: string, beaconID?: string, beaconName?: string, symbol?: string) {
+export async function addTrackedMapPin(id: string, beaconID?: string, subdivisionID?: string, beaconName?: string, symbol?: string, addresses?: Array<{ id: string; source: string }>) {
     const mapPinId = parseInt(id, 10);
     if (isNaN(mapPinId)) {
         console.error('Invalid map pin ID:', id);
@@ -128,8 +136,10 @@ export async function addTrackedMapPin(id: string, beaconID?: string, beaconName
         expires,
         color,
         lastBeaconID: beaconID,
+        lastSubdivisionID: subdivisionID,
         lastBeaconName: beaconName,
-        symbol: symbol
+        symbol: symbol,
+        addresses: addresses && addresses.length > 0 ? [...addresses] : undefined
     };
     arr.push(newPin);
     saveLocalTrackedPins(arr);
@@ -143,6 +153,7 @@ export async function addTrackedMapPin(id: string, beaconID?: string, beaconName
             body: JSON.stringify({
                 mapPinId,
                 beaconID: beaconID ? parseInt(beaconID, 10) : undefined,
+                subdivisionID: subdivisionID ? parseInt(subdivisionID, 10) : undefined,
                 beaconName,
                 symbol,
                 color
@@ -187,12 +198,16 @@ export function getTrackedColor(id: string): string | undefined {
     return arr.find(item => item.id === id)?.color;
 }
 
-export async function updateTrackedPinLocation(id: string, beaconID: string, beaconName: string) {
+export async function updateTrackedPinLocation(id: string, beaconID: string, subdivisionID: string, beaconName: string, addresses?: Array<{ id: string; source: string }>) {
     const arr = getLocalTrackedPins();
     const tracked = arr.find(item => item.id === id);
     if (tracked) {
         tracked.lastBeaconID = beaconID;
+        tracked.lastSubdivisionID = subdivisionID;
         tracked.lastBeaconName = beaconName;
+        if (addresses && addresses.length > 0) {
+            tracked.addresses = [...addresses];
+        }
         saveLocalTrackedPins(arr);
     }
 
@@ -206,6 +221,7 @@ export async function updateTrackedPinLocation(id: string, beaconID: string, bea
             headers,
             body: JSON.stringify({
                 beaconID: beaconID ? parseInt(beaconID, 10) : undefined,
+                subdivisionID: subdivisionID ? parseInt(subdivisionID, 10) : undefined,
                 beaconName
             })
         });
@@ -254,13 +270,14 @@ export function getTrackedPinSymbol(id: string): string | undefined {
 export type TrackedPinServerDTO = {
     mapPinId: number;
     beaconID?: number;
+    subdivisionID?: number;
     beaconName?: string;
     symbol?: string;
     color: string;
     expiresUtc: string;
 };
 
-function mapServerDtoToTrackedPin(dto: TrackedPinServerDTO): TrackedPin {
+function mapServerDtoToTrackedPin(dto: TrackedPinServerDTO, existing?: TrackedPin): TrackedPin {
     const expires = dto.expiresUtc ? new Date(dto.expiresUtc).getTime() : Date.now();
     return {
         id: String(dto.mapPinId),
@@ -268,8 +285,10 @@ function mapServerDtoToTrackedPin(dto: TrackedPinServerDTO): TrackedPin {
         expires,
         color: dto.color || 'orange',
         lastBeaconID: dto.beaconID ? String(dto.beaconID) : undefined,
+        lastSubdivisionID: dto.subdivisionID ? String(dto.subdivisionID) : undefined,
         lastBeaconName: dto.beaconName,
-        symbol: dto.symbol
+        symbol: dto.symbol,
+        addresses: existing?.addresses ? [...existing.addresses] : undefined
     };
 }
 
@@ -277,11 +296,13 @@ function mapServerDtoToTrackedPin(dto: TrackedPinServerDTO): TrackedPin {
 export function applyTrackedPinAddedOrUpdatedFromServer(dto: TrackedPinServerDTO): TrackedPin[] {
     if (!dto || !dto.mapPinId) return getLocalTrackedPins();
 
-    const normalized = mapServerDtoToTrackedPin(dto);
-    const existing = getLocalTrackedPins().filter(p => p.id !== normalized.id);
-    existing.push(normalized);
-    saveLocalTrackedPins(existing);
-    return existing;
+    const currentPins = getLocalTrackedPins();
+    const existing = currentPins.find(p => p.id === String(dto.mapPinId));
+    const normalized = mapServerDtoToTrackedPin(dto, existing);
+    const next = currentPins.filter(p => p.id !== normalized.id);
+    next.push(normalized);
+    saveLocalTrackedPins(next);
+    return next;
 }
 
 // Apply server-pushed remove without making additional API calls

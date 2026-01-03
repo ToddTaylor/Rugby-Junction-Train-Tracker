@@ -13,5 +13,6 @@ export type MapPin = {
     isLocal: boolean;
     railroad: string;
     subdivision: string;
+    subdivisionID: string;
     lastUpdate: string;
 };

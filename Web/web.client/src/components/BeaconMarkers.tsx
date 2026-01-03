@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 // import { Popup } from 'react-leaflet';
 import { Beacon } from '../types/Beacon';
+import { MapPin } from '../types/MapPin';
 import { TrackedPin } from '../services/trackedPins';
 import BeaconMarker from './BeaconMarker';
 import BeaconLabelPin from './BeaconLabelPin';
@@ -10,8 +11,9 @@ interface BeaconMarkersProps {
     zoom: number;
     mapTheme: 'dark' | 'light';
     beaconLastUpdateMap?: { [beaconID: string]: { lastUpdate: string, direction: string | null } };
-    onBeaconClick?: (beaconID: string, beaconName: string) => void;
+    onBeaconClick?: (beaconID: string, beaconName: string, subdivisionID?: string, railroad?: string, subdivision?: string) => void;
     trackedPins?: TrackedPin[];
+    mapPins?: MapPin[];
 }
 
 const BeaconMarkers: React.FC<BeaconMarkersProps> = ({ 
@@ -20,7 +22,8 @@ const BeaconMarkers: React.FC<BeaconMarkersProps> = ({
     mapTheme, 
     beaconLastUpdateMap, 
     onBeaconClick,
-    trackedPins = []
+    trackedPins = [],
+    mapPins = []
 }) => {
     // Vertical offset for label marker (in degrees latitude, approx 7px)
     const getLabelOffsetLat = (lat: number, zoom: number) => {
@@ -30,20 +33,58 @@ const BeaconMarkers: React.FC<BeaconMarkersProps> = ({
         return lat - (offsetMeters / 111320); // 1 deg lat ~ 111.32km
     };
 
-    // Deduplicate beacons by beaconID to avoid duplicate React keys when upstream data contains repeats
+    // Allow multiple beacon-railroad records for the same physical beacon.
+    // Dedup only when both beaconID and railroadID match; otherwise keep distinct entries.
     const uniqueBeaconPins = useMemo(() => {
-        const byId = new Map<string | number, Beacon>();
+        const byComposite = new Map<string | number, Beacon>();
         for (const b of beaconPins) {
-            if (b.beaconID !== undefined && b.beaconID !== null) {
-                byId.set(b.beaconID, b); // overwrite keeps latest occurrence
-            } else {
-                // Use a Symbol fallback to keep truly missing IDs unique
-                byId.set(Symbol('no-id') as any, b);
+            // Treat 0 as invalid ID (likely unset/default value)
+            const hasValidBeaconID = b.beaconID !== undefined && b.beaconID !== null && Number(b.beaconID) !== 0;
+            const hasValidRailroadID = b.railroadID !== undefined && b.railroadID !== null && Number(b.railroadID) !== 0;
+            
+            if (hasValidBeaconID && hasValidRailroadID) {
+                byComposite.set(`${b.beaconID}-${b.railroadID}`, b);
+            } else if (hasValidBeaconID) {
+                // fallback: dedupe by beaconID only when railroad missing
+                byComposite.set(b.beaconID, b);
+            }
+            // Skip beacons with invalid IDs entirely
+        }
+        return Array.from(byComposite.values());
+    }, [beaconPins]);
+
+    // Detect beacons that are close together horizontally and assign horizontal shifts
+    const beaconHorizontalShifts = useMemo(() => {
+        const shifts = new Map<string, number>();
+        const LONGITUDE_THRESHOLD = 0.005;
+        
+        for (let i = 0; i < uniqueBeaconPins.length; i++) {
+            for (let j = i + 1; j < uniqueBeaconPins.length; j++) {
+                const b1 = uniqueBeaconPins[i];
+                const b2 = uniqueBeaconPins[j];
+                
+                // Check if same beacon location but different railroad
+                if (b1.beaconID === b2.beaconID && Math.abs(b1.longitude - b2.longitude) < LONGITUDE_THRESHOLD) {
+                    const id1 = `${b1.beaconID}-${b1.railroadID}`;
+                    const id2 = `${b2.beaconID}-${b2.railroadID}`;
+                    
+                    // Use railroadID for deterministic ordering
+                    const rr1 = String(b1.railroadID || '');
+                    const rr2 = String(b2.railroadID || '');
+                    
+                    if (rr1 < rr2) {
+                        shifts.set(id1, -50); // Shift left
+                        shifts.set(id2, 50);  // Shift right
+                    } else {
+                        shifts.set(id1, 50);  // Shift right
+                        shifts.set(id2, -50); // Shift left
+                    }
+                }
             }
         }
-        // Map preserves insertion order with overwrites; spread to array
-        return Array.from(byId.values());
-    }, [beaconPins]);
+        
+        return shifts;
+    }, [uniqueBeaconPins]);
 
     return (
         <>
@@ -54,15 +95,22 @@ const BeaconMarkers: React.FC<BeaconMarkersProps> = ({
                 let lastUpdateTime: string | null = null;
                 let direction: string | null = null;
                 if (beaconLastUpdateMap && beaconPin.beaconID) {
-                    const entry = beaconLastUpdateMap[String(beaconPin.beaconID)];
+                    // Use beaconID and subdivisionID for unique key (matches makeBeaconKey in RailMap.tsx)
+                    const keyComposite = `${beaconPin.beaconID}${beaconPin.subdivisionID ? `|${beaconPin.subdivisionID}` : ''}`;
+                    const entry = beaconLastUpdateMap[keyComposite];
                     if (entry && entry.lastUpdate) {
                         const d = new Date(entry.lastUpdate);
-                        lastUpdateTime = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        lastUpdateTime = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
                         direction = entry.direction;
                     }
                 }
-                // Stable unique key: use beaconID plus lastUpdate (if present) for identity, fallback to idx
-                const keyRoot = beaconPin.beaconID != null ? `beacon-${beaconPin.beaconID}` : `beacon-idx-${idx}`;
+                // Stable unique key: use beaconID+railroadID for identity, fallback to idx
+                const keyRoot = beaconPin.beaconID != null && beaconPin.railroadID != null 
+                    ? `beacon-${beaconPin.beaconID}-${beaconPin.railroadID}` 
+                    : `beacon-idx-${idx}`;
+                const shiftKey = `${beaconPin.beaconID}-${beaconPin.railroadID}`;
+                const horizontalShift = beaconHorizontalShifts.get(shiftKey) || 0;
+                
                 return (
                     <React.Fragment key={keyRoot}>
                         <BeaconMarker
@@ -81,6 +129,8 @@ const BeaconMarkers: React.FC<BeaconMarkersProps> = ({
                                 direction={direction}
                                 onClick={onBeaconClick}
                                 trackedPins={trackedPins}
+                                mapPins={mapPins}
+                                horizontalShift={horizontalShift}
                             />
                         )}
                     </React.Fragment>
