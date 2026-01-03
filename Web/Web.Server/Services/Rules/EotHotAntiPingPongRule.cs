@@ -1,3 +1,4 @@
+using Web.Server.Entities;
 using Web.Server.Enums;
 using Web.Server.Repositories;
 
@@ -9,7 +10,7 @@ namespace Web.Server.Services.Rules
     /// </summary>
     public class EotHotAntiPingPongRule : ITelemetryRule
     {
-        public const int TIME_WINDOW_MINUTES = 15;
+        public const int TIME_WINDOW_MINUTES = 30;
 
         private readonly ITelemetryRepository _telemetryRepository;
 
@@ -27,32 +28,51 @@ namespace Web.Server.Services.Rules
 
             var minutesAgo = context.Telemetry.CreatedAt.AddMinutes(-TIME_WINDOW_MINUTES);
 
-            // Check to see if there is any recent telemetry for this address within the time window.
+            // Get recent telemetry for this address within the time window.
             var recentTelemetry = await _telemetryRepository
                 .GetRecentsWithinTimeOffsetAsync(context.Telemetry.AddressID, context.RailroadId, minutesAgo);
 
-            var atLeastTwoRecentTelemetry = recentTelemetry.Any() && recentTelemetry.Count >= 2;
-
-            if (!atLeastTwoRecentTelemetry)
+            if (recentTelemetry == null || recentTelemetry.Count <= 1)
             {
+                // Only zero or one previous telemetry exists, so no ping-pong possible.
                 return false;
             }
 
-            var firstNewestLoggedTelemetry = recentTelemetry[0];
-
-            var trainNotSwitchingBeacons = context.Telemetry.BeaconID == firstNewestLoggedTelemetry.BeaconID;
-
-            if (trainNotSwitchingBeacons)
+            if (await beaconIdAlreadyUsed(context.Telemetry.BeaconID, recentTelemetry[0].BeaconID, recentTelemetry))
             {
-                return false;
+                // Discard the telemetry as it is ping-ponging back to a previous beacon.
+                return true;
             }
-
-            var secondNewestLoggedTelemetry = recentTelemetry[1];
-
-            var trainPingPongingBackToBeacon = context.Telemetry.BeaconID == secondNewestLoggedTelemetry.BeaconID;
 
             // Discard if the train is switching beacons and trying to return to a previous beacon.
-            return trainPingPongingBackToBeacon;
+            return false;
+        }
+
+        private async Task<bool> beaconIdAlreadyUsed(int newBeaconId, int lastBeaconId, List<Telemetry> recentTelemetry)
+        {
+            if (newBeaconId == lastBeaconId)
+            {
+                // Same beacon, no ping-pong.
+                return false;
+            }
+
+            foreach (var entry in recentTelemetry)
+            {
+                if (entry.BeaconID == newBeaconId)
+                {
+                    // Beacon already exists in recent history.
+                    return true;
+                }
+
+                if (entry.BeaconID != lastBeaconId)
+                {
+                    // Stop checking, a different beacon hit.
+                    break;
+                }
+            }
+
+            // Beacon not found in recent history.
+            return false;
         }
     }
 }

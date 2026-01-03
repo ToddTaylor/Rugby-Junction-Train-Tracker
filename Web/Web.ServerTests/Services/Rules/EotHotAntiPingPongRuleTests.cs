@@ -350,7 +350,7 @@ namespace Web.ServerTests.Services.Rules
             var recentTelemetry = new List<Telemetry>
             {
                 new Telemetry { BeaconID = 2, AddressID = 32981, Source = SourceEnum.EOT, CreatedAt = currentTime.AddMinutes(-1) },
-                new Telemetry { BeaconID = 3, AddressID = 32981, Source = SourceEnum.EOT, CreatedAt = currentTime.AddMinutes(-360) }
+                new Telemetry { BeaconID = 3, AddressID = 32981, Source = SourceEnum.EOT, CreatedAt = currentTime.AddMinutes(EotHotAntiPingPongRule.TIME_WINDOW_MINUTES-1) }
             };
 
             _telemetryRepositoryMock
@@ -362,6 +362,37 @@ namespace Web.ServerTests.Services.Rules
 
             // Assert
             Assert.IsFalse(result);
+        }
+
+        [TestMethod]
+        public async Task ShouldDiscardAsync_ReturnsTrue_WhenTelemetryPingPongsToPreviousBeacon()
+        {
+            // Arrange
+            var currentTime = DateTime.UtcNow;
+            var context = new TelemetryRuleContext
+            {
+                Telemetry =
+                new Telemetry { BeaconID = 2, AddressID = 32981, Source = SourceEnum.EOT, CreatedAt = currentTime },
+                RailroadBeacons = new List<BeaconRailroad>(),
+                RailroadId = 1
+            };
+
+            var recentTelemetry = new List<Telemetry>
+            {
+                new Telemetry { BeaconID = 1, AddressID = 32981, Source = SourceEnum.EOT, CreatedAt = currentTime.AddMinutes(-1) },
+                new Telemetry { BeaconID = 1, AddressID = 32981, Source = SourceEnum.EOT, CreatedAt = currentTime.AddMinutes(-2) },
+                new Telemetry { BeaconID = 2, AddressID = 32981, Source = SourceEnum.EOT, CreatedAt = currentTime.AddMinutes(-3) } // Older telemetry at beacon 2
+            };
+
+            _telemetryRepositoryMock
+                .Setup(s => s.GetRecentsWithinTimeOffsetAsync(32981, 1, It.IsAny<DateTime>()))
+                .ReturnsAsync(recentTelemetry);
+
+            // Act
+            var result = await _rule.ShouldDiscardAsync(context);
+
+            // Assert
+            Assert.IsTrue(result);
         }
     }
 }
