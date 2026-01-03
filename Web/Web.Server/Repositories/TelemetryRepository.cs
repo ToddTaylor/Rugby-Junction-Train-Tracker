@@ -118,5 +118,16 @@ namespace Web.Server.Repositories
                 .OrderByDescending(t => t.CreatedAt)
                 .FirstOrDefaultAsync();
         }
+
+        public async Task<Telemetry?> GetMostRecentByAddressAsync(int addressId)
+        {
+            return await _context.Telemetries
+                .Where(t => t.AddressID == addressId && t.Discarded == false)
+                .Include(t => t.Beacon)
+                    .ThenInclude(b => b.BeaconRailroads)
+                    .ThenInclude(br => br.Subdivision)
+                .OrderByDescending(t => t.CreatedAt)
+                .FirstOrDefaultAsync();
+        }
     }
 }

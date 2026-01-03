@@ -124,6 +124,7 @@ builder.Services.AddScoped<ISubdivisionTrackageRightService, SubdivisionTrackage
 // Register telemetry rules
 builder.Services.AddScoped<ITelemetryRule, DpuAntiPingPongRule>();
 builder.Services.AddScoped<ITelemetryRule, EotHotAntiPingPongRule>();
+builder.Services.AddScoped<ITelemetryRule, TrackageRightsRule>();
 builder.Services.AddScoped<TelemetryRuleEngine>();
 
 builder.Services.AddScoped<ITimeProvider, SystemTimeProvider>();
