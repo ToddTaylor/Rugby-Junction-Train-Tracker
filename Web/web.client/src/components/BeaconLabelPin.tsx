@@ -188,8 +188,11 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
                     <div style="position: relative; display: flex; flex-direction: column; align-items: center; pointer-events: none;">
                         <div style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); z-index: 0; width:0;height:0;border-left:${pointerBorderWidth}px solid transparent;border-right:${pointerBorderWidth}px solid transparent;border-bottom:${pointerBorderHeight}px solid ${borderColor};"></div>
                         <div style="position: relative; z-index: 1; width:0;height:0;border-left:${pointerWidth}px solid transparent;border-right:${pointerWidth}px solid transparent;border-bottom:${pointerHeight}px solid ${pointerColor};margin-top:2px;"></div>
-                        <div style="transform: translateX(${horizontalShift}px); display: flex; flex-direction: column; align-items: center;">
-                            <div class="beacon-name" style="background:${labelBg};color:${labelColor};font-size:${labelFontSize}px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-weight:500;padding:${labelPadding}px 12px;border-radius:${labelRadius}px;box-shadow:0 1px 6px rgba(0,0,0,0.13);margin-top:-2px;white-space:nowrap;text-transform:uppercase;border:1px solid ${borderColor};cursor:pointer;pointer-events:auto;">${beaconPin.beaconName || ''}</div>
+                        <div style="display: flex; flex-direction: column; align-items: center;">
+                            <div class="beacon-name" style="position: relative; background:${labelBg};color:${labelColor};font-size:${labelFontSize}px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-weight:500;padding:${labelPadding}px 12px;border-radius:${labelRadius}px;box-shadow:0 1px 6px rgba(0,0,0,0.13);margin-top:-2px;margin-left:${horizontalShift}px;white-space:nowrap;text-transform:uppercase;border:1px solid ${borderColor};cursor:pointer;pointer-events:auto;">
+                                ${beaconPin.beaconName || ''}
+                                ${beaconPin.railroad ? `<span style="position: absolute; bottom: -5px; ${horizontalShift >= 0 ? 'right' : 'left'}: 4px; font-size: 9px; font-weight: 400; background: #005aa9; color: #fff; padding: 0px 3px; border-radius: 3px; white-space: nowrap; line-height: 1.2;">${beaconPin.railroad.toUpperCase()}</span>` : ''}
+                            </div>
                             ${statusText ? `<div class="beacon-status" style="
                                 background:${statusBg};
                                 color:${statusTextColor};
