@@ -172,8 +172,8 @@ const RailMap: React.FC = () => {
         enableHardReload: true
     });
 
-    // Marker icon size in pixels (constant)
-    const MARKER_SIZE_PX = 20;
+    // Calculate marker icon size based on zoom (matches getMarkerSize in TelemetryMarkers.tsx)
+    const MARKER_SIZE_PX = Math.max(10, Math.min(40, 28 + (mapZoom - 11) * 2));
 
     // Memoize sorting, grouping, and offset calculations to avoid recomputation on unrelated renders
     const { groupedPins } = useMemo(() => {
@@ -193,7 +193,8 @@ const RailMap: React.FC = () => {
             } else {
                 group.forEach((pin, idx) => {
                     const offsetIndex = idx - (n - 1) / 2;
-                    const offsetMeters = pixelsToMeters(MARKER_SIZE_PX, pin.latitude, mapZoom);
+                    // Add a small gap between markers (2 pixels) for better visibility
+                    const offsetMeters = pixelsToMeters(MARKER_SIZE_PX + 2, pin.latitude, mapZoom);
                     const offsetDeg = metersToLongitudeDegrees(offsetMeters * offsetIndex, pin.latitude);
                     offsets.push({ ...pin, longitude: pin.longitude + offsetDeg });
                 });
@@ -245,7 +246,8 @@ const RailMap: React.FC = () => {
             } else {
                 group.forEach((pin, idx) => {
                     const offsetIndex = idx - (n - 1) / 2;
-                    const offsetMeters = pixelsToMeters(MARKER_SIZE_PX, pin.latitude, mapZoom);
+                    // Add a small gap between markers (2 pixels) for better visibility
+                    const offsetMeters = pixelsToMeters(MARKER_SIZE_PX + 2, pin.latitude, mapZoom);
                     const offsetDeg = metersToLongitudeDegrees(offsetMeters * offsetIndex, pin.latitude);
                     offsets.push({ ...pin, longitude: pin.longitude + offsetDeg });
                 });
