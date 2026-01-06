@@ -210,8 +210,8 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
                 // - DO NOT CHANGE THIS FORMAT - it was carefully designed to prevent label overlap
                 // ==================================================================================
                 html: showArrow ? `
-                    <div style="position: absolute; ${arrowOnRight ? 'right' : 'left'}: 0; top: ${beaconDotRadius * 2}px; pointer-events: none; overflow: visible;">
-                        <div class="beacon-name" style="position: absolute; ${arrowOnRight ? 'right' : 'left'}: 0; top: 0; cursor: pointer; pointer-events: auto;">
+                    <div style="position: absolute; ${arrowOnRight ? 'right' : 'left'}: 0; top: ${beaconDotRadius * 2}px; display: flex; flex-direction: column; align-items: ${arrowOnRight ? 'flex-end' : 'flex-start'}; pointer-events: none; overflow: visible;">
+                        <div class="beacon-name" style="position: relative; cursor: pointer; pointer-events: auto;">
                             <svg style="position: absolute; ${arrowOnRight ? 'right' : 'left'}: -1px; top: -${triangleHeight - 1}px; width: ${triangleWidth + 2}px; height: ${triangleHeight + 1}px; overflow: visible; z-index: 1;" viewBox="0 0 ${triangleWidth} ${triangleHeight}">
                                 <polygon points="${arrowOnRight 
                                     ? `${triangleWidth},0 ${triangleWidth},${triangleHeight} 0,${triangleHeight}` 
@@ -225,14 +225,14 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
                             <div style="
                                 position: relative;
                                 top: 0;
-                                display: flex;
+                                display: inline-flex;
                                 align-items: center;
                                 background: ${labelBg};
                                 color: ${labelColor};
                                 font-size: ${labelFontSize}px;
                                 font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
                                 font-weight: 500;
-                                padding: ${labelPadding}px 12px;
+                                padding: ${labelPadding}px 8px;
                                 white-space: nowrap;
                                 text-transform: uppercase;
                                 border-radius: ${labelRadius}px;
@@ -243,24 +243,24 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
                                 ${beaconPin.beaconName || ''}
                                 ${beaconPin.railroad ? `<span style="position: absolute; bottom: -5px; right: 4px; font-size: 9px; font-weight: 400; background: #005aa9; color: #fff; padding: 0px 3px; border-radius: 3px; white-space: nowrap; line-height: 1.2;">${beaconPin.railroad.toUpperCase()}</span>` : ''}
                             </div>
-                            ${statusText ? `<div class="beacon-status" style="
-                                display: flex;
-                                justify-content: center;
-                                margin-top: 4px;
-                                background:${statusBg};
-                                color:${statusTextColor};
-                                font-size:${statusFontSize}px;
-                                font-family:${statusFontFamily};
-                                font-weight:${statusFontWeight};
-                                letter-spacing:${statusLetterSpacing};
-                                white-space:nowrap;
-                                text-shadow:${statusTextShadow};
-                                padding:${statusPadding};
-                                border-radius:${statusRadius};
-                                cursor:pointer;
-                                pointer-events:auto;
-                            ">${statusText}</div>` : ''}
-                            ${trackedTrainsAtBeacon.length > 0 ? `<div style="display: flex; flex-direction: column; gap: 2px; align-items: center; margin-top: 4px;">
+                        </div>
+                        ${statusText ? `<div class="beacon-status" style="
+                            display: inline-block;
+                            margin-top: 4px;
+                            background:${statusBg};
+                            color:${statusTextColor};
+                            font-size:${statusFontSize}px;
+                            font-family:${statusFontFamily};
+                            font-weight:${statusFontWeight};
+                            letter-spacing:${statusLetterSpacing};
+                            white-space:nowrap;
+                            text-shadow:${statusTextShadow};
+                            padding:${statusPadding};
+                            border-radius:${statusRadius};
+                            cursor:pointer;
+                            pointer-events:auto;
+                        ">${statusText}</div>` : ''}
+                        ${trackedTrainsAtBeacon.length > 0 ? `<div style="display: flex; flex-direction: column; gap: 2px; align-items: ${arrowOnRight ? 'flex-end' : 'flex-start'}; margin-top: 4px;">
                                 ${trackedTrainsAtBeacon.map(train => `
                                     <div class="track-indicator" data-train-id="${train.id}" data-symbol="${train.symbol || ''}" style="
                                         display: flex;
@@ -292,7 +292,6 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
                                     </div>
                                 `).join('')}
                             </div>` : ''}
-                        </div>
                     </div>
                 ` : `
                     <!-- ==================================================================================
