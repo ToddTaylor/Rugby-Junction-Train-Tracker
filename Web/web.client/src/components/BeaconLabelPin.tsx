@@ -71,8 +71,8 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
         statusText = 'Last Train: N/A';
     }
     
-    // For single beacon labels, only show statusText if there's actual data
-    const statusTextForSingleBeacon = lastUpdateTime ? statusText : '';
+    // For single beacon labels, show the same statusText (including N/A when no data)
+    const statusTextForSingleBeacon = statusText;
     
     // Style for status text
     const statusFontSize = labelFontSize;

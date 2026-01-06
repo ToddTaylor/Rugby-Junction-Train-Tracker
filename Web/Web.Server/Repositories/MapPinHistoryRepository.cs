@@ -44,6 +44,16 @@ namespace Web.Server.Repositories
                 .FirstOrDefaultAsync();
         }
 
+        public async Task<IEnumerable<MapPinHistory>> GetLatestPerBeaconAsync()
+        {
+            var histories = await _context.MapPinHistories
+                .GroupBy(mph => new { mph.BeaconID, mph.SubdivisionId })
+                .Select(g => g.OrderByDescending(mph => mph.LastUpdate).First())
+                .ToListAsync();
+
+            return histories;
+        }
+
         public async Task<MapPinHistory> AddAsync(MapPinHistory mapPinHistory)
         {
             mapPinHistory.CreatedAt = _timeProvider.UtcNow;

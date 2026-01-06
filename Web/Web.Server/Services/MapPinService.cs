@@ -63,6 +63,7 @@ namespace Web.Server.Services
 
         public async Task<IEnumerable<MapPin>> GetMapPinsLatestAsync()
         {
+            // Get latest from current MapPins table
             var mapPins = await _mapPinRepository.GetLatestAsync();
 
             // Recalculate IsLocal flag for each map pin based on current subdivision settings
@@ -75,7 +76,27 @@ namespace Web.Server.Services
                 }
             }
 
-            return mapPins;
+            // Get latest from MapPinHistory table for beacons that don't have a current MapPin
+            var historyLatest = await _mapPinHistoryService.GetLatestPerBeaconAsync();
+            
+            // Create a set of beacon+subdivision keys that already have MapPin entries
+            var existingKeys = new HashSet<string>(
+                mapPins.Select(mp => $"{mp.BeaconID}|{mp.SubdivisionId}")
+            );
+
+            // Add history entries for beacons that don't have a current MapPin
+            var historyMapPins = historyLatest
+                .Where(h => !existingKeys.Contains($"{h.BeaconID}|{h.SubdivisionId}"))
+                .Select(h => new MapPin
+                {
+                    BeaconID = h.BeaconID,
+                    SubdivisionId = h.SubdivisionId,
+                    Direction = h.Direction,
+                    LastUpdate = h.LastUpdate,
+                    BeaconRailroad = h.BeaconRailroad
+                });
+
+            return mapPins.Concat(historyMapPins);
         }
 
         public async Task<MapPin?> GetMapPinByIdAsync(int addressID)

@@ -45,6 +45,19 @@ namespace Web.Server.Services
             return histories;
         }
 
+        public async Task<IEnumerable<MapPinHistory>> GetLatestPerBeaconAsync()
+        {
+            var histories = await _repository.GetLatestPerBeaconAsync();
+
+            // Populate BeaconRailroad data for each history record
+            foreach (var history in histories)
+            {
+                history.BeaconRailroad = await _beaconRailroadService.GetByIdAsync(history.BeaconID, history.SubdivisionId);
+            }
+
+            return histories;
+        }
+
         public async Task CreateOrUpdateHistoryFromMapPin(MapPin mapPin, bool isNewMapPin)
         {
             // Serialize addresses to JSON
