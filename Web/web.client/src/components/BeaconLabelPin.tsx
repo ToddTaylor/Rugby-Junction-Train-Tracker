@@ -182,37 +182,49 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
         }
     };
 
-    // Memoize the icon to ensure it's recreated when dependencies change
-    // Only show arrow when there are multiple labels (horizontalShift !== 0)
+    // ==================================================================================
+    // BEACON LABEL CONFIGURATION - DO NOT MODIFY WITHOUT CAREFUL TESTING
+    // ==================================================================================
+    // showArrow: true = MULTIPLE BEACONS at same location (callout style with diagonal triangle)
+    // showArrow: false = SINGLE BEACON (centered label with downward-pointing triangle above)
+    // ==================================================================================
     const showArrow = horizontalShift !== 0;
     const arrowOnRight = horizontalShift < 0;
-    const arrowWidth = 10 * base;
-    const actualLabelHeight = (labelFontSize + labelPadding * 2 + 2); // text + padding + border
+    const actualLabelHeight = (labelFontSize + labelPadding * 2 + 2);
     const beaconDotRadius = getBeaconDotSizePx(zoom) / 2;
     
-    // ==================================================================================
-    // CRITICAL ALIGNMENT LOGIC - DO NOT MODIFY WITHOUT CAREFUL TESTING
-    // ==================================================================================
-    // For arrow labels (multi-beacon case), the positioning must be DECOUPLED:
-    // - beacon-name (with arrow) is absolutely positioned and centered on beacon dot
-    // - statusText is absolutely positioned below beacon-name, independent of its width
-    // - This ensures beacon-name doesn't shift when statusText loads or changes
-    // 
-    // The arrow tip must align EXACTLY with the beacon dot center:
-    // - actualLabelHeight / 2 gives the vertical center of the beacon-name
-    // - +2px fine-tuning adjustment for pixel-perfect alignment with beacon dot
-    // - DO NOT change this calculation without visual verification at multiple zoom levels
-    const arrowVerticalOffset = (actualLabelHeight / 2) + 2; // CRITICAL: +2px is fine-tuned
-    // ==================================================================================
+    // Triangle dimensions for multi-beacon callout style
+    const triangleWidth = 20 * base;
+    const triangleHeight = beaconDotRadius + 4;
     
     const markerIcon = React.useMemo(() => L.divIcon({
                 className: 'beacon-label-marker',
+                // ==================================================================================
+                // MULTIPLE BEACON LABEL FORMAT (showArrow = true)
+                // ==================================================================================
+                // - Label positioned BELOW and to the LEFT or RIGHT of beacon
+                // - Diagonal triangle extends from top corner of label UP to beacon center
+                // - arrowOnRight: true = label on LEFT side, triangle points up-right to beacon
+                // - arrowOnRight: false = label on RIGHT side, triangle points up-left to beacon
+                // - "Last Train" status text shown below label
+                // - DO NOT CHANGE THIS FORMAT - it was carefully designed to prevent label overlap
+                // ==================================================================================
                 html: showArrow ? `
-                    <div style="position: absolute; ${arrowOnRight ? 'right' : 'left'}: ${beaconDotRadius}px; top: 0; transform: translateY(-${arrowVerticalOffset}px); pointer-events: none; overflow: visible;">
-                        <!-- CRITICAL: beacon-name uses absolute positioning (left:0 or right:0) to decouple from statusText width -->
-                        <div class="beacon-name" style="position: absolute; ${arrowOnRight ? 'right' : 'left'}: 0; display: flex; align-items: center; cursor: pointer; pointer-events: auto;">
+                    <div style="position: absolute; ${arrowOnRight ? 'right' : 'left'}: 0; top: ${beaconDotRadius * 2}px; pointer-events: none; overflow: visible;">
+                        <div class="beacon-name" style="position: absolute; ${arrowOnRight ? 'right' : 'left'}: 0; top: 0; cursor: pointer; pointer-events: auto;">
+                            <svg style="position: absolute; ${arrowOnRight ? 'right' : 'left'}: -1px; top: -${triangleHeight - 1}px; width: ${triangleWidth + 2}px; height: ${triangleHeight + 1}px; overflow: visible; z-index: 1;" viewBox="0 0 ${triangleWidth} ${triangleHeight}">
+                                <polygon points="${arrowOnRight 
+                                    ? `${triangleWidth},0 ${triangleWidth},${triangleHeight} 0,${triangleHeight}` 
+                                    : `0,0 ${triangleWidth},${triangleHeight} 0,${triangleHeight}`}" 
+                                    fill="${borderColor}"/>
+                                <polygon points="${arrowOnRight 
+                                    ? `${triangleWidth - 1},1 ${triangleWidth - 1},${triangleHeight} 1,${triangleHeight}` 
+                                    : `1,1 ${triangleWidth - 1},${triangleHeight} 1,${triangleHeight}`}" 
+                                    fill="${labelBg}"/>
+                            </svg>
                             <div style="
                                 position: relative;
+                                top: 0;
                                 display: flex;
                                 align-items: center;
                                 background: ${labelBg};
@@ -224,96 +236,74 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
                                 white-space: nowrap;
                                 text-transform: uppercase;
                                 border-radius: ${labelRadius}px;
-                                ${arrowOnRight ? `border-top-right-radius: 0; border-bottom-right-radius: 0;` : `border-top-left-radius: 0; border-bottom-left-radius: 0;`}
                                 border: 1px solid ${borderColor};
-                                ${arrowOnRight ? 'border-right: none;' : 'border-left: none;'}
+                                border-top-${arrowOnRight ? 'right' : 'left'}-radius: 0;
                                 box-shadow: 0 1px 6px rgba(0,0,0,0.13);
-                                ${arrowOnRight ? '' : 'order: 1;'}
                             ">
                                 ${beaconPin.beaconName || ''}
-                                ${beaconPin.railroad ? `<span style="position: absolute; bottom: -5px; ${arrowOnRight ? 'left' : 'right'}: 4px; font-size: 9px; font-weight: 400; background: #005aa9; color: #fff; padding: 0px 3px; border-radius: 3px; white-space: nowrap; line-height: 1.2;">${beaconPin.railroad.toUpperCase()}</span>` : ''}
+                                ${beaconPin.railroad ? `<span style="position: absolute; bottom: -5px; right: 4px; font-size: 9px; font-weight: 400; background: #005aa9; color: #fff; padding: 0px 3px; border-radius: 3px; white-space: nowrap; line-height: 1.2;">${beaconPin.railroad.toUpperCase()}</span>` : ''}
                             </div>
-                            <div style="
-                                width: 0;
-                                height: 0;
-                                border-top: ${actualLabelHeight / 2}px solid transparent;
-                                border-bottom: ${actualLabelHeight / 2}px solid transparent;
-                                ${arrowOnRight 
-                                    ? `border-left: ${arrowWidth}px solid ${labelBg};`
-                                    : `border-right: ${arrowWidth}px solid ${labelBg};`
-                                }
-                                position: relative;
-                                margin: 0;
-                            "></div>
-                            <div style="
-                                position: absolute;
-                                ${arrowOnRight ? 'right' : 'left'}: -4px;
-                                top: 50%;
-                                transform: translateY(-50%);
-                                width: 0;
-                                height: 0;
-                                border-top: ${actualLabelHeight / 2 + 3}px solid transparent;
-                                border-bottom: ${actualLabelHeight / 2 + 3}px solid transparent;
-                                ${arrowOnRight 
-                                    ? `border-left: ${arrowWidth + 5}px solid ${borderColor};`
-                                    : `border-right: ${arrowWidth + 5}px solid ${borderColor};`
-                                }
-                                z-index: -1;
-                            "></div>
-                        </div>
-                        <!-- CRITICAL: statusText is absolutely positioned +8px below beacon-name for comfortable spacing -->
-                        <!-- DO NOT change to relative/flex positioning - it will couple beacon-name and statusText alignment -->
-                        ${statusText ? `<div class="beacon-status" style="
-                            position: absolute;
-                            ${arrowOnRight ? 'right' : 'left'}: 0;
-                            top: ${actualLabelHeight + 8}px;
-                            background:${statusBg};
-                            color:${statusTextColor};
-                            font-size:${statusFontSize}px;
-                            font-family:${statusFontFamily};
-                            font-weight:${statusFontWeight};
-                            letter-spacing:${statusLetterSpacing};
-                            white-space:nowrap;
-                            text-shadow:${statusTextShadow};
-                            padding:${statusPadding};
-                            border-radius:${statusRadius};
-                            cursor:pointer;
-                            pointer-events:auto;
-                        ">${statusText}</div>` : ''}
-                        ${trackedTrainsAtBeacon.length > 0 ? `<div style="position: absolute; ${arrowOnRight ? 'right' : 'left'}: 0; top: ${actualLabelHeight + 2 + (statusText ? 20 : 0)}px; display: flex; flex-direction: column; gap: 2px; align-items: ${arrowOnRight ? 'flex-start' : 'flex-end'};">
-                            ${trackedTrainsAtBeacon.map(train => `
-                                <div class="track-indicator" data-train-id="${train.id}" data-symbol="${train.symbol || ''}" style="
-                                    display: flex;
-                                    align-items: center;
-                                    gap: 2px;
-                                    cursor: pointer;
-                                    pointer-events: auto;
-                                " title="Click to edit symbol">
-                                    <div style="
-                                        width: 14px;
-                                        height: 14px;
-                                        background-color: ${train.color};
-                                        border-radius: 50%;
-                                        border: 1px solid rgba(0, 0, 0, 0.5);
+                            ${statusText ? `<div class="beacon-status" style="
+                                display: flex;
+                                justify-content: center;
+                                margin-top: 4px;
+                                background:${statusBg};
+                                color:${statusTextColor};
+                                font-size:${statusFontSize}px;
+                                font-family:${statusFontFamily};
+                                font-weight:${statusFontWeight};
+                                letter-spacing:${statusLetterSpacing};
+                                white-space:nowrap;
+                                text-shadow:${statusTextShadow};
+                                padding:${statusPadding};
+                                border-radius:${statusRadius};
+                                cursor:pointer;
+                                pointer-events:auto;
+                            ">${statusText}</div>` : ''}
+                            ${trackedTrainsAtBeacon.length > 0 ? `<div style="display: flex; flex-direction: column; gap: 2px; align-items: center; margin-top: 4px;">
+                                ${trackedTrainsAtBeacon.map(train => `
+                                    <div class="track-indicator" data-train-id="${train.id}" data-symbol="${train.symbol || ''}" style="
                                         display: flex;
                                         align-items: center;
-                                        justify-content: center;
-                                        font-size: 10px;
-                                        font-weight: 900;
-                                        color: #000;
-                                        line-height: 14px;
-                                    ">T</div>
-                                    ${train.symbol ? `<span style="
-                                        font-size: 13px;
-                                        font-weight: bold;
-                                        color: ${train.color};
-                                        text-decoration: underline;
-                                    ">${train.symbol}</span>` : ''}
-                                </div>
-                            `).join('')}
-                        </div>` : ''}
+                                        gap: 2px;
+                                        cursor: pointer;
+                                        pointer-events: auto;
+                                    " title="Click to edit symbol">
+                                        <div style="
+                                            width: 14px;
+                                            height: 14px;
+                                            background-color: ${train.color};
+                                            border-radius: 50%;
+                                            border: 1px solid rgba(0, 0, 0, 0.5);
+                                            display: flex;
+                                            align-items: center;
+                                            justify-content: center;
+                                            font-size: 10px;
+                                            font-weight: 900;
+                                            color: #000;
+                                            line-height: 14px;
+                                        ">T</div>
+                                        ${train.symbol ? `<span style="
+                                            font-size: 13px;
+                                            font-weight: bold;
+                                            color: ${train.color};
+                                            text-decoration: underline;
+                                        ">${train.symbol}</span>` : ''}
+                                    </div>
+                                `).join('')}
+                            </div>` : ''}
+                        </div>
                     </div>
                 ` : `
+                    <!-- ==================================================================================
+                         SINGLE BEACON LABEL FORMAT (showArrow = false)
+                         ==================================================================================
+                         - Label centered directly above beacon dot
+                         - Small downward-pointing triangle connects label to beacon
+                         - "Last Train" status text shown below label (only if available)
+                         - This is the default format when only one beacon at a location
+                         - DO NOT CHANGE THIS FORMAT - it is the standard beacon label appearance
+                         ================================================================================== -->
                     <div style="position: relative; display: flex; flex-direction: column; align-items: center; pointer-events: none;">
                         <div style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); z-index: 0; width:0;height:0;border-left:${pointerBorderWidth}px solid transparent;border-right:${pointerBorderWidth}px solid transparent;border-bottom:${pointerBorderHeight}px solid ${borderColor};"></div>
                         <div style="position: relative; z-index: 1; width:0;height:0;border-left:${pointerWidth}px solid transparent;border-right:${pointerWidth}px solid transparent;border-bottom:${pointerHeight}px solid ${pointerColor};margin-top:2px;"></div>
@@ -386,14 +376,12 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
                 statusText,
                 statusTextForSingleBeacon,
                 trackedTrainsAtBeacon,
-                arrowVerticalOffset, 
                 labelBg, 
                 labelColor, 
                 pointerColor, 
                 borderColor,
                 showArrow,
                 arrowOnRight,
-                arrowWidth,
                 actualLabelHeight,
                 beaconDotRadius,
                 labelFontSize,
