@@ -42,13 +42,21 @@ namespace Web.Server.Services
 
                 var beaconRailroadDTOs = _mapper.Map<IEnumerable<BeaconRailroadDTO>>(beaconRailroads);
 
+                var updatedBeacons = new List<BeaconRailroadDTO>();
+
                 foreach (var beaconRailroadDTO in beaconRailroadDTOs)
                 {
                     var isOffline = beaconRailroadDTO.LastUpdate != default && beaconRailroadDTO.LastUpdate <= cutoff;
 
                     beaconRailroadDTO.Online = !isOffline;
 
-                    await _hubContext.Clients.All.SendAsync(NotificationMethods.BeaconUpdate, beaconRailroadDTO, cancellationToken: stoppingToken);
+                    updatedBeacons.Add(beaconRailroadDTO);
+                }
+
+                // Send all beacons as a single batch to match frontend expectation of Beacon[]
+                if (updatedBeacons.Any())
+                {
+                    await _hubContext.Clients.All.SendAsync(NotificationMethods.BeaconUpdate, updatedBeacons, cancellationToken: stoppingToken);
                 }
 
                 await Task.Delay(_cleanupInterval, stoppingToken);
