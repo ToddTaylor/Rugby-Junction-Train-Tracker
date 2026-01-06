@@ -16,6 +16,11 @@ export function useBeacons() {
     const fetchBeacons = async () => {
       const STORE_NAME = 'beacons';
       const DB_VERSION = 2;
+      // Cache schema version - increment when beacon data structure changes
+      // This ensures stale cached data without new fields (like railroad/subdivision names) is refreshed
+      const BEACON_CACHE_VERSION = 2; // v2: added railroad/subdivision name fields
+      const CACHE_VERSION_KEY = 'beacons_version';
+      
       const db = await openDB('railways-db', DB_VERSION, {
         upgrade(db) {
           if (!db.objectStoreNames.contains('geojson')) {
@@ -26,23 +31,33 @@ export function useBeacons() {
           }
         }
       });
-      let cached;
+      
+      // Check if cached data is from an older schema version
+      let cachedVersion: number | undefined;
       try {
-        cached = await db.get(STORE_NAME, 'beacons');
-      } catch (e) {
-        await db.close();
-        await indexedDB.deleteDatabase('railways-db');
-        const db2 = await openDB('railways-db', DB_VERSION, {
-          upgrade(db) {
-            if (!db.objectStoreNames.contains('geojson')) {
-              db.createObjectStore('geojson');
+        cachedVersion = await db.get(STORE_NAME, CACHE_VERSION_KEY);
+      } catch { /* ignore */ }
+      
+      let cached;
+      // Only use cache if version matches current schema version
+      if (cachedVersion === BEACON_CACHE_VERSION) {
+        try {
+          cached = await db.get(STORE_NAME, 'beacons');
+        } catch (e) {
+          await db.close();
+          await indexedDB.deleteDatabase('railways-db');
+          const db2 = await openDB('railways-db', DB_VERSION, {
+            upgrade(db) {
+              if (!db.objectStoreNames.contains('geojson')) {
+                db.createObjectStore('geojson');
+              }
+              if (!db.objectStoreNames.contains(STORE_NAME)) {
+                db.createObjectStore(STORE_NAME);
+              }
             }
-            if (!db.objectStoreNames.contains(STORE_NAME)) {
-              db.createObjectStore(STORE_NAME);
-            }
-          }
-        });
-        cached = await db2.get(STORE_NAME, 'beacons');
+          });
+          cached = await db2.get(STORE_NAME, 'beacons');
+        }
       }
       const graceUntil = Number(localStorage.getItem('focusGraceUntil') || '0');
       const now = Date.now();
@@ -83,7 +98,10 @@ export function useBeacons() {
           online: b.online
         }));
         
+        // Store beacons and cache version together
         await db.put(STORE_NAME, beacons, 'beacons');
+        await db.put(STORE_NAME, BEACON_CACHE_VERSION, CACHE_VERSION_KEY);
+        
         const withStatus = (beacons as Beacon[]).map(b => {
           const stored = initialStatusMap[b.beaconID];
           if (stored === true && b.online === false && now < graceUntil) {

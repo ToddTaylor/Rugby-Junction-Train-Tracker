@@ -138,13 +138,28 @@ const RailMap: React.FC = () => {
                 });
             }
         },
-        BeaconUpdate: (beaconBatch: Beacon[]) => {
+        BeaconUpdate: (beaconBatch: any[]) => {
             setBeacons((prevBeacons: Beacon[]) => {
                 let updated = prevBeacons;
                 beaconBatch.forEach(b => {
+                    // Map DTO field names to frontend Beacon type
+                    // Server sends: beaconID, beaconName, railroadID, railroadName, subdivisionID, subdivisionName
+                    // Frontend uses: beaconID, beaconName, railroadID, railroad, subdivisionID, subdivision
+                    const mappedBeacon: Beacon = {
+                        beaconID: b.beaconID,
+                        beaconName: b.beaconName,
+                        railroadID: b.railroadID,
+                        subdivisionID: b.subdivisionID,
+                        railroad: b.railroadName,
+                        subdivision: b.subdivisionName,
+                        latitude: b.latitude,
+                        longitude: b.longitude,
+                        milepost: b.milepost,
+                        online: b.online
+                    };
                     // Filter out beacons with invalid IDs (0 or null/undefined)
-                    if (b.beaconID && Number(b.beaconID) !== 0 && b.railroadID && Number(b.railroadID) !== 0) {
-                        updated = updateBeacon(updated, b);
+                    if (mappedBeacon.beaconID && Number(mappedBeacon.beaconID) !== 0 && mappedBeacon.railroadID && Number(mappedBeacon.railroadID) !== 0) {
+                        updated = updateBeacon(updated, mappedBeacon);
                     }
                 });
                 return updated;
