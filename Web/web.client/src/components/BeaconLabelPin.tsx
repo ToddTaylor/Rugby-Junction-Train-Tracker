@@ -175,14 +175,8 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
         }
     };
 
-    return (
-        <>
-            <Marker
-            ref={markerRef}
-            key={`beacon-label-${beaconPin.beaconID ?? idx}`}
-            position={[getLabelOffsetLat(beaconPin.latitude, zoom), beaconPin.longitude]}
-            pane="beaconLabelPane"
-            icon={L.divIcon({
+    // Memoize the icon to ensure it's recreated when dependencies change
+    const markerIcon = React.useMemo(() => L.divIcon({
                 className: 'beacon-label-marker',
                 html: `
                     <div style="position: relative; display: flex; flex-direction: column; align-items: center; pointer-events: none;">
@@ -245,7 +239,47 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
                 `,
                 iconSize: [iconWidth, iconHeight + (statusText ? 18 : 0) + (trackedTrainsAtBeacon.length > 0 ? 20 : 0)],
                 iconAnchor: [iconAnchorX, iconAnchorY],
-            })}
+            }), [
+                beaconPin.beaconName, 
+                beaconPin.railroad, 
+                beaconPin.subdivisionID,
+                statusText, 
+                trackedTrainsAtBeacon, 
+                labelBg, 
+                labelColor, 
+                pointerColor, 
+                borderColor,
+                horizontalShift,
+                labelFontSize,
+                labelPadding,
+                labelRadius,
+                pointerWidth,
+                pointerHeight,
+                pointerBorderWidth,
+                pointerBorderHeight,
+                statusFontSize,
+                statusFontWeight,
+                statusLetterSpacing,
+                statusFontFamily,
+                statusTextColor,
+                statusBg,
+                statusTextShadow,
+                statusPadding,
+                statusRadius,
+                iconWidth,
+                iconHeight,
+                iconAnchorX,
+                iconAnchorY
+            ]);
+
+    return (
+        <>
+            <Marker
+            ref={markerRef}
+            key={`beacon-label-${beaconPin.beaconID ?? idx}`}
+            position={[getLabelOffsetLat(beaconPin.latitude, zoom), beaconPin.longitude]}
+            pane="beaconLabelPane"
+            icon={markerIcon}
         />
         <TrackSymbolModal
             open={modalOpen}
