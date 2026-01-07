@@ -11,6 +11,7 @@ import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { MapPinHistory } from '../types/MapPinHistory';
 import { format, parseISO } from 'date-fns';
 import { getTrackedMapPins, updateTrackedPinSymbol, removeTrackedMapPin, getTrackedPinSymbol } from '../services/trackedPins';
+import { fetchBeaconHistory } from '../services/mapPinsHistory';
 import TrackSymbolModal from './TrackSymbolModal';
 
 interface BeaconHistoryModalProps {
@@ -49,24 +50,7 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdiv
         setLoading(true);
         setError(null);
         try {
-            // Build query string - include subdivisionId if present
-            let apiUrl = `${import.meta.env.VITE_API_URL}/api/v1/MapPins/History/${beaconID}?limit=10`;
-            if (subdivisionID) {
-                apiUrl += `&subdivisionId=${subdivisionID}`;
-            }
-            
-            const response = await fetch(apiUrl, {
-                headers: {
-                    'X-Api-Key': import.meta.env.VITE_API_KEY,
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to fetch beacon history');
-            }
-
-            const { data } = await response.json();
+            const data = await fetchBeaconHistory(beaconID, subdivisionID, 10);
             setHistory(data || []);
         } catch (err) {
             console.error('Error fetching beacon history:', err);

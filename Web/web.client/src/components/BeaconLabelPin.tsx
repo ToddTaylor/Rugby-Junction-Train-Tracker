@@ -6,6 +6,7 @@ import { TrackedPin, updateTrackedPinSymbol, removeTrackedMapPin } from '../serv
 import { MapPin } from '../types/MapPin';
 import TrackSymbolModal from './TrackSymbolModal';
 import { getBeaconDotSizePx } from '../utils/markerSizing';
+import { fetchBeaconLatestFromHistory } from '../services/mapPinsHistory';
 
 interface BeaconLabelPinProps {
     beaconPin: Beacon;
@@ -34,6 +35,57 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
     mapPins = [],
     horizontalShift = 0
 }) => {
+    // Fetch most recent history entry from same API as BeaconHistoryModal to ensure timestamp accuracy
+    const [fetchedLastUpdateTime, setFetchedLastUpdateTime] = useState<string | null>(null);
+    const [fetchedDirection, setFetchedDirection] = useState<string | null>(null);
+
+    const updateFromHistory = async (bypassCache = false) => {
+        if (!beaconPin.beaconID) return;
+        try {
+            const latest = await fetchBeaconLatestFromHistory(beaconPin.beaconID, beaconPin.subdivisionID, { bypassCache });
+            if (latest?.lastUpdate) {
+                const d = new Date(latest.lastUpdate);
+                setFetchedLastUpdateTime(d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }));
+                setFetchedDirection(latest.direction || null);
+            }
+        } catch (e) {
+            console.error('Error fetching latest beacon history:', e);
+        }
+    };
+
+    useEffect(() => {
+        updateFromHistory(false);
+    }, [beaconPin.beaconID, beaconPin.subdivisionID]);
+
+    // On live map pin changes (e.g., SignalR updates), prefer immediate pin data and then refresh history without cache
+    useEffect(() => {
+        if (!beaconPin.beaconID || !mapPins.length) return;
+        const latestForBeacon = mapPins
+            .filter(pin => String(pin.beaconID || '') === String(beaconPin.beaconID || '')
+                && String(pin.subdivisionID || '') === String(beaconPin.subdivisionID || ''))
+            .reduce<{ lastUpdate: string | null; direction: string | null } | null>((acc, pin) => {
+                if (!pin.lastUpdate) return acc;
+                if (!acc || new Date(pin.lastUpdate) > new Date(acc.lastUpdate || 0)) {
+                    return { lastUpdate: pin.lastUpdate, direction: pin.direction ?? null };
+                }
+                return acc;
+            }, null);
+
+        if (latestForBeacon?.lastUpdate) {
+            const d = new Date(latestForBeacon.lastUpdate);
+            setFetchedLastUpdateTime(d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }));
+            setFetchedDirection(latestForBeacon.direction);
+        }
+
+        // Then force a fresh pull from history to stay aligned with log
+        updateFromHistory(true);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [mapPins, beaconPin.beaconID, beaconPin.subdivisionID]);
+
+    // Use fetched data if available, otherwise fall back to props
+    const actualLastUpdateTime = fetchedLastUpdateTime || lastUpdateTime;
+    const actualDirection = fetchedDirection || direction;
+
     // Sizing and style logic
     const base = 1 + (zoom - 7) * 0.09;
     const labelFontSize = 13;
@@ -65,8 +117,8 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
     }
 
     let statusText = '';
-    if (lastUpdateTime) {
-        statusText = `Last Train: ${direction ? getDirectionArrow(direction) + ' ' : ''}${lastUpdateTime}`;
+    if (actualLastUpdateTime) {
+        statusText = `Last Train: ${actualDirection ? getDirectionArrow(actualDirection) + ' ' : ''}${actualLastUpdateTime}`;
     } else {
         statusText = 'Last Train: N/A';
     }
