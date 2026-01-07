@@ -30,10 +30,10 @@ namespace Web.Server.Repositories
                 .FirstOrDefaultAsync();
         }
 
-        public async Task<MapPin?> GetByAddressIdAsync(int addressID)
+        public async Task<MapPin?> GetByAddressIdAsync(int addressID, int? trainID)
         {
             return await _context.MapPins
-                .Where(mp => mp.Addresses.Any(a => a.AddressID == addressID))
+                .Where(mp => mp.Addresses.Any(a => a.AddressID == addressID && (trainID == null || a.DpuTrainID == trainID)))
                 .Include(mp => mp.Addresses)
                 .Include(mp => mp.BeaconRailroad)
                 .Include(mp => mp.BeaconRailroad.Subdivision)
@@ -41,11 +41,11 @@ namespace Web.Server.Repositories
                 .FirstOrDefaultAsync();
         }
 
-        public async Task<MapPin?> GetByTrainIdAsync(int dpuTrainID)
+        public async Task<MapPin?> GetByTrainIdAsync(int trainID)
         {
             return await _context.MapPins
                 .Include(mp => mp.Addresses)
-                .Where(mp => mp.Addresses.Any(a => a.DpuTrainID == dpuTrainID))
+                .Where(mp => mp.Addresses.Any(a => a.DpuTrainID == trainID))
                 .FirstOrDefaultAsync();
         }
 
@@ -123,7 +123,7 @@ namespace Web.Server.Repositories
                 existingMapPin.Direction = mapPin.Direction;
                 existingMapPin.Moving = mapPin.Moving;
                 existingMapPin.IsLocal = mapPin.IsLocal;
-                
+
                 // Update addresses collection
                 existingMapPin.Addresses = mapPin.Addresses;
 

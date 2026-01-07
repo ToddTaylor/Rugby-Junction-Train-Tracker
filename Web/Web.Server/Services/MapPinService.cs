@@ -78,7 +78,7 @@ namespace Web.Server.Services
 
             // Get latest from MapPinHistory table for beacons that don't have a current MapPin
             var historyLatest = await _mapPinHistoryService.GetLatestPerBeaconAsync();
-            
+
             // Create a set of beacon+subdivision keys that already have MapPin entries
             var existingKeys = new HashSet<string>(
                 mapPins.Select(mp => $"{mp.BeaconID}|{mp.SubdivisionId}")
@@ -99,9 +99,9 @@ namespace Web.Server.Services
             return mapPins.Concat(historyMapPins);
         }
 
-        public async Task<MapPin?> GetMapPinByIdAsync(int addressID)
+        public async Task<MapPin?> GetMapPinByIdAsync(int addressID, int? trainID)
         {
-            return await _mapPinRepository.GetByAddressIdAsync(addressID);
+            return await _mapPinRepository.GetByAddressIdAsync(addressID, trainID);
         }
 
         public async Task UpsertMapPin(Telemetry telemetry, ICollection<BeaconRailroad> railroadBeacons)
@@ -110,9 +110,10 @@ namespace Web.Server.Services
             bool isNewMapPin = false; // Track if this is a newly created map pin
 
             // HOT / EOT logic depends on whether a previous map pin exists with the same address ID.
-            var previousMapPinByAddressID = await _mapPinRepository.GetByAddressIdAsync(telemetry.AddressID);
+            // DPU logic depends on whether a previous map pin exists with the same address ID and Train ID.
+            var previousMapPin = await _mapPinRepository.GetByAddressIdAsync(telemetry.AddressID, telemetry.TrainID);
 
-            if (previousMapPinByAddressID == null)
+            if (previousMapPin == null)
             {
                 // No previous map pin exists with same address ID (HOT / EOT).
 
@@ -343,12 +344,14 @@ namespace Web.Server.Services
                 // Previous map pin with same address ID.
 
                 // Notes: With current logic, DPUs will never go here because their address ID is always unique.
-                mapPin = await this.UpdateMapPin(telemetry, previousMapPinByAddressID, railroadBeacons);
+                mapPin = await this.UpdateMapPin(telemetry, previousMapPin, railroadBeacons);
             }
 
             // Check for new DPU telemetry by Train ID.
-            if (telemetry.TrainID.HasValue && previousMapPinByAddressID == null)
+            if (telemetry.TrainID.HasValue && previousMapPin == null)
             {
+                // DPU telemetry with no previous map pin by address ID.
+
                 var previousMapPinByTrainID = await _mapPinRepository.GetByTrainIdAsync(telemetry.TrainID.Value);
 
                 if (previousMapPinByTrainID != null)
