@@ -21,7 +21,7 @@ export function updateMapPins(pins: MapPin[], newPin: MapPin): MapPin[] {
 
 export function updateBeacon(beacons: Beacon[], updatedBeacon: Beacon): Beacon[] {
     const existingIndex = beacons.findIndex(
-        (beacon) => beacon.beaconID === updatedBeacon.beaconID && beacon.railroadID === updatedBeacon.railroadID
+        (beacon) => String(beacon.beaconID) === String(updatedBeacon.beaconID) && String(beacon.railroadID) === String(updatedBeacon.railroadID)
     );
 
     if (existingIndex !== -1) {

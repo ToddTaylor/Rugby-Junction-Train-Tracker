@@ -38,7 +38,11 @@ namespace Web.Server.Services
 
                 var cutoff = DateTime.UtcNow.AddMinutes(-15);
 
-                var beaconRailroads = dbContext.BeaconRailroads.Include(br => br.Beacon).ToList();
+                var beaconRailroads = dbContext.BeaconRailroads
+                    .Include(br => br.Beacon)
+                    .Include(br => br.Subdivision)
+                        .ThenInclude(s => s.Railroad)
+                    .ToList();
 
                 var beaconRailroadDTOs = _mapper.Map<IEnumerable<BeaconRailroadDTO>>(beaconRailroads);
 
