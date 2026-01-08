@@ -33,6 +33,7 @@ namespace Web.Server.Controllers.v1
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "An error occurred while fetching all beacon railroads.");
                 response.Errors.Add(ex.Message);
                 return StatusCode(StatusCodes.Status500InternalServerError, response);
             }
@@ -77,6 +78,7 @@ namespace Web.Server.Controllers.v1
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "An error occurred while creating a beacon railroad.");
                 response.Errors.Add(ex.Message);
                 if (ex.InnerException != null)
                 { 
@@ -117,13 +119,21 @@ namespace Web.Server.Controllers.v1
         [HttpDelete("{beaconId:int}/{subdivisionId:int}")]
         public async Task<IActionResult> Delete(int beaconId, int subdivisionId)
         {
-            var deleted = await _service.DeleteAsync(beaconId, subdivisionId);
-            if (!deleted)
+            try
             {
-                return NotFound();
-            }
+                var deleted = await _service.DeleteAsync(beaconId, subdivisionId);
+                if (!deleted)
+                {
+                    return NotFound();
+                }
 
-            return NoContent();
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while deleting beacon railroad {BeaconId}/{SubdivisionId}.", beaconId, subdivisionId);
+                return StatusCode(StatusCodes.Status500InternalServerError, new MessageEnvelope<object>(null, new List<string> { ex.Message }));
+            }
         }
     }
 }

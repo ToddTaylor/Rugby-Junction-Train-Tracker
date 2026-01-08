@@ -25,18 +25,26 @@ public class AuthController : ControllerBase
     [HttpPost("send-code")]
     public async Task<IActionResult> SendCode([FromBody] SendCodeRequestDTO request)
     {
-        var user = await _userService.GetUserByEmailAsync(request.Email);
-        if (user == null || !user.IsActive)
+        try
         {
-            return BadRequest(new { success = false, errors = new List<string> { "User does not exist or is not active." } });
-        }
+            var user = await _userService.GetUserByEmailAsync(request.Email);
+            if (user == null || !user.IsActive)
+            {
+                return BadRequest(new { success = false, errors = new List<string> { "User does not exist or is not active." } });
+            }
 
-        var (success, errors) = await _authService.SendCodeAsync(request.Email);
-        if (success)
-        {
-            return Ok(new { success });
+            var (success, errors) = await _authService.SendCodeAsync(request.Email);
+            if (success)
+            {
+                return Ok(new { success });
+            }
+            return BadRequest(new { success, errors });
         }
-        return BadRequest(new { success, errors });
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "An error occurred while sending verification code to {Email}", request.Email);
+            return StatusCode(StatusCodes.Status500InternalServerError, new { success = false, errors = new List<string> { "An error occurred while sending the verification code." } });
+        }
     }
 
     /// <summary>
@@ -45,11 +53,19 @@ public class AuthController : ControllerBase
     [HttpPost("verify-code")]
     public async Task<IActionResult> VerifyCode([FromBody] VerifyCodeRequestDTO request)
     {
-        var (success, result, errors) = await _authService.VerifyCodeAsync(request.Email, request.Code, request.Remember);
-        if (success && result != null)
+        try
         {
-            return Ok(new { success, token = result.Token, expiresUtc = result.ExpiresUtc, roles = result.Roles, userId = result.UserId });
+            var (success, result, errors) = await _authService.VerifyCodeAsync(request.Email, request.Code, request.Remember);
+            if (success && result != null)
+            {
+                return Ok(new { success, token = result.Token, expiresUtc = result.ExpiresUtc, roles = result.Roles, userId = result.UserId });
+            }
+            return BadRequest(new { success, errors });
         }
-        return BadRequest(new { success, errors });
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "An error occurred while verifying code for {Email}", request.Email);
+            return StatusCode(StatusCodes.Status500InternalServerError, new { success = false, errors = new List<string> { "An error occurred while verifying the code." } });
+        }
     }
 }

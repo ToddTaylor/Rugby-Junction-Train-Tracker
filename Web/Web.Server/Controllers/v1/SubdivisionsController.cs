@@ -74,24 +74,33 @@ namespace Web.Server.Controllers.v1
         public async Task<ActionResult> PutSubdivision(int id, UpdateSubdivisionDTO updateSubdivisionDTO)
         {
             var response = new MessageEnvelope<SubdivisionDTO>(null, []);
-            if (id != updateSubdivisionDTO.ID)
-            {
-                response.Errors.Add("ID mismatch.");
-                return BadRequest(response);
-            }
-
-            var subdivision = _mapper.Map<Subdivision>(updateSubdivisionDTO);
-
             try
             {
-                var updatedSubdivision = await _subdivisionService.UpdateSubdivisionAsync(subdivision);
-                response.Data = _mapper.Map<SubdivisionDTO>(updatedSubdivision);
-                return Ok(response);
+                if (id != updateSubdivisionDTO.ID)
+                {
+                    response.Errors.Add("ID mismatch.");
+                    return BadRequest(response);
+                }
+
+                var subdivision = _mapper.Map<Subdivision>(updateSubdivisionDTO);
+
+                try
+                {
+                    var updatedSubdivision = await _subdivisionService.UpdateSubdivisionAsync(subdivision);
+                    response.Data = _mapper.Map<SubdivisionDTO>(updatedSubdivision);
+                    return Ok(response);
+                }
+                catch (KeyNotFoundException)
+                {
+                    response.Errors.Add("Subdivision not found.");
+                    return NotFound(response);
+                }
             }
-            catch (KeyNotFoundException)
+            catch (Exception ex)
             {
-                response.Errors.Add("Subdivision not found.");
-                return NotFound(response);
+                _logger.LogError(ex, "An error occurred while updating subdivision {SubdivisionId}.", id);
+                response.Errors.Add(ex.Message);
+                return StatusCode(StatusCodes.Status500InternalServerError, response);
             }
         }
 
@@ -121,14 +130,22 @@ namespace Web.Server.Controllers.v1
         {
             try
             {
-                await _subdivisionService.DeleteSubdivisionAsync(id);
-            }
-            catch (KeyNotFoundException)
-            {
-                // Do nothing as item already doesn't exist.
-            }
+                try
+                {
+                    await _subdivisionService.DeleteSubdivisionAsync(id);
+                }
+                catch (KeyNotFoundException)
+                {
+                    // Do nothing as item already doesn't exist.
+                }
 
-            return NoContent();
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while deleting subdivision {SubdivisionId}.", id);
+                return StatusCode(StatusCodes.Status500InternalServerError, new { error = ex.Message });
+            }
         }
     }
 }

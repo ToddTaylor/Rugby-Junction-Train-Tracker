@@ -74,24 +74,33 @@ namespace Web.Server.Controllers.v1
         public async Task<ActionResult> PutRailroad(int id, UpdateRailroadDTO updateRailroadDTO)
         {
             var response = new MessageEnvelope<RailroadDTO>(null, []);
-            if (id != updateRailroadDTO.ID)
-            {
-                response.Errors.Add("ID mismatch.");
-                return BadRequest(response);
-            }
-
-            var railroad = _mapper.Map<Railroad>(updateRailroadDTO);
-
             try
             {
-                var updatedRailroad = await _railroadService.UpdateRailroadAsync(railroad);
-                response.Data = _mapper.Map<RailroadDTO>(updatedRailroad);
-                return Ok(response);
+                if (id != updateRailroadDTO.ID)
+                {
+                    response.Errors.Add("ID mismatch.");
+                    return BadRequest(response);
+                }
+
+                var railroad = _mapper.Map<Railroad>(updateRailroadDTO);
+
+                try
+                {
+                    var updatedRailroad = await _railroadService.UpdateRailroadAsync(railroad);
+                    response.Data = _mapper.Map<RailroadDTO>(updatedRailroad);
+                    return Ok(response);
+                }
+                catch (KeyNotFoundException)
+                {
+                    response.Errors.Add("Railroad not found.");
+                    return NotFound(response);
+                }
             }
-            catch (KeyNotFoundException)
+            catch (Exception ex)
             {
-                response.Errors.Add("Railroad not found.");
-                return NotFound(response);
+                _logger.LogError(ex, "An error occurred while updating railroad {RailroadId}.", id);
+                response.Errors.Add(ex.Message);
+                return StatusCode(StatusCodes.Status500InternalServerError, response);
             }
         }
 
@@ -121,14 +130,22 @@ namespace Web.Server.Controllers.v1
         {
             try
             {
-                await _railroadService.DeleteRailroadAsync(id);
-            }
-            catch (KeyNotFoundException)
-            {
-                // Do nothing as item already doesn't exist.
-            }
+                try
+                {
+                    await _railroadService.DeleteRailroadAsync(id);
+                }
+                catch (KeyNotFoundException)
+                {
+                    // Do nothing as item already doesn't exist.
+                }
 
-            return NoContent();
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while deleting railroad {RailroadId}.", id);
+                return StatusCode(StatusCodes.Status500InternalServerError, new { error = ex.Message });
+            }
         }
     }
 }

@@ -125,34 +125,50 @@ namespace Web.Server.Controllers.v1
         [HttpPost("Health/{id}")]
         public async Task<IActionResult> CheckHealth(int id)
         {
-            if (id == 0)
+            try
             {
-                return BadRequest("A beacon ID is required.");
+                if (id == 0)
+                {
+                    return BadRequest("A beacon ID is required.");
+                }
+
+                var beacon = await _beaconService.GetBeaconByIdAsync(id);
+
+                if (beacon == null)
+                {
+                    return NotFound();
+                }
+
+                await _beaconService.UpdateBeaconHealthAsync(id, beacon);
+
+                return NoContent();
             }
-
-            var beacon = await _beaconService.GetBeaconByIdAsync(id);
-
-            if (beacon == null)
+            catch (Exception ex)
             {
-                return NotFound();
+                _logger.LogError(ex, "An error occurred while checking health for beacon {BeaconId}.", id);
+                return StatusCode(StatusCodes.Status500InternalServerError, new { error = ex.Message });
             }
-
-            await _beaconService.UpdateBeaconHealthAsync(id, beacon);
-
-            return NoContent();
         }
 
         // DELETE: api/v1/Beacons/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteBeacon(int id)
         {
-            var success = await _beaconService.DeleteBeaconAsync(id);
-            if (!success)
+            try
             {
-                return NotFound();
-            }
+                var success = await _beaconService.DeleteBeaconAsync(id);
+                if (!success)
+                {
+                    return NotFound();
+                }
 
-            return NoContent();
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while deleting beacon {BeaconId}.", id);
+                return StatusCode(StatusCodes.Status500InternalServerError, new { error = ex.Message });
+            }
         }
     }
 }

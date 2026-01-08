@@ -145,13 +145,21 @@ namespace Web.Server.Controllers.v1
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteBeacon(int id)
         {
-            var success = await _mapPinsService.DeleteMapPinAsync(id);
-            if (!success)
+            try
             {
-                return NotFound();
-            }
+                var success = await _mapPinsService.DeleteMapPinAsync(id);
+                if (!success)
+                {
+                    return NotFound();
+                }
 
-            return NoContent();
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while deleting map pin {MapPinId}.", id);
+                return StatusCode(StatusCodes.Status500InternalServerError, new { error = ex.Message });
+            }
         }
     }
 }
