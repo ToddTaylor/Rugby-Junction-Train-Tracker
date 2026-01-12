@@ -535,6 +535,15 @@ const RailMap: React.FC = () => {
 
     const [mapTheme, setMapTheme] = useState(() => localStorage.getItem('mapTheme') || 'dark');
 
+    // Set or remove the 'dark' class on <body> for global dark mode styling
+    useEffect(() => {
+        if (mapTheme === 'dark') {
+            document.body.classList.add('dark');
+        } else {
+            document.body.classList.remove('dark');
+        }
+    }, [mapTheme]);
+
     const handleToggleTheme = () => {
         setMapTheme(prev => {
             const next = prev === 'dark' ? 'light' : 'dark';

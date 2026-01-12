@@ -56,6 +56,28 @@ const formatDirection = (dir?: string | null): string => {
 };
 
 const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'light' }> = ({ pin, size, maxPinAgeMinutes, mapTheme, trackedPins, longitudeOffset = 0 }) => {
+    // Inject dark mode popup CSS override once per page load
+    useEffect(() => {
+        const styleId = 'leaflet-popup-darkmode-style';
+        if (!document.getElementById(styleId)) {
+            const style = document.createElement('style');
+            style.id = styleId;
+            style.innerHTML = `
+                /* Dark mode override: only background and text color, do not touch padding or box model */
+                body[data-theme='dark'] .leaflet-popup-content-wrapper,
+                .dark .leaflet-popup-content-wrapper {
+                    background: #181a1b !important;
+                    color: #f3f3f3 !important;
+                    border: 1px solid #333 !important;
+                }
+                body[data-theme='dark'] .leaflet-popup-content,
+                .dark .leaflet-popup-content {
+                    color: #f3f3f3 !important;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    }, []);
     const markerRef = useRef<L.Marker>(null);
     const shouldReopenPopupRef = useRef(false);
     const [brightness, setBrightness] = useState(() =>
@@ -129,15 +151,20 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
             ? 'Tracking'
             : 'Not Tracking';
 
+        // Use only inline color for the track link, not for the popup background
+        const isDark = mapTheme === 'dark';
+        const trackLinkColor = isDark ? '#cde3ff' : '#007bff';
         const popupContent = `
-            ${pin.beaconName ? `<strong>${pin.beaconName}</strong><br/>` : ''}
-            ${pin.railroad?.trim() ? `${pin.railroad} ${pin.subdivision + ' Sub' || ''}<br/>` : ''}
-            MP ${pin.milepost}<br/>
-            ${formatDirection(pin.direction)}<br/>
-            ${pin.moving === true ? "Moving<br/>" : pin.moving === false ? "Not Moving<br/>" : ''}
-            ${format(parseISO(pin.lastUpdate), 'h:mm aa')}<br/>
-            ${addressLines}
-            <span id='${trackTextId}' style='cursor:pointer;text-decoration:underline;color:#007bff;display:inline-flex;align-items:center;'>${trackingIcon}${trackText}</span>
+            <div>
+                ${pin.beaconName ? `<strong>${pin.beaconName}</strong><br/>` : ''}
+                ${pin.railroad?.trim() ? `${pin.railroad} ${pin.subdivision + ' Sub' || ''}<br/>` : ''}
+                MP ${pin.milepost}<br/>
+                ${formatDirection(pin.direction)}<br/>
+                ${pin.moving === true ? "Moving<br/>" : pin.moving === false ? "Not Moving<br/>" : ''}
+                ${format(parseISO(pin.lastUpdate), 'h:mm aa')}<br/>
+                ${addressLines}
+                <span id='${trackTextId}' style='cursor:pointer;text-decoration:underline;color:${trackLinkColor};display:inline-flex;align-items:center;'>${trackingIcon}${trackText}</span>
+            </div>
         `;
 
         marker.bindPopup(popupContent);
