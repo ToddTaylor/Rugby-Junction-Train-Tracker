@@ -28,6 +28,11 @@ namespace Web.Server.DTOs
         /// </summary>
         public bool Discarded { get; set; }
 
+        /// <summary>
+        /// Reason why this telemetry record was discarded (if applicable).
+        /// </summary>
+        public string? DiscardReason { get; set; }
+
         public required DateTime CreatedAt { get; set; }
 
         public required DateTime LastUpdate { get; set; }
@@ -39,17 +44,18 @@ namespace Web.Server.DTOs
 
         public bool Equals(TelemetryDTO? other)
         {
-            return other is not null &&
-                   ID == other.ID &&
-                   BeaconID == other.BeaconID &&
-                   BeaconName == other.BeaconName &&
-                   AddressID == other.AddressID &&
-                   TrainID == other.TrainID &&
-                   Moving == other.Moving &&
-                   Source == other.Source &&
-                   Discarded == other.Discarded &&
-                   CreatedAt == other.CreatedAt &&
-                   LastUpdate == other.LastUpdate;
+                 return other is not null &&
+                     ID == other.ID &&
+                     BeaconID == other.BeaconID &&
+                     BeaconName == other.BeaconName &&
+                     AddressID == other.AddressID &&
+                     TrainID == other.TrainID &&
+                     Moving == other.Moving &&
+                     Source == other.Source &&
+                     Discarded == other.Discarded &&
+                     DiscardReason == other.DiscardReason &&
+                     CreatedAt == other.CreatedAt &&
+                     LastUpdate == other.LastUpdate;
         }
 
         public override int GetHashCode()
@@ -63,6 +69,7 @@ namespace Web.Server.DTOs
             hash.Add(Moving);
             hash.Add(Source);
             hash.Add(Discarded);
+            hash.Add(DiscardReason);
             hash.Add(CreatedAt);
             hash.Add(LastUpdate);
             return hash.ToHashCode();

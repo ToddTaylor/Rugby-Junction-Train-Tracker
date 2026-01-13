@@ -10,6 +10,6 @@ namespace Web.Server.Services.Rules
         /// </summary>
         /// <param name="context">The context containing telemetry and related data.</param>
         /// <returns>True if telemetry should be discarded, otherwise false.</returns>
-        Task<bool> ShouldDiscardAsync(TelemetryRuleContext context);
+        Task<TelemetryRuleResult> ShouldDiscardAsync(TelemetryRuleContext context);
     }
 }

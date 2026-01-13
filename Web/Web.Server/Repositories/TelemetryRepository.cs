@@ -65,6 +65,8 @@ namespace Web.Server.Repositories
             existingTelemetry.TrainID = telemetry.TrainID;
             existingTelemetry.Moving = telemetry.Moving;
             existingTelemetry.Source = telemetry.Source;
+            existingTelemetry.Discarded = telemetry.Discarded;
+            existingTelemetry.DiscardReason = telemetry.DiscardReason;
             existingTelemetry.LastUpdate = _timeProvider.UtcNow;
 
             await _context.SaveChangesAsync();

@@ -8,6 +8,8 @@ namespace Web.Server.Services.Rules
     /// </summary>
     public class TrackageRightsRule : ITelemetryRule
     {
+        private const string DISCARD_REASON = "Trackage Rights";
+
         private readonly ITelemetryRepository _telemetryRepository;
         private readonly ISubdivisionTrackageRightRepository _trackageRightRepository;
 
@@ -19,7 +21,7 @@ namespace Web.Server.Services.Rules
             _trackageRightRepository = trackageRightRepository;
         }
 
-        public async Task<bool> ShouldDiscardAsync(TelemetryRuleContext context)
+        public async Task<TelemetryRuleResult> ShouldDiscardAsync(TelemetryRuleContext context)
         {
             // Determine the current subdivision from the beacon's railroad mapping
             var currentSubdivision = context.RailroadBeacons
@@ -29,7 +31,7 @@ namespace Web.Server.Services.Rules
             if (currentSubdivision == null)
             {
                 // No current subdivision to compare.
-                return false;
+                return TelemetryRuleResult.NotDiscarded();
             }
 
             // Get the most recent prior telemetry for this address (non-discarded)
@@ -37,7 +39,7 @@ namespace Web.Server.Services.Rules
             if (previousTelemetry == null)
             {
                 // No prior telemetry to compare.
-                return false;
+                return TelemetryRuleResult.NotDiscarded();
             }
 
             var previousSubdivision = previousTelemetry.Beacon?.BeaconRailroads?
@@ -47,13 +49,13 @@ namespace Web.Server.Services.Rules
             if (previousSubdivision == null)
             {
                 // No prior subdivision to compare.
-                return false;
+                return TelemetryRuleResult.NotDiscarded();
             }
 
             if (previousSubdivision.RailroadID == currentSubdivision.RailroadID)
             {
                 // Same railroad is always allowed.
-                return false;
+                return TelemetryRuleResult.NotDiscarded();
             }
 
             // Check if previous subdivision has rights to the current subdivision
@@ -62,12 +64,19 @@ namespace Web.Server.Services.Rules
             if (trackageRights == null)
             {
                 // No rights found, allow by default.
-                return false;
+                return TelemetryRuleResult.NotDiscarded();
             }
 
             var hasRights = trackageRights.Any(tr => tr.ToSubdivisionID == currentSubdivision.ID);
 
-            return !hasRights;
+            if (hasRights)
+            {
+                return TelemetryRuleResult.NotDiscarded();
+            }
+            else
+            {
+                return TelemetryRuleResult.Discarded(DISCARD_REASON);
+            }
         }
     }
 }

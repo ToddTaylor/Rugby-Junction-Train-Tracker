@@ -32,6 +32,11 @@ namespace Web.Server.Entities
         /// </summary>
         public bool Discarded { get; set; }
 
+        /// <summary>
+        /// Reason why this telemetry record was discarded (if applicable).
+        /// </summary>
+        public string? DiscardReason { get; set; }
+
         public override bool Equals(object? obj)
         {
             return Equals(obj as Telemetry);
@@ -39,17 +44,18 @@ namespace Web.Server.Entities
 
         public bool Equals(Telemetry? other)
         {
-            return other is not null &&
-                   CreatedAt == other.CreatedAt &&
-                   LastUpdate == other.LastUpdate &&
-                   ID == other.ID &&
-                   BeaconID == other.BeaconID &&
-                   EqualityComparer<Beacon>.Default.Equals(Beacon, other.Beacon) &&
-                   AddressID == other.AddressID &&
-                   TrainID == other.TrainID &&
-                   Moving == other.Moving &&
-                   Source == other.Source &&
-                   Discarded == other.Discarded;
+                 return other is not null &&
+                     CreatedAt == other.CreatedAt &&
+                     LastUpdate == other.LastUpdate &&
+                     ID == other.ID &&
+                     BeaconID == other.BeaconID &&
+                     EqualityComparer<Beacon>.Default.Equals(Beacon, other.Beacon) &&
+                     AddressID == other.AddressID &&
+                     TrainID == other.TrainID &&
+                     Moving == other.Moving &&
+                     Source == other.Source &&
+                     Discarded == other.Discarded &&
+                     DiscardReason == other.DiscardReason;
         }
 
         public override int GetHashCode()
@@ -65,6 +71,7 @@ namespace Web.Server.Entities
             hash.Add(Moving);
             hash.Add(Source);
             hash.Add(Discarded);
+            hash.Add(DiscardReason);
             return hash.ToHashCode();
         }
 

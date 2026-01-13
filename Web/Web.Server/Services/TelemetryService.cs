@@ -76,10 +76,12 @@ namespace Web.Server.Services
                 RailroadId = beacon.BeaconRailroads.First().Subdivision.RailroadID
             };
 
-            if (await _ruleEngine.ShouldDiscardAsync(context))
+            var result = await _ruleEngine.ShouldDiscardAsync(context);
+            if (result.ShouldDiscard)
             {
                 // Mark telemetry as discarded and save to database
                 telemetry.Discarded = true;
+                telemetry.DiscardReason = result.Reason;
                 await _telemetryRepository.AddAsync(telemetry);
 
                 return telemetry;

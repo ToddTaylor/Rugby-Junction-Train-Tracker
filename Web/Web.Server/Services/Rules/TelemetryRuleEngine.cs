@@ -13,19 +13,19 @@ namespace Web.Server.Services.Rules
         }
 
         /// <summary>
-        /// Evaluates all rules and returns true if any rule determines the telemetry should be discarded.
+        /// Evaluates all rules and returns a result with discard status and reason.
         /// </summary>
-        public async Task<bool> ShouldDiscardAsync(TelemetryRuleContext context)
+        public async Task<TelemetryRuleResult> ShouldDiscardAsync(TelemetryRuleContext context)
         {
             foreach (var rule in _rules)
             {
-                if (await rule.ShouldDiscardAsync(context))
+                var result = await rule.ShouldDiscardAsync(context);
+                if (result.ShouldDiscard)
                 {
-                    return true;
+                    return result;
                 }
             }
-
-            return false;
+            return TelemetryRuleResult.NotDiscarded();
         }
     }
 }

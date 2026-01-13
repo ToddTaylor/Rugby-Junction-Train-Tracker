@@ -97,13 +97,14 @@ function TelemetryLog() {
         {
             field: 'discarded',
             headerName: 'Discarded',
-            width: 120,
-            type: 'boolean',
-            renderCell: (params: any) => (
-                <span>
-                    {params.row?.discarded ? 'Yes' : 'No'}
-                </span>
-            ),
+            width: 180,
+            renderCell: (params: any) => {
+                const reason = params.row?.discardReason;
+                if (reason && reason.trim()) {
+                    return <span style={{ color: '#d32f2f', fontWeight: 500 }}>{reason}</span>;
+                }
+                return <span>{params.row?.discarded ? 'Yes' : 'No'}</span>;
+            },
         },
     ];
 
@@ -111,7 +112,7 @@ function TelemetryLog() {
         <Box
             sx={{
                 width: '100%',
-                maxWidth: 1200,
+                maxWidth: 1400,
                 margin: '0 auto',
                 padding: 4,
                 boxSizing: 'border-box',
@@ -266,6 +267,7 @@ function TelemetryLog() {
                 sx={{
                     maxHeight: 600,
                     minHeight: 400,
+                    width: '100%',
                 }}
                 getRowClassName={(params) => params.row.discarded ? 'discarded-row' : ''}
             />

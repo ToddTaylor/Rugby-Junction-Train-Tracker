@@ -11,6 +11,8 @@ namespace Web.Server.Services.Rules
     {
         private const int TIME_WINDOW_MINUTES = 60;
 
+        private const string DISCARD_REASON = "DPU Ping-Pong";
+
         private readonly ITelemetryRepository _telemetryRepository;
 
         public DpuAntiPingPongRule(ITelemetryRepository telemetryRepository)
@@ -18,12 +20,12 @@ namespace Web.Server.Services.Rules
             _telemetryRepository = telemetryRepository;
         }
 
-        public async Task<bool> ShouldDiscardAsync(TelemetryRuleContext context)
+        public async Task<TelemetryRuleResult> ShouldDiscardAsync(TelemetryRuleContext context)
         {
             // Only applies to DPU telemetry with a TrainID
             if (context.Telemetry.Source != SourceEnum.DPU || !context.Telemetry.TrainID.HasValue)
             {
-                return false;
+                return TelemetryRuleResult.NotDiscarded();
             }
 
             var minutesAgo = context.Telemetry.CreatedAt.AddMinutes(-TIME_WINDOW_MINUTES);
@@ -37,7 +39,7 @@ namespace Web.Server.Services.Rules
 
             if (currentBeacon == null)
             {
-                return false;
+                return TelemetryRuleResult.NotDiscarded();
             }
 
             // Get most recent telemetry for this train at any other beacon (previousBeacon) within alloted time.
@@ -49,11 +51,18 @@ namespace Web.Server.Services.Rules
 
             if (previousBeacon == null)
             {
-                return false;
+                return TelemetryRuleResult.NotDiscarded();
             }
 
             // If previousBeacon is more recent than currentBeacon, discard (ping-pong detected).
-            return previousBeacon.CreatedAt > currentBeacon.CreatedAt;
+            if (previousBeacon.CreatedAt > currentBeacon.CreatedAt)
+            {
+                return TelemetryRuleResult.Discarded(DISCARD_REASON);
+            }
+            else
+            {
+                return TelemetryRuleResult.NotDiscarded();
+            }
         }
     }
 }

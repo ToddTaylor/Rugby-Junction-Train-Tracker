@@ -10,6 +10,7 @@ const Admin: React.FC = () => {
     { path: '/admin/beacon-railroads', label: 'Beacon Railroads', icon: '🗺️' },
     { path: '/admin/railroads', label: 'Railroads', icon: '🚂' },
     { path: '/admin/subdivisions', label: 'Subdivisions', icon: '🛤️' },
+    { path: '/admin/telemetry', label: 'Telemetry Log', icon: '📋' },
     { path: '/admin/users', label: 'Users', icon: '👥' },
     // Future menu items can be added here
     // { path: '/admin/settings', label: 'Settings', icon: '⚙️' },

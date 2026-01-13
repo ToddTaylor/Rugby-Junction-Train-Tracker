@@ -12,6 +12,8 @@ namespace Web.Server.Services.Rules
     {
         public const int TIME_WINDOW_MINUTES = 30;
 
+        private const string DISCARD_REASON = "EOT/HOT Ping-Pong";
+
         private readonly ITelemetryRepository _telemetryRepository;
 
         public EotHotAntiPingPongRule(ITelemetryRepository telemetryRepository)
@@ -19,11 +21,11 @@ namespace Web.Server.Services.Rules
             _telemetryRepository = telemetryRepository;
         }
 
-        public async Task<bool> ShouldDiscardAsync(TelemetryRuleContext context)
+        public async Task<TelemetryRuleResult> ShouldDiscardAsync(TelemetryRuleContext context)
         {
             if (context.Telemetry.Source != SourceEnum.EOT && context.Telemetry.Source != SourceEnum.HOT)
             {
-                return false;
+                return TelemetryRuleResult.NotDiscarded();
             }
 
             var minutesAgo = context.Telemetry.CreatedAt.AddMinutes(-TIME_WINDOW_MINUTES);
@@ -35,17 +37,17 @@ namespace Web.Server.Services.Rules
             if (recentTelemetry == null || recentTelemetry.Count <= 1)
             {
                 // Only zero or one previous telemetry exists, so no ping-pong possible.
-                return false;
+                return TelemetryRuleResult.NotDiscarded();
             }
 
             if (await beaconIdAlreadyUsed(context.Telemetry.BeaconID, recentTelemetry[0].BeaconID, recentTelemetry))
             {
                 // Discard the telemetry as it is ping-ponging back to a previous beacon.
-                return true;
+                return TelemetryRuleResult.Discarded(DISCARD_REASON);
             }
 
             // Discard if the train is switching beacons and trying to return to a previous beacon.
-            return false;
+            return TelemetryRuleResult.NotDiscarded();
         }
 
         private async Task<bool> beaconIdAlreadyUsed(int newBeaconId, int lastBeaconId, List<Telemetry> recentTelemetry)

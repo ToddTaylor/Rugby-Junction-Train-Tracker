@@ -12,6 +12,7 @@ import AdminBeaconRailroads from './views/AdminBeaconRailroads';
 import { AdminSubdivisions } from './views/AdminSubdivisions';
 import PrivateRoute from './components/PrivateRoute';
 import AdminRoute from './components/AdminRoute';
+import AdminTelemetryLog from './views/AdminTelemetryLog';
 
 function App() {
     // NOTE: RailMap manages stale refresh hook for live telemetry. App-level refresh removed to avoid duplicate reload logic.
@@ -26,10 +27,13 @@ function App() {
                     <Route path="telemetrylog" element={<PrivateRoute><TelemetryLog /></PrivateRoute>} />
                     <Route path="webcams" element={<PrivateRoute><WebCams /></PrivateRoute>} />
                     <Route path="admin" element={<AdminRoute><Admin /></AdminRoute>}>
-                        <Route index element={<Navigate to="/admin/users" replace />} />                        <Route path="beacons" element={<AdminBeacons />} />
-                        <Route path="beacon-railroads" element={<AdminBeaconRailroads />} />                        <Route path="users" element={<AdminUsers />} />
+                        <Route index element={<Navigate to="/admin/telemetry" replace />} />
+                        <Route path="beacons" element={<AdminBeacons />} />
+                        <Route path="beacon-railroads" element={<AdminBeaconRailroads />} />
                         <Route path="railroads" element={<AdminRailroads />} />
                         <Route path="subdivisions" element={<AdminSubdivisions />} />
+                        <Route path="telemetry" element={<AdminTelemetryLog />} />
+                        <Route path="users" element={<AdminUsers />} />
                     </Route>
                     <Route path="*" element={<PrivateRoute><RailMap /></PrivateRoute>} />
                 </Routes>
