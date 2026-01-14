@@ -4,6 +4,10 @@ import { User } from '../types/User';
 import { getBeacons, createBeacon, updateBeacon, deleteBeacon } from '../api/beacons';
 import { getUsers } from '../api/users';
 import './AdminBeacons.css';
+import TextField from '@mui/material/TextField';
+import Tooltip from '@mui/material/Tooltip';
+import IconButton from '@mui/material/IconButton';
+import ClearIcon from '@mui/icons-material/Clear';
 
 type SortField = 'name' | 'ownerID' | 'createdAt';
 type SortDirection = 'asc' | 'desc' | null;
@@ -190,55 +194,53 @@ const AdminBeacons = () => {
 
       <div className="admin-controls">
         <div className="search-container">
-          <input
-            type="text"
-            placeholder="Search by name..."
+          <TextField
+            label="Filter by Name"
+            variant="outlined"
+            size="small"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="search-input"
+            className="admin-input"
+            fullWidth
           />
-          {searchTerm && (
-            <button className="search-clear" onClick={() => setSearchTerm('')}>×</button>
-          )}
+          <Tooltip title="Clear filters">
+            <IconButton
+              sx={{ color: '#fff', backgroundColor: '#222', '&:hover': { backgroundColor: '#444' }, height: '40px', width: '40px' }}
+              aria-label="clear filters"
+              onClick={() => {
+                setSearchTerm('');
+              }}
+            >
+              <ClearIcon />
+            </IconButton>
+          </Tooltip>
         </div>
         <div className="right-controls">
-          <div className="results-info">
-            Showing {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, sortedBeacons.length)} of {sortedBeacons.length} beacons
-          </div>
-          {totalPages > 1 && (
-            <div className="pagination">
-              <button
-                className="btn-page"
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-              >
-                Previous
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                <button
-                  key={page}
-                  className={`btn-page ${currentPage === page ? 'active' : ''}`}
-                  onClick={() => setCurrentPage(page)}
-                >
-                  {page}
-                </button>
-              ))}
-              <button
-                className="btn-page"
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-              >
-                Next
-              </button>
+          <div className="pagination-wrapper" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0px' }}>
+            {totalPages > 1 && (
+              <div className="pagination">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <button
+                    key={page}
+                    className={`btn-page ${currentPage === page ? 'active' : ''}`}
+                    onClick={() => setCurrentPage(page)}
+                  >
+                    {page}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="results-info">
+              Showing {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, sortedBeacons.length)} of {sortedBeacons.length} beacons
             </div>
-          )}
+          </div>
         </div>
       </div>
 
       {error && <div className="error-message">{error}</div>}
 
-      <div className="beacons-table-container">
-        <table className="beacons-table">
+      <div className="admin-table-container">
+        <table className="admin-table">
           <thead>
             <tr>
               <th>Beacon ID</th>

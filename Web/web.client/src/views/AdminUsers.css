@@ -69,6 +69,9 @@
 }
 
 .search-box {
+  display: flex;
+  align-items: center;
+  gap: 10px; /* Adds spacing between the text field and the button */
   flex: 0 0 auto;
   width: 400px;
   position: relative;
@@ -173,47 +176,6 @@
 
 .users-table th.sortable {
   cursor: pointer;
-  user-select: none;
-}
-
-.users-table th.sortable:hover {
-  background-color: #3a3a3a;
-}
-
-.sort-arrows {
-  display: inline-flex;
-  flex-direction: column;
-  margin-left: 0.5rem;
-  line-height: 0.7;
-  vertical-align: middle;
-}
-
-.sort-arrows .arrow-up,
-.sort-arrows .arrow-down {
-  font-size: 0.9rem;
-  color: #666;
-  transition: color 0.2s;
-}
-
-.sort-arrows .arrow-up.active,
-.sort-arrows .arrow-down.active {
-  color: #007bff;
-}
-
-.roles-badges {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.role-badge {
-  display: inline-block;
-  padding: 0.25rem 0.75rem;
-  background-color: #007bff;
-  color: white;
-  border-radius: 12px;
-  font-size: 0.85rem;
-  font-weight: 500;
 }
 
 .status-badge {

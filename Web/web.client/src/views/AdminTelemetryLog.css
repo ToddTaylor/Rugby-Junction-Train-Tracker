@@ -21,45 +21,6 @@
   margin: 0;
 }
 
-.admin-controls {
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  margin-bottom: 10px;
-  flex-wrap: nowrap;
-}
-
-.search-bar {
-  position: relative;
-  flex: 0 0 auto;
-  width: 400px;
-}
-
-.right-controls {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 15px;
-  flex: 0 0 auto;
-  margin-left: auto;
-}
-
-.results-info {
-  color: #888;
-  font-size: 14px;
-  white-space: nowrap;
-  display: flex;
-  align-items: center;
-  height: 42px;
-}
-
-.error-message {
-  background-color: #dc3545;
-  color: white;
-  padding: 1rem;
-  border-radius: 4px;
-  margin-bottom: 1.5rem;
-}
 
 .btn-primary {
   background-color: #4a9eff;
@@ -110,6 +71,90 @@
 
 .MuiDataGrid-row:hover {
   background-color: #2d2d2d;
+}
+
+.right-controls {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 15px;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.results-info {
+  margin: 0; /* Remove all margins */
+  padding: 0; /* Remove all padding */
+  color: #888;
+  font-size: 14px;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  text-align: center;
+}
+
+.pagination-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0; /* Ensure no gap between pagination and results-info */
+  margin-top: 0; /* Remove any additional margin */
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+  margin-top: 0; /* Remove extra vertical spacing */
+}
+
+.btn-page {
+  background: #2a2a2a;
+  color: #e0e0e0;
+  min-width: 40px;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.btn-page:hover:not(:disabled) {
+  background: #3a3a3a;
+}
+
+.btn-page.active {
+  background: #4a9eff;
+  color: white;
+}
+
+.btn-page:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Reverted layout changes to the admin-controls and pagination */
+.admin-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.admin-controls-wrapper {
+  padding: 0; /* Remove all padding */
+  margin: 0; /* Remove all margin */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+  margin-top: 20px;
 }
 
 
