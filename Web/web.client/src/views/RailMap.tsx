@@ -568,10 +568,10 @@ const RailMap: React.FC = () => {
                         border: 'none',
                         cursor: 'pointer',
                         padding: 0,
-                        marginRight: 12, // Larger gap for the gear icon
+                        marginRight: 12,
                     }}>
                         <img
-                            src={`/icons/gear-${mapTheme}.svg${cacheBuster}`}
+                            src={`/icons/gear-dark.svg${cacheBuster}`}
                             alt="Admin settings"
                             style={{ width: 24, height: 24 }}
                         />
