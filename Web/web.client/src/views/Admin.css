@@ -1,3 +1,64 @@
+.admin-table tr {
+  transition: background 0.2s;
+}
+
+.admin-table tbody tr {
+  background: #232323;
+}
+
+.admin-table td {
+  padding: 15px;
+  border-bottom: 1px solid #333;
+  color: #ccc;
+  font-size: 14px;
+}
+
+.admin-table tbody tr:hover {
+  background: #252525;
+}
+/* Common admin table styles for all admin pages */
+.admin-table-container {
+  background: #2a2a2a;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.admin-table thead {
+  background: #1a1a1a;
+}
+
+.admin-table th {
+  padding: 15px;
+  text-align: left;
+  color: #e0e0e0;
+  font-weight: 600;
+  border-bottom: 2px solid #444;
+}
+
+.admin-table th.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.admin-table th.sortable:hover {
+  background: #222;
+}
+
+.admin-table td {
+  padding: 15px;
+  border-bottom: 1px solid #333;
+  color: #ccc;
+}
+
+.admin-table tbody tr:hover {
+  background: #252525;
+}
 .admin-layout {
   display: flex;
   min-height: 100vh;
@@ -94,6 +155,84 @@
 .admin-content {
   flex: 1;
   overflow-y: auto;
+}
+
+.admin-input {
+    width: 250px;
+    padding: 0 12px;
+    background: #2a2a2a;
+    border-radius: 4px;
+    color: #e0e0e0;
+    font-size: 14px;
+    height: 40px;
+    box-sizing: border-box;
+    outline: 1px solid #444;
+}
+
+.admin-input .MuiOutlinedInput-root {
+    padding: 0;
+    height: 40px;
+    box-sizing: border-box;
+}
+
+.admin-input .MuiOutlinedInput-root.Mui-focused fieldset {
+    border-width: 2px;
+    border-color: #4a9eff;
+}
+
+.admin-input .MuiInputBase-input {
+    color: #e0e0e0;
+    padding: 10px 0;
+    padding-left: 12px;
+}
+
+.admin-input label {
+    color: #e0e0e0;
+}
+
+.admin-input label.Mui-focused {
+    color: #4a9eff;
+}
+
+.admin-select {
+    background-color: #2a2a2a;
+    color: #e0e0e0;
+    border: 1px solid #444;
+    border-radius: 4px;
+    font-size: 14px;
+    padding: 8px;
+}
+
+.admin-select .MuiSelect-root {
+    background-color: #2a2a2a;
+    color: #e0e0e0;
+}
+
+.admin-select .MuiSelect-icon {
+    color: #e0e0e0;
+}
+
+.admin-select .MuiMenu-paper {
+    background-color: #2a2a2a;
+    color: #e0e0e0;
+    border: 1px solid #444;
+    border-radius: 4px;
+}
+
+.admin-select .MuiMenuItem-root {
+    color: #e0e0e0;
+}
+
+.admin-select .MuiMenuItem-root:hover {
+    background-color: #3a3a3a;
+}
+
+.admin-select .MuiCheckbox-root {
+    color: #e0e0e0;
+}
+
+.admin-select .MuiCheckbox-root.Mui-checked {
+    color: #4a9eff;
 }
 
 @media (max-width: 768px) {

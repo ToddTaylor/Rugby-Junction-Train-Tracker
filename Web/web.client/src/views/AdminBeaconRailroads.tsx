@@ -6,6 +6,10 @@ import { getBeaconRailroads, createBeaconRailroad, updateBeaconRailroad, deleteB
 import { getBeacons } from '../api/beacons';
 import { getSubdivisions } from '../api/subdivisions';
 import './AdminBeaconRailroads.css';
+import TextField from '@mui/material/TextField';
+import Tooltip from '@mui/material/Tooltip';
+import IconButton from '@mui/material/IconButton';
+import ClearIcon from '@mui/icons-material/Clear';
 
 type SortField = 'beaconName' | 'subdivisionName' | 'railroadName' | 'milepost';
 type SortDirection = 'asc' | 'desc' | null;
@@ -42,7 +46,7 @@ const AdminBeaconRailroads = () => {
 
   const loadData = async () => {
     setLoading(true);
-    
+
     const [brResponse, beaconsResponse, subdivisionsResponse] = await Promise.all([
       getBeaconRailroads(),
       getBeacons(),
@@ -157,7 +161,7 @@ const AdminBeaconRailroads = () => {
     if (response.errors.length > 0) {
       setError(response.errors.join(', '));
     } else {
-      setBeaconRailroads(beaconRailroads.filter(br => 
+      setBeaconRailroads(beaconRailroads.filter(br =>
         !(br.beaconID === beaconId && br.subdivisionID === subdivisionId)
       ));
     }
@@ -232,46 +236,44 @@ const AdminBeaconRailroads = () => {
 
       <div className="admin-controls">
         <div className="search-container">
-          <input
-            type="text"
-            placeholder="Search..."
+          <TextField
+            label="Filter by Beacon, Railroad, or Subdivision"
+            variant="outlined"
+            size="small"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="search-input"
+            className="admin-input"
+            fullWidth
           />
-          {searchTerm && (
-            <button className="search-clear" onClick={() => setSearchTerm('')}>×</button>
-          )}
+          <Tooltip title="Clear filters">
+            <IconButton
+              sx={{ color: '#fff', backgroundColor: '#222', '&:hover': { backgroundColor: '#444' }, height: '40px', width: '40px' }}
+              aria-label="clear filters"
+              onClick={() => {
+                setSearchTerm('');
+              }}
+            >
+              <ClearIcon />
+            </IconButton>
+          </Tooltip>
         </div>
         <div className="right-controls">
-          <div className="results-info">
-            Showing {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, sortedBeaconRailroads.length)} of {sortedBeaconRailroads.length} beacon railroads
-          </div>
           {totalPages > 1 && (
-            <div className="pagination">
-              <button
-                className="btn-page"
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-              >
-                Previous
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                <button
-                  key={page}
-                  className={`btn-page ${currentPage === page ? 'active' : ''}`}
-                  onClick={() => setCurrentPage(page)}
-                >
-                  {page}
-                </button>
-              ))}
-              <button
-                className="btn-page"
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-              >
-                Next
-              </button>
+            <div className="pagination-container">
+              <div className="pagination">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <button
+                    key={page}
+                    className={`btn-page ${currentPage === page ? 'active' : ''}`}
+                    onClick={() => setCurrentPage(page)}
+                  >
+                    {page}
+                  </button>
+                ))}
+              </div>
+              <div className="results-info">
+                Showing {paginatedBeaconRailroads.length} of {sortedBeaconRailroads.length} beacon railroads
+              </div>
             </div>
           )}
         </div>
@@ -279,8 +281,8 @@ const AdminBeaconRailroads = () => {
 
       {error && <div className="error-message">{error}</div>}
 
-      <div className="beacon-railroads-table-container">
-        <table className="beacon-railroads-table">
+      <div className="admin-table-container">
+        <table className="admin-table">
           <thead>
             <tr>
               <th>Beacon ID</th>
@@ -325,7 +327,7 @@ const AdminBeaconRailroads = () => {
             <h2>{editingBeaconRailroad ? 'Edit Beacon Railroad' : 'Add Beacon Railroad'}</h2>
             <form onSubmit={handleSubmit}>
               {error && <div className="error-message">{error}</div>}
-              
+
               <div className="form-group">
                 <label htmlFor="beaconID">Beacon *</label>
                 <select

@@ -50,9 +50,9 @@
 }
 
 .search-container {
-  position: relative;
-  flex: 0 0 auto;
-  width: 400px;
+  display: flex;
+  align-items: center;
+  gap: 10px; /* Adds spacing between the text field and the button */
 }
 
 .right-controls {
@@ -166,51 +166,6 @@
   padding: 15px;
   border-bottom: 1px solid #333;
   color: #ccc;
-}
-
-.railroads-table tbody tr:hover {
-  background: #252525;
-}
-
-.actions-cell {
-  display: flex;
-  gap: 10px;
-}
-
-.btn-primary,
-.btn-secondary,
-.btn-edit,
-.btn-delete,
-.btn-page {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: all 0.2s;
-}
-
-.btn-primary {
-  background: #4a9eff;
-  color: white;
-}
-
-.btn-primary:hover {
-  background: #3a8eef;
-}
-
-.btn-secondary {
-  background: #444;
-  color: #e0e0e0;
-}
-
-.btn-secondary:hover {
-  background: #555;
-}
-
-.btn-edit {
-  background: #4a9eff;
-  color: white;
 }
 
 .btn-edit:hover {

@@ -151,49 +151,6 @@
   color: #ccc;
 }
 
-.beacon-railroads-table tbody tr:hover {
-  background: #252525;
-}
-
-.location-cell {
-  font-family: monospace;
-  font-size: 13px;
-}
-
-.location-cell .badge {
-  display: inline-block;
-  background: #3a3a3a;
-  color: #ffa726;
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-size: 11px;
-  margin-top: 4px;
-  font-family: sans-serif;
-}
-
-.status-badge {
-  display: inline-block;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.status-badge.online {
-  background: #2e7d32;
-  color: #a5d6a7;
-}
-
-.status-badge.offline {
-  background: #c62828;
-  color: #ef9a9a;
-}
-
-.actions-cell {
-  display: flex;
-  gap: 10px;
-  white-space: nowrap;
-}
 
 .btn-primary,
 .btn-secondary,

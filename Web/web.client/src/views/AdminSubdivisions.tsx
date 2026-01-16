@@ -5,6 +5,10 @@ import { getSubdivisions, createSubdivision, updateSubdivision, deleteSubdivisio
 import { getRailroads } from '../api/railroads';
 import { getTrackageRights, replaceTrackageRights } from '../api/subdivisionTrackageRights';
 import './AdminSubdivisions.css';
+import TextField from '@mui/material/TextField';
+import Tooltip from '@mui/material/Tooltip';
+import IconButton from '@mui/material/IconButton';
+import ClearIcon from '@mui/icons-material/Clear';
 
 type SortField = 'name' | 'railroad';
 type SortDirection = 'asc' | 'desc' | null;
@@ -129,7 +133,7 @@ export const AdminSubdivisions: React.FC = () => {
       localTrainAddressIDs: subdivision.localTrainAddressIDs || '',
     });
     setFormErrors([]);
-    
+
     // Load trackage rights for this subdivision
     const result = await getTrackageRights(subdivision.id);
     if (result.errors.length === 0 && result.data) {
@@ -147,7 +151,7 @@ export const AdminSubdivisions: React.FC = () => {
       setSelectedTrackageRailroad(0);
       setSelectedTrackageSubdivisions([]);
     }
-    
+
     setShowModal(true);
   };
 
@@ -257,15 +261,29 @@ export const AdminSubdivisions: React.FC = () => {
 
       <div className="admin-controls">
         <div className="search-bar">
-          <input
-            type="text"
-            placeholder="Search subdivisions..."
+          <TextField
+            label="Filter by Name or Railroad"
+            variant="outlined"
+            size="small"
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value);
               setCurrentPage(1);
             }}
+            className="admin-input"
+            fullWidth
           />
+          <Tooltip title="Clear filters">
+            <IconButton
+              sx={{ color: '#fff', backgroundColor: '#222', '&:hover': { backgroundColor: '#444' }, height: '40px', width: '40px' }}
+              aria-label="clear filters"
+              onClick={() => {
+                setSearchTerm('');
+              }}
+            >
+              <ClearIcon />
+            </IconButton>
+          </Tooltip>
         </div>
         <div className="right-controls">
           <div className="results-info">
@@ -284,10 +302,11 @@ export const AdminSubdivisions: React.FC = () => {
               ))}
             </div>
           )}
+
         </div>
       </div>
 
-      <table className="subdivisions-table">
+      <table className="admin-table">
         <thead>
           <tr>
             <th onClick={() => handleSort('name')} className="sortable">
@@ -367,7 +386,7 @@ export const AdminSubdivisions: React.FC = () => {
                   ))}
                 </select>
               </div>
-              
+
               <div className="form-group">
                 <label htmlFor="trackageRailroad">Trackage Rights on Railroad:</label>
                 <select
@@ -410,7 +429,7 @@ export const AdminSubdivisions: React.FC = () => {
                   </div>
                 </div>
               )}
-              
+
               <div className="form-group checkbox-group">
                 <label htmlFor="dpuCapable">
                   <input

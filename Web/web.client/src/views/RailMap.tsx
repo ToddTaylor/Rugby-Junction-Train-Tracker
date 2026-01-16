@@ -558,25 +558,29 @@ const RailMap: React.FC = () => {
 
     return (
         <>
-            <div style={{ position: 'absolute', top: 10, right: 10, zIndex: 1000, display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ position: 'absolute', top: 14, right: 10, zIndex: 1000, display: 'flex', alignItems: 'center' }}>
                 {isAdmin && (
                     <a href="/admin" style={{
-                        background: '#007bff',
-                        color: '#fff',
-                        padding: '8px 16px',
-                        borderRadius: '4px',
-                        textDecoration: 'none',
-                        fontSize: '14px',
-                        fontWeight: 500,
-                        transition: 'background 0.2s',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: 0,
+                        marginRight: 12, // Larger gap for the gear icon
                     }}>
-                        Admin
+                        <img
+                            src={`/icons/gear-${mapTheme}.svg${cacheBuster}`}
+                            alt="Admin settings"
+                            style={{ width: 24, height: 24 }}
+                        />
                     </a>
                 )}
-                <span style={{ marginRight: 8 }}>
+                <span style={{ display: 'flex', alignItems: 'center', marginRight: 4 }}>
                     <img src={`/icons/sun.svg${cacheBuster}`} alt="Light mode" style={{ opacity: mapTheme === 'light' ? 1 : 0.4, width: 24, height: 24 }} />
                 </span>
-                <label style={{ display: 'inline-flex', alignItems: 'center', cursor: 'pointer' }}>
+                <label style={{ display: 'inline-flex', alignItems: 'center', cursor: 'pointer', margin: '0 4px' }}>
                     <input
                         type="checkbox"
                         checked={mapTheme === 'dark'}
@@ -609,7 +613,7 @@ const RailMap: React.FC = () => {
                         />
                     </span>
                 </label>
-                <span style={{ marginLeft: 8 }}>
+                <span style={{ display: 'flex', alignItems: 'center', marginLeft: 4 }}>
                     <img src={`/icons/moon.svg${cacheBuster}`} alt="Dark mode" style={{ opacity: mapTheme === 'dark' ? 1 : 0.4, width: 24, height: 24 }} />
                 </span>
             </div>

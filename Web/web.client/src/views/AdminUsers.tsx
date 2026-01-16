@@ -2,6 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { User, CreateUser, UpdateUser } from '../types/User';
 import { getUsers, createUser, updateUser, deleteUser } from '../api/users';
 import './AdminUsers.css';
+import TextField from '@mui/material/TextField';
+import Tooltip from '@mui/material/Tooltip';
+import IconButton from '@mui/material/IconButton';
+import ClearIcon from '@mui/icons-material/Clear';
 
 const formatDate = (dateString: string): string => {
   const date = new Date(dateString);
@@ -76,7 +80,7 @@ const AdminUsers: React.FC = () => {
 
   const handleDelete = async (id: number) => {
     if (!confirm('Are you sure you want to delete this user?')) return;
-    
+
     const response = await deleteUser(id);
     if (response.success) {
       setUsers(users.filter(u => u.id !== id));
@@ -173,7 +177,7 @@ const AdminUsers: React.FC = () => {
   // Sort filtered users
   const sortedUsers = [...filteredUsers].sort((a, b) => {
     let aVal: string, bVal: string;
-    
+
     if (sortField === 'firstName') {
       aVal = a.firstName.toLowerCase();
       bVal = b.firstName.toLowerCase();
@@ -184,7 +188,7 @@ const AdminUsers: React.FC = () => {
       aVal = a.email.toLowerCase();
       bVal = b.email.toLowerCase();
     }
-    
+
     if (sortDirection === 'asc') {
       return aVal.localeCompare(bVal);
     } else {
@@ -226,22 +230,26 @@ const AdminUsers: React.FC = () => {
 
       <div className="users-controls">
         <div className="search-box">
-          <input
-            type="text"
-            placeholder="Search by name or email..."
+          <TextField
+            label="Filter by Name or Email"
+            variant="outlined"
+            size="small"
             value={searchQuery}
             onChange={(e) => handleSearchChange(e.target.value)}
-            className="search-input"
+            className="admin-input"
+            fullWidth
           />
-          {searchQuery && (
-            <button
-              className="search-clear-btn"
-              onClick={() => handleSearchChange('')}
-              title="Clear search"
+          <Tooltip title="Clear filters">
+            <IconButton
+              sx={{ color: '#fff', backgroundColor: '#222', '&:hover': { backgroundColor: '#444' }, height: '40px', width: '40px' }}
+              aria-label="clear filters"
+              onClick={() => {
+                setSearchQuery('');
+              }}
             >
-              ×
-            </button>
-          )}
+              <ClearIcon />
+            </IconButton>
+          </Tooltip>
         </div>
         <div className="right-controls">
           <div className="results-info">
@@ -256,7 +264,7 @@ const AdminUsers: React.FC = () => {
               >
                 Previous
               </button>
-              
+
               <div className="pagination-pages">
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
                   <button
@@ -281,8 +289,8 @@ const AdminUsers: React.FC = () => {
         </div>
       </div>
 
-      <div className="users-table-container">
-        <table className="users-table">
+      <div className="admin-table-container">
+        <table className="admin-table">
           <thead>
             <tr>
               <th className="sortable" onClick={() => handleSort('lastName')}>
@@ -338,9 +346,9 @@ const AdminUsers: React.FC = () => {
               <h2>{editingUser ? 'Edit User' : 'Create User'}</h2>
               <button className="modal-close" onClick={() => setShowModal(false)}>×</button>
             </div>
-            
+
             {error && <div className="error-message">{error}</div>}
-            
+
             <form onSubmit={handleSubmit}>
               <div className="form-group">
                 <label htmlFor="firstName">First Name</label>

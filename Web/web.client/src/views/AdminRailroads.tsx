@@ -1,6 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Railroad, CreateRailroad, UpdateRailroad } from '../types/Railroad';
 import { getRailroads, createRailroad, updateRailroad, deleteRailroad } from '../api/railroads';
+import TextField from '@mui/material/TextField';
+import Tooltip from '@mui/material/Tooltip';
+import IconButton from '@mui/material/IconButton';
+import ClearIcon from '@mui/icons-material/Clear';
 import './AdminRailroads.css';
 
 type SortField = 'name' | 'createdAt';
@@ -167,16 +171,26 @@ const AdminRailroads = () => {
 
       <div className="admin-controls">
         <div className="search-container">
-          <input
-            type="text"
-            placeholder="Search by name..."
+          <TextField
+            label="Filter by Name"
+            variant="outlined"
+            size="small"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="search-input"
+            className="admin-input"
+            fullWidth
           />
-          {searchTerm && (
-            <button className="search-clear" onClick={() => setSearchTerm('')}>×</button>
-          )}
+          <Tooltip title="Clear filters">
+            <IconButton
+              sx={{ color: '#fff', backgroundColor: '#222', '&:hover': { backgroundColor: '#444' }, height: '40px', width: '40px' }}
+              aria-label="clear filters"
+              onClick={() => {
+                setSearchTerm('');
+              }}
+            >
+              <ClearIcon />
+            </IconButton>
+          </Tooltip>
         </div>
         <div className="right-controls">
           <div className="results-info">
@@ -212,8 +226,8 @@ const AdminRailroads = () => {
         </div>
       </div>
 
-      <div className="railroads-table-container">
-        <table className="railroads-table">
+      <div className="admin-table-container">
+        <table className="admin-table">
           <thead>
             <tr>
               <th className="sortable" onClick={() => handleSort('name')}>
