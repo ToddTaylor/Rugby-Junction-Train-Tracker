@@ -74,6 +74,11 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
                 .dark .leaflet-popup-content {
                     color: #f3f3f3 !important;
                 }
+                body[data-theme='dark'] .leaflet-popup-tip,
+                .dark .leaflet-popup-tip {
+                    background: #181a1b !important;
+                    border: 1px solid #333 !important;
+                }
             `;
             document.head.appendChild(style);
         }
@@ -144,16 +149,17 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
 
         // Add a unique id to the trackText span for event delegation
         const trackTextId = `track-text-${pin.id}`;
+        const iconSuffix = mapTheme === 'dark' ? '-light' : '-dark';
         const trackingIcon = isTracked
-            ? `<img src='/icons/tracking-on.svg' alt='Tracking' style='height:16px;width:16px;vertical-align:middle;margin-right:6px;' />`
-            : `<img src='/icons/tracking-off.svg' alt='Not Tracking' style='height:16px;width:16px;vertical-align:middle;margin-right:6px;' />`;
+            ? `<img src='/icons/tracking-on${iconSuffix}.svg' alt='Tracking' style='height:16px;width:16px;vertical-align:middle;margin-right:6px;' />`
+            : `<img src='/icons/tracking-off${iconSuffix}.svg' alt='Not Tracking' style='height:16px;width:16px;vertical-align:middle;margin-right:6px;' />`;
         const trackText = isTracked
             ? 'Tracking'
             : 'Not Tracking';
 
         // Use only inline color for the track link, not for the popup background
         const isDark = mapTheme === 'dark';
-        const trackLinkColor = isDark ? '#cde3ff' : '#007bff';
+        const trackLinkColor = isDark ? 'white' : '#0056b3';
         const popupContent = `
             <div>
                 ${pin.beaconName ? `<strong>${pin.beaconName}</strong><br/>` : ''}
@@ -258,7 +264,7 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
                 observer.disconnect();
             }
         };
-    }, [pin.id, pin.beaconID, pin.beaconName, pin.railroad, pin.subdivision, pin.milepost, pin.direction, pin.moving, pin.lastUpdate, pin.addresses, isTracked, trackColor]);
+    }, [pin.id, pin.beaconID, pin.beaconName, pin.railroad, pin.subdivision, pin.milepost, pin.direction, pin.moving, pin.lastUpdate, pin.addresses, isTracked, trackColor, mapTheme]);
 
     // Use ArrowMapPin as the icon, with rotation and border color
     const createCustomIcon = () => {
