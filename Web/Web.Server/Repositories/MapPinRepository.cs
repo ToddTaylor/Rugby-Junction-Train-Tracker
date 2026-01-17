@@ -49,6 +49,16 @@ namespace Web.Server.Repositories
                 .FirstOrDefaultAsync();
         }
 
+        public async Task<MapPin?> GetByIdAsync(int id)
+        {
+            return await _context.MapPins
+                .Include(mp => mp.Addresses)
+                .Include(mp => mp.BeaconRailroad)
+                .Include(mp => mp.BeaconRailroad.Subdivision)
+                .Include(mp => mp.BeaconRailroad.Subdivision.Railroad)
+                .FirstOrDefaultAsync(mp => mp.ID == id);
+        }
+
         public async Task<IEnumerable<MapPin>> GetLatestAsync()
         {
             var mapPins = await _context.MapPins

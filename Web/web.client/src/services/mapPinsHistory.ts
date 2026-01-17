@@ -20,7 +20,7 @@ function isFresh<T>(entry?: CacheEntry<T>, ttlMs = CACHE_TTL_MS) {
 }
 
 function buildHistoryUrl(beaconID: string | number, subdivisionID?: string | number, limit = 10) {
-    let apiUrl = `${import.meta.env.VITE_API_URL}/api/v1/MapPins/History/${beaconID}?limit=${limit}`;
+    let apiUrl = `${import.meta.env.VITE_API_URL}/api/v1/MapPins/History/${beaconID}?limit=${limit}&t=${Date.now()}`;
     if (subdivisionID) apiUrl += `&subdivisionId=${subdivisionID}`;
     return apiUrl;
 }
@@ -71,6 +71,18 @@ export async function fetchBeaconHistory(
     const list: MapPinHistory[] = Array.isArray(data) ? data : [];
     historyCache.set(key, { at: Date.now(), data: list });
     return list;
+}
+
+export function invalidateBeaconHistoryCache(beaconID: string | number, subdivisionID?: string | number) {
+    // Remove all cache entries for this beacon/subdivision combination
+    const keysToDelete: string[] = [];
+    for (const key of historyCache.keys()) {
+        const [b, s] = key.split('|');
+        if (String(b) === String(beaconID) && String(s || '') === String(subdivisionID || '')) {
+            keysToDelete.push(key);
+        }
+    }
+    keysToDelete.forEach(key => historyCache.delete(key));
 }
 
 export async function fetchBeaconLatestFromHistory(

@@ -4,7 +4,7 @@ import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { Box, Typography, FormControl, InputLabel, Select, MenuItem, Checkbox, ListItemText } from '@mui/material';
 import { MapPin } from '../types/MapPin';
 import { format, parseISO } from "date-fns";
-import { getTrackedMapPins, TrackedPin, updateTrackedPinSymbol, refreshTrackedPinsFromApi } from '../services/trackedPins';
+import { getTrackedMapPins, TrackedPin, updateTrackedPinSymbol, refreshTrackedPinsFromApi, applyTrackedPinAddedOrUpdatedFromServer, applyTrackedPinRemovedFromServer } from '../services/trackedPins';
 import { useSignalR } from '../hooks/useSignalR';
 import { updateMapPins } from '../utils/updateHelpers';
 
@@ -39,6 +39,18 @@ function MapPinsLog() {
     useSignalR({
         MapPinUpdate: (mapPin: MapPin) => {
             setMapPins((prevPins: MapPin[]) => updateMapPins(prevPins, mapPin));
+        },
+        TrackedPinAdded: (payload: any) => {
+            const updated = applyTrackedPinAddedOrUpdatedFromServer(payload);
+            setTrackedPins(updated);
+        },
+        TrackedPinUpdated: (payload: any) => {
+            const updated = applyTrackedPinAddedOrUpdatedFromServer(payload);
+            setTrackedPins(updated);
+        },
+        TrackedPinRemoved: (mapPinId: number) => {
+            const updated = applyTrackedPinRemovedFromServer(mapPinId);
+            setTrackedPins(updated);
         }
     });
 
@@ -60,16 +72,46 @@ function MapPinsLog() {
         // Also set immediate local state
         updateTrackedPins();
         
-        // Listen for storage events (changes in other tabs/windows)
-        window.addEventListener('storage', updateTrackedPins);
+        // Listen for storage events (changes in other tabs/windows) - refresh from API to ensure sync
+        const handleStorageChange = () => {
+            refreshTrackedPinsFromApi().then(pins => {
+                if (!disposed) {
+                    setTrackedPins(pins);
+                }
+            }).catch(() => updateTrackedPins());
+        };
+        window.addEventListener('storage', handleStorageChange);
+
+        // Refresh from API when tab becomes visible
+        const handleVisibilityChange = () => {
+            if (!document.hidden) {
+                refreshTrackedPinsFromApi().then(pins => {
+                    if (!disposed) {
+                        setTrackedPins(pins);
+                    }
+                }).catch(() => updateTrackedPins());
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
         
         // Poll for changes every 100ms (for same-tab updates)
         const interval = setInterval(updateTrackedPins, 100);
         
+        // Also refresh from API every 10 seconds to ensure sync across devices
+        const apiInterval = setInterval(() => {
+            refreshTrackedPinsFromApi().then(pins => {
+                if (!disposed) {
+                    setTrackedPins(pins);
+                }
+            }).catch(() => updateTrackedPins());
+        }, 10000);
+        
         return () => {
             disposed = true;
-            window.removeEventListener('storage', updateTrackedPins);
+            window.removeEventListener('storage', handleStorageChange);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
             clearInterval(interval);
+            clearInterval(apiInterval);
         };
     }, []);
 
@@ -176,7 +218,7 @@ function MapPinsLog() {
                                 style={{ 
                                     fontWeight: 'bold', 
                                     marginRight: '4px',
-                                    color: trackedColor || '#FFD700',
+                                    color: '#0056b3',
                                     cursor: 'pointer',
                                     textDecoration: 'underline'
                                 }}

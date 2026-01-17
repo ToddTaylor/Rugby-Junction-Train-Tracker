@@ -10,6 +10,8 @@ namespace Web.Server.Repositories
 
         Task<MapPin?> GetByTrainIdAsync(int dpuTrainID);
 
+        Task<MapPin?> GetByIdAsync(int id);
+
         Task<IEnumerable<MapPin>> GetAllAsync(int? minutes);
 
         Task<IEnumerable<MapPin>> GetLatestAsync();

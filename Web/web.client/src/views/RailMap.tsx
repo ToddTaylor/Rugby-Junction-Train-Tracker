@@ -21,6 +21,7 @@ import { useBeacons } from '../hooks/useBeacons';
 import { useTelemetryPins } from '../hooks/useTelemetryPins';
 import { useStaleRefresh } from '../hooks/useStaleRefresh';
 import { useAuth } from '../hooks/useAuth';
+import { invalidateBeaconHistoryCache } from '../services/mapPinsHistory';
 
 const DARK_TILE_URL = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
 const LIGHT_TILE_URL = "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
@@ -66,7 +67,36 @@ const RailMap: React.FC = () => {
         const interval = setInterval(() => {
             setTrackedPinsState(getTrackedMapPins());
         }, 5000); // Refresh cache view every 5 seconds
-        return () => clearInterval(interval);
+        
+        // Also refresh from API every 10 seconds to ensure sync across devices
+        const apiInterval = setInterval(() => {
+            refreshTrackedPinsFromApi().then(setTrackedPinsState).catch(() => {
+                // fallback to local
+                setTrackedPinsState(getTrackedMapPins());
+            });
+        }, 10000);
+
+        // Listen for storage events (changes in other tabs/windows) - update from cache
+        const handleStorageChange = () => {
+            setTrackedPinsState(getTrackedMapPins()); // immediate update from cache
+        };
+        window.addEventListener('storage', handleStorageChange);
+
+        // Refresh from API when tab becomes visible
+        const handleVisibilityChange = () => {
+            if (!document.hidden) {
+                setTrackedPinsState(getTrackedMapPins()); // immediate update from cache
+                refreshTrackedPinsFromApi().then(setTrackedPinsState).catch(() => {});
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        
+        return () => {
+            clearInterval(interval);
+            clearInterval(apiInterval);
+            window.removeEventListener('storage', handleStorageChange);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
     }, []);
 
     // Sync tracked pin locations with current mapPins on load and when mapPins change
@@ -77,7 +107,7 @@ const RailMap: React.FC = () => {
         let updated = false;
         trackedPins.forEach(tracked => {
             const mapPin = mapPins.find(p => String(p.id) === String(tracked.id));
-            if (mapPin && mapPin.beaconID && mapPin.subdivisionID && mapPin.beaconName) {
+            if (mapPin && mapPin.beaconID && mapPin.subdivisionID) {
                 const addresses = Array.isArray(mapPin.addresses)
                     ? mapPin.addresses.map(addr => ({ id: String(addr.addressID), source: addr.source }))
                     : undefined;
@@ -102,13 +132,16 @@ const RailMap: React.FC = () => {
     // SignalR updates (retain reference to connection if needed for future reconnect logic)
     useSignalR({
         MapPinUpdate: (mapPin: MapPin) => {
+            // Invalidate history cache for this beacon to ensure fresh data on next fetch
+            invalidateBeaconHistoryCache(mapPin.beaconID, mapPin.subdivisionID);
+            
             // Update tracked pin location if this is a tracked pin
             const trackedPins = getTrackedMapPins();
             const tracked = trackedPins.find(tp => String(tp.id) === String(mapPin.id));
             const addresses = Array.isArray(mapPin.addresses)
                 ? mapPin.addresses.map(addr => ({ id: String(addr.addressID), source: addr.source }))
                 : undefined;
-            if (tracked && mapPin.beaconID && mapPin.subdivisionID && mapPin.beaconName) {
+            if (tracked && mapPin.beaconID && mapPin.subdivisionID) {
                 const locationChanged = tracked.lastBeaconID !== mapPin.beaconID || tracked.lastSubdivisionID !== mapPin.subdivisionID;
                 const addressesChanged = !!addresses && (
                     !tracked.addresses ||
@@ -691,6 +724,7 @@ const RailMap: React.FC = () => {
                 theme={mapTheme as 'dark' | 'light'}
                 lastUpdate={beaconLastUpdateMap?.[makeBeaconKey(selectedBeaconID, selectedSubdivisionID)]?.lastUpdate}
                 mapPins={mapPins}
+                trackedPins={trackedPinsState}
             />
         </>
     );

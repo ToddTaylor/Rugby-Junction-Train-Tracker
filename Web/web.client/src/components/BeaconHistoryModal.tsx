@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import {
     IconButton,
     Box,
@@ -7,10 +7,12 @@ import {
     Paper
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import { DataGrid, GridColDef } from '@mui/x-data-grid';
+import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { MapPinHistory } from '../types/MapPinHistory';
+import { MapPin } from '../types/MapPin';
+import { TrackedPin } from '../services/trackedPins';
 import { format, parseISO } from 'date-fns';
-import { getTrackedMapPins, updateTrackedPinSymbol, removeTrackedMapPin, getTrackedPinSymbol } from '../services/trackedPins';
+import { getTrackedMapPins, updateTrackedPinSymbol, removeTrackedMapPin, getTrackedPinSymbol, refreshTrackedPinsFromApi } from '../services/trackedPins';
 import { fetchBeaconHistory } from '../services/mapPinsHistory';
 import TrackSymbolModal from './TrackSymbolModal';
 
@@ -24,10 +26,11 @@ interface BeaconHistoryModalProps {
     subdivision?: string;
     theme: 'dark' | 'light';
     lastUpdate?: string | null;
-    mapPins?: any[];
+    mapPins?: MapPin[];
+    trackedPins?: TrackedPin[];
 }
 
-export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdivisionID, railroad: _railroad, subdivision: _subdivision, theme, lastUpdate }: BeaconHistoryModalProps) {
+export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdivisionID, railroad: _railroad, subdivision: _subdivision, theme, lastUpdate, trackedPins: propTrackedPins }: BeaconHistoryModalProps) {
     const [loading, setLoading] = useState(false);
     const [history, setHistory] = useState<MapPinHistory[]>([]);
     const [error, setError] = useState<string | null>(null);
@@ -35,18 +38,11 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdiv
     const [modalSymbol, setModalSymbol] = useState('');
     const [selectedMapPinId, setSelectedMapPinId] = useState<string | null>(null);
     const [modalAddresses, setModalAddresses] = useState<Array<{id: string, source: string}>>([]);
+    const [trackedPins, setTrackedPins] = useState(() => propTrackedPins || getTrackedMapPins());
+    const [refreshKey, setRefreshKey] = useState(0);
+    const prevBeaconIDRef = useRef<string | null>(null);
 
-    useEffect(() => {
-        if (open && beaconID) {
-            setHistory([]); // Clear history when switching beacons
-            fetchHistory();
-        } else if (!open) {
-            setHistory([]); // Clear history when modal closes
-        }
-    }, [open, beaconID, subdivisionID, lastUpdate]); // Added subdivisionID and lastUpdate to trigger refresh
-
-
-    const fetchHistory = async () => {
+    const fetchHistory = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
@@ -58,7 +54,73 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdiv
         } finally {
             setLoading(false);
         }
-    };
+    }, [beaconID, subdivisionID]);
+
+    // Update local state when prop changes
+    useEffect(() => {
+        if (propTrackedPins) {
+            setTrackedPins(propTrackedPins);
+            setRefreshKey(k => k + 1); // Force DataGrid re-render
+        }
+    }, [propTrackedPins]);
+
+    useEffect(() => {
+        if (open && beaconID) {
+            const prevBeaconID = prevBeaconIDRef.current;
+            if (prevBeaconID !== beaconID) {
+                setHistory([]); // Clear history when switching beacons
+            }
+            prevBeaconIDRef.current = beaconID;
+            fetchHistory();
+        } else if (!open) {
+            setHistory([]); // Clear history when modal closes
+        }
+    }, [open, beaconID, subdivisionID, lastUpdate, fetchHistory]); // Re-fetch when lastUpdate changes
+
+    // Periodic refresh of history every 30 seconds when modal is open
+    useEffect(() => {
+        if (!open || !beaconID) return;
+        const interval = setInterval(() => {
+            fetchHistory();
+        }, 30000);
+        return () => clearInterval(interval);
+    }, [open, beaconID, subdivisionID, fetchHistory]);
+
+    // Update tracked pins state and listen for changes (only if not using prop)
+    useEffect(() => {
+        if (propTrackedPins) return; // Use prop instead
+
+        const updateTrackedPins = () => {
+            setTrackedPins(getTrackedMapPins());
+        };
+
+        // Initial load
+        updateTrackedPins();
+
+        // Listen for storage events (changes in other tabs/windows) - refresh from API
+        const handleStorageChange = () => {
+            refreshTrackedPinsFromApi().then(setTrackedPins).catch(updateTrackedPins);
+        };
+        window.addEventListener('storage', handleStorageChange);
+
+        // Refresh from API when tab becomes visible
+        const handleVisibilityChange = () => {
+            if (!document.hidden) {
+                refreshTrackedPinsFromApi().then(setTrackedPins).catch(updateTrackedPins);
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        // Poll for changes every 2 seconds (for local updates)
+        const interval = setInterval(updateTrackedPins, 2000);
+
+        return () => {
+            window.removeEventListener('storage', handleStorageChange);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            clearInterval(interval);
+        };
+    }, [propTrackedPins]);
+
 
     const columns: GridColDef[] = [
         { field: 'id', headerName: 'ID', width: 70 },
@@ -100,7 +162,7 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdiv
             flex: 1,
             minWidth: 150,
             maxWidth: 400,
-            renderCell: (params: any) => {
+            renderCell: (params: GridRenderCellParams<MapPinHistory>) => {
                 const addresses = params.row?.addresses;
                 const isLocal = params.row?.isLocal;
                 if (!Array.isArray(addresses) || addresses.length === 0) return '';
@@ -111,7 +173,6 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdiv
                 
                 // Check if this train is currently tracked
                 // Match history addresses with current MapPins, then check if those MapPins are tracked
-                const trackedPins = getTrackedMapPins();
                 let isTracked = false;
                 let trackedColor = undefined;
                 let symbol = undefined;
@@ -121,7 +182,7 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdiv
                 for (const addr of addresses) {
                     // Check if this address is in any tracked pin's addresses
                     const tracked = trackedPins.find(tp => 
-                        Array.isArray(tp.addresses) && tp.addresses.some(a => 
+                        Array.isArray(tp.addresses) && tp.addresses.some((a: { id: string; source: string }) => 
                             a.id === String(addr.addressID) && a.source === addr.source
                         )
                     );
@@ -214,19 +275,29 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdiv
 
     const isDark = theme === 'dark';
 
-    const handleModalSave = (newSymbol: string) => {
+    const handleModalSave = async (newSymbol: string) => {
         if (selectedMapPinId) {
-            updateTrackedPinSymbol(selectedMapPinId, newSymbol);
-            // Force refresh by triggering a re-fetch
-            window.dispatchEvent(new Event('storage'));
+            try {
+                await updateTrackedPinSymbol(selectedMapPinId, newSymbol);
+                // Force refresh by triggering a re-fetch
+                window.dispatchEvent(new Event('storage'));
+            } catch (error) {
+                console.error('Failed to update symbol:', error);
+                throw error; // Re-throw to keep modal open
+            }
         }
     };
 
-    const handleModalUntrack = () => {
+    const handleModalUntrack = async () => {
         if (selectedMapPinId) {
-            removeTrackedMapPin(selectedMapPinId);
-            // Force refresh by triggering a re-fetch
-            window.dispatchEvent(new Event('storage'));
+            try {
+                await removeTrackedMapPin(selectedMapPinId);
+                // Force refresh by triggering a re-fetch
+                window.dispatchEvent(new Event('storage'));
+            } catch (error) {
+                console.error('Failed to untrack:', error);
+                throw error; // Re-throw to keep modal open
+            }
         }
     };
     
@@ -327,6 +398,7 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdiv
                 {history.length > 0 && (
                     <Box sx={{ width: '100%' }}>
                         <DataGrid
+                            key={`${history.length}-${refreshKey}`} // Force re-render when history or tracked pins change
                             rows={history.slice(0, 10)}
                             columns={columns}
                             hideFooter
@@ -401,14 +473,8 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdiv
             <TrackSymbolModal
                 open={modalOpen}
                 currentSymbol={modalSymbol}
-                onSave={(symbol) => {
-                    handleModalSave(symbol);
-                    setModalOpen(false);
-                }}
-                onUntrack={() => {
-                    handleModalUntrack();
-                    setModalOpen(false);
-                }}
+                onSave={handleModalSave}
+                onUntrack={handleModalUntrack}
                 onClose={() => setModalOpen(false)}
                 theme={theme}
                 showUntrackButton={true}

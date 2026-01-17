@@ -218,19 +218,31 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
         };
     }, [trackedTrainsAtBeacon, trackedPins, onClick, beaconPin.beaconID, beaconPin.beaconName]);
     
-    const handleSaveSymbol = (newSymbol: string) => {
+    const handleSaveSymbol = async (newSymbol: string) => {
         if (selectedTrainId) {
-            if (newSymbol) {
-                updateTrackedPinSymbol(selectedTrainId, newSymbol);
-            } else {
-                updateTrackedPinSymbol(selectedTrainId, '');
+            try {
+                if (newSymbol) {
+                    await updateTrackedPinSymbol(selectedTrainId, newSymbol);
+                } else {
+                    await updateTrackedPinSymbol(selectedTrainId, '');
+                }
+            } catch (error) {
+                console.error('Failed to save symbol:', error);
+                alert(`Failed to save symbol: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                throw error; // Re-throw to keep modal open
             }
         }
     };
 
-    const handleUntrackTrain = () => {
+    const handleUntrackTrain = async () => {
         if (selectedTrainId) {
-            removeTrackedMapPin(selectedTrainId);
+            try {
+                await removeTrackedMapPin(selectedTrainId);
+            } catch (error) {
+                console.error('Failed to untrack train:', error);
+                alert(`Failed to untrack train: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                throw error; // Re-throw to keep modal open
+            }
         }
     };
 

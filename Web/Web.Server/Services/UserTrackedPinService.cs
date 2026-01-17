@@ -93,14 +93,41 @@ namespace Web.Server.Services
                 var trackedPin = await _repository.GetByUserAndMapPinAsync(userId, mapPinId);
                 if (trackedPin == null)
                 {
-                    _logger.LogWarning("Tracked pin not found for user {UserId} and pin {MapPinId}", userId, mapPinId);
-                    return;
+                    // If the tracked pin doesn't exist, create it
+                    var mapPin = await _mapPinRepository.GetByIdAsync(mapPinId);
+                    if (mapPin == null)
+                    {
+                        throw new InvalidOperationException($"Map pin {mapPinId} not found");
+                    }
+
+                    // Get existing colors for the user
+                    var existingPins = await _repository.GetByUserIdAsync(userId);
+                    var usedColors = existingPins.Select(p => p.Color).ToList();
+                    var availableColors = new[] { "#FF3366", "#00FFFF", "#00FF00", "#FF00FF", "#FFFF00", "#FF6600", "#00FF99", "#FF0099", "#66FF00", "#0099FF" };
+                    var color = availableColors.FirstOrDefault(c => !usedColors.Contains(c)) ?? "orange";
+
+                    trackedPin = new UserTrackedPin
+                    {
+                        UserId = userId,
+                        MapPinId = mapPinId,
+                        BeaconID = mapPin.BeaconID,
+                        SubdivisionID = mapPin.SubdivisionId,
+                        Symbol = symbol,
+                        Color = color,
+                        LastUpdate = _timeProvider.UtcNow,
+                        ExpiresUtc = _timeProvider.UtcNow.AddHours(TrackingDurationHours)
+                    };
+                    await _repository.AddAsync(trackedPin);
+                    _logger.LogInformation("Created tracked pin for user {UserId} and pin {MapPinId} with symbol {Symbol}", userId, mapPinId, symbol);
+                }
+                else
+                {
+                    trackedPin.Symbol = symbol;
+                    trackedPin.LastUpdate = _timeProvider.UtcNow;
+                    await _repository.UpdateAsync(trackedPin);
+                    _logger.LogInformation("Updated tracked pin symbol for user {UserId} and pin {MapPinId} to {Symbol}", userId, mapPinId, symbol);
                 }
 
-                trackedPin.Symbol = symbol;
-                trackedPin.LastUpdate = _timeProvider.UtcNow;
-                await _repository.UpdateAsync(trackedPin);
-                _logger.LogInformation("Updated tracked pin symbol for user {UserId} and pin {MapPinId} to {Symbol}", userId, mapPinId, symbol);
                 var dto = _mapper.Map<UserTrackedPinDTO>(trackedPin);
                 await SafeBroadcastAsync("TrackedPinUpdated", userId, dto);
             }

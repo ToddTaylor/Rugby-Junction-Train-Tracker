@@ -104,22 +104,32 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
         ? pin.addresses.map(addr => ({ id: String(addr.addressID), source: addr.source }))
         : [];
 
-    const handleModalSave = (symbol: string) => {
-        if (isEditingTrack) {
-            // Update existing tracked pin's symbol
-            updateTrackedPinSymbol(String(pin.id), symbol);
-        } else {
-            // Add new tracked pin
-            addTrackedMapPin(String(pin.id), pin.beaconID, pin.subdivisionID, pin.beaconName, symbol || undefined, addressesForModal);
-            setIsTracked(true);
-            setTrackColor(getTrackedColor(String(pin.id)));
+    const handleModalSave = async (symbol: string) => {
+        try {
+            if (isEditingTrack) {
+                // Update existing tracked pin's symbol
+                await updateTrackedPinSymbol(String(pin.id), symbol);
+            } else {
+                // Add new tracked pin
+                await addTrackedMapPin(String(pin.id), pin.beaconID, pin.subdivisionID, pin.beaconName, symbol || undefined, addressesForModal);
+                setIsTracked(true);
+                setTrackColor(getTrackedColor(String(pin.id)));
+            }
+            setModalOpen(false);
+        } catch (error) {
+            console.error('Failed to save tracked pin:', error);
         }
     };
 
-    const handleModalUntrack = () => {
-        removeTrackedMapPin(String(pin.id));
-        setIsTracked(false);
-        setTrackColor(undefined);
+    const handleModalUntrack = async () => {
+        try {
+            await removeTrackedMapPin(String(pin.id));
+            setIsTracked(false);
+            setTrackColor(undefined);
+            setModalOpen(false);
+        } catch (error) {
+            console.error('Failed to untrack pin:', error);
+        }
     };
 
     useEffect(() => {
@@ -160,8 +170,6 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
             : 'Not Tracking';
 
         // Use only inline color for the track link, not for the popup background
-        const isDark = mapTheme === 'dark';
-        const trackLinkColor = isDark ? 'white' : '#0056b3';
         const popupContent = `
             <div>
                 ${pin.beaconName ? `<strong>${pin.beaconName}</strong><br/>` : ''}
@@ -171,7 +179,7 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
                 ${pin.moving === true ? "Moving<br/>" : pin.moving === false ? "Not Moving<br/>" : ''}
                 ${format(parseISO(pin.lastUpdate), 'h:mm aa')}<br/>
                 ${addressLines}
-                <span id='${trackTextId}' style='cursor:pointer;text-decoration:underline;color:${trackLinkColor};display:inline-flex;align-items:center;'>${trackingIcon}${trackText}</span>
+                <span id='${trackTextId}' style='cursor:pointer;text-decoration:underline;display:inline-flex;align-items:center;'>${trackingIcon}${trackText}</span>
             </div>
         `;
 
@@ -320,14 +328,8 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
             <TrackSymbolModal
                 open={modalOpen}
                 currentSymbol={modalSymbol}
-                onSave={(symbol) => {
-                    handleModalSave(symbol);
-                    setModalOpen(false);
-                }}
-                onUntrack={() => {
-                    handleModalUntrack();
-                    setModalOpen(false);
-                }}
+                onSave={handleModalSave}
+                onUntrack={handleModalUntrack}
                 onClose={() => setModalOpen(false)}
                 theme={mapTheme}
                 addresses={addressesForModal}

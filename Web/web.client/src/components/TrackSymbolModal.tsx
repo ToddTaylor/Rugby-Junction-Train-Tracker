@@ -3,8 +3,8 @@ import React, { useState, useEffect } from 'react';
 interface TrackSymbolModalProps {
     open: boolean;
     currentSymbol: string;
-    onSave: (symbol: string) => void;
-    onUntrack: () => void;
+    onSave: (symbol: string) => Promise<void>;
+    onUntrack: () => Promise<void>;
     onClose: () => void;
     theme?: 'dark' | 'light';
     showUntrackButton?: boolean;
@@ -29,15 +29,25 @@ const TrackSymbolModal: React.FC<TrackSymbolModalProps> = ({
         setSymbol(currentSymbol);
     }, [currentSymbol]);
 
-    const handleSave = () => {
+    const handleSave = async () => {
         const trimmedSymbol = symbol.trim();
-        onSave(trimmedSymbol.toUpperCase().substring(0, 10));
-        onClose();
+        try {
+            await onSave(trimmedSymbol.toUpperCase().substring(0, 10));
+            onClose();
+        } catch (error) {
+            console.error('Error saving symbol:', error);
+            // Keep modal open on error
+        }
     };
 
-    const handleUntrack = () => {
-        onUntrack();
-        onClose();
+    const handleUntrack = async () => {
+        try {
+            await onUntrack();
+            onClose();
+        } catch (error) {
+            console.error('Error untracking:', error);
+            // Keep modal open on error
+        }
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {

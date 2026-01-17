@@ -78,7 +78,7 @@ export function getTrackedMapPins(): TrackedPin[] {
 export async function refreshTrackedPinsFromApi(): Promise<TrackedPin[]> {
     try {
         const headers = await getAuthHeader();
-        const response = await fetch(API_BASE, { headers });
+        const response = await fetch(`${API_BASE}?t=${Date.now()}`, { headers });
         if (response.ok) {
             const text = await response.text();
             let data: any = null;
@@ -118,16 +118,36 @@ export async function refreshTrackedPinsFromApi(): Promise<TrackedPin[]> {
 export async function addTrackedMapPin(id: string, beaconID?: string, subdivisionID?: string, beaconName?: string, symbol?: string, addresses?: Array<{ id: string; source: string }>) {
     const mapPinId = parseInt(id, 10);
     if (isNaN(mapPinId)) {
-        console.error('Invalid map pin ID:', id);
-        return;
+        console.error('Invalid map pin ID provided:', id);
+        throw new Error('An unexpected error occurred. Please try again.');
     }
 
-    // Get next available color
+    // Ensure beaconName is not empty
+    if (!beaconName) beaconName = 'Unknown';
+
+    // Persist to API first
+    const headers = await getAuthHeader();
+    const response = await fetch(API_BASE, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+            mapPinId,
+            beaconID: beaconID ? parseInt(beaconID, 10) : undefined,
+            subdivisionID: subdivisionID ? parseInt(subdivisionID, 10) : undefined,
+            beaconName,
+            symbol,
+            color: TRACK_COLORS.find(c => !getLocalTrackedPins().map(item => item.color).includes(c)) || 'orange'
+        })
+    });
+    if (!response.ok) {
+        const errorText = await response.text().catch(() => 'Unknown error');
+        throw new Error(`Failed to add tracked pin to API (${response.status} ${response.statusText}): ${errorText}`);
+    }
+
+    // Add to local storage after API success
     const arr = getLocalTrackedPins();
     const usedColors = arr.map(item => item.color);
     const color = TRACK_COLORS.find(c => !usedColors.includes(c)) || 'orange';
-
-    // Add to local storage first for immediate UI feedback
     const now = Date.now();
     const expires = now + 12 * 60 * 60 * 1000; // 12 hours
     const newPin: TrackedPin = {
@@ -139,58 +159,33 @@ export async function addTrackedMapPin(id: string, beaconID?: string, subdivisio
         lastSubdivisionID: subdivisionID,
         lastBeaconName: beaconName,
         symbol: symbol,
-        addresses: addresses && addresses.length > 0 ? [...addresses] : undefined
+        addresses: addresses || []
     };
     arr.push(newPin);
     saveLocalTrackedPins(arr);
-
-    // Persist to API (best-effort)
-    try {
-        const headers = await getAuthHeader();
-        const response = await fetch(API_BASE, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({
-                mapPinId,
-                beaconID: beaconID ? parseInt(beaconID, 10) : undefined,
-                subdivisionID: subdivisionID ? parseInt(subdivisionID, 10) : undefined,
-                beaconName,
-                symbol,
-                color
-            })
-        });
-        if (!response.ok) {
-            console.error('Failed to add tracked pin to API');
-        }
-    } catch (error) {
-        console.error('Error adding tracked pin to API:', error);
-    }
 }
 
 export async function removeTrackedMapPin(id: string) {
     const mapPinId = parseInt(id, 10);
     if (isNaN(mapPinId)) {
-        console.error('Invalid map pin ID:', id);
-        return;
+        console.error('Invalid map pin ID provided:', id);
+        throw new Error('An unexpected error occurred. Please try again.');
     }
 
-    // Remove from local storage first
+    // Delete from API first
+    const headers = await getAuthHeader();
+    const response = await fetch(`${API_BASE}/${mapPinId}`, {
+        method: 'DELETE',
+        headers
+    });
+    if (!response.ok) {
+        const errorText = await response.text().catch(() => 'Unknown error');
+        throw new Error(`Failed to remove tracked pin from API (${response.status} ${response.statusText}): ${errorText}`);
+    }
+
+    // Remove from local storage after API success
     const arr = getLocalTrackedPins().filter(item => item.id !== id);
     saveLocalTrackedPins(arr);
-
-    // Delete from API (best-effort)
-    try {
-        const headers = await getAuthHeader();
-        const response = await fetch(`${API_BASE}/${mapPinId}`, {
-            method: 'DELETE',
-            headers
-        });
-        if (!response.ok) {
-            console.error('Failed to remove tracked pin from API');
-        }
-    } catch (error) {
-        console.error('Error removing tracked pin from API:', error);
-    }
 }
 
 export function getTrackedColor(id: string): string | undefined {
@@ -198,15 +193,17 @@ export function getTrackedColor(id: string): string | undefined {
     return arr.find(item => item.id === id)?.color;
 }
 
-export async function updateTrackedPinLocation(id: string, beaconID: string, subdivisionID: string, beaconName: string, addresses?: Array<{ id: string; source: string }>) {
+export async function updateTrackedPinLocation(id: string, beaconID: string, subdivisionID: string, beaconName: string | undefined, addresses?: Array<{ id: string; source: string }>) {
     const arr = getLocalTrackedPins();
     const tracked = arr.find(item => item.id === id);
     if (tracked) {
         tracked.lastBeaconID = beaconID;
         tracked.lastSubdivisionID = subdivisionID;
-        tracked.lastBeaconName = beaconName;
-        if (addresses && addresses.length > 0) {
-            tracked.addresses = [...addresses];
+        if (beaconName !== undefined) {
+            tracked.lastBeaconName = beaconName;
+        }
+        if (addresses !== undefined) {
+            tracked.addresses = addresses.length > 0 ? [...addresses] : undefined;
         }
         saveLocalTrackedPins(arr);
     }
@@ -234,31 +231,28 @@ export async function updateTrackedPinLocation(id: string, beaconID: string, sub
 export async function updateTrackedPinSymbol(id: string, symbol: string) {
     const mapPinId = parseInt(id, 10);
     if (isNaN(mapPinId)) {
-        console.error('Invalid map pin ID:', id);
-        return;
+        console.error('Invalid map pin ID provided:', id);
+        throw new Error('An unexpected error occurred. Please try again.');
     }
 
-    // Update local storage first
+    // Update in API first
+    const headers = await getAuthHeader();
+    const response = await fetch(`${API_BASE}/${mapPinId}/symbol`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ symbol })
+    });
+    if (!response.ok) {
+        const errorText = await response.text().catch(() => 'Unknown error');
+        throw new Error(`Failed to update tracked pin symbol in API (${response.status} ${response.statusText}): ${errorText}`);
+    }
+
+    // Update local storage after API success
     const arr = getLocalTrackedPins();
     const tracked = arr.find(item => item.id === id);
     if (tracked) {
         tracked.symbol = symbol;
         saveLocalTrackedPins(arr);
-    }
-
-    // Update in API (best-effort)
-    try {
-        const headers = await getAuthHeader();
-        const response = await fetch(`${API_BASE}/${mapPinId}/symbol`, {
-            method: 'PATCH',
-            headers,
-            body: JSON.stringify({ symbol })
-        });
-        if (!response.ok) {
-            console.error('Failed to update tracked pin symbol in API');
-        }
-    } catch (error) {
-        console.error('Error updating tracked pin symbol in API:', error);
     }
 }
 
@@ -283,12 +277,12 @@ function mapServerDtoToTrackedPin(dto: TrackedPinServerDTO, existing?: TrackedPi
         id: String(dto.mapPinId),
         mapPinId: dto.mapPinId,
         expires,
-        color: dto.color || 'orange',
-        lastBeaconID: dto.beaconID ? String(dto.beaconID) : undefined,
-        lastSubdivisionID: dto.subdivisionID ? String(dto.subdivisionID) : undefined,
-        lastBeaconName: dto.beaconName,
-        symbol: dto.symbol,
-        addresses: existing?.addresses ? [...existing.addresses] : undefined
+        color: dto.color || existing?.color || 'orange',
+        lastBeaconID: dto.beaconID ? String(dto.beaconID) : existing?.lastBeaconID,
+        lastSubdivisionID: dto.subdivisionID ? String(dto.subdivisionID) : existing?.lastSubdivisionID,
+        lastBeaconName: dto.beaconName ?? existing?.lastBeaconName,
+        symbol: dto.symbol ?? existing?.symbol,
+        addresses: existing?.addresses ? [...existing.addresses] : []
     };
 }
 
@@ -298,6 +292,8 @@ export function applyTrackedPinAddedOrUpdatedFromServer(dto: TrackedPinServerDTO
 
     const currentPins = getLocalTrackedPins();
     const existing = currentPins.find(p => p.id === String(dto.mapPinId));
+    if (!existing) return currentPins;
+
     const normalized = mapServerDtoToTrackedPin(dto, existing);
     const next = currentPins.filter(p => p.id !== normalized.id);
     next.push(normalized);
