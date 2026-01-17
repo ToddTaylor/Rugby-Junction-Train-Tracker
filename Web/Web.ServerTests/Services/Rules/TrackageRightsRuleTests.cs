@@ -40,7 +40,7 @@ namespace Web.ServerTests.Services.Rules
             var result = await _rule.ShouldDiscardAsync(context);
 
             // Assert
-            Assert.IsFalse(result);
+            Assert.IsFalse(result.ShouldDiscard);
         }
 
         [TestMethod]
@@ -58,7 +58,7 @@ namespace Web.ServerTests.Services.Rules
             var result = await _rule.ShouldDiscardAsync(context);
 
             // Assert
-            Assert.IsFalse(result);
+            Assert.IsFalse(result.ShouldDiscard);
         }
 
         [TestMethod]
@@ -84,7 +84,7 @@ namespace Web.ServerTests.Services.Rules
             var result = await _rule.ShouldDiscardAsync(context);
 
             // Assert
-            Assert.IsFalse(result);
+            Assert.IsFalse(result.ShouldDiscard);
         }
 
         [TestMethod]
@@ -112,7 +112,7 @@ namespace Web.ServerTests.Services.Rules
             var result = await _rule.ShouldDiscardAsync(context);
 
             // Assert
-            Assert.IsFalse(result);
+            Assert.IsFalse(result.ShouldDiscard);
         }
 
         [TestMethod]
@@ -150,7 +150,7 @@ namespace Web.ServerTests.Services.Rules
             var result = await _rule.ShouldDiscardAsync(context);
 
             // Assert
-            Assert.IsFalse(result);
+            Assert.IsFalse(result.ShouldDiscard);
         }
 
         [TestMethod]
@@ -190,7 +190,7 @@ namespace Web.ServerTests.Services.Rules
             var result = await _rule.ShouldDiscardAsync(context);
 
             // Assert - Same railroad always allowed
-            Assert.IsFalse(result);
+            Assert.IsFalse(result.ShouldDiscard);
         }
 
         [TestMethod]
@@ -234,7 +234,7 @@ namespace Web.ServerTests.Services.Rules
             var result = await _rule.ShouldDiscardAsync(context);
 
             // Assert - No rights found, allow by default
-            Assert.IsFalse(result);
+            Assert.IsFalse(result.ShouldDiscard);
         }
 
         [TestMethod]
@@ -287,7 +287,7 @@ namespace Web.ServerTests.Services.Rules
             var result = await _rule.ShouldDiscardAsync(context);
 
             // Assert - Has rights, so telemetry is allowed
-            Assert.IsFalse(result);
+            Assert.IsFalse(result.ShouldDiscard);
         }
 
         [TestMethod]
@@ -340,7 +340,7 @@ namespace Web.ServerTests.Services.Rules
             var result = await _rule.ShouldDiscardAsync(context);
 
             // Assert - No rights to current subdivision, should discard
-            Assert.IsTrue(result);
+            Assert.IsTrue(result.ShouldDiscard);
         }
 
         [TestMethod]
@@ -403,7 +403,7 @@ namespace Web.ServerTests.Services.Rules
             var result = await _rule.ShouldDiscardAsync(context);
 
             // Assert - Has rights among multiple, so allowed
-            Assert.IsFalse(result);
+            Assert.IsFalse(result.ShouldDiscard);
         }
 
         [TestMethod]
@@ -466,7 +466,7 @@ namespace Web.ServerTests.Services.Rules
             var result = await _rule.ShouldDiscardAsync(context);
 
             // Assert - No rights to current subdivision among all rights, should discard
-            Assert.IsTrue(result);
+            Assert.IsTrue(result.ShouldDiscard);
         }
 
         [TestMethod]
@@ -512,7 +512,7 @@ namespace Web.ServerTests.Services.Rules
             var result = await _rule.ShouldDiscardAsync(context);
 
             // Assert - Empty list means no rights, but code treats this as discard (no rights found)
-            Assert.IsTrue(result);
+            Assert.IsTrue(result.ShouldDiscard);
         }
     }
 }

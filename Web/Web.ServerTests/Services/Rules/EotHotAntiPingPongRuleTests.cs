@@ -34,7 +34,7 @@ namespace Web.ServerTests.Services.Rules
             var result = await _rule.ShouldDiscardAsync(context);
 
             // Assert
-            Assert.IsFalse(result);
+            Assert.IsFalse(result.ShouldDiscard);
         }
 
         [TestMethod]
@@ -63,7 +63,7 @@ namespace Web.ServerTests.Services.Rules
             var result = await _rule.ShouldDiscardAsync(context);
 
             // Assert
-            Assert.IsFalse(result);
+            Assert.IsFalse(result.ShouldDiscard);
         }
 
         [TestMethod]
@@ -92,7 +92,7 @@ namespace Web.ServerTests.Services.Rules
             var result = await _rule.ShouldDiscardAsync(context);
 
             // Assert
-            Assert.IsFalse(result);
+            Assert.IsFalse(result.ShouldDiscard);
         }
 
         [TestMethod]
@@ -126,7 +126,7 @@ namespace Web.ServerTests.Services.Rules
             var result = await _rule.ShouldDiscardAsync(context);
 
             // Assert
-            Assert.IsFalse(result);
+            Assert.IsFalse(result.ShouldDiscard);
         }
 
         [TestMethod]
@@ -161,7 +161,7 @@ namespace Web.ServerTests.Services.Rules
             var result = await _rule.ShouldDiscardAsync(context);
 
             // Assert
-            Assert.IsFalse(result);
+            Assert.IsFalse(result.ShouldDiscard);
         }
 
         [TestMethod]
@@ -196,7 +196,7 @@ namespace Web.ServerTests.Services.Rules
             var result = await _rule.ShouldDiscardAsync(context);
 
             // Assert - Train is moving forward legitimately
-            Assert.IsFalse(result);
+            Assert.IsFalse(result.ShouldDiscard);
         }
 
         [TestMethod]
@@ -231,7 +231,7 @@ namespace Web.ServerTests.Services.Rules
             var result = await _rule.ShouldDiscardAsync(context);
 
             // Assert - Train switched to beacon 2, now trying to return to beacon 1
-            Assert.IsTrue(result);
+            Assert.IsTrue(result.ShouldDiscard);
         }
 
         [TestMethod]
@@ -266,7 +266,7 @@ namespace Web.ServerTests.Services.Rules
             var result = await _rule.ShouldDiscardAsync(context);
 
             // Assert - Train switched to beacon 4, now trying to return to beacon 3
-            Assert.IsTrue(result);
+            Assert.IsTrue(result.ShouldDiscard);
         }
 
         [TestMethod]
@@ -301,7 +301,7 @@ namespace Web.ServerTests.Services.Rules
             var result = await _rule.ShouldDiscardAsync(context);
 
             // Assert - Train is at beacon 2 most recently, trying to return to beacon 1
-            Assert.IsTrue(result);
+            Assert.IsTrue(result.ShouldDiscard);
         }
 
         [TestMethod]
@@ -331,7 +331,7 @@ namespace Web.ServerTests.Services.Rules
             var result = await _rule.ShouldDiscardAsync(context);
 
             // Assert
-            Assert.IsFalse(result);
+            Assert.IsFalse(result.ShouldDiscard);
         }
 
         [TestMethod]
@@ -361,7 +361,7 @@ namespace Web.ServerTests.Services.Rules
             var result = await _rule.ShouldDiscardAsync(context);
 
             // Assert
-            Assert.IsFalse(result);
+            Assert.IsFalse(result.ShouldDiscard);
         }
 
         [TestMethod]
@@ -392,7 +392,7 @@ namespace Web.ServerTests.Services.Rules
             var result = await _rule.ShouldDiscardAsync(context);
 
             // Assert
-            Assert.IsTrue(result);
+            Assert.IsTrue(result.ShouldDiscard);
         }
     }
 }

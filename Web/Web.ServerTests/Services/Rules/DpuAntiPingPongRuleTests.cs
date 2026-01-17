@@ -34,7 +34,7 @@ namespace Web.ServerTests.Services.Rules
             var result = await _rule.ShouldDiscardAsync(context);
 
             // Assert
-            Assert.IsFalse(result);
+            Assert.IsFalse(result.ShouldDiscard);
         }
 
         [TestMethod]
@@ -52,7 +52,7 @@ namespace Web.ServerTests.Services.Rules
             var result = await _rule.ShouldDiscardAsync(context);
 
             // Assert
-            Assert.IsFalse(result);
+            Assert.IsFalse(result.ShouldDiscard);
         }
 
         [TestMethod]
@@ -80,7 +80,7 @@ namespace Web.ServerTests.Services.Rules
             var result = await _rule.ShouldDiscardAsync(context);
 
             // Assert
-            Assert.IsFalse(result);
+            Assert.IsFalse(result.ShouldDiscard);
         }
 
         [TestMethod]
@@ -115,7 +115,7 @@ namespace Web.ServerTests.Services.Rules
             var result = await _rule.ShouldDiscardAsync(context);
 
             // Assert
-            Assert.IsFalse(result);
+            Assert.IsFalse(result.ShouldDiscard);
         }
 
         [TestMethod]
@@ -151,7 +151,7 @@ namespace Web.ServerTests.Services.Rules
             var result = await _rule.ShouldDiscardAsync(context);
 
             // Assert - previousBeacon is more recent than currentBeacon
-            Assert.IsTrue(result);
+            Assert.IsTrue(result.ShouldDiscard);
         }
 
         [TestMethod]
@@ -187,7 +187,7 @@ namespace Web.ServerTests.Services.Rules
             var result = await _rule.ShouldDiscardAsync(context);
 
             // Assert - currentBeacon is more recent, so legitimate move forward
-            Assert.IsFalse(result);
+            Assert.IsFalse(result.ShouldDiscard);
         }
     }
 }
