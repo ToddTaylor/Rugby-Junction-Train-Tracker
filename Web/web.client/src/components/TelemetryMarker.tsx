@@ -69,6 +69,7 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
                     background: #181a1b !important;
                     color: #f3f3f3 !important;
                     border: 1px solid #333 !important;
+                    box-shadow: 0 0 8px rgba(0, 123, 255, 0.6);
                 }
                 body[data-theme='dark'] .leaflet-popup-content,
                 .dark .leaflet-popup-content {
@@ -78,6 +79,7 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
                 .dark .leaflet-popup-tip {
                     background: #181a1b !important;
                     border: 1px solid #333 !important;
+                    box-shadow: 0 0 8px rgba(0, 123, 255, 0.6);
                 }
             `;
             document.head.appendChild(style);
