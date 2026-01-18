@@ -615,43 +615,12 @@ const RailMap: React.FC = () => {
                     </a>
                 )}
                 <span style={{ display: 'flex', alignItems: 'center', marginRight: 4 }}>
-                    <img src={`/icons/sun.svg${cacheBuster}`} alt="Light mode" style={{ opacity: mapTheme === 'light' ? 1 : 0.4, width: 24, height: 24 }} />
-                </span>
-                <label style={{ display: 'inline-flex', alignItems: 'center', cursor: 'pointer', margin: '0 4px' }}>
-                    <input
-                        type="checkbox"
-                        checked={mapTheme === 'dark'}
-                        onChange={handleToggleTheme}
-                        style={{ display: 'none' }}
+                    <img
+                        src={mapTheme === 'dark' ? `/icons/moon.svg${cacheBuster}` : `/icons/sun.svg${cacheBuster}`}
+                        alt={mapTheme === 'dark' ? 'Dark mode' : 'Light mode'}
+                        style={{ width: 28, height: 28, cursor: 'pointer' }}
+                        onClick={handleToggleTheme}
                     />
-                    <span
-                        style={{
-                            width: 40,
-                            height: 24,
-                            background: mapTheme === 'dark' ? '#333' : '#bbb', // darker in light mode
-                            borderRadius: 12,
-                            position: 'relative',
-                            transition: 'background 0.2s',
-                            display: 'inline-block',
-                        }}
-                    >
-                        <span
-                            style={{
-                                position: 'absolute',
-                                left: mapTheme === 'dark' ? 20 : 2,
-                                top: 2,
-                                width: 20,
-                                height: 20,
-                                background: mapTheme === 'dark' ? '#fff' : '#f8f8f8',
-                                borderRadius: '50%',
-                                boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
-                                transition: 'left 0.2s, background 0.2s',
-                            }}
-                        />
-                    </span>
-                </label>
-                <span style={{ display: 'flex', alignItems: 'center', marginLeft: 4 }}>
-                    <img src={`/icons/moon.svg${cacheBuster}`} alt="Dark mode" style={{ opacity: mapTheme === 'dark' ? 1 : 0.4, width: 24, height: 24 }} />
                 </span>
             </div>
             <MapContainer
