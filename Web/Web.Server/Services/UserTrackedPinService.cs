@@ -74,7 +74,7 @@ namespace Web.Server.Services
                 };
 
                 var result = await _repository.AddAsync(trackedPin);
-                _logger.LogInformation("User {UserId} tracked pin {MapPinId} with symbol {Symbol}", userId, mapPinId, symbol);
+                _logger.LogDebug("User {UserId} tracked pin {MapPinId} with symbol {Symbol}", userId, mapPinId, symbol);
                 var dto = _mapper.Map<UserTrackedPinDTO>(result);
                 await SafeBroadcastAsync("TrackedPinAdded", userId, dto);
                 return dto;
@@ -118,14 +118,14 @@ namespace Web.Server.Services
                         ExpiresUtc = _timeProvider.UtcNow.AddHours(TrackingDurationHours)
                     };
                     await _repository.AddAsync(trackedPin);
-                    _logger.LogInformation("Created tracked pin for user {UserId} and pin {MapPinId} with symbol {Symbol}", userId, mapPinId, symbol);
+                    _logger.LogDebug("Created tracked pin for user {UserId} and pin {MapPinId} with symbol {Symbol}", userId, mapPinId, symbol);
                 }
                 else
                 {
                     trackedPin.Symbol = symbol;
                     trackedPin.LastUpdate = _timeProvider.UtcNow;
                     await _repository.UpdateAsync(trackedPin);
-                    _logger.LogInformation("Updated tracked pin symbol for user {UserId} and pin {MapPinId} to {Symbol}", userId, mapPinId, symbol);
+                    _logger.LogDebug("Updated tracked pin symbol for user {UserId} and pin {MapPinId} to {Symbol}", userId, mapPinId, symbol);
                 }
 
                 var dto = _mapper.Map<UserTrackedPinDTO>(trackedPin);
@@ -153,7 +153,7 @@ namespace Web.Server.Services
                 trackedPin.SubdivisionID = subdivisionId;
                 trackedPin.LastUpdate = _timeProvider.UtcNow;
                 await _repository.UpdateAsync(trackedPin);
-                _logger.LogInformation("Updated tracked pin location for user {UserId} and pin {MapPinId} to beacon {BeaconId}", userId, mapPinId, beaconId);
+                _logger.LogDebug("Updated tracked pin location for user {UserId} and pin {MapPinId} to beacon {BeaconId}", userId, mapPinId, beaconId);
                 var dto = _mapper.Map<UserTrackedPinDTO>(trackedPin);
                 await SafeBroadcastAsync("TrackedPinUpdated", userId, dto);
             }
@@ -169,7 +169,7 @@ namespace Web.Server.Services
             try
             {
                 await _repository.DeleteByUserAndMapPinAsync(userId, mapPinId);
-                _logger.LogInformation("User {UserId} untracked pin {MapPinId}", userId, mapPinId);
+                _logger.LogDebug("User {UserId} untracked pin {MapPinId}", userId, mapPinId);
                 await SafeBroadcastAsync("TrackedPinRemoved", userId, new { mapPinId });
             }
             catch (Exception ex)
@@ -184,7 +184,7 @@ namespace Web.Server.Services
             try
             {
                 await _repository.DeleteExpiredAsync();
-                _logger.LogInformation("Cleanup: Removed expired tracked pins");
+                _logger.LogDebug("Cleanup: Removed expired tracked pins");
             }
             catch (Exception ex)
             {

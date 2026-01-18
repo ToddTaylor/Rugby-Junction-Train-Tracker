@@ -88,7 +88,7 @@ namespace Web.Server.Services
                 };
 
                 var result = await _repository.AddAsync(trackageRight);
-                _logger.LogInformation("Added trackage right from subdivision {FromID} to {ToID}", dto.FromSubdivisionID, dto.ToSubdivisionID);
+                _logger.LogDebug("Added trackage right from subdivision {FromID} to {ToID}", dto.FromSubdivisionID, dto.ToSubdivisionID);
 
                 return new SubdivisionTrackageRightDTO
                 {
@@ -112,7 +112,7 @@ namespace Web.Server.Services
             try
             {
                 await _repository.DeleteAsync(id);
-                _logger.LogInformation("Deleted trackage right {ID}", id);
+                _logger.LogDebug("Deleted trackage right {ID}", id);
             }
             catch (Exception ex)
             {
@@ -138,7 +138,7 @@ namespace Web.Server.Services
                     });
                 }
 
-                _logger.LogInformation("Replaced trackage rights for subdivision {ID}", fromSubdivisionID);
+                _logger.LogDebug("Replaced trackage rights for subdivision {ID}", fromSubdivisionID);
             }
             catch (Exception ex)
             {
