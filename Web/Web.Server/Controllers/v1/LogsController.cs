@@ -13,7 +13,7 @@ namespace Web.Server.Controllers.v1
         public LogsController(ILogger<LogsController> logger)
         {
             _logger = logger;
-            _logsDirectory = Path.Combine(Directory.GetCurrentDirectory(), "logs");
+            _logsDirectory = Path.Combine(Directory.GetCurrentDirectory(), "..\\logs");
         }
 
         /// <summary>
@@ -55,9 +55,9 @@ namespace Web.Server.Controllers.v1
                 }
 
                 var logLines = await ReadLastLinesAsync(logFilePath, lines);
-                
-                return Ok(new 
-                { 
+
+                return Ok(new
+                {
                     fileName = Path.GetFileName(logFilePath),
                     lineCount = logLines.Count,
                     logs = string.Join(Environment.NewLine, logLines)
@@ -115,9 +115,9 @@ namespace Web.Server.Controllers.v1
             try
             {
                 // Validate filename to prevent directory traversal attacks
-                if (string.IsNullOrWhiteSpace(fileName) || 
-                    fileName.Contains("..") || 
-                    fileName.Contains("/") || 
+                if (string.IsNullOrWhiteSpace(fileName) ||
+                    fileName.Contains("..") ||
+                    fileName.Contains("/") ||
                     fileName.Contains("\\") ||
                     !fileName.StartsWith("web-server-") ||
                     !fileName.EndsWith(".log"))
@@ -138,7 +138,7 @@ namespace Web.Server.Controllers.v1
                 }
 
                 List<string> logLines;
-                
+
                 if (lines.HasValue)
                 {
                     // Limit the number of lines
@@ -203,11 +203,11 @@ namespace Web.Server.Controllers.v1
                 {
                     var lines = await ReadAllLinesWithSharedAccessAsync(logFile);
                     var matches = lines.Where(line => line.Contains(query, StringComparison.OrdinalIgnoreCase));
-                    
+
                     foreach (var match in matches)
                     {
                         matchingLines.Add($"[{Path.GetFileName(logFile)}] {match}");
-                        
+
                         if (matchingLines.Count >= maxResults)
                         {
                             break;
@@ -242,7 +242,7 @@ namespace Web.Server.Controllers.v1
             var lines = new List<string>();
             using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
             using var reader = new StreamReader(stream, Encoding.UTF8);
-            
+
             while (!reader.EndOfStream)
             {
                 var line = await reader.ReadLineAsync();
@@ -251,7 +251,7 @@ namespace Web.Server.Controllers.v1
                     lines.Add(line);
                 }
             }
-            
+
             return lines;
         }
 
@@ -261,7 +261,7 @@ namespace Web.Server.Controllers.v1
         private async Task<List<string>> ReadLastLinesAsync(string filePath, int lineCount)
         {
             var lines = new List<string>();
-            
+
             try
             {
                 // For smaller files or small line counts, just read all and take last N
@@ -275,7 +275,7 @@ namespace Web.Server.Controllers.v1
                 // For larger files, read from the end
                 using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
                 using var reader = new StreamReader(stream, Encoding.UTF8);
-                
+
                 var buffer = new List<string>();
                 while (!reader.EndOfStream)
                 {
@@ -289,7 +289,7 @@ namespace Web.Server.Controllers.v1
                         }
                     }
                 }
-                
+
                 return buffer;
             }
             catch
