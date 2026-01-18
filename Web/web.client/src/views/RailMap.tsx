@@ -44,7 +44,7 @@ const RailMap: React.FC = () => {
     const [selectedSubdivision, setSelectedSubdivision] = useState<string | undefined>(undefined);
 
     // Auth for admin button
-    const { session } = useAuth();
+    const { session, logout } = useAuth();
     const isAdmin = session?.roles?.includes('Admin');
 
     // Use custom hooks for data
@@ -593,35 +593,80 @@ const RailMap: React.FC = () => {
         ? `?v=${import.meta.env.VITE_APP_VERSION}`
         : `?t=${Date.now()}`;
 
+    const handleLogout = async () => {
+        const confirmed = window.confirm("Are you sure you want to log out?");
+        if (!confirmed) return;
+        try {
+            // Get token from session (useAuth)
+            const token = session?.token;
+            if (token) {
+                await fetch(import.meta.env.VITE_API_URL + '/api/v1/auth/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Api-Key': import.meta.env.VITE_API_KEY
+                    },
+                    body: JSON.stringify(token)
+                });
+            }
+        } finally {
+            logout(); // clears rjtt_auth cookie and sessionStorage
+            window.location.href = '/login';
+        }
+    };
+
     return (
         <>
-            <div style={{ position: 'absolute', top: 14, right: 10, zIndex: 1000, display: 'flex', alignItems: 'center' }}>
-                {isAdmin && (
-                    <a href="/admin" style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        padding: 0,
-                        marginRight: 12,
-                    }}>
+            <div style={{ position: 'absolute', top: 14, right: 10, zIndex: 1000, display: 'flex', alignItems: 'center', width: '100%', justifyContent: 'flex-end' }}>
+                {/* Settings (admin) icon, then theme toggle, then logout at far right */}
+                <div style={{ display: 'flex', alignItems: 'center', marginLeft: 'auto' }}>
+                    {isAdmin && (
+                        <a href="/admin" style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            padding: 0,
+                            marginRight: 12,
+                        }}>
+                            <img
+                                src={`/icons/settings.svg${cacheBuster}`}
+                                alt="Admin settings"
+                                style={{ width: 26, height: 26 }}
+                            />
+                        </a>
+                    )}
+                    <span style={{ display: 'flex', alignItems: 'center', marginRight: 4 }}>
                         <img
-                            src={`/icons/gear-dark.svg${cacheBuster}`}
-                            alt="Admin settings"
-                            style={{ width: 24, height: 24 }}
+                            src={mapTheme === 'dark' ? `/icons/moon.svg${cacheBuster}` : `/icons/sun.svg${cacheBuster}`}
+                            alt={mapTheme === 'dark' ? 'Dark mode' : 'Light mode'}
+                            style={{ width: 28, height: 28, cursor: 'pointer' }}
+                            onClick={handleToggleTheme}
                         />
-                    </a>
-                )}
-                <span style={{ display: 'flex', alignItems: 'center', marginRight: 4 }}>
-                    <img
-                        src={mapTheme === 'dark' ? `/icons/moon.svg${cacheBuster}` : `/icons/sun.svg${cacheBuster}`}
-                        alt={mapTheme === 'dark' ? 'Dark mode' : 'Light mode'}
-                        style={{ width: 28, height: 28, cursor: 'pointer' }}
-                        onClick={handleToggleTheme}
-                    />
-                </span>
+                    </span>
+                    {/* Logout button at the far right */}
+                    <button
+                        onClick={handleLogout}
+                        style={{
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            padding: 0,
+                            marginLeft: 12,
+                            display: 'flex',
+                            alignItems: 'center',
+                        }}
+                        title="Log out"
+                    >
+                        <img
+                            src={`/icons/logout.svg${cacheBuster}`}
+                            alt="Log out"
+                            style={{ width: 26, height: 26 }}
+                        />
+                    </button>
+                </div>
             </div>
             <MapContainer
                 center={mapCenter}

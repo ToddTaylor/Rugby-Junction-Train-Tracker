@@ -20,6 +20,28 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
+    /// Logs out the user by invalidating the token.
+    /// </summary>
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout([FromBody] string token)
+    {
+        try
+        {
+            var success = await _authService.InvalidateTokenAsync(token);
+            if (success)
+            {
+                return Ok(new { success = true });
+            }
+            return BadRequest(new { success = false, errors = new List<string> { "Invalid token or already logged out." } });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "An error occurred while logging out token {Token}", token);
+            return StatusCode(StatusCodes.Status500InternalServerError, new { success = false, errors = new List<string> { "An error occurred while logging out." } });
+        }
+    }
+
+    /// <summary>
     /// Sends a verification code to the provided email address.
     /// </summary>
     [HttpPost("send-code")]

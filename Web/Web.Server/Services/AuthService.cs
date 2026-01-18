@@ -77,7 +77,6 @@ public class AuthService : IAuthService
             }
             history.Add(now);
         }
-
         var code = GenerateNumericCode(CodeLength);
         var codeHash = Hash(code);
         _codes[email] = new CodeEntry { CodeHash = codeHash, ExpiresUtc = now.Add(CodeLifetime) };
@@ -202,6 +201,18 @@ public class AuthService : IAuthService
         // Optionally remove the code to prevent reuse
         _codes.TryRemove(email, out _);
         return (true, result, errors);
+    }
+
+    public async Task<bool> InvalidateTokenAsync(string token)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+            return false;
+        var authToken = await _db.AuthTokens.FirstOrDefaultAsync(t => t.Token == token);
+        if (authToken == null)
+            return false;
+        _db.AuthTokens.Remove(authToken);
+        await _db.SaveChangesAsync();
+        return true;
     }
 
     public async Task<(bool IsValid, int? UserId)> ValidateAndRefreshTokenAsync(string token)

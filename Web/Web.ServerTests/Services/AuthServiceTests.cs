@@ -1,10 +1,9 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Web.Server.Providers;
 using Web.Server.Repositories;
 using Web.Server.Services;
-using System.Linq;
 
 namespace Web.ServerTests.Services;
 
@@ -19,7 +18,11 @@ public class AuthServiceTests
     private AuthService CreateService(TestTimeProvider timeProvider)
     {
         var userRepositoryMock = new Mock<IUserRepository>();
-        return new AuthService(timeProvider, new NullLogger<AuthService>(), userRepositoryMock.Object);
+        var options = new DbContextOptionsBuilder<Server.Data.TelemetryDbContext>()
+            .UseInMemoryDatabase(databaseName: "AuthServiceTests_" + Guid.NewGuid())
+            .Options;
+        var dbContext = new Web.Server.Data.TelemetryDbContext(options);
+        return new AuthService(timeProvider, new NullLogger<AuthService>(), userRepositoryMock.Object, dbContext);
     }
 
     [TestMethod]
@@ -64,7 +67,7 @@ public class AuthServiceTests
         var tp = new TestTimeProvider();
         var svc = CreateService(tp);
         var (sent, _) = await svc.SendCodeAsync("exp@example.com");
-    Assert.IsTrue(sent);
+        Assert.IsTrue(sent);
         // Advance time beyond expiration
         tp.UtcNow = tp.UtcNow.Add(AuthService.CodeLifetime).AddSeconds(1);
         var (success, result, errors) = await svc.VerifyCodeAsync("exp@example.com", "000000", false);
