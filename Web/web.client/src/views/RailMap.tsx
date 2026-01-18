@@ -55,6 +55,10 @@ const RailMap: React.FC = () => {
     // Track the current tracked pins in state to trigger re-renders when they change
     const [trackedPinsState, setTrackedPinsState] = useState(() => getTrackedMapPins());
 
+    // Provide a global callback for TelemetryMarker to update tracked pins from API
+    // (This is a workaround for prop drilling; in a real app, use context or a state manager)
+    (window as any).setTrackedPinsStateFromApi = setTrackedPinsState;
+
     // On mount, pull latest tracked pins from API (syncs cache + state)
     useEffect(() => {
         refreshTrackedPinsFromApi().then(setTrackedPinsState).catch(() => {

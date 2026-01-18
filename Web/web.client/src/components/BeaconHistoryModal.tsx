@@ -38,6 +38,7 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdiv
     const [modalSymbol, setModalSymbol] = useState('');
     const [selectedMapPinId, setSelectedMapPinId] = useState<string | null>(null);
     const [modalAddresses, setModalAddresses] = useState<Array<{id: string, source: string}>>([]);
+    // Always use propTrackedPins if provided, else fallback to local state
     const [trackedPins, setTrackedPins] = useState(() => propTrackedPins || getTrackedMapPins());
     const [refreshKey, setRefreshKey] = useState(0);
     const prevBeaconIDRef = useRef<string | null>(null);
@@ -64,6 +65,9 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdiv
         }
     }, [propTrackedPins]);
 
+    // If propTrackedPins is provided, always use it for rendering
+
+
     useEffect(() => {
         if (open && beaconID) {
             const prevBeaconID = prevBeaconIDRef.current;
@@ -88,7 +92,7 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdiv
 
     // Update tracked pins state and listen for changes (only if not using prop)
     useEffect(() => {
-        if (propTrackedPins) return; // Use prop instead
+
 
         const updateTrackedPins = () => {
             setTrackedPins(getTrackedMapPins());
@@ -96,6 +100,7 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdiv
 
         // Initial load
         updateTrackedPins();
+
 
         // Listen for storage events (changes in other tabs/windows) - refresh from API
         const handleStorageChange = () => {
@@ -164,7 +169,7 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdiv
             maxWidth: 400,
             renderCell: (params: GridRenderCellParams<MapPinHistory>) => {
                 const addresses = params.row?.addresses;
-                const isLocal = params.row?.isLocal;
+
                 if (!Array.isArray(addresses) || addresses.length === 0) return '';
                 
                 const addressText = addresses
@@ -227,26 +232,6 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdiv
                                 }}
                             >
                                 T
-                            </Box>
-                        )}
-                        {isLocal && (
-                            <Box
-                                sx={{
-                                    width: 14,
-                                    height: 14,
-                                    backgroundColor: '#FFD700',
-                                    borderRadius: '50%',
-                                    border: '1px solid rgba(0, 0, 0, 0.5)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    fontSize: '9px',
-                                    fontWeight: '900',
-                                    color: '#000',
-                                    flexShrink: 0,
-                                }}
-                            >
-                                L
                             </Box>
                         )}
                         {symbol && (

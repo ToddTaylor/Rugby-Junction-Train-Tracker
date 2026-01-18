@@ -26,6 +26,7 @@ namespace Web.Server.Data
         public DbSet<Telemetry> Telemetries { get; set; }
         public DbSet<UserTrackedPin> UserTrackedPins { get; set; }
         public DbSet<SubdivisionTrackageRight> SubdivisionTrackageRights { get; set; }
+        public DbSet<AuthToken> AuthTokens { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

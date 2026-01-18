@@ -1,3 +1,9 @@
+// Extend Window type to include mapPins
+declare global {
+    interface Window {
+        mapPins?: any[];
+    }
+}
 import { getAuthToken } from './auth';
 
 // Service for tracked map pins (uses API when available, falls back to localStorage)
@@ -92,6 +98,31 @@ export async function refreshTrackedPinsFromApi(): Promise<TrackedPin[]> {
             const cachedPins = getLocalTrackedPins();
 
             if (data?.data) {
+                // Try to get current mapPins from window (global RailMap state)
+                let mapPins: any[] = [];
+                if (typeof window !== 'undefined' && Array.isArray(window.mapPins)) {
+                    mapPins = window.mapPins;
+                } else {
+                    // Fallback: fetch mapPins from API if not available in window
+                    try {
+                        const minutesOldFilter = 15;
+                        const apiUrl = import.meta.env.VITE_API_URL + '/api/v1/MapPins?minutes=' + minutesOldFilter;
+                        const response = await fetch(apiUrl, {
+                            headers: {
+                                'X-Api-Key': import.meta.env.VITE_API_KEY,
+                                'Content-Type': 'application/json'
+                            }
+                        });
+                        if (response.ok) {
+                            const result = await response.json();
+                            if (Array.isArray(result.data)) {
+                                mapPins = result.data;
+                            }
+                        }
+                    } catch (err) {
+                        console.error('Failed to fetch mapPins for tracked pin address restoration:', err);
+                    }
+                }
                 const pins: TrackedPin[] = data.data.map((pin: any) => {
                     const serverDto: TrackedPinServerDTO = {
                         mapPinId: pin.mapPinId,
@@ -103,7 +134,15 @@ export async function refreshTrackedPinsFromApi(): Promise<TrackedPin[]> {
                         expiresUtc: pin.expiresUtc
                     };
                     const existing = cachedPins.find(p => p.id === String(pin.mapPinId));
-                    return mapServerDtoToTrackedPin(serverDto, existing);
+                    let trackedPin = mapServerDtoToTrackedPin(serverDto, existing);
+                    // If addresses missing/empty, try to restore from mapPins
+                    if (!trackedPin.addresses || trackedPin.addresses.length === 0) {
+                        const mapPin = mapPins.find(mp => String(mp.id) === String(pin.mapPinId));
+                        if (mapPin && Array.isArray(mapPin.addresses)) {
+                            trackedPin.addresses = mapPin.addresses.map((addr: any) => ({ id: String(addr.addressID), source: addr.source }));
+                        }
+                    }
+                    return trackedPin;
                 });
                 saveLocalTrackedPins(pins);
                 return pins;
@@ -144,25 +183,19 @@ export async function addTrackedMapPin(id: string, beaconID?: string, subdivisio
         throw new Error(`Failed to add tracked pin to API (${response.status} ${response.statusText}): ${errorText}`);
     }
 
-    // Add to local storage after API success
-    const arr = getLocalTrackedPins();
-    const usedColors = arr.map(item => item.color);
-    const color = TRACK_COLORS.find(c => !usedColors.includes(c)) || 'orange';
-    const now = Date.now();
-    const expires = now + 12 * 60 * 60 * 1000; // 12 hours
-    const newPin: TrackedPin = {
-        id,
-        mapPinId,
-        expires,
-        color,
-        lastBeaconID: beaconID,
-        lastSubdivisionID: subdivisionID,
-        lastBeaconName: beaconName,
-        symbol: symbol,
-        addresses: addresses || []
-    };
-    arr.push(newPin);
-    saveLocalTrackedPins(arr);
+    // After API success, fetch latest from server and update local cache
+    const pins = await refreshTrackedPinsFromApi();
+    // Patch: ensure addresses are present in localStorage for this pin
+    if (addresses && addresses.length > 0) {
+        const arr = getLocalTrackedPins();
+        const tracked = arr.find(item => item.id === id);
+        if (tracked) {
+            tracked.addresses = [...addresses];
+            saveLocalTrackedPins(arr);
+        }
+    }
+    window.dispatchEvent(new Event('storage'));
+    return pins;
 }
 
 export async function removeTrackedMapPin(id: string) {
@@ -183,9 +216,9 @@ export async function removeTrackedMapPin(id: string) {
         throw new Error(`Failed to remove tracked pin from API (${response.status} ${response.statusText}): ${errorText}`);
     }
 
-    // Remove from local storage after API success
-    const arr = getLocalTrackedPins().filter(item => item.id !== id);
-    saveLocalTrackedPins(arr);
+    // After API success, fetch latest from server and update local cache
+    await refreshTrackedPinsFromApi();
+    window.dispatchEvent(new Event('storage'));
 }
 
 export function getTrackedColor(id: string): string | undefined {

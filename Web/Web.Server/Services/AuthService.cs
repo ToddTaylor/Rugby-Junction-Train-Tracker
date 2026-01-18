@@ -30,6 +30,7 @@ public class AuthService : IAuthService
     private readonly ITimeProvider _timeProvider;
     private readonly ILogger<AuthService> _logger;
     private readonly IUserRepository _userRepository;
+    private readonly Data.TelemetryDbContext _db;
 
     // email -> CodeEntry
     private static readonly ConcurrentDictionary<string, CodeEntry> _codes = new(StringComparer.OrdinalIgnoreCase);
@@ -46,11 +47,12 @@ public class AuthService : IAuthService
     public static readonly TimeSpan LongSessionLifetime = TimeSpan.FromDays(365);
     public const int MaxSendsPerHour = 5;
 
-    public AuthService(ITimeProvider timeProvider, ILogger<AuthService> logger, IUserRepository userRepository)
+    public AuthService(ITimeProvider timeProvider, ILogger<AuthService> logger, IUserRepository userRepository, Data.TelemetryDbContext db)
     {
         _timeProvider = timeProvider;
         _logger = logger;
         _userRepository = userRepository;
+        _db = db;
     }
 
     public async Task<(bool Success, List<string> Errors)> SendCodeAsync(string email)
@@ -180,15 +182,16 @@ public class AuthService : IAuthService
         // success: generate token
         var token = Guid.NewGuid().ToString("N");
         var expires = now.Add(remember ? LongSessionLifetime : ShortSessionLifetime);
-        
-        // Store token mapping
-        _tokens[token] = new TokenEntry
+        // Store token in database
+        var authToken = new Entities.AuthToken
         {
+            Token = token,
             UserId = user.ID,
             ExpiresUtc = expires,
             LastRefreshed = now
         };
-        
+        _db.AuthTokens.Add(authToken);
+        await _db.SaveChangesAsync();
         var result = new AuthVerifySuccessDTO 
         { 
             Token = token, 
@@ -196,10 +199,8 @@ public class AuthService : IAuthService
             Roles = roles,
             UserId = user.ID
         };
-
         // Optionally remove the code to prevent reuse
         _codes.TryRemove(email, out _);
-
         return (true, result, errors);
     }
 
@@ -207,32 +208,29 @@ public class AuthService : IAuthService
     {
         if (string.IsNullOrWhiteSpace(token))
             return (false, null);
-
-        if (!_tokens.TryGetValue(token, out var entry))
+        var authToken = await _db.AuthTokens.FirstOrDefaultAsync(t => t.Token == token);
+        if (authToken == null)
             return (false, null);
-
         var now = _timeProvider.UtcNow;
-        
-        // Check if token is expired
-        if (now > entry.ExpiresUtc)
+        if (now > authToken.ExpiresUtc)
         {
-            _tokens.TryRemove(token, out _);
+            _db.AuthTokens.Remove(authToken);
+            await _db.SaveChangesAsync();
             return (false, null);
         }
-
         // Only update LastLogin if it's been more than the refresh interval since last update
-        if (now - entry.LastRefreshed > LastLoginRefreshInterval)
+        if (now - authToken.LastRefreshed > LastLoginRefreshInterval)
         {
-            var user = await _userRepository.GetByIdAsync(entry.UserId);
+            var user = await _userRepository.GetByIdAsync(authToken.UserId);
             if (user != null && user.IsActive)
             {
                 user.LastLogin = now;
                 await _userRepository.UpdateAsync(user);
-                entry.LastRefreshed = now;
+                authToken.LastRefreshed = now;
+                await _db.SaveChangesAsync();
             }
         }
-
-        return (true, entry.UserId);
+        return (true, authToken.UserId);
     }
 
     private static string GenerateNumericCode(int length)

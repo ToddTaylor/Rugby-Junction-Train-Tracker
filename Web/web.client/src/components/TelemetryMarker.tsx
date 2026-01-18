@@ -3,7 +3,13 @@ import L from 'leaflet';
 import { useEffect, useRef, useState } from 'react';
 import { parseISO } from 'date-fns/parseISO';
 import { format } from 'date-fns';
-import { addTrackedMapPin, removeTrackedMapPin, getTrackedColor, getTrackedPinSymbol, updateTrackedPinSymbol } from '../services/trackedPins';
+import { addTrackedMapPin, removeTrackedMapPin, getTrackedPinSymbol, updateTrackedPinSymbol, refreshTrackedPinsFromApi } from '../services/trackedPins';
+// Extend window type for setTrackedPinsStateFromApi
+declare global {
+    interface Window {
+        setTrackedPinsStateFromApi?: (pins: import('../services/trackedPins').TrackedPin[]) => void;
+    }
+}
 import type { TrackedPin } from '../services/trackedPins';
 import ReactDOMServer from 'react-dom/server';
 import { ArrowIcon } from './ArrowIcon'; // adjust import as needed
@@ -104,17 +110,23 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
         ? pin.addresses.map(addr => ({ id: String(addr.addressID), source: addr.source }))
         : [];
 
+    // Accept a callback prop to update trackedPins in parent (RailMap)
+    // If not provided, fallback to no-op
+    const updateTrackedPinsFromApi = async () => {
+        if (typeof window.setTrackedPinsStateFromApi === 'function') {
+            const pins = await refreshTrackedPinsFromApi();
+            window.setTrackedPinsStateFromApi(pins);
+        }
+    };
+
     const handleModalSave = async (symbol: string) => {
         try {
             if (isEditingTrack) {
-                // Update existing tracked pin's symbol
                 await updateTrackedPinSymbol(String(pin.id), symbol);
             } else {
-                // Add new tracked pin
                 await addTrackedMapPin(String(pin.id), pin.beaconID, pin.subdivisionID, pin.beaconName, symbol || undefined, addressesForModal);
-                setIsTracked(true);
-                setTrackColor(getTrackedColor(String(pin.id)));
             }
+            await updateTrackedPinsFromApi();
             setModalOpen(false);
         } catch (error) {
             console.error('Failed to save tracked pin:', error);
@@ -124,8 +136,7 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
     const handleModalUntrack = async () => {
         try {
             await removeTrackedMapPin(String(pin.id));
-            setIsTracked(false);
-            setTrackColor(undefined);
+            await updateTrackedPinsFromApi();
             setModalOpen(false);
         } catch (error) {
             console.error('Failed to untrack pin:', error);
