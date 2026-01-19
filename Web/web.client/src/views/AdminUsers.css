@@ -1,3 +1,31 @@
+/* Role radio buttons horizontal alignment */
+/* Role radio buttons horizontal alignment, label to right */
+/* Role radio buttons horizontal alignment, label to right */
+/* Role radio buttons vertical alignment, label to right */
+/* Role radio buttons grid alignment */
+.roles-radio-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  row-gap: 16px;
+  column-gap: 12px;
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+.role-radio-row {
+  display: contents;
+}
+
+.role-radio-btn {
+  justify-self: end;
+  align-self: center;
+}
+
+.role-radio-label-text {
+  align-self: center;
+  font-size: 1rem;
+  margin-left: 8px;
+}
 .admin-users {
   padding: 2rem;
   padding-bottom: 80px;

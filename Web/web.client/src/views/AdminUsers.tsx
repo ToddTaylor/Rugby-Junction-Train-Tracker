@@ -385,17 +385,18 @@ const AdminUsers: React.FC = () => {
 
               <div className="form-group">
                 <label>Role</label>
-                <div className="roles-checkboxes">
+                <div className="roles-radio-grid">
                   {availableRoles.map(role => (
-                    <label key={role} className="checkbox-label">
+                    <div key={role} className="role-radio-row">
                       <input
                         type="radio"
                         name="role"
                         checked={formData.roles.includes(role)}
                         onChange={() => handleRoleChange(role)}
+                        className="role-radio-btn"
                       />
-                      {role}
-                    </label>
+                      <span className="role-radio-label-text">{role}</span>
+                    </div>
                   ))}
                 </div>
               </div>
