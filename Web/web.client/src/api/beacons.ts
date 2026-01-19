@@ -45,7 +45,8 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<Api
       headers['X-Auth-Token'] = token;
     }
     
-    const response = await fetch(`${API_URL}${endpoint}`, {
+    const { fetchWithAuth } = await import('../utils/fetchWithAuth');
+    const response = await fetchWithAuth(`${API_URL}${endpoint}`, {
       ...options,
       headers,
     });

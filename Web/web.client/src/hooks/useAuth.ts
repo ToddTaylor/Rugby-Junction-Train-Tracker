@@ -1,10 +1,8 @@
 import { useCallback, useState } from 'react';
 import { AuthState, AuthSession } from '../types/Auth';
 import { sendLoginCode, verifyLoginCode } from '../api/auth';
-import { getCookie, setCookie, eraseCookie } from '../utils/cookies';
 
-const COOKIE_NAME = 'rjtt_auth';
-const SESSION_KEY = 'rjtt_auth_session';
+const STORAGE_KEY = 'rjtt_auth_session';
 
 function parseSession(raw: string | null): AuthSession | null {
   if (!raw) return null;
@@ -18,14 +16,12 @@ function parseSession(raw: string | null): AuthSession | null {
 
 export function useAuth() {
   const [state, setState] = useState<AuthState>(() => {
-    const cookieSession = parseSession(getCookie(COOKIE_NAME));
-    const ephemeralSession = parseSession(sessionStorage.getItem(SESSION_KEY));
-    const active = cookieSession || ephemeralSession;
+    const storedSession = parseSession(localStorage.getItem(STORAGE_KEY));
     return {
-      session: active,
+      session: storedSession,
       loading: false,
       error: undefined,
-      step: active ? 'ready' : 'email',
+      step: storedSession ? 'ready' : 'email',
       emailInput: '',
       remember: false,
     };
@@ -58,18 +54,12 @@ export function useAuth() {
       roles: resp.roles,
       userId: resp.userId
     };
-    if (state.remember) {
-      setCookie(COOKIE_NAME, JSON.stringify(session), 365); // 1 year
-      sessionStorage.removeItem(SESSION_KEY);
-    } else {
-      sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
-    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
     setState(s => ({ ...s, session, loading: false, step: 'ready' }));
   }, [state.emailInput, state.remember]);
 
   const logout = useCallback(() => {
-    eraseCookie(COOKIE_NAME);
-    sessionStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(STORAGE_KEY);
     setState({ session: null, loading: false, error: undefined, step: 'email', emailInput: '', remember: false });
   }, []);
 

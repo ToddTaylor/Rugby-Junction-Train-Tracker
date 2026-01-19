@@ -13,9 +13,15 @@ import { AdminSubdivisions } from './views/AdminSubdivisions';
 import PrivateRoute from './components/PrivateRoute';
 import AdminRoute from './components/AdminRoute';
 import AdminTelemetryLog from './views/AdminTelemetryLog';
+import { useEffect } from 'react';
+import { getUsers } from './api/users';
 
 function App() {
-    // NOTE: RailMap manages stale refresh hook for live telemetry. App-level refresh removed to avoid duplicate reload logic.
+    // On mount, trigger a protected API call to ensure inactive users are logged out immediately
+    useEffect(() => {
+        getUsers();
+    }, []);
+
     return (
         <>
             <BrowserRouter>

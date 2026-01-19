@@ -229,17 +229,24 @@ public class AuthService : IAuthService
             await _db.SaveChangesAsync();
             return (false, null);
         }
+
+        // Always check if user is active
+        var user = await _userRepository.GetByIdAsync(authToken.UserId);
+        if (user == null || !user.IsActive)
+        {
+            // Invalidate token if user is inactive or missing
+            _db.AuthTokens.Remove(authToken);
+            await _db.SaveChangesAsync();
+            return (false, null);
+        }
+
         // Only update LastLogin if it's been more than the refresh interval since last update
         if (now - authToken.LastRefreshed > LastLoginRefreshInterval)
         {
-            var user = await _userRepository.GetByIdAsync(authToken.UserId);
-            if (user != null && user.IsActive)
-            {
-                user.LastLogin = now;
-                await _userRepository.UpdateAsync(user);
-                authToken.LastRefreshed = now;
-                await _db.SaveChangesAsync();
-            }
+            user.LastLogin = now;
+            await _userRepository.UpdateAsync(user);
+            authToken.LastRefreshed = now;
+            await _db.SaveChangesAsync();
         }
         return (true, authToken.UserId);
     }

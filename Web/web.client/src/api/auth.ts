@@ -8,7 +8,8 @@ export interface SendCodeResponse { success: boolean; errors?: string[]; }
 
 export async function sendLoginCode(req: SendCodeRequest): Promise<SendCodeResponse> {
   try {
-    const response = await fetch(`${API_BASE}/api/v1/auth/send-code`, {
+    const { fetchWithAuth } = await import('../utils/fetchWithAuth');
+    const response = await fetchWithAuth(`${API_BASE}/api/v1/auth/send-code`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Api-Key': API_KEY },
       body: JSON.stringify(req)
@@ -36,7 +37,8 @@ export interface VerifyCodeResponse {
 
 export async function verifyLoginCode(req: VerifyCodeRequest): Promise<VerifyCodeResponse> {
   try {
-    const response = await fetch(`${API_BASE}/api/v1/auth/verify-code`, {
+    const { fetchWithAuth } = await import('../utils/fetchWithAuth');
+    const response = await fetchWithAuth(`${API_BASE}/api/v1/auth/verify-code`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Api-Key': API_KEY },
       body: JSON.stringify(req)

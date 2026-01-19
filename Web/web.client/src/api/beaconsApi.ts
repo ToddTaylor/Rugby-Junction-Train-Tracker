@@ -1,4 +1,5 @@
 import { openRailwaysDB } from './db';
+import { fetchWithAuth } from '../utils/fetchWithAuth';
 
 // Fetch and cache beacons with status persistence & focus grace period overlay.
 export const fetchBeacons = async (setBeacons: any, setBeaconsLoaded: any) => {
@@ -37,7 +38,7 @@ export const fetchBeacons = async (setBeacons: any, setBeaconsLoaded: any) => {
 
   try {
     const apiUrl = import.meta.env.VITE_API_URL + '/api/v1/BeaconRailroads';
-    const response = await fetch(apiUrl, {
+    const response = await fetchWithAuth(apiUrl, {
       headers: {
         'X-Api-Key': import.meta.env.VITE_API_KEY,
         'Content-Type': 'application/json'

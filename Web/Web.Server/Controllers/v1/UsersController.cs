@@ -27,7 +27,7 @@ namespace Web.Server.Controllers.v1
         [HttpGet]
         public async Task<ActionResult> GetUsers()
         {
-            var response = new MessageEnvelope<IEnumerable<UserDTO>>(null, new List<string>());
+            var response = new MessageEnvelope<IEnumerable<UserDTO>>(default!, new List<string>());
             try
             {
                 var users = await _userService.GetUsersAsync();
@@ -46,7 +46,7 @@ namespace Web.Server.Controllers.v1
         [HttpGet("{id}")]
         public async Task<ActionResult> GetUser(int id)
         {
-            var response = new MessageEnvelope<UserDTO>(null, []);
+            var response = new MessageEnvelope<UserDTO>(default!, new List<string>());
             try
             {
                 var user = await _userService.GetUserByIdAsync(id);
@@ -74,7 +74,7 @@ namespace Web.Server.Controllers.v1
         [HttpGet("by-email")]
         public async Task<ActionResult> GetUserByEmail([FromQuery] string email)
         {
-            var response = new MessageEnvelope<UserDTO>(null, []);
+            var response = new MessageEnvelope<UserDTO>(default!, new List<string>());
             try
             {
                 var user = await _userService.GetUserByEmailAsync(email);
@@ -102,7 +102,7 @@ namespace Web.Server.Controllers.v1
         [HttpPost]
         public async Task<ActionResult> PostUser(CreateUserDTO createUser)
         {
-            var response = new MessageEnvelope<UserDTO>(null, []);
+            var response = new MessageEnvelope<UserDTO>(default!, new List<string>());
             try
             {
                 var existingUser = await _userService.GetUserByEmailAsync(createUser.Email);
@@ -149,7 +149,7 @@ namespace Web.Server.Controllers.v1
         [HttpPut("{id}")]
         public async Task<IActionResult> PutUser(int id, UpdateUserDTO updateUser)
         {
-            var response = new MessageEnvelope<UserDTO>(null, []);
+            var response = new MessageEnvelope<UserDTO>(default!, new List<string>());
             try
             {
                 if (id != updateUser.ID)

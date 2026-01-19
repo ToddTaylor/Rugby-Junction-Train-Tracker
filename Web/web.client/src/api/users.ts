@@ -1,40 +1,28 @@
 import { User, CreateUser, UpdateUser } from '../types/User';
-import { getCookie } from '../utils/cookies';
+import { fetchWithAuth } from '../utils/fetchWithAuth';
 import { AuthSession } from '../types/Auth';
 
 const API_URL = import.meta.env.VITE_API_URL;
 const API_KEY = import.meta.env.VITE_API_KEY;
-const SESSION_KEY = 'rjtt_auth_session';
-const COOKIE_NAME = 'rjtt_auth';
+const STORAGE_KEY = 'rjtt_auth_session';
 
 function getAuthToken(): string | null {
-  // Try cookie first
-  const cookieData = getCookie(COOKIE_NAME);
-  if (cookieData) {
-    try {
-      const session = JSON.parse(cookieData) as AuthSession;
-      return session.token;
-    } catch { }
-  }
-  
-  // Try sessionStorage
-  const sessionData = sessionStorage.getItem(SESSION_KEY);
+  const sessionData = localStorage.getItem(STORAGE_KEY);
   if (sessionData) {
     try {
       const session = JSON.parse(sessionData) as AuthSession;
       return session.token;
     } catch { }
   }
-  
   return null;
 }
 
-interface ApiResponse<T> {
+export interface ApiResponse<T> {
   data: T | null;
   errors: string[];
 }
 
-async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<ApiResponse<T>> {
+export async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<ApiResponse<T>> {
   try {
     const token = getAuthToken();
     const headers: Record<string, string> = {
@@ -42,27 +30,21 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<Api
       'Content-Type': 'application/json',
       ...options?.headers as Record<string, string>,
     };
-    
     if (token) {
       headers['X-Auth-Token'] = token;
     }
-    
-    const response = await fetch(`${API_URL}${endpoint}`, {
+    const response = await fetchWithAuth(`${API_URL}${endpoint}`, {
       ...options,
       headers,
     });
-
     // Handle 204 No Content responses
     if (response.status === 204) {
       return { data: null as T, errors: [] };
     }
-
     const json = await response.json();
-
     if (!response.ok) {
       return { data: null, errors: json.errors || ['Request failed'] };
     }
-
     return { data: json.data, errors: [] };
   } catch (error) {
     return { data: null, errors: [error instanceof Error ? error.message : 'Unknown error'] };

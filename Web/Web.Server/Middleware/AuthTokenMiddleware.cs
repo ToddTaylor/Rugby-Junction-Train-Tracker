@@ -23,8 +23,33 @@ public class AuthTokenMiddleware
             var (isValid, userId) = await authService.ValidateAndRefreshTokenAsync(token);
             if (isValid && userId.HasValue)
             {
-                // Store userId in HttpContext items for potential use by controllers
+                // Fetch user and check IsActive
+                var userService = (IUserService)context.RequestServices.GetService(typeof(IUserService));
+                if (userService != null)
+                {
+                    var user = await userService.GetUserByIdAsync(userId.Value);
+                    if (user == null)
+                    {
+                        await authService.InvalidateTokenAsync(token);
+                        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                        await context.Response.CompleteAsync();
+                        return;
+                    }
+                    if (!user.IsActive)
+                    {
+                        await authService.InvalidateTokenAsync(token);
+                        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                        await context.Response.CompleteAsync();
+                        return;
+                    }
+                }
                 context.Items["UserId"] = userId.Value;
+            }
+            else
+            {
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                await context.Response.CompleteAsync();
+                return;
             }
         }
 

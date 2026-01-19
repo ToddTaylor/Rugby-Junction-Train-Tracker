@@ -1,8 +1,7 @@
-using Web.Server.Entities;
-using Web.Server.Repositories;
-using Web.Server.DTOs;
 using Microsoft.EntityFrameworkCore;
 using Web.Server.Data;
+using Web.Server.Entities;
+using Web.Server.Repositories;
 
 namespace Web.Server.Services
 {
@@ -61,6 +60,14 @@ namespace Web.Server.Services
             user.LastName = owner.LastName;
             user.Email = owner.Email;
             user.IsActive = owner.IsActive;
+
+            // Invalidate tokens if user is set to inactive
+            if (!user.IsActive)
+            {
+                var tokens = _context.AuthTokens.Where(t => t.UserId == user.ID);
+                _context.AuthTokens.RemoveRange(tokens);
+                await _context.SaveChangesAsync();
+            }
 
             // Assign new roles (only key properties)
             user.UserRoles = owner.UserRoles ?? new List<UserRole>();

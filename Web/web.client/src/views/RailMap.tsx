@@ -30,6 +30,11 @@ const TILE_ATTRIBUTION = '&copy; <a href="https://carto.com/">CARTO</a>';
 const fallbackCenter: LatLngTuple = [44.524570, -89.567290]; // Default if location fails
 
 const RailMap: React.FC = () => {
+        // On mount, trigger a protected API call to ensure inactive users are blocked immediately
+        useEffect(() => {
+            // This call will log out and redirect if the user is inactive
+            import('../api/users').then(({ getUsers }) => getUsers());
+        }, []);
     // Use cached location and zoom if available, else fallbackCenter and default zoom
     const savedMapState = JSON.parse(localStorage.getItem('mapState') || 'null');
     const [mapZoom, setMapZoom] = useState<number>(savedMapState?.zoom || 7);

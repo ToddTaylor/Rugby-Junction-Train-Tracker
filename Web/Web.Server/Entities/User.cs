@@ -20,6 +20,7 @@ namespace Web.Server.Entities
 
         public bool IsActive { get; set; }
 
+
         public DateTime? LastLogin { get; set; }
 
         // Navigation
