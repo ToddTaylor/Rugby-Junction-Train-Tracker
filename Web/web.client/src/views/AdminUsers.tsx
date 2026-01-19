@@ -302,10 +302,9 @@ const AdminUsers: React.FC = () => {
               <th className="sortable" onClick={() => handleSort('email')}>
                 Email {getSortIcon('email')}
               </th>
-              <th>Last Login</th>
+              <th>Last Active</th>
               <th>Roles</th>
               <th>Status</th>
-              <th>Created</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -315,7 +314,7 @@ const AdminUsers: React.FC = () => {
                 <td>{user.lastName}</td>
                 <td>{user.firstName}</td>
                 <td>{user.email}</td>
-                <td>{user.lastLogin ? formatDate(user.lastLogin) : 'Never'}</td>
+                <td>{user.lastActive ? formatDate(user.lastActive) : 'Never'}</td>
                 <td>
                   <div className="roles-badges">
                     {user.roles.map(role => (
@@ -328,7 +327,6 @@ const AdminUsers: React.FC = () => {
                     {user.isActive ? 'Active' : 'Inactive'}
                   </span>
                 </td>
-                <td>{formatDate(user.createdAt)}</td>
                 <td className="actions-cell">
                   <button className="btn-edit" onClick={() => handleEdit(user)}>Edit</button>
                   <button className="btn-delete" onClick={() => handleDelete(user.id)}>Delete</button>

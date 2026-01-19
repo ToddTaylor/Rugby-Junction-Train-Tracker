@@ -21,7 +21,9 @@ namespace Web.Server.Entities
         public bool IsActive { get; set; }
 
 
-        public DateTime? LastLogin { get; set; }
+    public DateTime? LastLogin { get; set; }
+
+    public DateTime? LastActive { get; set; } // Updated every time user accesses the app
 
         // Navigation
 

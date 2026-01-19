@@ -240,14 +240,16 @@ public class AuthService : IAuthService
             return (false, null);
         }
 
+        // Always update LastActive on any token validation (app open/access)
+        user.LastActive = now;
         // Only update LastLogin if it's been more than the refresh interval since last update
         if (now - authToken.LastRefreshed > LastLoginRefreshInterval)
         {
             user.LastLogin = now;
-            await _userRepository.UpdateAsync(user);
             authToken.LastRefreshed = now;
-            await _db.SaveChangesAsync();
         }
+        await _userRepository.UpdateAsync(user);
+        await _db.SaveChangesAsync();
         return (true, authToken.UserId);
     }
 

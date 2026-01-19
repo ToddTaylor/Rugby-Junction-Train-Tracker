@@ -5,7 +5,7 @@ export interface User {
   email: string;
   isActive: boolean;
   createdAt: string;
-  lastUpdate: string;
+  lastActive?: string;
   lastLogin?: string;
   roles: string[];
 }
