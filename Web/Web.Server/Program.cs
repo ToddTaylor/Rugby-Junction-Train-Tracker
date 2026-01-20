@@ -6,6 +6,7 @@ using Serilog;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Web.Server.BackgroundServices;
 using Web.Server.Data;
 using Web.Server.Hubs;
 using Web.Server.Mappers;
@@ -151,6 +152,7 @@ try
 
     builder.Services.AddHostedService<BeaconRailroadHealthService>();
     builder.Services.AddHostedService<RecordCleanupService>();
+    builder.Services.AddHostedService<TelemetryConsumerService>();
 
     var app = builder.Build();
 

@@ -1,7 +1,6 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using Web.Server.DTOs;
-using Web.Server.Entities;
 using Web.Server.Services;
 
 namespace Web.Server.Controllers.v1
@@ -10,6 +9,9 @@ namespace Web.Server.Controllers.v1
     [ApiController]
     public class TelemetriesController : ControllerBase
     {
+        // In-memory queue for telemetry messages
+        internal static readonly System.Collections.Concurrent.ConcurrentQueue<string> _telemetryQueue = new();
+
         private readonly ITelemetryService _telemetryService;
         private readonly ILogger<TelemetriesController> _logger;
         private readonly IMapper _mapper;
@@ -28,7 +30,7 @@ namespace Web.Server.Controllers.v1
         [HttpGet]
         public async Task<ActionResult> GetTelemetries()
         {
-            var response = new MessageEnvelope<IEnumerable<TelemetryDTO>>(null, []);
+            var response = new MessageEnvelope<IEnumerable<TelemetryDTO>>(default!, new List<string>());
             try
             {
                 var telemetries = await _telemetryService.GetTelemetriesAsync();
@@ -47,7 +49,7 @@ namespace Web.Server.Controllers.v1
         [HttpGet("{id}")]
         public async Task<ActionResult<TelemetryDTO>> GetTelemetry(int id)
         {
-            var response = new MessageEnvelope<RailroadDTO>(null, []);
+            var response = new MessageEnvelope<TelemetryDTO>(default!, new List<string>());
             try
             {
                 var telemetry = await _telemetryService.GetTelemetryByIdAsync(id);
@@ -74,13 +76,19 @@ namespace Web.Server.Controllers.v1
         [HttpPost]
         public async Task<ActionResult> PostTelemetry(CreateTelemetryDTO telemetryDTO)
         {
-            var response = new MessageEnvelope<TelemetryDTO>(null, []);
+            var response = new MessageEnvelope<TelemetryDTO>(default!, new List<string>());
             try
             {
-                var telemetry = _mapper.Map<Telemetry>(telemetryDTO);
-                var createdTelemetry = await _telemetryService.CreateMapPinAsync(telemetry);
-                response.Data = _mapper.Map<TelemetryDTO>(createdTelemetry);
-                return CreatedAtAction("GetTelemetry", new { id = response.Data.ID }, response);
+                // Serialize telemetryDTO to JSON (or other format)
+                var telemetryJson = System.Text.Json.JsonSerializer.Serialize(telemetryDTO);
+
+                // Enqueue telemetry message to in-memory queue
+                _telemetryQueue.Enqueue(telemetryJson);
+
+                _logger.LogDebug($"[InMemoryQueue] Enqueued telemetry: {telemetryJson}");
+
+                // Respond immediately
+                return Accepted();
             }
             catch (Exception ex)
             {
