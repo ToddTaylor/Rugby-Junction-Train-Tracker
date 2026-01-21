@@ -103,29 +103,6 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
     const labelColor = mapTheme === 'dark' ? '#eaf3ff' : '#005aa9';
     const pointerColor = mapTheme === 'dark' ? '#222' : '#fff';
     const borderColor = mapTheme === 'dark' ? '#444' : '#c5d8ee';
-
-    // Add status text below label, with direction between 'Last Train:' and timestamp
-    // Map direction letter to arrow icon
-    function getDirectionArrow(dir: string | null): string {
-        switch (dir) {
-            case 'N': return '▲';
-            case 'S': return '▼';
-            case 'E': return '►';
-            case 'W': return '◄';
-            default: return dir ? dir : '';
-        }
-    }
-
-    let statusText = '';
-    if (actualLastUpdateTime) {
-        statusText = `Last Train: ${actualDirection ? getDirectionArrow(actualDirection) + ' ' : ''}${actualLastUpdateTime}`;
-    } else {
-        statusText = 'Last Train: N/A';
-    }
-    
-    // For single beacon labels, show the same statusText (including N/A when no data)
-    const statusTextForSingleBeacon = statusText;
-    
     // Style for status text
     const statusFontSize = labelFontSize;
     const statusFontWeight = 200;
@@ -138,6 +115,37 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
         : '0 1px 4px #fff, 0 0 2px #005aa9';
     const statusPadding = `${labelPadding / 2}px 8px`;
     const statusRadius = `${labelRadius / 1.5}px`;
+
+    // Map direction letter to arrow icon
+
+    function getDirectionArrowSvg(dir: string | null, size = 16, color = statusTextColor): string {
+        if (!dir) return '';
+        let rotate = 0;
+        switch (dir) {
+            case 'N': rotate = 0; break;
+            case 'S': rotate = 180; break;
+            case 'E': rotate = 90; break;
+            case 'W': rotate = -90; break;
+            case 'NE': rotate = 45; break;
+            case 'SE': rotate = 135; break;
+            case 'NW': rotate = -45; break;
+            case 'SW': rotate = -135; break;
+            default: return '';
+        }
+        return `<span style="display:inline-block;align-self:center;transform:rotate(${rotate}deg);"><svg width="${size}" height="${size}" viewBox="0 0 16 16"><polygon points="8,2 14,14 2,14" fill="${color}" /></svg></span>`;
+    }
+
+    let statusText = '';
+    if (actualLastUpdateTime) {
+        statusText = `<span style="display:inline-flex;align-items:center;gap:4px;">Last Train: ${actualDirection ? getDirectionArrowSvg(actualDirection, 16, statusTextColor) : ''} ${actualLastUpdateTime}</span>`;
+    } else {
+        statusText = '<span style="display:inline-flex;align-items:center;">Last Train: N/A</span>';
+    }
+
+    // For single beacon labels, show the same statusText (including N/A when no data)
+    const statusTextForSingleBeacon = statusText;
+    
+    // ...existing code...
     
     // Tracked trains last seen at this beacon (whether or not the map pin is still visible)
     const trackedTrainsAtBeacon = Array.from(
