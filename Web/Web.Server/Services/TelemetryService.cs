@@ -51,21 +51,14 @@ namespace Web.Server.Services
 
             if (beacon == null)
             {
-                throw new InvalidOperationException("Telemetry beacon not found."); // TODO: Not found exception.
+                throw new InvalidOperationException("Telemetry beacon not found.");
             }
 
-            var updatedBeaconRailroads = await _beaconRailroadService.UpdateAsync(beacon.BeaconRailroads);
-
-            var beaconRailroadDTOs = _mapper.Map<ICollection<BeaconRailroadDTO>>(updatedBeaconRailroads);
-
-            // Set online status to true since it's now updated.
-            beaconRailroadDTOs.ToList().ForEach(beaconRailroadDTO => beaconRailroadDTO.Online = true);
-
-            // Notify clients about the updated beacon railroads.
-            await _hubContext.Clients.All.SendAsync(NotificationMethods.BeaconUpdate, beaconRailroadDTOs);
+            beacon = await CheckBeaconHealth(beacon);
 
             // Set telemetry timestamps and default state
             telemetry.CreatedAt = _timeProvider.UtcNow;
+            telemetry.LastUpdate = _timeProvider.UtcNow;
             telemetry.Discarded = false;
 
             // Evaluate rules to determine if telemetry should be discarded
@@ -87,7 +80,7 @@ namespace Web.Server.Services
                 return telemetry;
             }
 
-            // Insert new telemetry for historical logging purposes.
+            // Insert new telemetry for historical logging purposes
             telemetry = await _telemetryRepository.AddAsync(telemetry);
 
             // Upsert map pin via Map Pin service (telemetry will be saved within)
@@ -104,6 +97,36 @@ namespace Web.Server.Services
         public async Task<Telemetry?> GetTelemetryByIdAsync(int id)
         {
             return await _telemetryRepository.GetByIdAsync(id);
+        }
+
+        /// <summary>
+        /// Checks the health status of the specified beacon and updates its state if it is determined to be offline.
+        /// </summary>
+        /// <remarks>If the beacon is considered offline based on its last update timestamp, this method
+        /// updates the beacon and its associated railroads, and notifies connected clients of the change.</remarks>
+        /// <param name="beacon">The beacon to check and potentially update. Must not be null.</param>
+        /// <returns>A task that represents the asynchronous operation. The task result contains the updated beacon instance.</returns>
+        private async Task<Beacon> CheckBeaconHealth(Beacon beacon)
+        {
+            var cutoff = _timeProvider.UtcNow.AddMinutes(-15);
+            var beaconIsOffline = beacon.LastUpdate <= cutoff;
+
+            if (beaconIsOffline)
+            {
+                // Update beacon's last update timestamp as it's the beacon that is actually online.
+                beacon = await _beaconService.UpdateBeaconAsync(beacon.ID, beacon);
+
+                // Update beacon railroads last update timestamps as well bcause they are what is visible on the map.
+                var updatedBeaconRailroads = await _beaconRailroadService.UpdateAsync(beacon.BeaconRailroads);
+
+                var beaconRailroadDTOs = _mapper.Map<ICollection<BeaconRailroadDTO>>(updatedBeaconRailroads);
+                beaconRailroadDTOs.ToList().ForEach(beaconRailroadDTO => beaconRailroadDTO.Online = true);
+
+                // Notify clients.
+                await _hubContext.Clients.All.SendAsync(NotificationMethods.BeaconUpdate, beaconRailroadDTOs);
+            }
+
+            return beacon;
         }
     }
 }

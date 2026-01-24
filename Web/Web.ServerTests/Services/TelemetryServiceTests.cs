@@ -173,6 +173,8 @@ namespace Web.ServerTests.Services
 
             _mapPinServiceMock.Setup(m => m.UpsertMapPin(It.IsAny<Telemetry>(), It.IsAny<ICollection<BeaconRailroad>>()))
                 .Returns(Task.CompletedTask);
+            _beaconServiceMock.Setup(b => b.UpdateBeaconAsync(beacon.ID, beacon))
+                .ReturnsAsync(beacon);
             _beaconRailroadServiceMock.Setup(b => b.UpdateAsync(It.IsAny<ICollection<BeaconRailroad>>()))
                 .ReturnsAsync(new List<BeaconRailroad> { beaconRailroad });
             _mapperMock.Setup(m => m.Map<ICollection<BeaconRailroadDTO>>(It.IsAny<ICollection<BeaconRailroad>>()))
