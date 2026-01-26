@@ -56,33 +56,31 @@ const BeaconMarkers: React.FC<BeaconMarkersProps> = ({
     // Detect beacons that are close together horizontally and assign horizontal shifts
     const beaconHorizontalShifts = useMemo(() => {
         const shifts = new Map<string, number>();
-        const LONGITUDE_THRESHOLD = 0.005;
-        
+        const LATITUDE_THRESHOLD = 0.05;
+
         for (let i = 0; i < uniqueBeaconPins.length; i++) {
             for (let j = i + 1; j < uniqueBeaconPins.length; j++) {
                 const b1 = uniqueBeaconPins[i];
                 const b2 = uniqueBeaconPins[j];
-                
-                // Check if same beacon location but different railroad
-                if (b1.beaconID === b2.beaconID && Math.abs(b1.longitude - b2.longitude) < LONGITUDE_THRESHOLD) {
+
+                // Check if same beacon (ID) and latitudes are close enough
+                if (b1.beaconID === b2.beaconID && Math.abs(b1.latitude - b2.latitude) < LATITUDE_THRESHOLD) {
                     const id1 = `${b1.beaconID}-${b1.railroadID}`;
                     const id2 = `${b2.beaconID}-${b2.railroadID}`;
-                    
-                    // Use railroadID for deterministic ordering
-                    const rr1 = String(b1.railroadID || '');
-                    const rr2 = String(b2.railroadID || '');
-                    
-                    if (rr1 < rr2) {
-                        shifts.set(id1, -50); // Shift left
-                        shifts.set(id2, 50);  // Shift right
+
+                    // Use longitude for deterministic ordering
+                    if (b1.longitude < b2.longitude) {
+                        // b1 is further west, b2 is further east
+                        shifts.set(id1, -50);  // b1: left-most, right-aligned label (triangle points up-left)
+                        shifts.set(id2, 50);   // b2: right-most, left-aligned label (triangle points up-right)
                     } else {
-                        shifts.set(id1, 50);  // Shift right
-                        shifts.set(id2, -50); // Shift left
+                        shifts.set(id1, 50);   // b1: right-most, left-aligned label (triangle points up-right)
+                        shifts.set(id2, -50);  // b2: left-most, right-aligned label (triangle points up-left)
                     }
                 }
             }
         }
-        
+
         return shifts;
     }, [uniqueBeaconPins]);
 
