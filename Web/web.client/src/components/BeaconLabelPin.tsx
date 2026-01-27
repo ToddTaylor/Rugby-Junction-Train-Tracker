@@ -234,6 +234,7 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
                 } else {
                     await updateTrackedPinSymbol(selectedTrainId, '');
                 }
+                // Optionally update parent state if needed
             } catch (error) {
                 console.error('Failed to save symbol:', error);
                 alert(`Failed to save symbol: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -246,6 +247,7 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
         if (selectedTrainId) {
             try {
                 await removeTrackedMapPin(selectedTrainId);
+                // Optionally update parent state if needed
             } catch (error) {
                 console.error('Failed to untrack train:', error);
                 alert(`Failed to untrack train: ${error instanceof Error ? error.message : 'Unknown error'}`);

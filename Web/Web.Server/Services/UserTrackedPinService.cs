@@ -35,11 +35,7 @@ namespace Web.Server.Services
             _hubContext = hubContext;
         }
 
-        public async Task<UserTrackedPinDTO?> GetByIdAsync(int id)
-        {
-            var entity = await _repository.GetByIdAsync(id);
-            return entity != null ? _mapper.Map<UserTrackedPinDTO>(entity) : null;
-        }
+
 
         public async Task<IEnumerable<UserTrackedPinDTO>> GetByUserIdAsync(int userId)
         {
@@ -47,19 +43,10 @@ namespace Web.Server.Services
             return _mapper.Map<IEnumerable<UserTrackedPinDTO>>(entities);
         }
 
-        public async Task<UserTrackedPinDTO?> GetByUserAndMapPinAsync(int userId, int mapPinId)
-        {
-            var entity = await _repository.GetByUserAndMapPinAsync(userId, mapPinId);
-            return entity != null ? _mapper.Map<UserTrackedPinDTO>(entity) : null;
-        }
-
         public async Task<UserTrackedPinDTO> AddAsync(int userId, int mapPinId, int? beaconId, int? subdivisionId, string? beaconName, string? symbol, string color)
         {
             try
             {
-                var now = _timeProvider.UtcNow;
-                var expiresUtc = now.AddHours(TrackingDurationHours);
-
                 var trackedPin = new UserTrackedPin
                 {
                     UserId = userId,
@@ -68,9 +55,9 @@ namespace Web.Server.Services
                     SubdivisionID = subdivisionId,
                     Symbol = symbol,
                     Color = color,
-                    ExpiresUtc = expiresUtc,
-                    CreatedAt = now,
-                    LastUpdate = now
+                    ExpiresUtc = _timeProvider.UtcNow.AddHours(TrackingDurationHours),
+                    CreatedAt = _timeProvider.UtcNow,
+                    LastUpdate = _timeProvider.UtcNow
                 };
 
                 var result = await _repository.AddAsync(trackedPin);
@@ -176,19 +163,6 @@ namespace Web.Server.Services
             {
                 _logger.LogError(ex, "Error deleting tracked pin for user {UserId} and pin {MapPinId}", userId, mapPinId);
                 throw;
-            }
-        }
-
-        public async Task CleanupExpiredAsync()
-        {
-            try
-            {
-                await _repository.DeleteExpiredAsync();
-                _logger.LogDebug("Cleanup: Removed expired tracked pins");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error during cleanup of expired tracked pins");
             }
         }
 

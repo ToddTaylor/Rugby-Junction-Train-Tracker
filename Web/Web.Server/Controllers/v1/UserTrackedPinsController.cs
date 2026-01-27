@@ -1,4 +1,3 @@
-using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using Web.Server.DTOs;
 using Web.Server.Services;
@@ -19,6 +18,76 @@ namespace Web.Server.Controllers.v1
             _userTrackedPinService = userTrackedPinService;
             _logger = logger;
         }
+
+        /// <summary>
+        /// Updates the symbol for a tracked pin by unique tracked pin ID.
+        /// </summary>
+        [HttpPatch("{trackedPinId}/symbol")]
+        public async Task<ActionResult<MessageEnvelope<object>>> UpdateTrackedPinSymbol(int trackedPinId, [FromBody] UpdateTrackedPinSymbolRequestDTO request)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (!userId.HasValue)
+                {
+                    return BadRequest(new MessageEnvelope<object>(null!, new List<string> { "User not authenticated." }));
+                }
+                await _userTrackedPinService.UpdateSymbolAsync(userId.Value, trackedPinId, request.Symbol);
+                return Ok(new MessageEnvelope<object>(new { success = true }, new List<string>()));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating tracked pin symbol");
+                return StatusCode(500, new MessageEnvelope<object>(null!, new List<string> { "An error occurred while updating the symbol." }));
+            }
+        }
+
+        /// <summary>
+        /// Updates the last known beacon for a tracked pin by unique tracked pin ID.
+        /// </summary>
+        [HttpPatch("{trackedPinId}/location")]
+        public async Task<ActionResult<MessageEnvelope<object>>> UpdateTrackedPinLocation(int trackedPinId, [FromBody] UpdateTrackedPinLocationRequestDTO request)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (!userId.HasValue)
+                {
+                    return BadRequest(new MessageEnvelope<object>(null!, new List<string> { "User not authenticated." }));
+                }
+                await _userTrackedPinService.UpdateLocationAsync(userId.Value, trackedPinId, request.BeaconID, request.SubdivisionID, request.BeaconName);
+                return Ok(new MessageEnvelope<object>(new { success = true }, new List<string>()));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating tracked pin location");
+                return StatusCode(500, new MessageEnvelope<object>(null!, new List<string> { "An error occurred while updating the location." }));
+            }
+        }
+
+        /// <summary>
+        /// Removes a tracked pin by unique tracked pin ID.
+        /// </summary>
+        [HttpDelete("{trackedPinId}")]
+        public async Task<ActionResult<MessageEnvelope<object>>> RemoveTrackedPin(int trackedPinId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (!userId.HasValue)
+                {
+                    return BadRequest(new MessageEnvelope<object>(null!, new List<string> { "User not authenticated." }));
+                }
+                await _userTrackedPinService.DeleteAsync(userId.Value, trackedPinId);
+                return Ok(new MessageEnvelope<object>(new { success = true }, new List<string>()));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting tracked pin");
+                return StatusCode(500, new MessageEnvelope<object>(null!, new List<string> { "An error occurred while deleting the tracked pin." }));
+            }
+        }
+
 
         /// <summary>
         /// Gets all tracked pins for the current user.
@@ -72,7 +141,7 @@ namespace Web.Server.Controllers.v1
                     request.Symbol,
                     request.Color);
 
-                return CreatedAtAction(nameof(GetUserTrackedPins), new { userId = userId.Value }, 
+                return CreatedAtAction(nameof(GetUserTrackedPins), new { userId = userId.Value },
                     new MessageEnvelope<UserTrackedPinDTO>(trackedPin, new List<string>()));
             }
             catch (Exception ex)
@@ -85,74 +154,6 @@ namespace Web.Server.Controllers.v1
         /// <summary>
         /// Updates the symbol for a tracked pin.
         /// </summary>
-        [HttpPatch("{mapPinId}/symbol")]
-        public async Task<ActionResult<MessageEnvelope<object>>> UpdateTrackedPinSymbol(int mapPinId, [FromBody] UpdateTrackedPinSymbolRequestDTO request)
-        {
-            try
-            {
-                var userId = GetCurrentUserId();
-                if (!userId.HasValue)
-                {
-                    return BadRequest(new MessageEnvelope<object>(null!, new List<string> { "User not authenticated." }));
-                }
-
-                await _userTrackedPinService.UpdateSymbolAsync(userId.Value, mapPinId, request.Symbol);
-                return Ok(new MessageEnvelope<object>(new { success = true }, new List<string>()));
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error updating tracked pin symbol");
-                return StatusCode(500, new MessageEnvelope<object>(null!, new List<string> { "An error occurred while updating the symbol." }));
-            }
-        }
-
-        /// <summary>
-        /// Updates the last known beacon for a tracked pin.
-        /// </summary>
-        [HttpPatch("{mapPinId}/location")]
-        public async Task<ActionResult<MessageEnvelope<object>>> UpdateTrackedPinLocation(int mapPinId, [FromBody] UpdateTrackedPinLocationRequestDTO request)
-        {
-            try
-            {
-                var userId = GetCurrentUserId();
-                if (!userId.HasValue)
-                {
-                    return BadRequest(new MessageEnvelope<object>(null!, new List<string> { "User not authenticated." }));
-                }
-
-                await _userTrackedPinService.UpdateLocationAsync(userId.Value, mapPinId, request.BeaconID, request.SubdivisionID, request.BeaconName);
-                return Ok(new MessageEnvelope<object>(new { success = true }, new List<string>()));
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error updating tracked pin location");
-                return StatusCode(500, new MessageEnvelope<object>(null!, new List<string> { "An error occurred while updating the location." }));
-            }
-        }
-
-        /// <summary>
-        /// Removes a tracked pin for the current user.
-        /// </summary>
-        [HttpDelete("{mapPinId}")]
-        public async Task<ActionResult<MessageEnvelope<object>>> RemoveTrackedPin(int mapPinId)
-        {
-            try
-            {
-                var userId = GetCurrentUserId();
-                if (!userId.HasValue)
-                {
-                    return BadRequest(new MessageEnvelope<object>(null!, new List<string> { "User not authenticated." }));
-                }
-
-                await _userTrackedPinService.DeleteAsync(userId.Value, mapPinId);
-                return Ok(new MessageEnvelope<object>(new { success = true }, new List<string>()));
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error removing tracked pin");
-                return StatusCode(500, new MessageEnvelope<object>(null!, new List<string> { "An error occurred while removing the tracked pin." }));
-            }
-        }
 
         private int? GetCurrentUserId()
         {

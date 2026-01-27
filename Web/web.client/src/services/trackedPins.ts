@@ -1,3 +1,33 @@
+// --- New API helpers for tracked pin by unique ID ---
+export async function updateTrackedPinSymbol(trackedPinId: string, symbol: string) {
+    const headers = await getAuthHeader();
+    const response = await fetch(`${API_BASE}/${trackedPinId}/symbol`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ symbol })
+    });
+    if (!response.ok) {
+        const errorText = await response.text().catch(() => 'Unknown error');
+        throw new Error(`Failed to update tracked pin symbol by ID in API (${response.status} ${response.statusText}): ${errorText}`);
+    }
+    // Always refresh pins from backend after mutation
+    return await refreshTrackedPinsFromApi();
+}
+
+export async function removeTrackedMapPin(trackedPinId: string) {
+    const headers = await getAuthHeader();
+    const response = await fetch(`${API_BASE}/${trackedPinId}`, {
+        method: 'DELETE',
+        headers
+    });
+    if (!response.ok) {
+        const errorText = await response.text().catch(() => 'Unknown error');
+        throw new Error(`Failed to remove tracked pin by ID from API (${response.status} ${response.statusText}): ${errorText}`);
+    }
+    // Always refresh pins from backend after mutation
+    return await refreshTrackedPinsFromApi();
+}
+
 // Extend Window type to include mapPins
 declare global {
     interface Window {
@@ -154,7 +184,7 @@ export async function refreshTrackedPinsFromApi(): Promise<TrackedPin[]> {
     return getLocalTrackedPins();
 }
 
-export async function addTrackedMapPin(id: string, beaconID?: string, subdivisionID?: string, beaconName?: string, symbol?: string, addresses?: Array<{ id: string; source: string }>) {
+export async function addTrackedMapPin(id: string, beaconID?: string, subdivisionID?: string, beaconName?: string, symbol?: string) {
     const mapPinId = parseInt(id, 10);
     if (isNaN(mapPinId)) {
         console.error('Invalid map pin ID provided:', id);
@@ -185,68 +215,23 @@ export async function addTrackedMapPin(id: string, beaconID?: string, subdivisio
 
     // After API success, fetch latest from server and update local cache
     const pins = await refreshTrackedPinsFromApi();
-    // Patch: ensure addresses are present in localStorage for this pin
-    if (addresses && addresses.length > 0) {
-        const arr = getLocalTrackedPins();
-        const tracked = arr.find(item => item.id === id);
-        if (tracked) {
-            tracked.addresses = [...addresses];
-            saveLocalTrackedPins(arr);
-        }
-    }
     window.dispatchEvent(new Event('storage'));
     return pins;
 }
 
-export async function removeTrackedMapPin(id: string) {
-    const mapPinId = parseInt(id, 10);
-    if (isNaN(mapPinId)) {
-        console.error('Invalid map pin ID provided:', id);
-        throw new Error('An unexpected error occurred. Please try again.');
-    }
-
-    // Delete from API first
-    const headers = await getAuthHeader();
-    const response = await fetch(`${API_BASE}/${mapPinId}`, {
-        method: 'DELETE',
-        headers
-    });
-    if (!response.ok) {
-        const errorText = await response.text().catch(() => 'Unknown error');
-        throw new Error(`Failed to remove tracked pin from API (${response.status} ${response.statusText}): ${errorText}`);
-    }
-
-    // After API success, fetch latest from server and update local cache
-    await refreshTrackedPinsFromApi();
-    window.dispatchEvent(new Event('storage'));
-}
 
 export function getTrackedColor(id: string): string | undefined {
     const arr = getLocalTrackedPins();
     return arr.find(item => item.id === id)?.color;
 }
 
-export async function updateTrackedPinLocation(id: string, beaconID: string, subdivisionID: string, beaconName: string | undefined, addresses?: Array<{ id: string; source: string }>) {
-    const arr = getLocalTrackedPins();
-    const tracked = arr.find(item => item.id === id);
-    if (tracked) {
-        tracked.lastBeaconID = beaconID;
-        tracked.lastSubdivisionID = subdivisionID;
-        if (beaconName !== undefined) {
-            tracked.lastBeaconName = beaconName;
-        }
-        if (addresses !== undefined) {
-            tracked.addresses = addresses.length > 0 ? [...addresses] : undefined;
-        }
-        saveLocalTrackedPins(arr);
-    }
-
-    // Persist to API (best-effort, background)
+export async function updateTrackedPinLocation(id: string, beaconID: string, subdivisionID: string, beaconName: string | undefined) {
+    // Always persist to API, then refresh from backend
     const mapPinId = parseInt(id, 10);
     if (!Number.isFinite(mapPinId)) return;
     try {
         const headers = await getAuthHeader();
-        await fetch(`${API_BASE}/${mapPinId}/location`, {
+        let response = await fetch(`${API_BASE}/${mapPinId}/location`, {
             method: 'PATCH',
             headers,
             body: JSON.stringify({
@@ -255,39 +240,18 @@ export async function updateTrackedPinLocation(id: string, beaconID: string, sub
                 beaconName
             })
         });
+        if (!response.ok) {
+            const errorText = await response.text().catch(() => 'Unknown error');
+            throw new Error(`Failed to update tracked pin location in API (${response.status} ${response.statusText}): ${errorText}`);
+        }
+        return await refreshTrackedPinsFromApi();
     } catch (err) {
         // Swallow errors; location will refresh on next add/update
         console.warn('Failed to sync tracked pin location', err);
+        return getLocalTrackedPins();
     }
 }
 
-export async function updateTrackedPinSymbol(id: string, symbol: string) {
-    const mapPinId = parseInt(id, 10);
-    if (isNaN(mapPinId)) {
-        console.error('Invalid map pin ID provided:', id);
-        throw new Error('An unexpected error occurred. Please try again.');
-    }
-
-    // Update in API first
-    const headers = await getAuthHeader();
-    const response = await fetch(`${API_BASE}/${mapPinId}/symbol`, {
-        method: 'PATCH',
-        headers,
-        body: JSON.stringify({ symbol })
-    });
-    if (!response.ok) {
-        const errorText = await response.text().catch(() => 'Unknown error');
-        throw new Error(`Failed to update tracked pin symbol in API (${response.status} ${response.statusText}): ${errorText}`);
-    }
-
-    // Update local storage after API success
-    const arr = getLocalTrackedPins();
-    const tracked = arr.find(item => item.id === id);
-    if (tracked) {
-        tracked.symbol = symbol;
-        saveLocalTrackedPins(arr);
-    }
-}
 
 export function getTrackedPinSymbol(id: string): string | undefined {
     const arr = getLocalTrackedPins();

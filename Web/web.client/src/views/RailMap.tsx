@@ -113,7 +113,7 @@ const RailMap: React.FC = () => {
         const trackedPins = getTrackedMapPins();
         if (trackedPins.length === 0 || mapPins.length === 0) return;
         
-        let updated = false;
+        let updatePromises: Promise<any>[] = [];
         trackedPins.forEach(tracked => {
             const mapPin = mapPins.find(p => String(p.id) === String(tracked.id));
             if (mapPin && mapPin.beaconID && mapPin.subdivisionID) {
@@ -127,14 +127,15 @@ const RailMap: React.FC = () => {
                     tracked.addresses.some((a, idx) => a.id !== addresses[idx].id || a.source !== addresses[idx].source)
                 );
                 if (locationChanged || addressesChanged) {
-                    updateTrackedPinLocation(tracked.id, mapPin.beaconID, mapPin.subdivisionID, mapPin.beaconName, addresses);
-                    updated = true;
+                    updatePromises.push(updateTrackedPinLocation(tracked.id, mapPin.beaconID, mapPin.subdivisionID, mapPin.beaconName));
                 }
             }
         });
-        
-        if (updated) {
-            setTrackedPinsState(getTrackedMapPins());
+        if (updatePromises.length > 0) {
+            Promise.all(updatePromises).then((results) => {
+                // Use the latest result from the backend
+                setTrackedPinsState(results[results.length - 1] || getTrackedMapPins());
+            });
         }
     }, [mapPins]);
 
@@ -158,8 +159,8 @@ const RailMap: React.FC = () => {
                     tracked.addresses.some((a, idx) => a.id !== addresses[idx].id || a.source !== addresses[idx].source)
                 );
                 if (locationChanged || addressesChanged) {
-                    updateTrackedPinLocation(mapPin.id, mapPin.beaconID, mapPin.subdivisionID, mapPin.beaconName, addresses);
-                    setTrackedPinsState(getTrackedMapPins());
+                    updateTrackedPinLocation(mapPin.id, mapPin.beaconID, mapPin.subdivisionID, mapPin.beaconName)
+                        .then(pins => setTrackedPinsState(pins || getTrackedMapPins()));
                 }
             }
             

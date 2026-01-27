@@ -124,7 +124,7 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
             if (isEditingTrack) {
                 await updateTrackedPinSymbol(String(pin.id), symbol);
             } else {
-                await addTrackedMapPin(String(pin.id), pin.beaconID, pin.subdivisionID, pin.beaconName, symbol || undefined, addressesForModal);
+                await addTrackedMapPin(String(pin.id), pin.beaconID, pin.subdivisionID, pin.beaconName, symbol || undefined);
             }
             await updateTrackedPinsFromApi();
             setModalOpen(false);
