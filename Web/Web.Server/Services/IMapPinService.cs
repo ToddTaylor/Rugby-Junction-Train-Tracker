@@ -10,7 +10,7 @@ namespace Web.Server.Services
 
         Task<IEnumerable<MapPin>> GetMapPinsLatestAsync();
 
-        Task UpsertMapPin(Telemetry telemetry, ICollection<BeaconRailroad> beaconRailroads);
+        Task UpsertMapPin(Telemetry telemetry);
 
         Task<bool> DeleteMapPinAsync(int id);
     }

@@ -30,22 +30,39 @@ namespace Web.Server.Repositories
                 .FirstOrDefaultAsync();
         }
 
+        /// <summary>
+        /// Get MapPin by AddressID and optional TrainID. If TrainID is null, only AddressID is matched.
+        /// The addresses collection of the returned MapPin may contain addresses not queried for as all
+        /// related addresses are returned.
+        /// </summary>
+        /// <param name="addressID">The HOT/EOT ID or the DPU ADDR value.</param>
+        /// <param name="trainID">The DPU train ID.</param>
+        /// <returns>MapPin containing matching in addresses collection or null if not found.</returns>
         public async Task<MapPin?> GetByAddressIdAsync(int addressID, int? trainID)
         {
-            return await _context.MapPins
-                .Where(mp => mp.Addresses.Any(a => a.AddressID == addressID && (trainID == null || a.DpuTrainID == trainID)))
+            var mapPin = await _context.MapPins
+                .Where(mp => mp.Addresses.Any(a =>
+                    a.AddressID == addressID &&
+                    ((trainID == null && a.DpuTrainID == null) ||
+                     (trainID != null && a.DpuTrainID == trainID))
+                ))
                 .Include(mp => mp.Addresses)
                 .Include(mp => mp.BeaconRailroad)
                 .Include(mp => mp.BeaconRailroad.Subdivision)
                 .Include(mp => mp.BeaconRailroad.Subdivision.Railroad)
                 .FirstOrDefaultAsync();
+
+            return mapPin;
         }
 
         public async Task<MapPin?> GetByTrainIdAsync(int trainID)
         {
             return await _context.MapPins
-                .Include(mp => mp.Addresses)
                 .Where(mp => mp.Addresses.Any(a => a.DpuTrainID == trainID))
+                .Include(mp => mp.Addresses)
+                .Include(mp => mp.BeaconRailroad)
+                .Include(mp => mp.BeaconRailroad.Subdivision)
+                .Include(mp => mp.BeaconRailroad.Subdivision.Railroad)
                 .FirstOrDefaultAsync();
         }
 
@@ -113,12 +130,9 @@ namespace Web.Server.Repositories
 
             if (existingMapPin == null)
             {
-                mapPin.Addresses = mapPin.Addresses;
-                mapPin.BeaconID = mapPin.BeaconID;
                 mapPin.CreatedAt = _timeProvider.UtcNow;
-                mapPin.SubdivisionId = mapPin.SubdivisionId;
-                mapPin.Direction = mapPin.Direction;
                 mapPin.LastUpdate = _timeProvider.UtcNow;
+
                 mapPin.BeaconRailroad = null;
 
                 _context.MapPins.Add(mapPin);
@@ -127,12 +141,14 @@ namespace Web.Server.Repositories
             {
                 // Keep the existing CreatedAt to track how long pin has been at this beacon
                 // Only update LastUpdate and other properties
-                existingMapPin.LastUpdate = mapPin.LastUpdate;
                 existingMapPin.BeaconID = mapPin.BeaconID;
                 existingMapPin.SubdivisionId = mapPin.SubdivisionId;
                 existingMapPin.Direction = mapPin.Direction;
                 existingMapPin.Moving = mapPin.Moving;
                 existingMapPin.IsLocal = mapPin.IsLocal;
+
+                // No created at update.
+                existingMapPin.LastUpdate = _timeProvider.UtcNow;
 
                 // Update addresses collection
                 existingMapPin.Addresses = mapPin.Addresses;

@@ -171,7 +171,7 @@ namespace Web.ServerTests.Services
             _telemetryRepositoryMock.Setup(s => s.GetRecentsWithinTimeOffsetAsync(1, 1, It.IsAny<DateTime>()))
                 .ReturnsAsync(recentTelemetry);
 
-            _mapPinServiceMock.Setup(m => m.UpsertMapPin(It.IsAny<Telemetry>(), It.IsAny<ICollection<BeaconRailroad>>()))
+            _mapPinServiceMock.Setup(m => m.UpsertMapPin(It.IsAny<Telemetry>()))
                 .Returns(Task.CompletedTask);
             _beaconServiceMock.Setup(b => b.UpdateBeaconAsync(beacon.ID, beacon))
                 .ReturnsAsync(beacon);
@@ -188,7 +188,7 @@ namespace Web.ServerTests.Services
             Assert.AreEqual(addedTelemetry, result);
             _beaconServiceMock.Verify(s => s.GetBeaconByIdAsync(1), Times.Once);
             _telemetryRepositoryMock.Verify(r => r.AddAsync(telemetry), Times.Once);
-            _mapPinServiceMock.Verify(m => m.UpsertMapPin(addedTelemetry, beacon.BeaconRailroads), Times.Once);
+            _mapPinServiceMock.Verify(m => m.UpsertMapPin(addedTelemetry), Times.Once);
         }
     }
 }

@@ -54,7 +54,9 @@ namespace Web.Server.Services
                 throw new InvalidOperationException("Telemetry beacon not found.");
             }
 
-            beacon = await CheckBeaconHealth(beacon);
+            beacon = await UpdateBeaconHealth(beacon);
+
+            telemetry.Beacon = beacon;
 
             // Set telemetry timestamps and default state
             telemetry.CreatedAt = _timeProvider.UtcNow;
@@ -65,8 +67,8 @@ namespace Web.Server.Services
             var context = new TelemetryRuleContext
             {
                 Telemetry = telemetry,
-                RailroadBeacons = beacon.BeaconRailroads,
-                RailroadId = beacon.BeaconRailroads.First().Subdivision.RailroadID
+                RailroadBeacons = telemetry.Beacon.BeaconRailroads,
+                RailroadId = telemetry.Beacon.BeaconRailroads.First().Subdivision.RailroadID
             };
 
             var result = await _ruleEngine.ShouldDiscardAsync(context);
@@ -84,7 +86,7 @@ namespace Web.Server.Services
             telemetry = await _telemetryRepository.AddAsync(telemetry);
 
             // Upsert map pin via Map Pin service (telemetry will be saved within)
-            await _mapPinsService.UpsertMapPin(telemetry, beacon.BeaconRailroads);
+            await _mapPinsService.UpsertMapPin(telemetry);
 
             return telemetry;
         }
@@ -106,7 +108,7 @@ namespace Web.Server.Services
         /// updates the beacon and its associated railroads, and notifies connected clients of the change.</remarks>
         /// <param name="beacon">The beacon to check and potentially update. Must not be null.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains the updated beacon instance.</returns>
-        private async Task<Beacon> CheckBeaconHealth(Beacon beacon)
+        private async Task<Beacon> UpdateBeaconHealth(Beacon beacon)
         {
             var cutoff = _timeProvider.UtcNow.AddMinutes(-15);
             var beaconIsOffline = beacon.LastUpdate <= cutoff;
