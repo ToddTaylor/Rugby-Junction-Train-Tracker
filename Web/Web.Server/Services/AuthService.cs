@@ -87,6 +87,21 @@ public class AuthService : IAuthService
         if (!emailSuccess)
         {
             errors.AddRange(emailErrors);
+
+            // Roll back the code entry if it still matches the one we just created
+            if (_codes.TryGetValue(email, out var existingEntry) && existingEntry.CodeHash == codeHash)
+            {
+                _codes.TryRemove(email, out _);
+            }
+
+            // Roll back the send-history entry we just added
+            lock (history)
+            {
+                if (history.Count > 0 && history[history.Count - 1] == now)
+                {
+                    history.RemoveAt(history.Count - 1);
+                }
+            }
             return (false, errors);
         }
 
