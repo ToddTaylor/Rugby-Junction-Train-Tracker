@@ -10,7 +10,7 @@ namespace Web.Server.Services.Rules
         public const string DISCARD_REASON = "Train Speed Sanity Check";
         private const int MAX_REALISTIC_SPEED_MPH = 35;
 
-        public async Task<MapPinRuleResult> ShouldDiscardAsync(MapPinRuleContext context)
+        public Task<MapPinRuleResult> ShouldDiscardAsync(MapPinRuleContext context)
         {
             // Calculate the distance between the two beacons in miles using Haversine formula
             var from = new Entities.GeoCoordinate(context.FromBeaconRailroad.Latitude, context.FromBeaconRailroad.Longitude);
@@ -24,7 +24,7 @@ namespace Web.Server.Services.Rules
             // If time difference is zero or negative, cannot calculate speed
             if (timeMinutes <= 0)
             {
-                return MapPinRuleResult.NotDiscarded();
+                return Task.FromResult(MapPinRuleResult.NotDiscarded());
             }
 
             // Calculate speed in miles per hour
@@ -34,10 +34,10 @@ namespace Web.Server.Services.Rules
             // If speed exceeds realistic threshold, discard
             if (speedMph > MAX_REALISTIC_SPEED_MPH)
             {
-                return MapPinRuleResult.Discarded(DISCARD_REASON);
+                return Task.FromResult(MapPinRuleResult.Discarded(DISCARD_REASON));
             }
 
-            return MapPinRuleResult.NotDiscarded();
+            return Task.FromResult(MapPinRuleResult.NotDiscarded());
         }
     }
 }
