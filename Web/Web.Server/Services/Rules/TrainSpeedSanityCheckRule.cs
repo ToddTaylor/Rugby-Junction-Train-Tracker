@@ -8,7 +8,7 @@ namespace Web.Server.Services.Rules
     public class TrainSpeedSanityCheckRule : IMapPinRule
     {
         public const string DISCARD_REASON = "Train Speed Sanity Check";
-        private const int MAX_REALISTIC_SPEED_MPH = 35;
+        private const int MAX_REALISTIC_SPEED_MPH = 60;
 
         public Task<MapPinRuleResult> ShouldDiscardAsync(MapPinRuleContext context)
         {
