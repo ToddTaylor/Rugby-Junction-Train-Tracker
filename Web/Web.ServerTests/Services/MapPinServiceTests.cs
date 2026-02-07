@@ -28,6 +28,7 @@ namespace Web.ServerTests.Services
         private readonly Mock<IClientProxy> _clientProxyMock = new();
         private readonly Mock<IConfiguration> _configurationMock = new();
         private readonly Mock<ITelemetryRepository> _telemetryRepositoryMock = new();
+        private readonly Mock<IMapPinRuleEngine> _mapPinRuleEngineMock = new();
 
         private MapPinService _service;
         private IMapper _mapper;
@@ -46,6 +47,10 @@ namespace Web.ServerTests.Services
             _configurationMock.Setup(c => c.GetSection("ApplicationSettings:StationaryDirectionNullThresholdHours").Value)
                 .Returns("6");
 
+            // Default setup: map pin rules pass all checks
+            _mapPinRuleEngineMock.Setup(e => e.ShouldDiscardAsync(It.IsAny<MapPinRuleContext>()))
+                .ReturnsAsync(MapPinRuleResult.NotDiscarded());
+
             _service = new MapPinService(
                 _beaconRailroadServiceMock.Object,
                 _mapPinHistoryServiceMock.Object,
@@ -54,6 +59,7 @@ namespace Web.ServerTests.Services
                 _mapper,
                 _timeProviderMock.Object,
                 _telemetryRepositoryMock.Object,
+                _mapPinRuleEngineMock.Object,
                 _configurationMock.Object);
         }
 
@@ -584,6 +590,10 @@ namespace Web.ServerTests.Services
                 .ReturnsAsync(CNRugbyJunctionBeacon);
             _beaconRailroadServiceMock.Setup(b => b.GetByIdAsync(previousMapPin.BeaconID, previousMapPin.SubdivisionId))
                 .ReturnsAsync(WSORHartfordBeacon); // Not the same beacon as new telemetry.
+
+            // Set up map pin rule engine to pass all rules
+            _mapPinRuleEngineMock.Setup(e => e.ShouldDiscardAsync(It.IsAny<MapPinRuleContext>()))
+                .ReturnsAsync(MapPinRuleResult.NotDiscarded());
 
             _clientProxyMock.Setup(proxy => proxy.SendCoreAsync(
                 NotificationMethods.MapPinUpdate, expectedMapPinObjects, default))
@@ -2736,6 +2746,8 @@ namespace Web.ServerTests.Services
                 .ReturnsAsync(CNRugbyJunctionBeaconRailroad);
             _beaconRailroadServiceMock.Setup(b => b.GetByIdAsync(fromMapPin.BeaconID, fromMapPin.SubdivisionId))
                 .ReturnsAsync(CNOshkoshBeaconRailroad);
+            _mapPinRuleEngineMock.Setup(e => e.ShouldDiscardAsync(It.IsAny<MapPinRuleContext>()))
+                .ReturnsAsync(MapPinRuleResult.Discarded(TrainSpeedSanityCheckRule.DISCARD_REASON));
 
             // Act
             await _service.UpsertMapPin(telemetry);

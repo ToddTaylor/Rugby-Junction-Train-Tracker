@@ -31,6 +31,7 @@ public class AuthService : IAuthService
     private readonly ILogger<AuthService> _logger;
     private readonly IUserRepository _userRepository;
     private readonly Data.TelemetryDbContext _db;
+    private readonly IEmailService _emailService;
 
     // email -> CodeEntry
     private static readonly ConcurrentDictionary<string, CodeEntry> _codes = new(StringComparer.OrdinalIgnoreCase);
@@ -47,12 +48,13 @@ public class AuthService : IAuthService
     public static readonly TimeSpan LongSessionLifetime = TimeSpan.FromDays(365);
     public const int MaxSendsPerHour = 5;
 
-    public AuthService(ITimeProvider timeProvider, ILogger<AuthService> logger, IUserRepository userRepository, Data.TelemetryDbContext db)
+    public AuthService(ITimeProvider timeProvider, ILogger<AuthService> logger, IUserRepository userRepository, Data.TelemetryDbContext db, IEmailService emailService)
     {
         _timeProvider = timeProvider;
         _logger = logger;
         _userRepository = userRepository;
         _db = db;
+        _emailService = emailService;
     }
 
     public async Task<(bool Success, List<string> Errors)> SendCodeAsync(string email)
@@ -81,45 +83,10 @@ public class AuthService : IAuthService
         var codeHash = Hash(code);
         _codes[email] = new CodeEntry { CodeHash = codeHash, ExpiresUtc = now.Add(CodeLifetime) };
 
-        try
+        var (emailSuccess, emailErrors) = await _emailService.SendVerificationCodeAsync(email, code);
+        if (!emailSuccess)
         {
-            var apiToken = "9e7b1356251970a4b0e621401ddea303";
-            using var mailtrapClientFactory = new MailtrapClientFactory(apiToken);
-            IMailtrapClient mailtrapClient = mailtrapClientFactory.CreateClient();
-
-            var request = SendEmailRequest
-                .Create()
-                .From("admin@rugbyjunction.us", "Rugby Junction")
-                .To(email)
-                .Subject("Your Rugby Junction Train Tracker Verification Code")
-                .Text($"Your verification code is: {code}")
-                .Html($@"<html>
-                            <body>
-                                <p>Your verification code is: <strong>{code}</strong></p>
-                            </body>
-                        </html>");
-
-            ValidationResult validationResult = request.Validate();
-            if (!validationResult.IsValid)
-            {
-                foreach (var err in validationResult.Errors)
-                    errors.Add(err);
-                return (false, errors);
-            }
-
-            SendEmailResponse? response = await mailtrapClient.Email().Send(request);
-
-            if (response is null || !response.Success)
-            {
-                _logger.LogError("Mailtrap send failed. Response: {@Response}", response);
-                errors.Add("Failed to send verification email. Please try again later.");
-                return (false, errors);
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to send verification code email to {Email}", email);
-            errors.Add("Failed to send verification email. Please try again later.");
+            errors.AddRange(emailErrors);
             return (false, errors);
         }
 

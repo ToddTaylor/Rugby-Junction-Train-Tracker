@@ -141,12 +141,17 @@ try
     builder.Services.AddScoped<IAuthService, AuthService>();
     builder.Services.AddScoped<IUserTrackedPinService, UserTrackedPinService>();
     builder.Services.AddScoped<ISubdivisionTrackageRightService, SubdivisionTrackageRightService>();
+    builder.Services.AddScoped<IEmailService, EmailService>();
 
     // Register telemetry rules
     builder.Services.AddScoped<ITelemetryRule, DpuAntiPingPongRule>();
     builder.Services.AddScoped<ITelemetryRule, EotHotAntiPingPongRule>();
-    builder.Services.AddScoped<ITelemetryRule, TrackageRightsRule>();
     builder.Services.AddScoped<TelemetryRuleEngine>();
+
+    // Register map pin rules
+    builder.Services.AddScoped<IMapPinRule, TrainSpeedSanityCheckRule>();
+    builder.Services.AddScoped<IMapPinRule, TrackageRightsRule>();
+    builder.Services.AddScoped<IMapPinRuleEngine, MapPinRuleEngine>();
 
     builder.Services.AddScoped<ITimeProvider, SystemTimeProvider>();
 

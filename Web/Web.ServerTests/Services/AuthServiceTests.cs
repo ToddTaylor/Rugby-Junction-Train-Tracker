@@ -15,14 +15,22 @@ public class AuthServiceTests
         public DateTime UtcNow { get; set; } = DateTime.UtcNow;
     }
 
-    private AuthService CreateService(TestTimeProvider timeProvider)
+    private AuthService CreateService(TestTimeProvider timeProvider, Mock<IEmailService>? emailServiceMock = null)
     {
         var userRepositoryMock = new Mock<IUserRepository>();
         var options = new DbContextOptionsBuilder<Server.Data.TelemetryDbContext>()
             .UseInMemoryDatabase(databaseName: "AuthServiceTests_" + Guid.NewGuid())
             .Options;
-        var dbContext = new Web.Server.Data.TelemetryDbContext(options);
-        return new AuthService(timeProvider, new NullLogger<AuthService>(), userRepositoryMock.Object, dbContext);
+        var dbContext = new Server.Data.TelemetryDbContext(options);
+        
+        if (emailServiceMock == null)
+        {
+            emailServiceMock = new Mock<IEmailService>();
+            emailServiceMock.Setup(e => e.SendVerificationCodeAsync(It.IsAny<string>(), It.IsAny<string>()))
+                .ReturnsAsync((true, new List<string>()));
+        }
+        
+        return new AuthService(timeProvider, new NullLogger<AuthService>(), userRepositoryMock.Object, dbContext, emailServiceMock.Object);
     }
 
     [TestMethod]

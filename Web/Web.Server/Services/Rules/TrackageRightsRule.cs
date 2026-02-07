@@ -3,80 +3,52 @@ using Web.Server.Repositories;
 namespace Web.Server.Services.Rules
 {
     /// <summary>
-    /// Rule: Discard telemetry if the previous subdivision does not have trackage rights
-    /// to the current subdivision when changing railroads.
+    /// Rule: Discard map pin if the from subdivision does not have trackage rights
+    /// to the to subdivision when changing railroads.
     /// </summary>
-    public class TrackageRightsRule : ITelemetryRule
+    public class TrackageRightsRule : IMapPinRule
     {
-        private const string DISCARD_REASON = "Trackage Rights";
+        public const string DISCARD_REASON = "Trackage Rights";
 
-        private readonly ITelemetryRepository _telemetryRepository;
         private readonly ISubdivisionTrackageRightRepository _trackageRightRepository;
 
-        public TrackageRightsRule(
-            ITelemetryRepository telemetryRepository,
-            ISubdivisionTrackageRightRepository trackageRightRepository)
+        public TrackageRightsRule(ISubdivisionTrackageRightRepository trackageRightRepository)
         {
-            _telemetryRepository = telemetryRepository;
             _trackageRightRepository = trackageRightRepository;
         }
 
-        public async Task<TelemetryRuleResult> ShouldDiscardAsync(TelemetryRuleContext context)
+        public async Task<MapPinRuleResult> ShouldDiscardAsync(MapPinRuleContext context)
         {
-            // Determine the current subdivision from the beacon's railroad mapping
-            var currentSubdivision = context.RailroadBeacons
-                .Select(br => br.Subdivision)
-                .FirstOrDefault(sub => sub != null);
+            // Get subdivisions from the provided beacon railroads
+            var fromSubdivision = context.FromBeaconRailroad?.Subdivision;
+            var toSubdivision = context.ToBeaconRailroad?.Subdivision;
 
-            if (currentSubdivision == null)
+            if (fromSubdivision == null || toSubdivision == null)
             {
-                // No current subdivision to compare.
-                return TelemetryRuleResult.NotDiscarded();
+                // Cannot compare without both subdivisions.
+                return MapPinRuleResult.NotDiscarded();
             }
 
-            // Get the most recent prior telemetry for this address (non-discarded)
-            var previousTelemetry = await _telemetryRepository.GetMostRecentByAddressAsync(context.Telemetry.AddressID);
-            if (previousTelemetry == null)
-            {
-                // No prior telemetry to compare.
-                return TelemetryRuleResult.NotDiscarded();
-            }
-
-            var previousSubdivision = previousTelemetry.Beacon?.BeaconRailroads?
-                .Select(br => br.Subdivision)
-                .FirstOrDefault(sub => sub != null);
-
-            if (previousSubdivision == null)
-            {
-                // No prior subdivision to compare.
-                return TelemetryRuleResult.NotDiscarded();
-            }
-
-            if (previousSubdivision.RailroadID == currentSubdivision.RailroadID)
+            if (fromSubdivision.RailroadID == toSubdivision.RailroadID)
             {
                 // Same railroad is always allowed.
-                return TelemetryRuleResult.NotDiscarded();
+                return MapPinRuleResult.NotDiscarded();
             }
 
-            // Check if previous subdivision has rights to the current subdivision
-            var trackageRights = await _trackageRightRepository.GetByFromSubdivisionAsync(previousSubdivision.ID);
+            // Check if from subdivision has rights to the to subdivision
+            var trackageRights = await _trackageRightRepository.GetByFromSubdivisionAsync(fromSubdivision.ID);
 
-            if (trackageRights == null)
+            if (trackageRights == null || !trackageRights.Any())
             {
-                // No rights found, allow by default.
-                return TelemetryRuleResult.NotDiscarded();
+                // No rights found, discard.
+                return MapPinRuleResult.Discarded(DISCARD_REASON);
             }
 
-            var hasRights = trackageRights.Any(tr => tr.ToSubdivisionID == currentSubdivision.ID);
+            var hasRights = trackageRights.Any(tr => tr.ToSubdivisionID == toSubdivision.ID);
 
-            if (hasRights)
-            {
-                return TelemetryRuleResult.NotDiscarded();
-            }
-            else
-            {
-                return TelemetryRuleResult.Discarded(DISCARD_REASON);
-            }
+            return hasRights 
+                ? MapPinRuleResult.NotDiscarded()
+                : MapPinRuleResult.Discarded(DISCARD_REASON);
         }
     }
 }

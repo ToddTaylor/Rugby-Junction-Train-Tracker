@@ -8,32 +8,25 @@ namespace Web.ServerTests.Services.Rules
     [TestClass]
     public class TrackageRightsRuleTests
     {
-        private Mock<ITelemetryRepository> _telemetryRepositoryMock;
         private Mock<ISubdivisionTrackageRightRepository> _trackageRightRepositoryMock;
         private TrackageRightsRule _rule;
 
         [TestInitialize]
         public void Setup()
         {
-            _telemetryRepositoryMock = new Mock<ITelemetryRepository>();
             _trackageRightRepositoryMock = new Mock<ISubdivisionTrackageRightRepository>();
-            _rule = new TrackageRightsRule(
-                _telemetryRepositoryMock.Object,
-                _trackageRightRepositoryMock.Object);
+            _rule = new TrackageRightsRule(_trackageRightRepositoryMock.Object);
         }
 
         [TestMethod]
-        public async Task ShouldDiscardAsync_ReturnsFalse_WhenNoCurrentSubdivision()
+        public async Task ShouldDiscardAsync_ReturnsFalse_WhenNoFromSubdivision()
         {
             // Arrange
-            var context = new TelemetryRuleContext
+            var toSubdivision = new Subdivision { ID = 1, RailroadID = 1 };
+            var context = new MapPinRuleContext
             {
-                Telemetry = new Telemetry { AddressID = 123, BeaconID = 1 },
-                RailroadBeacons = new List<BeaconRailroad>
-                {
-                    new BeaconRailroad { Subdivision = null }
-                },
-                RailroadId = 1
+                FromBeaconRailroad = new BeaconRailroad { Subdivision = null },
+                ToBeaconRailroad = new BeaconRailroad { Subdivision = toSubdivision }
             };
 
             // Act
@@ -44,107 +37,15 @@ namespace Web.ServerTests.Services.Rules
         }
 
         [TestMethod]
-        public async Task ShouldDiscardAsync_ReturnsFalse_WhenRailroadBeaconsEmpty()
+        public async Task ShouldDiscardAsync_ReturnsFalse_WhenNoToSubdivision()
         {
             // Arrange
-            var context = new TelemetryRuleContext
+            var fromSubdivision = new Subdivision { ID = 2, RailroadID = 2 };
+            var context = new MapPinRuleContext
             {
-                Telemetry = new Telemetry { AddressID = 123, BeaconID = 1 },
-                RailroadBeacons = new List<BeaconRailroad>(),
-                RailroadId = 1
+                FromBeaconRailroad = new BeaconRailroad { Subdivision = fromSubdivision },
+                ToBeaconRailroad = new BeaconRailroad { Subdivision = null }
             };
-
-            // Act
-            var result = await _rule.ShouldDiscardAsync(context);
-
-            // Assert
-            Assert.IsFalse(result.ShouldDiscard);
-        }
-
-        [TestMethod]
-        public async Task ShouldDiscardAsync_ReturnsFalse_WhenNoPreviousTelemetry()
-        {
-            // Arrange
-            var currentSubdivision = new Subdivision { ID = 1, RailroadID = 1 };
-            var context = new TelemetryRuleContext
-            {
-                Telemetry = new Telemetry { AddressID = 123, BeaconID = 1 },
-                RailroadBeacons = new List<BeaconRailroad>
-                {
-                    new BeaconRailroad { Subdivision = currentSubdivision }
-                },
-                RailroadId = 1
-            };
-
-            _telemetryRepositoryMock
-                .Setup(s => s.GetMostRecentByAddressAsync(123))
-                .ReturnsAsync((Telemetry?)null);
-
-            // Act
-            var result = await _rule.ShouldDiscardAsync(context);
-
-            // Assert
-            Assert.IsFalse(result.ShouldDiscard);
-        }
-
-        [TestMethod]
-        public async Task ShouldDiscardAsync_ReturnsFalse_WhenPreviousTelemetryHasNoBeacon()
-        {
-            // Arrange
-            var currentSubdivision = new Subdivision { ID = 1, RailroadID = 1 };
-            var context = new TelemetryRuleContext
-            {
-                Telemetry = new Telemetry { AddressID = 123, BeaconID = 1 },
-                RailroadBeacons = new List<BeaconRailroad>
-                {
-                    new BeaconRailroad { Subdivision = currentSubdivision }
-                },
-                RailroadId = 1
-            };
-
-            var previousTelemetry = new Telemetry { AddressID = 123, Beacon = null };
-
-            _telemetryRepositoryMock
-                .Setup(s => s.GetMostRecentByAddressAsync(123))
-                .ReturnsAsync(previousTelemetry);
-
-            // Act
-            var result = await _rule.ShouldDiscardAsync(context);
-
-            // Assert
-            Assert.IsFalse(result.ShouldDiscard);
-        }
-
-        [TestMethod]
-        public async Task ShouldDiscardAsync_ReturnsFalse_WhenPreviousBeaconHasNoSubdivision()
-        {
-            // Arrange
-            var currentSubdivision = new Subdivision { ID = 1, RailroadID = 1 };
-            var context = new TelemetryRuleContext
-            {
-                Telemetry = new Telemetry { AddressID = 123, BeaconID = 1 },
-                RailroadBeacons = new List<BeaconRailroad>
-                {
-                    new BeaconRailroad { Subdivision = currentSubdivision }
-                },
-                RailroadId = 1
-            };
-
-            var previousTelemetry = new Telemetry
-            {
-                AddressID = 123,
-                Beacon = new Beacon
-                {
-                    BeaconRailroads = new List<BeaconRailroad>
-                    {
-                        new BeaconRailroad { Subdivision = null }
-                    }
-                }
-            };
-
-            _telemetryRepositoryMock
-                .Setup(s => s.GetMostRecentByAddressAsync(123))
-                .ReturnsAsync(previousTelemetry);
 
             // Act
             var result = await _rule.ShouldDiscardAsync(context);
@@ -157,34 +58,14 @@ namespace Web.ServerTests.Services.Rules
         public async Task ShouldDiscardAsync_ReturnsFalse_WhenSameRailroad()
         {
             // Arrange
-            var currentSubdivision = new Subdivision { ID = 1, RailroadID = 1 };
-            var previousSubdivision = new Subdivision { ID = 2, RailroadID = 1 };
+            var fromSubdivision = new Subdivision { ID = 1, RailroadID = 1 };
+            var toSubdivision = new Subdivision { ID = 2, RailroadID = 1 };
 
-            var context = new TelemetryRuleContext
+            var context = new MapPinRuleContext
             {
-                Telemetry = new Telemetry { AddressID = 123, BeaconID = 1 },
-                RailroadBeacons = new List<BeaconRailroad>
-                {
-                    new BeaconRailroad { Subdivision = currentSubdivision }
-                },
-                RailroadId = 1
+                FromBeaconRailroad = new BeaconRailroad { Subdivision = fromSubdivision },
+                ToBeaconRailroad = new BeaconRailroad { Subdivision = toSubdivision }
             };
-
-            var previousTelemetry = new Telemetry
-            {
-                AddressID = 123,
-                Beacon = new Beacon
-                {
-                    BeaconRailroads = new List<BeaconRailroad>
-                    {
-                        new BeaconRailroad { Subdivision = previousSubdivision }
-                    }
-                }
-            };
-
-            _telemetryRepositoryMock
-                .Setup(s => s.GetMostRecentByAddressAsync(123))
-                .ReturnsAsync(previousTelemetry);
 
             // Act
             var result = await _rule.ShouldDiscardAsync(context);
@@ -194,37 +75,17 @@ namespace Web.ServerTests.Services.Rules
         }
 
         [TestMethod]
-        public async Task ShouldDiscardAsync_ReturnsFalse_WhenNoTrackageRightsFound()
+        public async Task ShouldDiscardAsync_ReturnsTrue_WhenNoTrackageRightsFound()
         {
             // Arrange
-            var currentSubdivision = new Subdivision { ID = 1, RailroadID = 1 };
-            var previousSubdivision = new Subdivision { ID = 2, RailroadID = 2 };
+            var fromSubdivision = new Subdivision { ID = 2, RailroadID = 2 };
+            var toSubdivision = new Subdivision { ID = 1, RailroadID = 1 };
 
-            var context = new TelemetryRuleContext
+            var context = new MapPinRuleContext
             {
-                Telemetry = new Telemetry { AddressID = 123, BeaconID = 1 },
-                RailroadBeacons = new List<BeaconRailroad>
-                {
-                    new BeaconRailroad { Subdivision = currentSubdivision }
-                },
-                RailroadId = 1
+                FromBeaconRailroad = new BeaconRailroad { Subdivision = fromSubdivision },
+                ToBeaconRailroad = new BeaconRailroad { Subdivision = toSubdivision }
             };
-
-            var previousTelemetry = new Telemetry
-            {
-                AddressID = 123,
-                Beacon = new Beacon
-                {
-                    BeaconRailroads = new List<BeaconRailroad>
-                    {
-                        new BeaconRailroad { Subdivision = previousSubdivision }
-                    }
-                }
-            };
-
-            _telemetryRepositoryMock
-                .Setup(s => s.GetMostRecentByAddressAsync(123))
-                .ReturnsAsync(previousTelemetry);
 
             _trackageRightRepositoryMock
                 .Setup(s => s.GetByFromSubdivisionAsync(2))
@@ -233,37 +94,21 @@ namespace Web.ServerTests.Services.Rules
             // Act
             var result = await _rule.ShouldDiscardAsync(context);
 
-            // Assert - No rights found, allow by default
-            Assert.IsFalse(result.ShouldDiscard);
+            // Assert - No rights found, should discard
+            Assert.IsTrue(result.ShouldDiscard);
         }
 
         [TestMethod]
         public async Task ShouldDiscardAsync_ReturnsFalse_WhenTrackageRightsExist()
         {
             // Arrange
-            var currentSubdivision = new Subdivision { ID = 1, RailroadID = 1 };
-            var previousSubdivision = new Subdivision { ID = 2, RailroadID = 2 };
+            var fromSubdivision = new Subdivision { ID = 2, RailroadID = 2 };
+            var toSubdivision = new Subdivision { ID = 1, RailroadID = 1 };
 
-            var context = new TelemetryRuleContext
+            var context = new MapPinRuleContext
             {
-                Telemetry = new Telemetry { AddressID = 123, BeaconID = 1 },
-                RailroadBeacons = new List<BeaconRailroad>
-                {
-                    new BeaconRailroad { Subdivision = currentSubdivision }
-                },
-                RailroadId = 1
-            };
-
-            var previousTelemetry = new Telemetry
-            {
-                AddressID = 123,
-                Beacon = new Beacon
-                {
-                    BeaconRailroads = new List<BeaconRailroad>
-                    {
-                        new BeaconRailroad { Subdivision = previousSubdivision }
-                    }
-                }
+                FromBeaconRailroad = new BeaconRailroad { Subdivision = fromSubdivision },
+                ToBeaconRailroad = new BeaconRailroad { Subdivision = toSubdivision }
             };
 
             var trackageRights = new List<SubdivisionTrackageRight>
@@ -275,10 +120,6 @@ namespace Web.ServerTests.Services.Rules
                 }
             };
 
-            _telemetryRepositoryMock
-                .Setup(s => s.GetMostRecentByAddressAsync(123))
-                .ReturnsAsync(previousTelemetry);
-
             _trackageRightRepositoryMock
                 .Setup(s => s.GetByFromSubdivisionAsync(2))
                 .ReturnsAsync(trackageRights);
@@ -286,37 +127,21 @@ namespace Web.ServerTests.Services.Rules
             // Act
             var result = await _rule.ShouldDiscardAsync(context);
 
-            // Assert - Has rights, so telemetry is allowed
+            // Assert - Has rights, so not discarded
             Assert.IsFalse(result.ShouldDiscard);
         }
 
         [TestMethod]
-        public async Task ShouldDiscardAsync_ReturnsTrue_WhenNoTrackageRightsToCurrentSubdivision()
+        public async Task ShouldDiscardAsync_ReturnsTrue_WhenNoTrackageRightsToSubdivision()
         {
             // Arrange
-            var currentSubdivision = new Subdivision { ID = 1, RailroadID = 1 };
-            var previousSubdivision = new Subdivision { ID = 2, RailroadID = 2 };
+            var fromSubdivision = new Subdivision { ID = 2, RailroadID = 2 };
+            var toSubdivision = new Subdivision { ID = 1, RailroadID = 1 };
 
-            var context = new TelemetryRuleContext
+            var context = new MapPinRuleContext
             {
-                Telemetry = new Telemetry { AddressID = 123, BeaconID = 1 },
-                RailroadBeacons = new List<BeaconRailroad>
-                {
-                    new BeaconRailroad { Subdivision = currentSubdivision }
-                },
-                RailroadId = 1
-            };
-
-            var previousTelemetry = new Telemetry
-            {
-                AddressID = 123,
-                Beacon = new Beacon
-                {
-                    BeaconRailroads = new List<BeaconRailroad>
-                    {
-                        new BeaconRailroad { Subdivision = previousSubdivision }
-                    }
-                }
+                FromBeaconRailroad = new BeaconRailroad { Subdivision = fromSubdivision },
+                ToBeaconRailroad = new BeaconRailroad { Subdivision = toSubdivision }
             };
 
             var trackageRights = new List<SubdivisionTrackageRight>
@@ -324,13 +149,9 @@ namespace Web.ServerTests.Services.Rules
                 new SubdivisionTrackageRight
                 {
                     FromSubdivisionID = 2,
-                    ToSubdivisionID = 3 // Different subdivision, not the current one
+                    ToSubdivisionID = 3 // Different subdivision, not the target one
                 }
             };
-
-            _telemetryRepositoryMock
-                .Setup(s => s.GetMostRecentByAddressAsync(123))
-                .ReturnsAsync(previousTelemetry);
 
             _trackageRightRepositoryMock
                 .Setup(s => s.GetByFromSubdivisionAsync(2))
@@ -339,37 +160,21 @@ namespace Web.ServerTests.Services.Rules
             // Act
             var result = await _rule.ShouldDiscardAsync(context);
 
-            // Assert - No rights to current subdivision, should discard
+            // Assert - No rights to target subdivision, should discard
             Assert.IsTrue(result.ShouldDiscard);
         }
 
         [TestMethod]
-        public async Task ShouldDiscardAsync_ReturnsFalse_WhenMultipleTrackageRightsIncludeCurrentSubdivision()
+        public async Task ShouldDiscardAsync_ReturnsFalse_WhenMultipleTrackageRightsIncludeToSubdivision()
         {
             // Arrange
-            var currentSubdivision = new Subdivision { ID = 1, RailroadID = 1 };
-            var previousSubdivision = new Subdivision { ID = 2, RailroadID = 2 };
+            var fromSubdivision = new Subdivision { ID = 2, RailroadID = 2 };
+            var toSubdivision = new Subdivision { ID = 1, RailroadID = 1 };
 
-            var context = new TelemetryRuleContext
+            var context = new MapPinRuleContext
             {
-                Telemetry = new Telemetry { AddressID = 123, BeaconID = 1 },
-                RailroadBeacons = new List<BeaconRailroad>
-                {
-                    new BeaconRailroad { Subdivision = currentSubdivision }
-                },
-                RailroadId = 1
-            };
-
-            var previousTelemetry = new Telemetry
-            {
-                AddressID = 123,
-                Beacon = new Beacon
-                {
-                    BeaconRailroads = new List<BeaconRailroad>
-                    {
-                        new BeaconRailroad { Subdivision = previousSubdivision }
-                    }
-                }
+                FromBeaconRailroad = new BeaconRailroad { Subdivision = fromSubdivision },
+                ToBeaconRailroad = new BeaconRailroad { Subdivision = toSubdivision }
             };
 
             var trackageRights = new List<SubdivisionTrackageRight>
@@ -382,7 +187,7 @@ namespace Web.ServerTests.Services.Rules
                 new SubdivisionTrackageRight
                 {
                     FromSubdivisionID = 2,
-                    ToSubdivisionID = 1 // Has rights to current subdivision
+                    ToSubdivisionID = 1 // Has rights to target subdivision
                 },
                 new SubdivisionTrackageRight
                 {
@@ -391,10 +196,6 @@ namespace Web.ServerTests.Services.Rules
                 }
             };
 
-            _telemetryRepositoryMock
-                .Setup(s => s.GetMostRecentByAddressAsync(123))
-                .ReturnsAsync(previousTelemetry);
-
             _trackageRightRepositoryMock
                 .Setup(s => s.GetByFromSubdivisionAsync(2))
                 .ReturnsAsync(trackageRights);
@@ -402,37 +203,21 @@ namespace Web.ServerTests.Services.Rules
             // Act
             var result = await _rule.ShouldDiscardAsync(context);
 
-            // Assert - Has rights among multiple, so allowed
+            // Assert - Has rights to target subdivision among multiple, so not discarded
             Assert.IsFalse(result.ShouldDiscard);
         }
 
         [TestMethod]
-        public async Task ShouldDiscardAsync_ReturnsTrue_WhenMultipleTrackageRightsExcludeCurrentSubdivision()
+        public async Task ShouldDiscardAsync_ReturnsTrue_WhenMultipleTrackageRightsExcludeToSubdivision()
         {
             // Arrange
-            var currentSubdivision = new Subdivision { ID = 1, RailroadID = 1 };
-            var previousSubdivision = new Subdivision { ID = 2, RailroadID = 2 };
+            var fromSubdivision = new Subdivision { ID = 2, RailroadID = 2 };
+            var toSubdivision = new Subdivision { ID = 1, RailroadID = 1 };
 
-            var context = new TelemetryRuleContext
+            var context = new MapPinRuleContext
             {
-                Telemetry = new Telemetry { AddressID = 123, BeaconID = 1 },
-                RailroadBeacons = new List<BeaconRailroad>
-                {
-                    new BeaconRailroad { Subdivision = currentSubdivision }
-                },
-                RailroadId = 1
-            };
-
-            var previousTelemetry = new Telemetry
-            {
-                AddressID = 123,
-                Beacon = new Beacon
-                {
-                    BeaconRailroads = new List<BeaconRailroad>
-                    {
-                        new BeaconRailroad { Subdivision = previousSubdivision }
-                    }
-                }
+                FromBeaconRailroad = new BeaconRailroad { Subdivision = fromSubdivision },
+                ToBeaconRailroad = new BeaconRailroad { Subdivision = toSubdivision }
             };
 
             var trackageRights = new List<SubdivisionTrackageRight>
@@ -454,10 +239,6 @@ namespace Web.ServerTests.Services.Rules
                 }
             };
 
-            _telemetryRepositoryMock
-                .Setup(s => s.GetMostRecentByAddressAsync(123))
-                .ReturnsAsync(previousTelemetry);
-
             _trackageRightRepositoryMock
                 .Setup(s => s.GetByFromSubdivisionAsync(2))
                 .ReturnsAsync(trackageRights);
@@ -465,44 +246,24 @@ namespace Web.ServerTests.Services.Rules
             // Act
             var result = await _rule.ShouldDiscardAsync(context);
 
-            // Assert - No rights to current subdivision among all rights, should discard
+            // Assert - No rights to target subdivision, should discard
             Assert.IsTrue(result.ShouldDiscard);
         }
 
         [TestMethod]
-        public async Task ShouldDiscardAsync_ReturnsFalse_WhenEmptyTrackageRightsList()
+        public async Task ShouldDiscardAsync_ReturnsTrue_WhenEmptyTrackageRightsList()
         {
             // Arrange
-            var currentSubdivision = new Subdivision { ID = 1, RailroadID = 1 };
-            var previousSubdivision = new Subdivision { ID = 2, RailroadID = 2 };
+            var fromSubdivision = new Subdivision { ID = 2, RailroadID = 2 };
+            var toSubdivision = new Subdivision { ID = 1, RailroadID = 1 };
 
-            var context = new TelemetryRuleContext
+            var context = new MapPinRuleContext
             {
-                Telemetry = new Telemetry { AddressID = 123, BeaconID = 1 },
-                RailroadBeacons = new List<BeaconRailroad>
-                {
-                    new BeaconRailroad { Subdivision = currentSubdivision }
-                },
-                RailroadId = 1
-            };
-
-            var previousTelemetry = new Telemetry
-            {
-                AddressID = 123,
-                Beacon = new Beacon
-                {
-                    BeaconRailroads = new List<BeaconRailroad>
-                    {
-                        new BeaconRailroad { Subdivision = previousSubdivision }
-                    }
-                }
+                FromBeaconRailroad = new BeaconRailroad { Subdivision = fromSubdivision },
+                ToBeaconRailroad = new BeaconRailroad { Subdivision = toSubdivision }
             };
 
             var trackageRights = new List<SubdivisionTrackageRight>();
-
-            _telemetryRepositoryMock
-                .Setup(s => s.GetMostRecentByAddressAsync(123))
-                .ReturnsAsync(previousTelemetry);
 
             _trackageRightRepositoryMock
                 .Setup(s => s.GetByFromSubdivisionAsync(2))
@@ -511,7 +272,7 @@ namespace Web.ServerTests.Services.Rules
             // Act
             var result = await _rule.ShouldDiscardAsync(context);
 
-            // Assert - Empty list means no rights, but code treats this as discard (no rights found)
+            // Assert - Empty list means no rights, should discard
             Assert.IsTrue(result.ShouldDiscard);
         }
     }

@@ -22,6 +22,7 @@ namespace Web.Server.Services
         private readonly ITimeProvider _timeProvider;
         private readonly ITelemetryRepository _telemetryRepository;
         private readonly IMapPinHistoryService _mapPinHistoryService;
+        private readonly IMapPinRuleEngine _mapPinRuleEngine;
 
         public MapPinService(
             IBeaconRailroadService beaconRailroadService,
@@ -31,6 +32,7 @@ namespace Web.Server.Services
             IMapper mapper,
             ITimeProvider timeProvider,
             ITelemetryRepository telemetryRepository,
+            IMapPinRuleEngine mapPinRuleEngine,
             IConfiguration configuration)
         {
             _beaconRailroadService = beaconRailroadService;
@@ -40,6 +42,7 @@ namespace Web.Server.Services
             _timeProvider = timeProvider;
             _telemetryRepository = telemetryRepository;
             _mapPinHistoryService = mapPinHistoryService;
+            _mapPinRuleEngine = mapPinRuleEngine;
             _stationaryDirectionNullThresholdHours = configuration.GetValue<int>("ApplicationSettings:StationaryDirectionNullThresholdHours", 6);
         }
 
@@ -250,20 +253,18 @@ namespace Web.Server.Services
                             // Existing map pin found matching DPU train ID.
 
                             var matchesTelemetryDpuCapableBeaconRailroad = telemetry.Beacon.BeaconRailroads
-                                .Where(br =>
+                                .FirstOrDefault(br =>
                                       br.BeaconID == existingMapPinByDpuTrainID.BeaconID &&
-                                      br.Subdivision.DpuCapable)
-                                .FirstOrDefault();
+                                      br.Subdivision.DpuCapable);
 
                             if (matchesTelemetryDpuCapableBeaconRailroad == null)
                             {
                                 // Existing map pin is from different beacon, potentially a different railroad.
 
                                 var matchingBeaconRailroad = telemetry.Beacon.BeaconRailroads
-                                    .Where(br =>
+                                    .FirstOrDefault(br =>
                                         br.Subdivision.RailroadID == existingMapPinByDpuTrainID.BeaconRailroad.Subdivision.RailroadID &&
-                                        br.Subdivision.DpuCapable)
-                                    .FirstOrDefault();
+                                        br.Subdivision.DpuCapable);
 
                                 if (matchingBeaconRailroad == null)
                                 {
@@ -451,21 +452,20 @@ namespace Web.Server.Services
 
                 var fromBeaconRailroad = await _beaconRailroadService.GetByIdAsync(existingMapPin.BeaconID, existingMapPin.SubdivisionId);
 
-                // Apply speed sanity check rule before updating
+                // Evaluate all map pin rules before updating
                 if (fromBeaconRailroad != null)
                 {
-                    var speedRule = new TrainSpeedSanityCheckRule();
                     var ruleContext = new MapPinRuleContext
                     {
                         FromBeaconRailroad = fromBeaconRailroad,
                         ToBeaconRailroad = toBeaconRailroad
                     };
 
-                    var ruleResult = await speedRule.ShouldDiscardAsync(ruleContext);
+                    var ruleResult = await _mapPinRuleEngine.ShouldDiscardAsync(ruleContext);
 
                     if (ruleResult.ShouldDiscard)
                     {
-                        // Speed check failed - update telemetry with discard reason and exit entirely
+                        // Rule failed - update telemetry with discard reason and exit entirely
                         telemetry.DiscardReason = ruleResult.Reason;
                         telemetry.Discarded = true;
 
