@@ -98,6 +98,7 @@ namespace Web.Server.Services
                 {
                     BeaconID = h.BeaconID,
                     SubdivisionId = h.SubdivisionId,
+                    CreatedRailroadID = h.CreatedRailroadID,
                     Direction = h.Direction,
                     LastUpdate = h.LastUpdate,
                     BeaconRailroad = h.BeaconRailroad
@@ -369,6 +370,7 @@ namespace Web.Server.Services
         /// <summary>
         /// Creates a new map pin.
         /// - Direction cannot be determined without a previous map pin.
+        /// - CreatedRailroadID is set once at creation and never updated.
         /// </summary>
         private async Task<MapPin> CreateMapPin(Telemetry telemetry)
         {
@@ -394,6 +396,7 @@ namespace Web.Server.Services
                 mapPin.BeaconRailroad = beaconRailroad;
                 mapPin.BeaconID = beaconRailroad.BeaconID;
                 mapPin.SubdivisionId = beaconRailroad.Subdivision.ID;
+                mapPin.CreatedRailroadID = beaconRailroad.Subdivision.RailroadID;
                 mapPin.IsLocal = IsLocalTrain(telemetry.AddressID, beaconRailroad.Subdivision);
             }
             else
@@ -405,6 +408,7 @@ namespace Web.Server.Services
                 mapPin.BeaconRailroad = beaconRailroad;
                 mapPin.BeaconID = beaconRailroad.BeaconID;
                 mapPin.SubdivisionId = beaconRailroad.Subdivision.ID;
+                mapPin.CreatedRailroadID = beaconRailroad.Subdivision.RailroadID;
                 mapPin.IsLocal = IsLocalTrain(telemetry.AddressID, beaconRailroad.Subdivision);
             }
 
@@ -458,7 +462,8 @@ namespace Web.Server.Services
                     var ruleContext = new MapPinRuleContext
                     {
                         FromBeaconRailroad = fromBeaconRailroad,
-                        ToBeaconRailroad = toBeaconRailroad
+                        ToBeaconRailroad = toBeaconRailroad,
+                        CreatedRailroadID = existingMapPin.CreatedRailroadID
                     };
 
                     var ruleResult = await _mapPinRuleEngine.ShouldDiscardAsync(ruleContext);

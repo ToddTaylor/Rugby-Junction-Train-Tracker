@@ -9,5 +9,6 @@ namespace Web.Server.Services.Rules
     {
         public required BeaconRailroad FromBeaconRailroad { get; init; }
         public required BeaconRailroad ToBeaconRailroad { get; init; }
+        public int? CreatedRailroadID { get; init; }
     }
 }

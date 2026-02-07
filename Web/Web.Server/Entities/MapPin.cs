@@ -15,6 +15,13 @@ namespace Web.Server.Entities
         [Required]
         public int SubdivisionId { get; set; }
 
+        /// <summary>
+        /// The RailroadID of the subdivision where this map pin was originally created.
+        /// This is set once at creation and never updated.
+        /// Used by trackage rights rule to allow returns to original railroad.
+        /// </summary>
+        public int? CreatedRailroadID { get; set; }
+
         [NotMapped]
         public BeaconRailroad? BeaconRailroad { get; set; }
 
@@ -36,6 +43,7 @@ namespace Web.Server.Entities
                 ID = this.ID,
                 BeaconID = this.BeaconID,
                 SubdivisionId = this.SubdivisionId,
+                CreatedRailroadID = this.CreatedRailroadID,
                 Direction = this.Direction,
                 LastUpdate = this.LastUpdate,
                 Moving = this.Moving,
@@ -78,6 +86,7 @@ namespace Web.Server.Entities
                    ID == other.ID &&
                    BeaconID == other.BeaconID &&
                    SubdivisionId == other.SubdivisionId &&
+                   CreatedRailroadID == other.CreatedRailroadID &&
                    EqualityComparer<BeaconRailroad?>.Default.Equals(BeaconRailroad, other.BeaconRailroad) &&
                    Direction == other.Direction &&
                    Moving == other.Moving &&
@@ -93,6 +102,7 @@ namespace Web.Server.Entities
             hash.Add(ID);
             hash.Add(BeaconID);
             hash.Add(SubdivisionId);
+            hash.Add(CreatedRailroadID);
             hash.Add(BeaconRailroad);
             hash.Add(Direction);
             hash.Add(IsLocal);

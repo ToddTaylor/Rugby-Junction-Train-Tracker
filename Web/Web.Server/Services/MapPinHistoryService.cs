@@ -73,17 +73,7 @@ namespace Web.Server.Services
             if (isNewMapPin)
             {
                 // Create new history record
-                var history = new MapPinHistory
-                {
-                    BeaconID = mapPin.BeaconID,
-                    SubdivisionId = mapPin.SubdivisionId,
-                    Direction = mapPin.Direction,
-                    Moving = mapPin.Moving,
-                    IsLocal = mapPin.IsLocal,
-                    AddressesJson = addressesJson,
-                    OriginalMapPinID = mapPin.ID
-                };
-
+                var history = CreateMapPinHistory(mapPin, addressesJson);
                 await _repository.AddAsync(history);
             }
             else
@@ -99,17 +89,7 @@ namespace Web.Server.Services
                     if (existingHistory.BeaconID != mapPin.BeaconID)
                     {
                         // Beacon changed - create NEW history record for the new location
-                        var newHistory = new MapPinHistory
-                        {
-                            BeaconID = mapPin.BeaconID,
-                            SubdivisionId = mapPin.SubdivisionId,
-                            Direction = mapPin.Direction,
-                            Moving = mapPin.Moving,
-                            IsLocal = mapPin.IsLocal,
-                            AddressesJson = addressesJson,
-                            OriginalMapPinID = mapPin.ID
-                        };
-
+                        var newHistory = CreateMapPinHistory(mapPin, addressesJson);
                         await _repository.AddAsync(newHistory);
                     }
                     else
@@ -121,17 +101,7 @@ namespace Web.Server.Services
                         {
                             // Enough time has passed (15+ minutes) - create NEW history record
                             // This represents a new train passage through the same beacon
-                            var newHistory = new MapPinHistory
-                            {
-                                BeaconID = mapPin.BeaconID,
-                                SubdivisionId = mapPin.SubdivisionId,
-                                Direction = mapPin.Direction,
-                                Moving = mapPin.Moving,
-                                IsLocal = mapPin.IsLocal,
-                                AddressesJson = addressesJson,
-                                OriginalMapPinID = mapPin.ID
-                            };
-
+                            var newHistory = CreateMapPinHistory(mapPin, addressesJson);
                             await _repository.AddAsync(newHistory);
                         }
                         else
@@ -162,20 +132,25 @@ namespace Web.Server.Services
                 {
                     // No existing history found - create initial history record for this existing MapPin
                     // This handles MapPins that existed before history tracking was implemented
-                    var newHistory = new MapPinHistory
-                    {
-                        BeaconID = mapPin.BeaconID,
-                        SubdivisionId = mapPin.SubdivisionId,
-                        Direction = mapPin.Direction,
-                        Moving = mapPin.Moving,
-                        IsLocal = mapPin.IsLocal,
-                        AddressesJson = addressesJson,
-                        OriginalMapPinID = mapPin.ID
-                    };
-
+                    var newHistory = CreateMapPinHistory(mapPin, addressesJson);
                     await _repository.AddAsync(newHistory);
                 }
             }
+        }
+
+        private MapPinHistory CreateMapPinHistory(MapPin mapPin, string addressesJson)
+        {
+            return new MapPinHistory
+            {
+                BeaconID = mapPin.BeaconID,
+                SubdivisionId = mapPin.SubdivisionId,
+                CreatedRailroadID = mapPin.CreatedRailroadID,
+                Direction = mapPin.Direction,
+                Moving = mapPin.Moving,
+                IsLocal = mapPin.IsLocal,
+                AddressesJson = addressesJson,
+                OriginalMapPinID = mapPin.ID
+            };
         }
     }
 }

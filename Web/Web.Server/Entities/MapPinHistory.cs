@@ -19,6 +19,12 @@ namespace Web.Server.Entities
         [Required]
         public int SubdivisionId { get; set; }
 
+        /// <summary>
+        /// The RailroadID of the subdivision where this map pin was originally created.
+        /// This is set once at creation and never updated.
+        /// </summary>
+        public int? CreatedRailroadID { get; set; }
+
         [NotMapped]
         public BeaconRailroad? BeaconRailroad { get; set; }
 

@@ -40,15 +40,33 @@ namespace Web.Server.Services.Rules
 
             if (trackageRights == null || !trackageRights.Any())
             {
-                // No rights found, discard.
+                // No rights found. However, allow if train is returning to its home railroad.
+                // CreatedRailroadID indicates where the map pin was originally created.
+                if (context.CreatedRailroadID == toSubdivision.RailroadID)
+                {
+                    // Train is returning to its home railroad, allow the move.
+                    return MapPinRuleResult.NotDiscarded();
+                }
+                
+                // No trackage rights and not returning home, discard.
                 return MapPinRuleResult.Discarded(DISCARD_REASON);
             }
 
             var hasRights = trackageRights.Any(tr => tr.ToSubdivisionID == toSubdivision.ID);
 
-            return hasRights 
-                ? MapPinRuleResult.NotDiscarded()
-                : MapPinRuleResult.Discarded(DISCARD_REASON);
+            if (hasRights)
+            {
+                return MapPinRuleResult.NotDiscarded();
+            }
+
+            // No trackage rights. Check if train is returning to its home railroad.
+            if (context.CreatedRailroadID == toSubdivision.RailroadID)
+            {
+                // Train is returning to its home railroad, allow despite no trackage rights.
+                return MapPinRuleResult.NotDiscarded();
+            }
+
+            return MapPinRuleResult.Discarded(DISCARD_REASON);
         }
     }
 }
