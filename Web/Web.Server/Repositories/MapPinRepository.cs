@@ -31,7 +31,7 @@ namespace Web.Server.Repositories
         }
 
         /// <summary>
-        /// Get MapPin by AddressID and optional TrainID. If TrainID is null, only AddressID is matched.
+        /// Get MapPin by AddressID and optional TrainID. If TrainID is null, only an HOT/EOT match is performed (AddressID only).
         /// The addresses collection of the returned MapPin may contain addresses not queried for as all
         /// related addresses are returned.
         /// </summary>

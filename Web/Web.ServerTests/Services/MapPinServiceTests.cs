@@ -406,7 +406,7 @@ namespace Web.ServerTests.Services
                         AddressID = 12345,
                         Source = SourceEnum.EOT,
                         CreatedAt = _timeProviderMock.Object.UtcNow.AddMinutes(-2),
-                        LastUpdate = _timeProviderMock.Object.UtcNow.AddMinutes(-2)
+                        LastUpdate = _timeProviderMock.Object.UtcNow
                     },
                     new Address
                     {
@@ -2591,7 +2591,7 @@ namespace Web.ServerTests.Services
                         DpuTrainID = fromTrainID,
                         Source = SourceEnum.DPU,
                         CreatedAt = _timeProviderMock.Object.UtcNow.AddMinutes(-2),
-                        LastUpdate = _timeProviderMock.Object.UtcNow.AddMinutes(-2),
+                        LastUpdate = _timeProviderMock.Object.UtcNow,
                     },
                     new Address
                     {
@@ -2717,8 +2717,6 @@ namespace Web.ServerTests.Services
                 TrainID = toTrainID,
                 Source = SourceEnum.DPU,
                 Moving = true,
-                DiscardReason = TrainSpeedSanityCheckRule.DISCARD_REASON,
-                Discarded = true,
                 CreatedAt = _timeProviderMock.Object.UtcNow,
                 LastUpdate = _timeProviderMock.Object.UtcNow
             };
@@ -2761,8 +2759,8 @@ namespace Web.ServerTests.Services
 
             // Assert
             _telemetryRepositoryMock.Verify(
-                r => r.UpdateAsync(It.Is<Telemetry>(t => 
-                    t.Discarded && 
+                r => r.UpdateAsync(It.Is<Telemetry>(t =>
+                    t.Discarded &&
                     t.DiscardReason == TrainSpeedSanityCheckRule.DISCARD_REASON)),
                 Times.Once);
             _mapPinRepositoryMock.Verify(r => r.UpsertAsync(It.IsAny<MapPin>()), Times.Never);

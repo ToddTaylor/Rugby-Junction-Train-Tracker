@@ -241,6 +241,16 @@ namespace Web.Server.Services
                     {
                         // DPU must match on train ID on the same railroad to be the same train.
 
+                        // Ensure TrainID is present for DPU telemetry before attempting lookup.
+                        if (!telemetry.TrainID.HasValue)
+                        {
+                            // Invalid DPU telemetry with no TrainID. Update telemetry with discard reason and exit.
+                            telemetry.DiscardReason = $"DPU Missing TrainID";
+                            telemetry.Discarded = true;
+                            await _telemetryRepository.UpdateAsync(telemetry);
+                            return;
+                        }
+
                         var existingMapPinByDpuTrainID = await _mapPinRepository.GetByTrainIdAsync(telemetry.TrainID.Value);
 
                         if (existingMapPinByDpuTrainID == null)
@@ -300,7 +310,7 @@ namespace Web.Server.Services
 
                             if (mapPin == null)
                             {
-                                // Speed check failed, discard reason already recorded in telemetry
+                                // Map pin rule(s) failed, discard reason already recorded in telemetry
                                 return;
                             }
                         }
@@ -342,7 +352,7 @@ namespace Web.Server.Services
 
                 if (mapPin == null)
                 {
-                    // Speed check failed, discard reason already recorded in telemetry
+                    // Map pin rule(s) failed, discard reason already recorded in telemetry
                     return;
                 }
             }
@@ -441,20 +451,20 @@ namespace Web.Server.Services
             }
         }
 
-        private async Task<MapPin?> UpdateMapPin(Telemetry telemetry, MapPin existingMapPin)
+        private async Task<MapPin?> UpdateMapPin(Telemetry telemetry, MapPin mapPinToUpdate)
         {
-            var differentBeacon = telemetry.BeaconID != existingMapPin.BeaconID;
+            var differentBeacon = telemetry.BeaconID != mapPinToUpdate.BeaconID;
 
-            var toBeaconRailroad = await _beaconRailroadService.GetByIdAsync(telemetry.BeaconID, existingMapPin.SubdivisionId);
+            var toBeaconRailroad = await _beaconRailroadService.GetByIdAsync(telemetry.BeaconID, mapPinToUpdate.SubdivisionId);
 
             // Clone existing map pin to modify.
-            var newMapPin = existingMapPin.Clone();
+            var newMapPin = mapPinToUpdate.Clone();
 
             if (differentBeacon && toBeaconRailroad != null)
             {
                 // Direction can be calculated since the beacon changed.
 
-                var fromBeaconRailroad = await _beaconRailroadService.GetByIdAsync(existingMapPin.BeaconID, existingMapPin.SubdivisionId);
+                var fromBeaconRailroad = await _beaconRailroadService.GetByIdAsync(mapPinToUpdate.BeaconID, mapPinToUpdate.SubdivisionId);
 
                 // Evaluate all map pin rules before updating
                 if (fromBeaconRailroad != null)
@@ -463,7 +473,7 @@ namespace Web.Server.Services
                     {
                         FromBeaconRailroad = fromBeaconRailroad,
                         ToBeaconRailroad = toBeaconRailroad,
-                        CreatedRailroadID = existingMapPin.CreatedRailroadID
+                        CreatedRailroadID = mapPinToUpdate.CreatedRailroadID
                     };
 
                     var ruleResult = await _mapPinRuleEngine.ShouldDiscardAsync(ruleContext);
@@ -499,7 +509,7 @@ namespace Web.Server.Services
             newMapPin.BeaconID = telemetry.BeaconID;
             newMapPin.LastUpdate = _timeProvider.UtcNow;
 
-            foreach (var address in existingMapPin.Addresses)
+            foreach (var address in newMapPin.Addresses)
             {
                 address.LastUpdate = _timeProvider.UtcNow;
             }

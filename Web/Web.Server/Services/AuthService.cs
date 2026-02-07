@@ -1,14 +1,10 @@
-using Mailtrap;
-using Mailtrap.Core.Validation;
-using Mailtrap.Emails.Requests;
-using Mailtrap.Emails.Responses;
+using Microsoft.EntityFrameworkCore;
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
 using Web.Server.DTOs;
 using Web.Server.Providers;
 using Web.Server.Repositories;
-using Microsoft.EntityFrameworkCore;
 
 namespace Web.Server.Services;
 
@@ -37,8 +33,6 @@ public class AuthService : IAuthService
     private static readonly ConcurrentDictionary<string, CodeEntry> _codes = new(StringComparer.OrdinalIgnoreCase);
     // email -> list of send timestamps (UTC)
     private static readonly ConcurrentDictionary<string, List<DateTime>> _sendHistory = new(StringComparer.OrdinalIgnoreCase);
-    // token -> TokenEntry
-    private static readonly ConcurrentDictionary<string, TokenEntry> _tokens = new(StringComparer.OrdinalIgnoreCase);
     // Refresh LastLogin at most once per hour per user
     private static readonly TimeSpan LastLoginRefreshInterval = TimeSpan.FromHours(1);
 
@@ -173,9 +167,9 @@ public class AuthService : IAuthService
         };
         _db.AuthTokens.Add(authToken);
         await _db.SaveChangesAsync();
-        var result = new AuthVerifySuccessDTO 
-        { 
-            Token = token, 
+        var result = new AuthVerifySuccessDTO
+        {
+            Token = token,
             ExpiresUtc = expires,
             Roles = roles,
             UserId = user.ID

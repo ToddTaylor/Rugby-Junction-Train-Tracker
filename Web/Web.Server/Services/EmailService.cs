@@ -2,7 +2,6 @@ using Mailtrap;
 using Mailtrap.Core.Validation;
 using Mailtrap.Emails.Requests;
 using Mailtrap.Emails.Responses;
-using Microsoft.Extensions.Logging;
 
 namespace Web.Server.Services;
 
@@ -14,13 +13,14 @@ public class EmailService : IEmailService
     public EmailService(ILogger<EmailService> logger, IConfiguration configuration)
     {
         _logger = logger;
-        _apiToken = configuration["Mailtrap:ApiToken"] ?? "9e7b1356251970a4b0e621401ddea303";
+        _apiToken = configuration["Mailtrap:ApiToken"]
+            ?? throw new InvalidOperationException("Mailtrap:ApiToken configuration is required but was not found.");
     }
 
     public async Task<(bool Success, List<string> Errors)> SendVerificationCodeAsync(string toEmail, string code)
     {
         var errors = new List<string>();
-        
+
         try
         {
             using var mailtrapClientFactory = new MailtrapClientFactory(_apiToken);
