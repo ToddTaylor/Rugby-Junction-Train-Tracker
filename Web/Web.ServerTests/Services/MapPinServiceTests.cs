@@ -11,6 +11,7 @@ using Web.Server.Mappers;
 using Web.Server.Providers;
 using Web.Server.Repositories;
 using Web.Server.Services;
+using Web.Server.Services.Rules;
 
 namespace Web.ServerTests.Services
 {
@@ -2651,6 +2652,109 @@ namespace Web.ServerTests.Services
                 default), Times.Once);
         }
 
+        [TestMethod]
+        public async Task UpsertMapPin_DPUsFromSameRailroadDiscarded()
+        {
+            // Arrange
+            var CNOshkoshBeaconRailroad = TestData.CN_Oshkosh_WI(_timeProviderMock.Object.UtcNow.AddMinutes(-30));
+            var fromAddressID = 92342;
+            var fromTrainID = 123;
+
+            var CNRugbyJunctionBeaconRailroad = TestData.CN_RugbyJunction_WI(_timeProviderMock.Object.UtcNow);
+            var toAddressID = 23424;
+            var toTrainID = 123;
+
+            var telemetry = new Telemetry
+            {
+                BeaconID = CNRugbyJunctionBeaconRailroad.BeaconID,
+                Beacon = new Beacon
+                {
+                    ID = CNRugbyJunctionBeaconRailroad.BeaconID,
+                    Name = CNRugbyJunctionBeaconRailroad.Beacon.Name,
+                    BeaconRailroads = new[]
+                    {
+                        CNRugbyJunctionBeaconRailroad
+                    },
+                },
+                AddressID = toAddressID,
+                TrainID = toTrainID,
+                Source = SourceEnum.DPU,
+                Moving = true,
+                CreatedAt = _timeProviderMock.Object.UtcNow,
+                LastUpdate = _timeProviderMock.Object.UtcNow
+            };
+
+            var telemetryDiscarded = new Telemetry
+            {
+                BeaconID = CNRugbyJunctionBeaconRailroad.BeaconID,
+                Beacon = new Beacon
+                {
+                    ID = CNRugbyJunctionBeaconRailroad.BeaconID,
+                    Name = CNRugbyJunctionBeaconRailroad.Beacon.Name,
+                    BeaconRailroads = new[]
+                    {
+                        CNRugbyJunctionBeaconRailroad
+                    },
+                },
+                AddressID = toAddressID,
+                TrainID = toTrainID,
+                Source = SourceEnum.DPU,
+                Moving = true,
+                DiscardReason = TrainSpeedSanityCheckRule.DISCARD_REASON,
+                Discarded = true,
+                CreatedAt = _timeProviderMock.Object.UtcNow,
+                LastUpdate = _timeProviderMock.Object.UtcNow
+            };
+
+            var fromMapPin = new MapPin
+            {
+                ID = 234,
+                BeaconID = CNOshkoshBeaconRailroad.BeaconID,
+                SubdivisionId = CNOshkoshBeaconRailroad.Subdivision.ID,
+                CreatedAt = _timeProviderMock.Object.UtcNow.AddMinutes(-2),
+                LastUpdate = _timeProviderMock.Object.UtcNow.AddMinutes(-2),
+                BeaconRailroad = CNOshkoshBeaconRailroad,
+                Moving = telemetry.Moving,
+                Addresses =
+                    [
+                        new Address
+                        {
+                            AddressID = fromAddressID,
+                            DpuTrainID = fromTrainID,
+                            Source = SourceEnum.DPU,
+                            CreatedAt = _timeProviderMock.Object.UtcNow.AddMinutes(-2),
+                            LastUpdate = _timeProviderMock.Object.UtcNow.AddMinutes(-2)
+                        }
+                    ],
+            };
+
+            _mapPinRepositoryMock.Setup(r => r.GetByAddressIdAsync(telemetry.AddressID, telemetry.TrainID))
+                .ReturnsAsync((MapPin?)null);
+            _mapPinRepositoryMock.Setup(r => r.GetByTrainIdAsync(telemetry.TrainID.Value))
+                .ReturnsAsync(fromMapPin);
+            _beaconRailroadServiceMock.Setup(b => b.GetByIdAsync(telemetry.BeaconID, fromMapPin.SubdivisionId))
+                .ReturnsAsync(CNRugbyJunctionBeaconRailroad);
+            _beaconRailroadServiceMock.Setup(b => b.GetByIdAsync(fromMapPin.BeaconID, fromMapPin.SubdivisionId))
+                .ReturnsAsync(CNOshkoshBeaconRailroad);
+
+            // Act
+            await _service.UpsertMapPin(telemetry);
+
+            // Assert
+            _telemetryRepositoryMock.Verify(
+                r => r.UpdateAsync(It.Is<Telemetry>(t => 
+                    t.Discarded && 
+                    t.DiscardReason == TrainSpeedSanityCheckRule.DISCARD_REASON)),
+                Times.Once);
+            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(It.IsAny<MapPin>()), Times.Never);
+
+            _clientProxyMock?.Verify(proxy => proxy.SendCoreAsync(
+                NotificationMethods.MapPinUpdate,
+                It.IsAny<object[]>(),
+                default),
+                Times.Never);
+        }
+
         private static class TestData
         {
             public static Beacon Hartford_WI()
@@ -2660,6 +2764,18 @@ namespace Web.ServerTests.Services
                     ID = 4,
                     OwnerID = 1,
                     Name = "Hartford",
+                    CreatedAt = DateTime.UtcNow,
+                    LastUpdate = DateTime.UtcNow
+                };
+            }
+
+            public static Beacon Oshkosh_WI()
+            {
+                return new Beacon
+                {
+                    ID = 2,
+                    OwnerID = 7,
+                    Name = "Oshkosh",
                     CreatedAt = DateTime.UtcNow,
                     LastUpdate = DateTime.UtcNow
                 };
@@ -2686,6 +2802,24 @@ namespace Web.ServerTests.Services
                     Name = "Sussex",
                     CreatedAt = DateTime.UtcNow,
                     LastUpdate = DateTime.UtcNow
+                };
+            }
+
+            public static BeaconRailroad CN_Oshkosh_WI(DateTime currentDateTime)
+            {
+                return new BeaconRailroad
+                {
+                    BeaconID = 2,
+                    Beacon = TestData.Oshkosh_WI(),
+                    SubdivisionID = 3,
+                    Subdivision = TestData.CN_Neenah(currentDateTime),
+                    Direction = Direction.NorthSouth,
+                    Latitude = 44.02356,
+                    Longitude = -88.531553,
+                    Milepost = 174.0,
+                    MultipleTracks = false,
+                    CreatedAt = currentDateTime,
+                    LastUpdate = currentDateTime
                 };
             }
 
@@ -2777,6 +2911,21 @@ namespace Web.ServerTests.Services
                     CreatedAt = currentDateTime,
                     LastUpdate = currentDateTime
                 };
+            }
+
+            public static Subdivision CN_Neenah(DateTime currentDateTime)
+            {
+                return
+                        new Subdivision
+                        {
+                            ID = 3,
+                            Name = "Neenah",
+                            RailroadID = 1,
+                            Railroad = new Railroad { ID = 1, Name = "CN" },
+                            DpuCapable = true,
+                            CreatedAt = currentDateTime,
+                            LastUpdate = currentDateTime
+                        };
             }
 
             public static Subdivision CN_Waukesha(DateTime currentDateTime)

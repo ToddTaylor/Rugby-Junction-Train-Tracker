@@ -6,6 +6,7 @@ using Web.Server.Enums;
 using Web.Server.Hubs;
 using Web.Server.Providers;
 using Web.Server.Repositories;
+using Web.Server.Services.Rules;
 
 namespace Web.Server.Services
 {
@@ -294,6 +295,12 @@ namespace Web.Server.Services
 
                             // Update the existing map pin with new telemetry data in case the map pin moved.
                             mapPin = await this.UpdateMapPin(telemetry, existingMapPinByDpuTrainID);
+
+                            if (mapPin == null)
+                            {
+                                // Speed check failed, discard reason already recorded in telemetry
+                                return;
+                            }
                         }
                     }
                 }
@@ -330,6 +337,12 @@ namespace Web.Server.Services
                 }
 
                 mapPin = await this.UpdateMapPin(telemetry, existingExactMatchMapPin);
+
+                if (mapPin == null)
+                {
+                    // Speed check failed, discard reason already recorded in telemetry
+                    return;
+                }
             }
 
             if (mapPin == null)
@@ -423,7 +436,7 @@ namespace Web.Server.Services
             }
         }
 
-        private async Task<MapPin> UpdateMapPin(Telemetry telemetry, MapPin existingMapPin)
+        private async Task<MapPin?> UpdateMapPin(Telemetry telemetry, MapPin existingMapPin)
         {
             var differentBeacon = telemetry.BeaconID != existingMapPin.BeaconID;
 
@@ -437,6 +450,30 @@ namespace Web.Server.Services
                 // Direction can be calculated since the beacon changed.
 
                 var fromBeaconRailroad = await _beaconRailroadService.GetByIdAsync(existingMapPin.BeaconID, existingMapPin.SubdivisionId);
+
+                // Apply speed sanity check rule before updating
+                if (fromBeaconRailroad != null)
+                {
+                    var speedRule = new TrainSpeedSanityCheckRule();
+                    var ruleContext = new MapPinRuleContext
+                    {
+                        FromBeaconRailroad = fromBeaconRailroad,
+                        ToBeaconRailroad = toBeaconRailroad
+                    };
+
+                    var ruleResult = await speedRule.ShouldDiscardAsync(ruleContext);
+
+                    if (ruleResult.ShouldDiscard)
+                    {
+                        // Speed check failed - update telemetry with discard reason and exit entirely
+                        telemetry.DiscardReason = ruleResult.Reason;
+                        telemetry.Discarded = true;
+
+                        await _telemetryRepository.UpdateAsync(telemetry);
+
+                        return null;  // Stop processing entirely
+                    }
+                }
 
                 newMapPin.SubdivisionId = toBeaconRailroad.Subdivision.ID;
                 newMapPin.Direction = CalculateDirection(fromBeaconRailroad, toBeaconRailroad);
