@@ -1438,6 +1438,7 @@ namespace Web.ServerTests.Services
             await _service.UpsertMapPin(telemetry);
 
             // Assert
+            _telemetryRepositoryMock.Verify(r => r.UpdateAsync(telemetry), Times.Once());
             _mapPinRepositoryMock.Verify(r => r.UpsertAsync(It.IsAny<MapPin>()), Times.Never);
         }
 

@@ -219,6 +219,12 @@ namespace Web.Server.Services
                                     else
                                     {
                                         // Train already has an EOT - discard duplicate EOT telemetry.
+
+                                        telemetry.DiscardReason = $"Multiple EOT in Time Threshold";
+                                        telemetry.Discarded = true;
+
+                                        await _telemetryRepository.UpdateAsync(telemetry);
+
                                         return;
                                     }
 
