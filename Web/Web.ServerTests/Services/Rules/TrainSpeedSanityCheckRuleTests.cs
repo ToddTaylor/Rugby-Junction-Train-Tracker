@@ -129,7 +129,7 @@ namespace Web.ServerTests.Services.Rules
         {
             // Arrange
             var currentTime = DateTime.UtcNow;
-            var previousTime = currentTime.AddMinutes(-30); // 30 minutes earlier
+            var previousTime = currentTime.AddMinutes(-20); // 20 minutes earlier
 
             // Beacons approximately 35 miles apart
             var fromBeacon = new BeaconRailroad
@@ -157,7 +157,7 @@ namespace Web.ServerTests.Services.Rules
             // Act
             var result = await _rule.ShouldDiscardAsync(context);
 
-            // Assert - ~35 miles in 30 minutes = 70 mph, which exceeds threshold
+            // Assert - ~35 miles in 20 minutes = 73.4 mph, which exceeds threshold
             Assert.IsTrue(result.ShouldDiscard);
             Assert.AreEqual("Train Speed Sanity Check", result.Reason);
         }
