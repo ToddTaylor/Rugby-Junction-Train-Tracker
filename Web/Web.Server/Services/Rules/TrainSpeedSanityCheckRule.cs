@@ -14,7 +14,7 @@ namespace Web.Server.Services.Rules
         /// Maximum realistic speed in miles per hour. Speeds above this threshold are considered unrealistic.
         /// </summary>
         private const int MAX_REALISTIC_SPEED_MPH = 60;
-        
+
         /// <summary>
         /// Radio range for each beacon in miles. Each beacon can detect trains
         /// within this radius, so the actual distance traveled is reduced by
@@ -33,13 +33,7 @@ namespace Web.Server.Services.Rules
             // BEACON_RADIO_RANGE_MILES radius, so subtract the range from both beacons.
             // For example, if beacons are 15 miles apart with 5-mile range each,
             // the actual distance traveled is only 15 - 5 - 5 = 5 miles.
-            var adjustedDistance = (double)distanceMiles - (2 * BEACON_RADIO_RANGE_MILES);
-
-            // Ensure adjusted distance doesn't go negative
-            if (adjustedDistance < 0)
-            {
-                adjustedDistance = 0;
-            }
+            var adjustedDistance = Math.Abs((double)distanceMiles - (2 * BEACON_RADIO_RANGE_MILES));
 
             // Calculate the time difference between the two beacon readings
             var timeDifference = context.ToBeaconRailroad.LastUpdate - context.FromBeaconRailroad.LastUpdate;
