@@ -8,7 +8,6 @@ namespace Web.Server.Services.Rules
     public class TelemetryRuleContext
     {
         public required Telemetry Telemetry { get; init; }
-        public required ICollection<BeaconRailroad> RailroadBeacons { get; init; }
         public required int RailroadId { get; init; }
     }
 }

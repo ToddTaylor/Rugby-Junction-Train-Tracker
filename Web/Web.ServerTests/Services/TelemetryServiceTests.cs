@@ -8,7 +8,6 @@ using Web.Server.Hubs;
 using Web.Server.Providers;
 using Web.Server.Repositories;
 using Web.Server.Services;
-using Web.Server.Services.Rules;
 
 namespace Web.ServerTests.Services
 {
@@ -23,7 +22,6 @@ namespace Web.ServerTests.Services
         private Mock<IMapPinService> _mapPinServiceMock;
         private Mock<ITimeProvider> _timeProviderMock;
         private TelemetryService _service;
-        private TelemetryRuleEngine _ruleEngine;
 
         [TestInitialize]
         public void Setup()
@@ -35,10 +33,6 @@ namespace Web.ServerTests.Services
             _mapperMock = new Mock<IMapper>();
             _mapPinServiceMock = new Mock<IMapPinService>();
             _timeProviderMock = new Mock<ITimeProvider>();
-            _ruleEngine = new TelemetryRuleEngine(new List<ITelemetryRule>
-            {
-                new EotHotAntiPingPongRule(_telemetryRepositoryMock.Object)
-            });
 
             // Setup SignalR Clients.All.SendAsync
             var clientsMock = new Mock<IHubClients>();
@@ -53,8 +47,7 @@ namespace Web.ServerTests.Services
                 _mapperMock.Object,
                 _mapPinServiceMock.Object,
                 _telemetryRepositoryMock.Object,
-                _timeProviderMock.Object,
-                _ruleEngine
+                _timeProviderMock.Object
             );
         }
 

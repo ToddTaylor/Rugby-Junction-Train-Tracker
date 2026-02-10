@@ -5,7 +5,6 @@ using Web.Server.Entities;
 using Web.Server.Hubs;
 using Web.Server.Providers;
 using Web.Server.Repositories;
-using Web.Server.Services.Rules;
 
 namespace Web.Server.Services
 {
@@ -18,7 +17,6 @@ namespace Web.Server.Services
         private readonly IMapper _mapper;
         private readonly IMapPinService _mapPinsService;
         private readonly ITimeProvider _timeProvider;
-        private readonly TelemetryRuleEngine _ruleEngine;
 
         public TelemetryService(
             IBeaconRailroadService beaconRailroadService,
@@ -27,8 +25,7 @@ namespace Web.Server.Services
             IMapper mapper,
             IMapPinService mapPinsService,
             ITelemetryRepository telemetryRepository,
-            ITimeProvider timeProvider,
-            TelemetryRuleEngine ruleEngine)
+            ITimeProvider timeProvider)
         {
             _beaconRailroadService = beaconRailroadService;
             _beaconService = beaconService;
@@ -37,7 +34,6 @@ namespace Web.Server.Services
             _mapPinsService = mapPinsService;
             _telemetryRepository = telemetryRepository;
             _timeProvider = timeProvider;
-            _ruleEngine = ruleEngine;
         }
 
         public async Task<Telemetry> CreateMapPinAsync(Telemetry telemetry)
@@ -62,25 +58,6 @@ namespace Web.Server.Services
             telemetry.CreatedAt = _timeProvider.UtcNow;
             telemetry.LastUpdate = _timeProvider.UtcNow;
             telemetry.Discarded = false;
-
-            // Evaluate rules to determine if telemetry should be discarded
-            var context = new TelemetryRuleContext
-            {
-                Telemetry = telemetry,
-                RailroadBeacons = telemetry.Beacon.BeaconRailroads,
-                RailroadId = telemetry.Beacon.BeaconRailroads.First().Subdivision.RailroadID
-            };
-
-            var result = await _ruleEngine.ShouldDiscardAsync(context);
-            if (result.ShouldDiscard)
-            {
-                // Mark telemetry as discarded and save to database
-                telemetry.Discarded = true;
-                telemetry.DiscardReason = result.Reason;
-                await _telemetryRepository.AddAsync(telemetry);
-
-                return telemetry;
-            }
 
             // Insert new telemetry for historical logging purposes
             telemetry = await _telemetryRepository.AddAsync(telemetry);

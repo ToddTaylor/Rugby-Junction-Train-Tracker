@@ -23,6 +23,8 @@ namespace Web.Server.Services
         private readonly ITelemetryRepository _telemetryRepository;
         private readonly IMapPinHistoryService _mapPinHistoryService;
         private readonly IMapPinRuleEngine _mapPinRuleEngine;
+        private readonly ITelemetryRuleEngine _telemetryRuleEngine;
+        private readonly ILogger<MapPinService> _logger;
 
         public MapPinService(
             IBeaconRailroadService beaconRailroadService,
@@ -33,6 +35,8 @@ namespace Web.Server.Services
             ITimeProvider timeProvider,
             ITelemetryRepository telemetryRepository,
             IMapPinRuleEngine mapPinRuleEngine,
+            ITelemetryRuleEngine telemetryRuleEngine,
+            ILogger<MapPinService> logger,
             IConfiguration configuration)
         {
             _beaconRailroadService = beaconRailroadService;
@@ -43,6 +47,8 @@ namespace Web.Server.Services
             _telemetryRepository = telemetryRepository;
             _mapPinHistoryService = mapPinHistoryService;
             _mapPinRuleEngine = mapPinRuleEngine;
+            _telemetryRuleEngine = telemetryRuleEngine;
+            _logger = logger;
             _stationaryDirectionNullThresholdHours = configuration.GetValue<int>("ApplicationSettings:StationaryDirectionNullThresholdHours", 6);
         }
 
@@ -232,22 +238,19 @@ namespace Web.Server.Services
                                 }
                         }
                     }
-                    else
-                    {
-                        // No previous map pin within time threshold.
 
-                        // Fall through to create new map pin below.
-                    }
+                    // No previous map pin within time threshold.
+                    // Fall through to create new map pin below.
                 }
                 else
                 {
                     // Multiple railroad and multiple track beacons are ineligible for time-threshold matching.
+                    // HOT and EOT will fall through this logic to create a new map pin.
 
                     if (telemetry.Source == SourceEnum.DPU)
                     {
                         // DPU must match on train ID on the same railroad to be the same train.
 
-                        // Ensure TrainID is present for DPU telemetry before attempting lookup.
                         if (!telemetry.TrainID.HasValue)
                         {
                             // Invalid DPU telemetry with no TrainID. Update telemetry with discard reason and exit.
@@ -258,32 +261,27 @@ namespace Web.Server.Services
                         }
 
                         var existingMapPinByDpuTrainID = await _mapPinRepository.GetByTrainIdAsync(telemetry.TrainID.Value);
+                        var foundMatchingDpuMapPin = existingMapPinByDpuTrainID != null;
 
-                        if (existingMapPinByDpuTrainID == null)
-                        {
-                            // No previous map pin matching DPU train ID.
-
-                            // Fall through to create new map pin below.
-                        }
-                        else
+                        if (foundMatchingDpuMapPin)
                         {
                             // Existing map pin found matching DPU train ID.
 
-                            var matchesTelemetryDpuCapableBeaconRailroad = telemetry.Beacon.BeaconRailroads
-                                .FirstOrDefault(br =>
-                                      br.BeaconID == existingMapPinByDpuTrainID.BeaconID &&
+                            var notTheSameBeacon = !telemetry.Beacon.BeaconRailroads
+                                .Any(br =>
+                                      br.BeaconID == existingMapPinByDpuTrainID!.BeaconID &&
                                       br.Subdivision.DpuCapable);
 
-                            if (matchesTelemetryDpuCapableBeaconRailroad == null)
+                            if (notTheSameBeacon)
                             {
                                 // Existing map pin is from different beacon, potentially a different railroad.
 
-                                var matchingBeaconRailroad = telemetry.Beacon.BeaconRailroads
-                                    .FirstOrDefault(br =>
+                                var notTheSameRailroad = !telemetry.Beacon.BeaconRailroads
+                                    .Any(br =>
                                         br.Subdivision.RailroadID == existingMapPinByDpuTrainID.BeaconRailroad.Subdivision.RailroadID &&
                                         br.Subdivision.DpuCapable);
 
-                                if (matchingBeaconRailroad == null)
+                                if (notTheSameRailroad)
                                 {
                                     // No matching railroad found between existing map pin and telemetry.
 
@@ -300,7 +298,7 @@ namespace Web.Server.Services
                             // Existing map pin is from same beacon railroad as the telemetry.
 
                             // Add the DPU address to the existing map pin.
-                            existingMapPinByDpuTrainID.Addresses.Add(
+                            existingMapPinByDpuTrainID!.Addresses.Add(
                                 new Address
                                 {
                                     AddressID = telemetry.AddressID,
@@ -311,15 +309,22 @@ namespace Web.Server.Services
 
                                 });
 
-                            // Update the existing map pin with new telemetry data in case the map pin moved.
-                            mapPin = await this.UpdateMapPin(telemetry, existingMapPinByDpuTrainID);
+                            // Determine if the map pin should be discarded based on telemetry and map pin rules.
 
-                            if (mapPin == null)
+                            var mapPinDiscarded = await ShouldDiscardMapPin(telemetry, existingMapPinByDpuTrainID);
+
+                            if (mapPinDiscarded)
                             {
                                 // Map pin rule(s) failed, discard reason already recorded in telemetry
                                 return;
                             }
+
+                            // Update the existing map pin with new telemetry data in case the map pin moved.
+
+                            mapPin = await this.UpdateMapPin(telemetry, existingMapPinByDpuTrainID);
                         }
+                        // No previous map pin matching DPU train ID.
+                        // Fall through to create new map pin below.
                     }
                 }
             }
@@ -354,13 +359,17 @@ namespace Web.Server.Services
                     }
                 }
 
-                mapPin = await this.UpdateMapPin(telemetry, existingExactMatchMapPin);
+                // Update the existing map pin with new telemetry data in case the map pin moved.
 
-                if (mapPin == null)
+                var mapPinDiscarded = await ShouldDiscardMapPin(telemetry, existingExactMatchMapPin);
+
+                if (mapPinDiscarded)
                 {
                     // Map pin rule(s) failed, discard reason already recorded in telemetry
                     return;
                 }
+
+                mapPin = await this.UpdateMapPin(telemetry, existingExactMatchMapPin);
             }
 
             if (mapPin == null)
@@ -438,7 +447,6 @@ namespace Web.Server.Services
             return mapPin;
         }
 
-
         /// <summary>
         /// If a train has been at the same beacon for longer than the configured threshold,
         /// its direction should be removed (set to null).
@@ -457,47 +465,148 @@ namespace Web.Server.Services
             }
         }
 
-        private async Task<MapPin?> UpdateMapPin(Telemetry telemetry, MapPin mapPinToUpdate)
+        private async Task<bool> ShouldDiscardMapPin(Telemetry telemetry, MapPin existingMapPinToUpdate)
         {
-            var differentBeacon = telemetry.BeaconID != mapPinToUpdate.BeaconID;
+            var toBeaconRailroad = (BeaconRailroad?)null;
 
-            var toBeaconRailroad = await _beaconRailroadService.GetByIdAsync(telemetry.BeaconID, mapPinToUpdate.SubdivisionId);
+            if (telemetry.Beacon.BeaconRailroads.Count() == 1)
+            {
+                toBeaconRailroad = telemetry.Beacon.BeaconRailroads.First();
+            }
+            else
+            {
+                // Is this a safe assumption that the "to" beacon railroad will be on the same railroad
+                // as the "from" beacon railroad if the "to" beacon railroad is multi-railroad?
+                //
+                // Yes. The existing map pin has a known beacon railroad ("from" beacon). If the telemetry beacon ("to" beacon)
+                // has multiple beacon railroads, the "from" beacon railroad's subdivision railroad ID can be used to find the
+                // correct "to" beacon railroad among the multiple beacon railroads.
+
+                toBeaconRailroad = telemetry.Beacon.BeaconRailroads
+                    .Where(br => br.Subdivision.RailroadID == existingMapPinToUpdate.BeaconRailroad.Subdivision.RailroadID)
+                    .FirstOrDefault();
+            }
+
+            if (toBeaconRailroad == null)
+            {
+                _logger.LogError($"To beacon railroad not found for map pin ID {existingMapPinToUpdate.ID}. Telemetry BeaconID: {telemetry.BeaconID}, SubdivisionID: {existingMapPinToUpdate.SubdivisionId}");
+                return true;
+            }
+
+            var fromBeaconRailroad = await _beaconRailroadService.GetByIdAsync(existingMapPinToUpdate.BeaconID, existingMapPinToUpdate.SubdivisionId);
+
+            if (fromBeaconRailroad == null)
+            {
+                _logger.LogError($"From beacon railroad not found for map pin ID {existingMapPinToUpdate.ID}. MapPin BeaconID: {existingMapPinToUpdate.BeaconID}, SubdivisionID: {existingMapPinToUpdate.SubdivisionId}");
+                return true;
+            }
+
+            var differentBeacon = telemetry.BeaconID != existingMapPinToUpdate.BeaconID;
+
+            if (differentBeacon)
+            {
+                // Ping pong telemetry rules.
+
+                var context = new TelemetryRuleContext
+                {
+                    Telemetry = telemetry,
+                    RailroadId = toBeaconRailroad.Subdivision.RailroadID
+                };
+
+                var result = await _telemetryRuleEngine.ShouldDiscardAsync(context);
+
+                if (result.ShouldDiscard)
+                {
+                    // Rule failed
+                    telemetry.DiscardReason = result.Reason;
+                    telemetry.Discarded = true;
+
+                    await _telemetryRepository.UpdateAsync(telemetry);
+
+                    return true; // Stop processing entirely
+                }
+            }
+
+            // Train speed sanity check and trackage right rules.
+
+            var ruleContext = new MapPinRuleContext
+            {
+                FromBeaconRailroad = fromBeaconRailroad,
+                ToBeaconRailroad = toBeaconRailroad,
+                CreatedRailroadID = existingMapPinToUpdate.CreatedRailroadID!.Value,
+            };
+
+            var ruleResult = await _mapPinRuleEngine.ShouldDiscardAsync(ruleContext);
+
+            if (ruleResult.ShouldDiscard)
+            {
+                // Rule failed
+                telemetry.DiscardReason = ruleResult.Reason;
+
+                // TEMPORARY HACK: Because on the CN Neenah antenna over-reach, this
+                // rule could block a lot of valid telemetry to Rugby Junction. This hack
+                // will still log the discard reason for monitoring and alerting purposes,
+                // but it won't actually discard the telemetry. This will allow for continued
+                // monitoring of the situation while avoiding blocking valid telemetry.
+                if (ruleResult.Reason == TrainSpeedSanityCheckRule.DISCARD_REASON)
+                {
+                    telemetry.Discarded = false;
+                }
+                else
+                {
+                    telemetry.Discarded = true;
+                }
+
+                await _telemetryRepository.UpdateAsync(telemetry);
+
+                return true; // Stop processing entirely
+            }
+
+            return false;
+        }
+
+        private async Task<MapPin?> UpdateMapPin(Telemetry telemetry, MapPin existingMapPinToUpdate)
+        {
+            var toBeaconRailroad = (BeaconRailroad?)null;
+
+            if (telemetry.Beacon.BeaconRailroads.Count() == 1)
+            {
+                toBeaconRailroad = telemetry.Beacon.BeaconRailroads.First();
+            }
+            else
+            {
+                // Is this a safe assumption that the "to" beacon railroad will be on the same railroad
+                // as the "from" beacon railroad if the "to" beacon railroad is multi-railroad?
+                //
+                // Yes. The existing map pin has a known beacon railroad ("from" beacon). If the telemetry beacon ("to" beacon)
+                // has multiple beacon railroads, the "from" beacon railroad's subdivision railroad ID can be used to find the
+                // correct "to" beacon railroad among the multiple beacon railroads.
+
+                toBeaconRailroad = telemetry.Beacon.BeaconRailroads
+                    .Where(br => br.Subdivision.RailroadID == existingMapPinToUpdate.BeaconRailroad.Subdivision.RailroadID)
+                    .FirstOrDefault();
+            }
+
+            var differentBeacon = telemetry.BeaconID != existingMapPinToUpdate.BeaconID;
 
             // Clone existing map pin to modify.
-            var newMapPin = mapPinToUpdate.Clone();
+            var newMapPin = existingMapPinToUpdate.Clone();
 
-            if (differentBeacon && toBeaconRailroad != null)
+            if (differentBeacon)
             {
                 // Direction can be calculated since the beacon changed.
 
-                var fromBeaconRailroad = await _beaconRailroadService.GetByIdAsync(mapPinToUpdate.BeaconID, mapPinToUpdate.SubdivisionId);
+                var fromBeaconRailroad = await _beaconRailroadService.GetByIdAsync(existingMapPinToUpdate.BeaconID, existingMapPinToUpdate.SubdivisionId);
 
-                // Evaluate all map pin rules before updating
-                if (fromBeaconRailroad != null)
+                if (fromBeaconRailroad == null)
                 {
-                    var ruleContext = new MapPinRuleContext
-                    {
-                        FromBeaconRailroad = fromBeaconRailroad,
-                        ToBeaconRailroad = toBeaconRailroad,
-                        CreatedRailroadID = mapPinToUpdate.CreatedRailroadID
-                    };
+                    _logger.LogError($"From beacon railroad not found for map pin ID {existingMapPinToUpdate.ID}. MapPin BeaconID: {existingMapPinToUpdate.BeaconID}, SubdivisionID: {existingMapPinToUpdate.SubdivisionId}");
 
-                    var ruleResult = await _mapPinRuleEngine.ShouldDiscardAsync(ruleContext);
-
-                    if (ruleResult.ShouldDiscard)
-                    {
-                        // Rule failed - update telemetry with discard reason and exit entirely
-                        telemetry.DiscardReason = ruleResult.Reason;
-                        telemetry.Discarded = true;
-
-                        await _telemetryRepository.UpdateAsync(telemetry);
-
-                        return null;  // Stop processing entirely
-                    }
+                    return null;
                 }
 
-                newMapPin.SubdivisionId = toBeaconRailroad.Subdivision.ID;
                 newMapPin.Direction = CalculateDirection(fromBeaconRailroad, toBeaconRailroad);
+                newMapPin.SubdivisionId = toBeaconRailroad.Subdivision.ID;
 
                 // Don't assume previous beacon's moving status.
                 newMapPin.Moving = null;

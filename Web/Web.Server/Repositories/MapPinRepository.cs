@@ -46,6 +46,7 @@ namespace Web.Server.Repositories
                     ((trainID == null && a.DpuTrainID == null) ||
                      (trainID != null && a.DpuTrainID == trainID))
                 ))
+                .OrderByDescending(mp => mp.LastUpdate)
                 .Include(mp => mp.Addresses)
                 .Include(mp => mp.BeaconRailroad)
                 .Include(mp => mp.BeaconRailroad.Subdivision)

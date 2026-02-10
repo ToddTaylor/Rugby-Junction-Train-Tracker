@@ -3,7 +3,7 @@ namespace Web.Server.Services.Rules
     /// <summary>
     /// Evaluates telemetry against a collection of rules to determine if it should be discarded.
     /// </summary>
-    public class TelemetryRuleEngine
+    public class TelemetryRuleEngine : ITelemetryRuleEngine
     {
         private readonly IEnumerable<ITelemetryRule> _rules;
 

@@ -26,7 +26,6 @@ namespace Web.ServerTests.Services.Rules
             var context = new TelemetryRuleContext
             {
                 Telemetry = new Telemetry { Source = SourceEnum.HOT, TrainID = 66 },
-                RailroadBeacons = new List<BeaconRailroad>(),
                 RailroadId = 1
             };
 
@@ -44,7 +43,6 @@ namespace Web.ServerTests.Services.Rules
             var context = new TelemetryRuleContext
             {
                 Telemetry = new Telemetry { Source = SourceEnum.DPU, TrainID = null },
-                RailroadBeacons = new List<BeaconRailroad>(),
                 RailroadId = 1
             };
 
@@ -68,7 +66,6 @@ namespace Web.ServerTests.Services.Rules
                     BeaconID = 2,
                     CreatedAt = DateTime.UtcNow
                 },
-                RailroadBeacons = new List<BeaconRailroad>(),
                 RailroadId = 1
             };
 
@@ -97,7 +94,6 @@ namespace Web.ServerTests.Services.Rules
                     BeaconID = 2,
                     CreatedAt = currentTime
                 },
-                RailroadBeacons = new List<BeaconRailroad>(),
                 RailroadId = 1
             };
 
@@ -132,7 +128,6 @@ namespace Web.ServerTests.Services.Rules
                     BeaconID = 2,
                     CreatedAt = currentTime
                 },
-                RailroadBeacons = new List<BeaconRailroad>(),
                 RailroadId = 1
             };
 
@@ -168,7 +163,6 @@ namespace Web.ServerTests.Services.Rules
                     BeaconID = 1,
                     CreatedAt = currentTime
                 },
-                RailroadBeacons = new List<BeaconRailroad>(),
                 RailroadId = 1
             };
 
