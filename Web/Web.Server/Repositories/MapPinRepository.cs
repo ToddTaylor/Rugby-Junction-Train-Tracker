@@ -125,8 +125,7 @@ namespace Web.Server.Repositories
                 .ToList();
 
             var existingMapPin = _context.MapPins
-                .Where(pin => pin.Addresses.Any(a => mapPinBAddressIds.Contains(a.AddressID)))
-                .Where(pin => pin.SubdivisionId == mapPin.SubdivisionId)
+                .Where(pin => pin.ID == mapPin.ID)
                 .FirstOrDefault();
 
             if (existingMapPin == null)
