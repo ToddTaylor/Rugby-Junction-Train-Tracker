@@ -212,6 +212,7 @@ namespace Web.ServerTests.Services.Rules
 
             var recentTelemetry = new List<Telemetry>
             {
+                new Telemetry { BeaconID = 1, CreatedAt = currentTime.AddMinutes(0) }, // Most recent telemetry at beacon 1
                 new Telemetry { BeaconID = 2, CreatedAt = currentTime.AddMinutes(-1) },
                 new Telemetry { BeaconID = 1, CreatedAt = currentTime.AddMinutes(-4) }
             };
@@ -246,6 +247,7 @@ namespace Web.ServerTests.Services.Rules
 
             var recentTelemetry = new List<Telemetry>
             {
+                new Telemetry { BeaconID = 3, CreatedAt = currentTime.AddMinutes(0) }, // Most recent telemetry at beacon 3
                 new Telemetry { BeaconID = 4, CreatedAt = currentTime.AddMinutes(-2) },
                 new Telemetry { BeaconID = 3, CreatedAt = currentTime.AddMinutes(-4) }
             };
@@ -280,6 +282,7 @@ namespace Web.ServerTests.Services.Rules
 
             var recentTelemetry = new List<Telemetry>
             {
+                new Telemetry { BeaconID = 1, CreatedAt = currentTime.AddMinutes(0) }, // Most recent telemetry at beacon 1
                 new Telemetry { BeaconID = 2, CreatedAt = currentTime.AddMinutes(-1) },
                 new Telemetry { BeaconID = 1, CreatedAt = currentTime.AddMinutes(-2) }
             };

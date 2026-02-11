@@ -493,6 +493,9 @@ namespace Web.Server.Services
                 return true;
             }
 
+            // Update the timestamp for discarding rules that rely on the time between beacons.
+            toBeaconRailroad.LastUpdate = _timeProvider.UtcNow;
+
             var fromBeaconRailroad = await _beaconRailroadService.GetByIdAsync(existingMapPinToUpdate.BeaconID, existingMapPinToUpdate.SubdivisionId);
 
             if (fromBeaconRailroad == null)
@@ -525,41 +528,43 @@ namespace Web.Server.Services
 
                     return true; // Stop processing entirely
                 }
-            }
 
-            // Train speed sanity check and trackage right rules.
+                // Train speed sanity check and trackage right rules.
 
-            var ruleContext = new MapPinRuleContext
-            {
-                FromBeaconRailroad = fromBeaconRailroad,
-                ToBeaconRailroad = toBeaconRailroad,
-                CreatedRailroadID = existingMapPinToUpdate.CreatedRailroadID!.Value,
-            };
-
-            var ruleResult = await _mapPinRuleEngine.ShouldDiscardAsync(ruleContext);
-
-            if (ruleResult.ShouldDiscard)
-            {
-                // Rule failed
-                telemetry.DiscardReason = ruleResult.Reason;
-
-                // TEMPORARY HACK: Because on the CN Neenah antenna over-reach, this
-                // rule could block a lot of valid telemetry to Rugby Junction. This hack
-                // will still log the discard reason for monitoring and alerting purposes,
-                // but it won't actually discard the telemetry. This will allow for continued
-                // monitoring of the situation while avoiding blocking valid telemetry.
-                if (ruleResult.Reason == TrainSpeedSanityCheckRule.DISCARD_REASON)
+                var ruleContext = new MapPinRuleContext
                 {
-                    telemetry.Discarded = false;
-                }
-                else
+                    FromBeaconRailroad = fromBeaconRailroad,
+                    ToBeaconRailroad = toBeaconRailroad,
+                    CreatedRailroadID = existingMapPinToUpdate.CreatedRailroadID!.Value,
+                };
+
+                var ruleResult = await _mapPinRuleEngine.ShouldDiscardAsync(ruleContext);
+
+                if (ruleResult.ShouldDiscard)
                 {
-                    telemetry.Discarded = true;
+                    // Rule failed
+                    telemetry.DiscardReason = ruleResult.Reason;
+
+                    // TEMPORARY HACK: Because on the CN Neenah antenna over-reach, this
+                    // rule could block a lot of valid telemetry to Rugby Junction. This hack
+                    // will still log the discard reason for monitoring and alerting purposes,
+                    // but it won't actually discard the telemetry. This will allow for continued
+                    // monitoring of the situation while avoiding blocking valid telemetry.
+                    if (telemetry.DiscardReason == TrainSpeedSanityCheckRule.DISCARD_REASON)
+                    {
+                        telemetry.DiscardReason = $"No - {telemetry.DiscardReason}";
+                        telemetry.Discarded = false;
+                        await _telemetryRepository.UpdateAsync(telemetry);
+                        // Continue processing for now
+                    }
+                    else
+                    {
+                        telemetry.Discarded = true;
+                        await _telemetryRepository.UpdateAsync(telemetry);
+
+                        return true; // Stop processing entirely
+                    }
                 }
-
-                await _telemetryRepository.UpdateAsync(telemetry);
-
-                return true; // Stop processing entirely
             }
 
             return false;

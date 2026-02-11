@@ -146,7 +146,7 @@ try
     // Register telemetry rules
     builder.Services.AddScoped<ITelemetryRule, DpuAntiPingPongRule>();
     builder.Services.AddScoped<ITelemetryRule, EotHotAntiPingPongRule>();
-    builder.Services.AddScoped<TelemetryRuleEngine>();
+    builder.Services.AddScoped<ITelemetryRuleEngine, TelemetryRuleEngine>();
 
     // Register map pin rules
     builder.Services.AddScoped<IMapPinRule, TrainSpeedSanityCheckRule>();

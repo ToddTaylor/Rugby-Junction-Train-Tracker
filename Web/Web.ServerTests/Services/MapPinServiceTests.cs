@@ -966,6 +966,149 @@ namespace Web.ServerTests.Services
                 default), Times.Once);
         }
 
+
+        [TestMethod]
+        public async Task UpsertMapPin_SingleRailroadDifferentSubdivision_SameAddress_SameSource()
+        {
+            // Arrange
+            var CNOshkoshBeaconRailroad = TestData.CN_Oshkosh_WI(_timeProviderMock.Object.UtcNow);
+            var CNRugbyJunctionBeaconRailroad = TestData.CN_RugbyJunction_WI(_timeProviderMock.Object.UtcNow);
+            var WSORRugbyJunctionBeaconRailroad = TestData.WSOR_RugbyJunction_WI(_timeProviderMock.Object.UtcNow);
+
+            var toDirection = "S";
+
+            var fromBeaconRailroads = new List<BeaconRailroad>
+            {
+                CNOshkoshBeaconRailroad
+            };
+
+            var toBeaconRailroads = new List<BeaconRailroad>
+            {
+                CNRugbyJunctionBeaconRailroad,
+                WSORRugbyJunctionBeaconRailroad
+            };
+
+            var telemetry = new Telemetry
+            {
+                BeaconID = CNRugbyJunctionBeaconRailroad.BeaconID,
+                Beacon = new Beacon
+                {
+                    ID = CNRugbyJunctionBeaconRailroad.BeaconID,
+                    Name = CNRugbyJunctionBeaconRailroad.Beacon.Name,
+                    BeaconRailroads = toBeaconRailroads
+                },
+                AddressID = 23424,
+                Source = SourceEnum.HOT,
+                Moving = true,
+                CreatedAt = _timeProviderMock.Object.UtcNow.AddMinutes(1),
+                LastUpdate = _timeProviderMock.Object.UtcNow.AddMinutes(2)
+            };
+
+            var fromMapPin = new MapPin
+            {
+                ID = 234,
+                BeaconID = CNOshkoshBeaconRailroad.BeaconID,
+                SubdivisionId = CNOshkoshBeaconRailroad.Subdivision.ID,
+                CreatedAt = _timeProviderMock.Object.UtcNow,
+                LastUpdate = _timeProviderMock.Object.UtcNow,
+                BeaconRailroad = CNOshkoshBeaconRailroad,
+                Moving = telemetry.Moving,
+                CreatedRailroadID = CNOshkoshBeaconRailroad.Subdivision.RailroadID,
+                Addresses =
+                [
+                    new Address
+                    {
+                        AddressID = telemetry.AddressID,
+                        Source = telemetry.Source, // Same source as new telemetry (HOT > HOT)
+                        CreatedAt = _timeProviderMock.Object.UtcNow,
+                        LastUpdate = _timeProviderMock.Object.UtcNow
+                    }
+                ],
+            };
+
+            var toMapPinBeforeUpdate = new MapPin
+            {
+                ID = fromMapPin.ID,
+                BeaconID = CNRugbyJunctionBeaconRailroad.BeaconID,
+                SubdivisionId = CNRugbyJunctionBeaconRailroad.Subdivision.ID,
+                Direction = toDirection,
+                CreatedAt = _timeProviderMock.Object.UtcNow,
+                LastUpdate = _timeProviderMock.Object.UtcNow,
+                BeaconRailroad = CNRugbyJunctionBeaconRailroad,
+                Moving = telemetry.Moving,
+                CreatedRailroadID = CNOshkoshBeaconRailroad.Subdivision.RailroadID,
+                Addresses =
+                [
+                    new Address
+                    {
+                        AddressID = telemetry.AddressID,
+                        Source = telemetry.Source,
+                        CreatedAt = _timeProviderMock.Object.UtcNow,
+                        LastUpdate = _timeProviderMock.Object.UtcNow
+                    }
+                ],
+            };
+
+            var toMapPinAfterUpdate = toMapPinBeforeUpdate;
+
+            var expectedMapPinObjects = new object[]
+            {
+                new MapPinDTO
+                {
+                    ID = toMapPinAfterUpdate.ID,
+                    Direction = toDirection,
+                    BeaconID = telemetry.BeaconID,
+                    BeaconName = CNRugbyJunctionBeaconRailroad.Beacon.Name,
+                    Railroad = CNRugbyJunctionBeaconRailroad.Subdivision.Railroad.Name,
+                    Subdivision = CNRugbyJunctionBeaconRailroad.Subdivision.Name,
+                    SubdivisionID = CNRugbyJunctionBeaconRailroad.Subdivision.ID,
+                    Latitude = CNRugbyJunctionBeaconRailroad.Latitude,
+                    Longitude = CNRugbyJunctionBeaconRailroad.Longitude,
+                    Milepost = CNRugbyJunctionBeaconRailroad.Milepost,
+                    Moving = telemetry.Moving,
+                    CreatedAt = _timeProviderMock.Object.UtcNow,
+                    LastUpdate = _timeProviderMock.Object.UtcNow,
+                    Addresses =
+                    [
+                        new AddressDTO
+                        {
+                            AddressID = telemetry.AddressID,
+                            Source = telemetry.Source
+                        }
+                    ],
+                }
+            };
+
+            _mapPinRepositoryMock.Setup(r => r.GetByAddressIdAsync(telemetry.AddressID, telemetry.TrainID))
+                .ReturnsAsync(fromMapPin); // Simulate previous map pin exists.
+            _mapPinRepositoryMock.Setup(r => r.GetByTimeThreshold(telemetry.BeaconID, CNOshkoshBeaconRailroad.SubdivisionID, 5))
+                .ReturnsAsync((MapPin?)null);
+            _beaconRailroadServiceMock.Setup(s => s.GetByIdAsync(telemetry.BeaconID, fromMapPin.SubdivisionId))
+                .ReturnsAsync(toBeaconRailroads[0]);
+            _beaconRailroadServiceMock.Setup(s => s.GetByIdAsync(fromMapPin.BeaconID, fromMapPin.SubdivisionId))
+                .ReturnsAsync(fromBeaconRailroads[0]);
+            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(toMapPinBeforeUpdate))
+                .ReturnsAsync(toMapPinAfterUpdate);
+
+            _clientProxyMock.Setup(proxy => proxy.SendCoreAsync(
+                NotificationMethods.MapPinUpdate, expectedMapPinObjects, default))
+                    .Returns(Task.CompletedTask);
+            _hubContextMock.Setup(h => h.Clients).Returns(_hubClientsMock.Object);
+            _hubClientsMock.Setup(h => h.All).Returns(_clientProxyMock.Object);
+
+            // Act
+            await _service.UpsertMapPin(telemetry);
+
+            // Assert
+            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(toMapPinBeforeUpdate), Times.Once);
+
+            _clientProxyMock?.Verify(proxy => proxy.SendCoreAsync(
+                NotificationMethods.MapPinUpdate,
+                It.Is<object[]>(args => args[0].Equals(expectedMapPinObjects[0])),
+                default), Times.Once);
+        }
+
+
         /// <summary>
         /// If a train emitting HOT telemetry from a single track and later detected emitting DPU telemetry by the
         /// same single-track beacon, the existing map pin should be updated with the additional source
@@ -2877,7 +3020,7 @@ namespace Web.ServerTests.Services
             {
                 return new BeaconRailroad
                 {
-                    BeaconID = 2,
+                    BeaconID = 10,
                     Beacon = TestData.Oshkosh_WI(),
                     SubdivisionID = 3,
                     Subdivision = TestData.CN_Neenah(currentDateTime),

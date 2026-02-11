@@ -40,6 +40,8 @@ namespace Web.Server.Services.Rules
                 return TelemetryRuleResult.NotDiscarded();
             }
 
+            recentTelemetry.RemoveAt(0); // Remove the most recent telemetry which is the current one being evaluated.
+
             if (await beaconIdAlreadyUsed(context.Telemetry.BeaconID, recentTelemetry[0].BeaconID, recentTelemetry))
             {
                 // Discard the telemetry as it is ping-ponging back to a previous beacon.

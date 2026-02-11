@@ -33,7 +33,13 @@ namespace Web.Server.Services.Rules
             // BEACON_RADIO_RANGE_MILES radius, so subtract the range from both beacons.
             // For example, if beacons are 15 miles apart with 5-mile range each,
             // the actual distance traveled is only 15 - 5 - 5 = 5 miles.
-            var adjustedDistance = Math.Abs((double)distanceMiles - (2 * BEACON_RADIO_RANGE_MILES));
+            var adjustedDistance = (double)distanceMiles - (2 * BEACON_RADIO_RANGE_MILES);
+
+            // Ensure adjusted distance doesn't go negative
+            if (adjustedDistance < 0)
+            {
+                adjustedDistance = 0;
+            }
 
             // Calculate the time difference between the two beacon readings
             var timeDifference = context.ToBeaconRailroad.LastUpdate - context.FromBeaconRailroad.LastUpdate;
