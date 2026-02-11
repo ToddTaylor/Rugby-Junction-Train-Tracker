@@ -148,9 +148,9 @@ try
     builder.Services.AddScoped<ITelemetryRule, EotHotAntiPingPongRule>();
     builder.Services.AddScoped<ITelemetryRuleEngine, TelemetryRuleEngine>();
 
-    // Register map pin rules
-    builder.Services.AddScoped<IMapPinRule, TrainSpeedSanityCheckRule>();
+    // Register map pin rules - Order matters!
     builder.Services.AddScoped<IMapPinRule, TrackageRightsRule>();
+    builder.Services.AddScoped<IMapPinRule, TrainSpeedSanityCheckRule>();
     builder.Services.AddScoped<IMapPinRuleEngine, MapPinRuleEngine>();
 
     builder.Services.AddScoped<ITimeProvider, SystemTimeProvider>();
