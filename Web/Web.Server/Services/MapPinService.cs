@@ -24,6 +24,7 @@ namespace Web.Server.Services
         private readonly IMapPinHistoryService _mapPinHistoryService;
         private readonly IMapPinRuleEngine _mapPinRuleEngine;
         private readonly ITelemetryRuleEngine _telemetryRuleEngine;
+        private readonly ISubdivisionTrackageRightRepository _trackageRightRepository;
         private readonly ILogger<MapPinService> _logger;
 
         public MapPinService(
@@ -36,6 +37,7 @@ namespace Web.Server.Services
             ITelemetryRepository telemetryRepository,
             IMapPinRuleEngine mapPinRuleEngine,
             ITelemetryRuleEngine telemetryRuleEngine,
+            ISubdivisionTrackageRightRepository trackageRightRepository,
             ILogger<MapPinService> logger,
             IConfiguration configuration)
         {
@@ -48,6 +50,7 @@ namespace Web.Server.Services
             _mapPinHistoryService = mapPinHistoryService;
             _mapPinRuleEngine = mapPinRuleEngine;
             _telemetryRuleEngine = telemetryRuleEngine;
+            _trackageRightRepository = trackageRightRepository;
             _logger = logger;
             _stationaryDirectionNullThresholdHours = configuration.GetValue<int>("ApplicationSettings:StationaryDirectionNullThresholdHours", 6);
         }
@@ -485,6 +488,25 @@ namespace Web.Server.Services
                 toBeaconRailroad = telemetry.Beacon.BeaconRailroads
                     .Where(br => br.Subdivision.RailroadID == existingMapPinToUpdate.BeaconRailroad.Subdivision.RailroadID)
                     .FirstOrDefault();
+
+                if (toBeaconRailroad == null)
+                {
+                    // Check trackage rights rules before discarding due to missing beacon railroad.
+
+                    var trackageRights = await _trackageRightRepository.GetByFromSubdivisionAsync(existingMapPinToUpdate.BeaconRailroad.SubdivisionID);
+
+                    if (trackageRights != null)
+                    {
+                        var hasRights = trackageRights.Where(tr => telemetry.Beacon.BeaconRailroads.Any(br => br.SubdivisionID == tr.ToSubdivisionID)).FirstOrDefault();
+
+                        if (hasRights != null)
+                        {
+                            toBeaconRailroad = telemetry.Beacon.BeaconRailroads
+                                .Where(br => br.Subdivision.ID == hasRights.ToSubdivisionID)
+                                .FirstOrDefault();
+                        }
+                    }
+                }
             }
 
             if (toBeaconRailroad == null)
@@ -590,6 +612,26 @@ namespace Web.Server.Services
                 toBeaconRailroad = telemetry.Beacon.BeaconRailroads
                     .Where(br => br.Subdivision.RailroadID == existingMapPinToUpdate.BeaconRailroad.Subdivision.RailroadID)
                     .FirstOrDefault();
+
+                if (toBeaconRailroad == null)
+                {
+                    // Check trackage rights rules before discarding due to missing beacon railroad.
+
+                    var trackageRights = await _trackageRightRepository.GetByFromSubdivisionAsync(existingMapPinToUpdate.BeaconRailroad.SubdivisionID);
+
+                    if (trackageRights != null)
+                    {
+                        var hasRights = trackageRights.Where(tr => telemetry.Beacon.BeaconRailroads.Any(br => br.SubdivisionID == tr.ToSubdivisionID)).FirstOrDefault();
+
+                        if (hasRights != null)
+                        {
+                            toBeaconRailroad = telemetry.Beacon.BeaconRailroads
+                                .Where(br => br.Subdivision.ID == hasRights.ToSubdivisionID)
+                                .FirstOrDefault();
+                        }
+                    }
+                }
+
             }
 
             var differentBeacon = telemetry.BeaconID != existingMapPinToUpdate.BeaconID;
