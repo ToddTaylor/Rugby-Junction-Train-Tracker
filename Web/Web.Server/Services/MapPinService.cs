@@ -13,6 +13,8 @@ namespace Web.Server.Services
     public class MapPinService : IMapPinService
     {
         public const int TIME_THRESHOLD_MINUTES = 2;
+        public const int TIME_THRESHOLD_DPU_MINUTES = 60;
+
         private readonly int _stationaryDirectionNullThresholdHours;
 
         private readonly IBeaconRailroadService _beaconRailroadService;
@@ -263,7 +265,10 @@ namespace Web.Server.Services
                             return;
                         }
 
-                        var existingMapPinByDpuTrainID = await _mapPinRepository.GetByTrainIdAsync(telemetry.TrainID.Value);
+                        // Get an existing map pin with the same DPU train ID within the DPU time threshold,
+                        // even if it's a different beacon. SoftDPU uses a 1 hour time threshold for the movements window.
+                        var existingMapPinByDpuTrainID = await _mapPinRepository.GetByTrainIdAsync(telemetry.TrainID.Value, TIME_THRESHOLD_DPU_MINUTES);
+
                         var foundMatchingDpuMapPin = existingMapPinByDpuTrainID != null;
 
                         if (foundMatchingDpuMapPin)

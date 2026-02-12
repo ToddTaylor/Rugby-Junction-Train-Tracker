@@ -56,10 +56,12 @@ namespace Web.Server.Repositories
             return mapPin;
         }
 
-        public async Task<MapPin?> GetByTrainIdAsync(int trainID)
+        public async Task<MapPin?> GetByTrainIdAsync(int trainID, int minutesThreshold)
         {
             return await _context.MapPins
-                .Where(mp => mp.Addresses.Any(a => a.DpuTrainID == trainID))
+                .Where(mp => mp.Addresses.Any(a => a.DpuTrainID == trainID) &&
+                    mp.LastUpdate >= _timeProvider.UtcNow.AddMinutes(-minutesThreshold))
+                .OrderByDescending(mp => mp.LastUpdate)
                 .Include(mp => mp.Addresses)
                 .Include(mp => mp.BeaconRailroad)
                 .Include(mp => mp.BeaconRailroad.Subdivision)

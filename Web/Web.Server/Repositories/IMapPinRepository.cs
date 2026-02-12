@@ -8,7 +8,7 @@ namespace Web.Server.Repositories
 
         Task<MapPin?> GetByTimeThreshold(int beaconID, int railroadID, int minutesThreshold);
 
-        Task<MapPin?> GetByTrainIdAsync(int dpuTrainID);
+        Task<MapPin?> GetByTrainIdAsync(int dpuTrainID, int minutesThreshold);
 
         Task<MapPin?> GetByIdAsync(int id);
 

@@ -1864,7 +1864,7 @@ namespace Web.ServerTests.Services
 
             _mapPinRepositoryMock.Setup(r => r.GetByAddressIdAsync(telemetry.AddressID, telemetry.TrainID))
                 .ReturnsAsync((MapPin?)null);
-            _mapPinRepositoryMock.Setup(r => r.GetByTrainIdAsync(telemetry.TrainID.Value))
+            _mapPinRepositoryMock.Setup(r => r.GetByTrainIdAsync(telemetry.TrainID.Value, MapPinService.TIME_THRESHOLD_DPU_MINUTES))
                 .ReturnsAsync((MapPin?)null);
             _mapPinRepositoryMock.Setup(r => r.UpsertAsync(expectedMapPinBeforeUpdate))
                 .ReturnsAsync(expectedMapPinAfterUpdate);
@@ -2742,7 +2742,7 @@ namespace Web.ServerTests.Services
 
             _mapPinRepositoryMock.Setup(r => r.GetByAddressIdAsync(telemetry.AddressID, telemetry.TrainID))
                 .ReturnsAsync((MapPin?)null);
-            _mapPinRepositoryMock.Setup(r => r.GetByTrainIdAsync(telemetry.TrainID.Value))
+            _mapPinRepositoryMock.Setup(r => r.GetByTrainIdAsync(telemetry.TrainID.Value, MapPinService.TIME_THRESHOLD_DPU_MINUTES))
                 .ReturnsAsync(fromMapPin);
             _beaconRailroadServiceMock.Setup(b => b.GetByIdAsync(telemetry.BeaconID, fromMapPin.SubdivisionId))
                 .ReturnsAsync(CNRugbyJunctionBeacon);
@@ -2832,7 +2832,7 @@ namespace Web.ServerTests.Services
 
             _mapPinRepositoryMock.Setup(r => r.GetByAddressIdAsync(telemetry.AddressID, telemetry.TrainID))
                 .ReturnsAsync((MapPin?)null);
-            _mapPinRepositoryMock.Setup(r => r.GetByTrainIdAsync(telemetry.TrainID.Value))
+            _mapPinRepositoryMock.Setup(r => r.GetByTrainIdAsync(telemetry.TrainID.Value, MapPinService.TIME_THRESHOLD_DPU_MINUTES))
                 .ReturnsAsync(wrongRailroadMapPin);
 
             // Act
@@ -2978,7 +2978,7 @@ namespace Web.ServerTests.Services
 
             _mapPinRepositoryMock.Setup(r => r.GetByAddressIdAsync(telemetry.AddressID, telemetry.TrainID))
                 .ReturnsAsync((MapPin?)null);
-            _mapPinRepositoryMock.Setup(r => r.GetByTrainIdAsync(telemetry.TrainID.Value))
+            _mapPinRepositoryMock.Setup(r => r.GetByTrainIdAsync(telemetry.TrainID.Value, MapPinService.TIME_THRESHOLD_DPU_MINUTES))
                 .ReturnsAsync(fromMapPin);
             _beaconRailroadServiceMock.Setup(b => b.GetByIdAsync(telemetry.BeaconID, fromMapPin.SubdivisionId))
                 .ReturnsAsync(CNRugbyJunctionBeacon);
@@ -3088,7 +3088,7 @@ namespace Web.ServerTests.Services
 
             _mapPinRepositoryMock.Setup(r => r.GetByAddressIdAsync(telemetry.AddressID, telemetry.TrainID))
                 .ReturnsAsync((MapPin?)null);
-            _mapPinRepositoryMock.Setup(r => r.GetByTrainIdAsync(telemetry.TrainID.Value))
+            _mapPinRepositoryMock.Setup(r => r.GetByTrainIdAsync(telemetry.TrainID.Value, MapPinService.TIME_THRESHOLD_DPU_MINUTES))
                 .ReturnsAsync(fromMapPin);
             _beaconRailroadServiceMock.Setup(b => b.GetByIdAsync(telemetry.BeaconID, fromMapPin.SubdivisionId))
                 .ReturnsAsync(CNRugbyJunctionBeaconRailroad);
