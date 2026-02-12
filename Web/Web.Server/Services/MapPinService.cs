@@ -570,27 +570,12 @@ namespace Web.Server.Services
                 if (ruleResult.ShouldDiscard)
                 {
                     // Rule failed
-                    telemetry.DiscardReason = ruleResult.Reason;
+                    telemetry.DiscardReason = result.Reason;
+                    telemetry.Discarded = true;
 
-                    // TEMPORARY HACK: Because on the CN Neenah antenna over-reach, this
-                    // rule could block a lot of valid telemetry to Rugby Junction. This hack
-                    // will still log the discard reason for monitoring and alerting purposes,
-                    // but it won't actually discard the telemetry. This will allow for continued
-                    // monitoring of the situation while avoiding blocking valid telemetry.
-                    if (telemetry.DiscardReason == TrainSpeedSanityCheckRule.DISCARD_REASON)
-                    {
-                        telemetry.DiscardReason = $"No - {telemetry.DiscardReason}";
-                        telemetry.Discarded = false;
-                        await _telemetryRepository.UpdateAsync(telemetry);
-                        // Continue processing for now
-                    }
-                    else
-                    {
-                        telemetry.Discarded = true;
-                        await _telemetryRepository.UpdateAsync(telemetry);
+                    await _telemetryRepository.UpdateAsync(telemetry);
 
-                        return true; // Stop processing entirely
-                    }
+                    return true; // Stop processing entirely
                 }
             }
 

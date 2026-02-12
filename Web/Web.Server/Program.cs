@@ -150,7 +150,7 @@ try
 
     // Register map pin rules - Order matters!
     builder.Services.AddScoped<IMapPinRule, TrackageRightsRule>();
-    builder.Services.AddScoped<IMapPinRule, TrainSpeedSanityCheckRule>(); // Temporary: Only logs warning, does not discard.
+    //builder.Services.AddScoped<IMapPinRule, TrainSpeedSanityCheckRule>(); // Temporary: Disabled due to Neenah issues.
     builder.Services.AddScoped<IMapPinRuleEngine, MapPinRuleEngine>();
 
     builder.Services.AddScoped<ITimeProvider, SystemTimeProvider>();

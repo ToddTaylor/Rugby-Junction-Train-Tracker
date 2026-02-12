@@ -313,7 +313,8 @@ namespace Web.ServerTests.Services.Rules
             var recentTelemetry = new List<Telemetry>
             {
                 new Telemetry { BeaconID = 2, AddressID = 32981, Source = SourceEnum.EOT, CreatedAt = currentTime.AddMinutes(-1) },
-                new Telemetry { BeaconID = 2, AddressID = 32981, Source = SourceEnum.EOT, CreatedAt = currentTime.AddMinutes(-2) }
+                new Telemetry { BeaconID = 2, AddressID = 32981, Source = SourceEnum.EOT, CreatedAt = currentTime.AddMinutes(-2) },
+                new Telemetry { BeaconID = 2, AddressID = 32981, Source = SourceEnum.EOT, CreatedAt = currentTime.AddMinutes(-3) }
             };
 
             _telemetryRepositoryMock
@@ -341,7 +342,8 @@ namespace Web.ServerTests.Services.Rules
 
             var recentTelemetry = new List<Telemetry>
             {
-                new Telemetry { BeaconID = 2, AddressID = 32981, Source = SourceEnum.EOT, CreatedAt = currentTime.AddMinutes(-1) },
+                new Telemetry { BeaconID = 1, AddressID = 32981, Source = SourceEnum.EOT, CreatedAt = currentTime.AddMinutes(-1) },
+                new Telemetry { BeaconID = 2, AddressID = 32981, Source = SourceEnum.EOT, CreatedAt = currentTime.AddMinutes(-2) },
                 new Telemetry { BeaconID = 3, AddressID = 32981, Source = SourceEnum.EOT, CreatedAt = currentTime.AddMinutes(EotHotAntiPingPongRule.TIME_WINDOW_MINUTES-1) }
             };
 
@@ -370,6 +372,7 @@ namespace Web.ServerTests.Services.Rules
 
             var recentTelemetry = new List<Telemetry>
             {
+                new Telemetry { BeaconID = 2, AddressID = 32981, Source = SourceEnum.EOT, CreatedAt = currentTime.AddMinutes(0) },
                 new Telemetry { BeaconID = 1, AddressID = 32981, Source = SourceEnum.EOT, CreatedAt = currentTime.AddMinutes(-1) },
                 new Telemetry { BeaconID = 1, AddressID = 32981, Source = SourceEnum.EOT, CreatedAt = currentTime.AddMinutes(-2) },
                 new Telemetry { BeaconID = 2, AddressID = 32981, Source = SourceEnum.EOT, CreatedAt = currentTime.AddMinutes(-3) } // Older telemetry at beacon 2
