@@ -364,8 +364,11 @@ namespace Web.ServerTests.Services.Rules
         public async Task ShouldDiscardAsync_ReturnsTrue_WhenCreatedRailroadIDDoesNotMatchAndNoRightsToTarget()
         {
             // Arrange - Train NOT returning to home railroad, trackage rights don't include target
-            var fromSubdivision = new Subdivision { ID = 3, RailroadID = 2 };
-            var toSubdivision = new Subdivision { ID = 1, RailroadID = 1 };
+            var fromRailroad = new Railroad { ID = 2, Name = "From RR" };
+            var toRailroad = new Railroad { ID = 1, Name = "To RR" };
+
+            var fromSubdivision = new Subdivision { ID = 2, Name = "From Sub", RailroadID = 2, Railroad = fromRailroad };
+            var toSubdivision = new Subdivision { ID = 1, Name = "To Sub", RailroadID = 1, Railroad = toRailroad };
 
             var context = new MapPinRuleContext
             {
@@ -392,6 +395,7 @@ namespace Web.ServerTests.Services.Rules
 
             // Assert - Not home railroad and doesn't have rights, should be discarded
             Assert.IsTrue(result.ShouldDiscard);
+            Assert.AreEqual(result.Reason, "Trackage Rights (From RR From Sub to To RR To Sub)");
         }
 
         [TestMethod]
