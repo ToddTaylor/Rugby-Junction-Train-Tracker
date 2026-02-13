@@ -543,12 +543,12 @@ namespace Web.Server.Services
                     RailroadId = toBeaconRailroad.Subdivision.RailroadID
                 };
 
-                var result = await _telemetryRuleEngine.ShouldDiscardAsync(context);
+                var telemetryRuleResult = await _telemetryRuleEngine.ShouldDiscardAsync(context);
 
-                if (result.ShouldDiscard)
+                if (telemetryRuleResult.ShouldDiscard)
                 {
                     // Rule failed
-                    telemetry.DiscardReason = result.Reason;
+                    telemetry.DiscardReason = telemetryRuleResult.Reason;
                     telemetry.Discarded = true;
 
                     await _telemetryRepository.UpdateAsync(telemetry);
@@ -565,12 +565,12 @@ namespace Web.Server.Services
                     CreatedRailroadID = existingMapPinToUpdate.CreatedRailroadID!.Value,
                 };
 
-                var ruleResult = await _mapPinRuleEngine.ShouldDiscardAsync(ruleContext);
+                var mapPinRuleResult = await _mapPinRuleEngine.ShouldDiscardAsync(ruleContext);
 
-                if (ruleResult.ShouldDiscard)
+                if (mapPinRuleResult.ShouldDiscard)
                 {
                     // Rule failed
-                    telemetry.DiscardReason = result.Reason;
+                    telemetry.DiscardReason = mapPinRuleResult.Reason;
                     telemetry.Discarded = true;
 
                     await _telemetryRepository.UpdateAsync(telemetry);

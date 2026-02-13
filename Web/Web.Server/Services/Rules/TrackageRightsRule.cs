@@ -35,6 +35,8 @@ namespace Web.Server.Services.Rules
                 return MapPinRuleResult.NotDiscarded();
             }
 
+            var discardReason = string.Format("{0}: From {1} {2} to {3} {4}", DISCARD_REASON, fromSubdivision.Railroad.Name, fromSubdivision.Name, toSubdivision.Railroad.Name, toSubdivision.Name);
+
             // Check if from subdivision has rights to the to subdivision
             var trackageRights = await _trackageRightRepository.GetByFromSubdivisionAsync(fromSubdivision.ID);
 
@@ -47,9 +49,9 @@ namespace Web.Server.Services.Rules
                     // Train is returning to its home railroad, allow the move.
                     return MapPinRuleResult.NotDiscarded();
                 }
-                
+
                 // No trackage rights and not returning home, discard.
-                return MapPinRuleResult.Discarded(DISCARD_REASON);
+                return MapPinRuleResult.Discarded(discardReason);
             }
 
             var hasRights = trackageRights.Any(tr => tr.ToSubdivisionID == toSubdivision.ID);
@@ -66,7 +68,7 @@ namespace Web.Server.Services.Rules
                 return MapPinRuleResult.NotDiscarded();
             }
 
-            return MapPinRuleResult.Discarded(DISCARD_REASON);
+            return MapPinRuleResult.Discarded(discardReason);
         }
     }
 }

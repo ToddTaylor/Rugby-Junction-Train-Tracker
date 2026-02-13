@@ -30,6 +30,9 @@ namespace Web.Server.Services
                 var oldMapPins = dbContext.MapPins.Where(mp => mp.LastUpdate < expirationTime);
                 dbContext.MapPins.RemoveRange(oldMapPins);
 
+                var oldMapPinHistories = dbContext.MapPinHistories.Where(mph => mph.LastUpdate < expirationTime);
+                dbContext.MapPinHistories.RemoveRange(oldMapPinHistories);
+
                 await dbContext.SaveChangesAsync(stoppingToken);
 
                 await Task.Delay(_cleanupInterval, stoppingToken);
