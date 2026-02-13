@@ -109,18 +109,6 @@ namespace Web.Server.Repositories
                 .ToListAsync();
         }
 
-        public async Task<Telemetry?> GetRecentForOtherBeaconWithinTimeOffsetAsync(int trainId, int currentBeaconId, int railroadId, DateTime sinceUtc)
-        {
-            return await _context.Telemetries
-                .Where(t => t.TrainID == trainId
-                    && t.BeaconID != currentBeaconId
-                    && t.CreatedAt >= sinceUtc
-                    && t.Beacon.BeaconRailroads.Any(br => br.BeaconID == t.BeaconID && br.Subdivision.RailroadID == railroadId)
-                    && t.Discarded == false)
-                .OrderByDescending(t => t.CreatedAt)
-                .FirstOrDefaultAsync();
-        }
-
         public async Task<Telemetry?> GetMostRecentByAddressAsync(int addressId)
         {
             return await _context.Telemetries
@@ -130,6 +118,17 @@ namespace Web.Server.Repositories
                     .ThenInclude(br => br.Subdivision)
                 .OrderByDescending(t => t.CreatedAt)
                 .FirstOrDefaultAsync();
+        }
+
+        public async Task<List<Telemetry>> GetRecentsForTrainWithinTimeOffsetAsync(int trainId, int railroadId, DateTime sinceUtc)
+        {
+            return await _context.Telemetries
+                .Where(t => t.TrainID == trainId
+                    && t.CreatedAt >= sinceUtc
+                    && t.Beacon.BeaconRailroads.Any(br => br.Subdivision.RailroadID == railroadId)
+                    && t.Discarded == false)
+                .OrderByDescending(t => t.CreatedAt)
+                .ToListAsync();
         }
     }
 }

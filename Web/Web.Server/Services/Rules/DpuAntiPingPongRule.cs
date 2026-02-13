@@ -1,3 +1,4 @@
+using Web.Server.Entities;
 using Web.Server.Enums;
 using Web.Server.Repositories;
 
@@ -5,11 +6,11 @@ namespace Web.Server.Services.Rules
 {
     /// <summary>
     /// Rule: Discard DPU telemetry if the train was recently seen at another beacon
-    /// and is now attempting to "ping-pong" back to a previous beacon within 5 minutes.
+    /// and is now attempting to "ping-pong" back to a previous beacon within the time window.
     /// </summary>
     public class DpuAntiPingPongRule : ITelemetryRule
     {
-        private const int TIME_WINDOW_MINUTES = 60;
+        public const int TIME_WINDOW_MINUTES = 30;
 
         private const string DISCARD_REASON = "DPU Ping-Pong";
 
@@ -30,39 +31,53 @@ namespace Web.Server.Services.Rules
 
             var minutesAgo = context.Telemetry.CreatedAt.AddMinutes(-TIME_WINDOW_MINUTES);
 
-            // Get most recent telemetry for this train at this beacon (currentBeacon) within alloted time.
-            var currentBeacon = await _telemetryRepository.GetRecentWithinTimeOffsetAsync(
-                context.Telemetry.TrainID.Value,
-                context.Telemetry.BeaconID,
-                context.RailroadId,
-                minutesAgo);
+            // Get recent telemetry for this train within the time window.
+            var recentTelemetry = await _telemetryRepository
+                .GetRecentsForTrainWithinTimeOffsetAsync(context.Telemetry.TrainID.Value, context.RailroadId, minutesAgo);
 
-            if (currentBeacon == null)
+            if (recentTelemetry == null || recentTelemetry.Count <= 1)
             {
+                // Only zero or one previous telemetry exists, so no ping-pong possible.
                 return TelemetryRuleResult.NotDiscarded();
             }
 
-            // Get most recent telemetry for this train at any other beacon (previousBeacon) within alloted time.
-            var previousBeacon = await _telemetryRepository.GetRecentForOtherBeaconWithinTimeOffsetAsync(
-                context.Telemetry.TrainID.Value,
-                context.Telemetry.BeaconID,
-                context.RailroadId,
-                minutesAgo);
+            recentTelemetry.RemoveAt(0); // Remove the most recent telemetry which is the current one being evaluated.
 
-            if (previousBeacon == null)
+            if (await BeaconIdAlreadyUsed(context.Telemetry.BeaconID, recentTelemetry[0].BeaconID, recentTelemetry))
             {
-                return TelemetryRuleResult.NotDiscarded();
-            }
-
-            // If previousBeacon is more recent than currentBeacon, discard (ping-pong detected).
-            if (previousBeacon.CreatedAt > currentBeacon.CreatedAt)
-            {
+                // Discard the telemetry as it is ping-ponging back to a previous beacon.
                 return TelemetryRuleResult.Discarded(DISCARD_REASON);
             }
-            else
+
+            // No ping-pong detected.
+            return TelemetryRuleResult.NotDiscarded();
+        }
+
+        private async Task<bool> BeaconIdAlreadyUsed(int newBeaconId, int lastBeaconId, List<Telemetry> recentTelemetry)
+        {
+            if (newBeaconId == lastBeaconId)
             {
-                return TelemetryRuleResult.NotDiscarded();
+                // Same beacon, no ping-pong.
+                return false;
             }
+
+            foreach (var entry in recentTelemetry)
+            {
+                if (entry.BeaconID == newBeaconId)
+                {
+                    // Beacon already exists in recent history.
+                    return true;
+                }
+
+                if (entry.BeaconID != lastBeaconId)
+                {
+                    // Stop checking, a different beacon hit.
+                    break;
+                }
+            }
+
+            // Beacon not found in recent history.
+            return false;
         }
     }
 }

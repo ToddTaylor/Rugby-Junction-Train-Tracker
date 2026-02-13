@@ -11,7 +11,7 @@ namespace Web.Server.Repositories
         Task<bool> DeleteAsync(int id);
         Task<Telemetry?> GetRecentWithinTimeOffsetAsync(int trainId, int beaconId, int railroadId, DateTime sinceUtc);
         Task<List<Telemetry>> GetRecentsWithinTimeOffsetAsync(int addressId, int railroadId, DateTime sinceUtc);
-        Task<Telemetry?> GetRecentForOtherBeaconWithinTimeOffsetAsync(int trainId, int currentBeaconId, int railroadId, DateTime sinceUtc);
+        Task<List<Telemetry>> GetRecentsForTrainWithinTimeOffsetAsync(int trainId, int railroadId, DateTime sinceUtc);
         Task<Telemetry?> GetMostRecentByAddressAsync(int addressId);
     }
 }
