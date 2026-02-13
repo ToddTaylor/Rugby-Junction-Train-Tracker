@@ -22,15 +22,16 @@ namespace Web.Server.Services
                 using var scope = _scopeFactory.CreateScope();
                 var dbContext = scope.ServiceProvider.GetRequiredService<TelemetryDbContext>();
 
-                var expirationTime = DateTime.UtcNow.AddHours(-12);
+                var expirationTime12Hours = DateTime.UtcNow.AddHours(-12);
+                var expirationTime48Hours = DateTime.UtcNow.AddHours(-48);
 
-                var oldRecords = dbContext.Telemetries.Where(t => t.LastUpdate < expirationTime);
+                var oldRecords = dbContext.Telemetries.Where(t => t.LastUpdate < expirationTime12Hours);
                 dbContext.Telemetries.RemoveRange(oldRecords);
 
-                var oldMapPins = dbContext.MapPins.Where(mp => mp.LastUpdate < expirationTime);
+                var oldMapPins = dbContext.MapPins.Where(mp => mp.LastUpdate < expirationTime12Hours);
                 dbContext.MapPins.RemoveRange(oldMapPins);
 
-                var oldMapPinHistories = dbContext.MapPinHistories.Where(mph => mph.LastUpdate < expirationTime);
+                var oldMapPinHistories = dbContext.MapPinHistories.Where(mph => mph.LastUpdate < expirationTime48Hours);
                 dbContext.MapPinHistories.RemoveRange(oldMapPinHistories);
 
                 await dbContext.SaveChangesAsync(stoppingToken);
