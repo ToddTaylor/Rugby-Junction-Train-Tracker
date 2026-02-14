@@ -8,6 +8,7 @@ export interface AddressSnapshot {
 
 export interface MapPinHistory {
     id: number;
+    originalMapPinID?: number;
     beaconID: number;
     beaconName?: string;
     subdivisionID: number;

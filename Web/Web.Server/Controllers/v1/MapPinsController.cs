@@ -94,14 +94,17 @@ namespace Web.Server.Controllers.v1
                     var dto = new MapPinHistoryDTO
                     {
                         ID = history.ID,
-                        BeaconID = history.BeaconID,
-                        SubdivisionID = history.SubdivisionId,
-                        Direction = history.Direction,
-                        Moving = history.Moving,
-                        IsLocal = history.IsLocal,
+                            OriginalMapPinID = history.OriginalMapPinID,
                         CreatedAt = history.CreatedAt.ToString("O"),
                         LastUpdate = history.LastUpdate.ToString("O")
                     };
+
+                    // Populate basic fields
+                    dto.BeaconID = history.BeaconID;
+                    dto.SubdivisionID = history.SubdivisionId;
+                    dto.Direction = history.Direction;
+                    dto.Moving = history.Moving;
+                    dto.IsLocal = history.IsLocal;
 
                     // Populate beacon railroad data
                     if (history.BeaconRailroad != null)

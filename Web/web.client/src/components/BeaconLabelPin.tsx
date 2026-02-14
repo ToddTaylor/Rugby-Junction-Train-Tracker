@@ -491,11 +491,18 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
             icon={markerIcon}
         />
         <TrackSymbolModal
+            key={selectedTrainId || selectedMapPinId}
             open={modalOpen}
             currentSymbol={selectedSymbol}
             onSave={handleSaveSymbol}
             onUntrack={handleUntrackTrain}
-            onClose={() => setModalOpen(false)}
+            onClose={() => {
+                setModalOpen(false);
+                setSelectedSymbol('');
+                setSelectedTrainId(null);
+                setSelectedMapPinId(undefined);
+                setSelectedAddresses([]);
+            }}
             theme={mapTheme}
             trainId={selectedTrainId}
             mapPinId={selectedMapPinId}

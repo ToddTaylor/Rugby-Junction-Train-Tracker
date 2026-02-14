@@ -11,6 +11,7 @@ interface TrackSymbolModalProps {
     trainId?: string | null;
     mapPinId?: number;
     addresses?: Array<{id: string, source: string}>;
+    isTrackingNew?: boolean;
 }
 
 const TrackSymbolModal: React.FC<TrackSymbolModalProps> = ({
@@ -21,7 +22,8 @@ const TrackSymbolModal: React.FC<TrackSymbolModalProps> = ({
     onClose,
     theme = 'light',
     showUntrackButton = true,
-    addresses = []
+    addresses = [],
+    isTrackingNew = false
 }) => {
     const [symbol, setSymbol] = useState(currentSymbol);
 
@@ -101,7 +103,7 @@ const TrackSymbolModal: React.FC<TrackSymbolModalProps> = ({
                     fontWeight: 600,
                     color: textColor
                 }}>
-                    Enter a Symbol
+                    {isTrackingNew ? 'Track This Train' : 'Enter a Symbol'}
                 </h2>
                 {addresses && addresses.length > 0 && (
                     <div style={{
@@ -216,7 +218,7 @@ const TrackSymbolModal: React.FC<TrackSymbolModalProps> = ({
                         onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#0056b3')}
                         onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#007bff')}
                     >
-                        Save
+                        {isTrackingNew ? 'Track' : 'Save'}
                     </button>
                 </div>
             </div>

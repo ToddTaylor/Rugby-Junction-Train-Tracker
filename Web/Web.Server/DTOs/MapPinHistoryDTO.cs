@@ -5,6 +5,7 @@ namespace Web.Server.DTOs
     public class MapPinHistoryDTO
     {
         public int ID { get; set; }
+        public int? OriginalMapPinID { get; set; }
         public int BeaconID { get; set; }
         public string? BeaconName { get; set; }
         public int SubdivisionID { get; set; }
