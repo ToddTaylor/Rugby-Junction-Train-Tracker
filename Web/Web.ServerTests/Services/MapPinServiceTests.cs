@@ -2544,7 +2544,8 @@ namespace Web.ServerTests.Services
         }
 
         /// <summary>
-        /// Test ensures that when telemetry has no Moving value (null), map pin Moving property is not updated.
+        /// Test ensures that when telemetry has no Moving value (null), map pin Moving property is nulled. 
+        /// Make no assumptions about whether the train is moving or not.
         /// </summary>
         [TestMethod]
         public async Task UpsertMapPin_MovingNull_NotUpdated()
@@ -2578,11 +2579,16 @@ namespace Web.ServerTests.Services
                 CreatedAt = _timeProviderMock.Object.UtcNow.AddMinutes(-10),
                 LastUpdate = _timeProviderMock.Object.UtcNow,
                 BeaconRailroad = beaconRailroad,
-                Moving = true, // Should remain true
+                Moving = true,
                 CreatedRailroadID = beaconRailroad.Subdivision.RailroadID,
                 Addresses =
                 [
-                    new Address { AddressID = 12345, Source = SourceEnum.HOT, CreatedAt = _timeProviderMock.Object.UtcNow.AddMinutes(-10), LastUpdate = _timeProviderMock.Object.UtcNow }
+                    new Address {
+                        AddressID = 12345,
+                        Source = SourceEnum.HOT,
+                        CreatedAt = _timeProviderMock.Object.UtcNow.AddMinutes(-10),
+                        LastUpdate = _timeProviderMock.Object.UtcNow
+                    }
                 ]
             };
 
@@ -2602,7 +2608,7 @@ namespace Web.ServerTests.Services
 
             // Assert - Moving should still be true (not updated to null)
             _mapPinRepositoryMock.Verify(r => r.UpsertAsync(It.Is<MapPin>(mp =>
-                mp.Moving == true
+                mp.Moving == null
             )), Times.Once);
         }
 

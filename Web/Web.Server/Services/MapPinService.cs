@@ -669,6 +669,9 @@ namespace Web.Server.Services
             // Update IsLocal flag based on new subdivision
             newMapPin.IsLocal = IsLocalTrain(telemetry.AddressID, toBeaconRailroad.Subdivision);
 
+            // Reset moving status on update to recalculate based on new telemetry. Don't assume previous moving status.
+            newMapPin.Moving = null;
+
             if (telemetry.Moving.HasValue)
             {
                 newMapPin.Moving = telemetry.Moving;
