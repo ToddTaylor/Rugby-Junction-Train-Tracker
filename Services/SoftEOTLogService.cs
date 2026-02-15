@@ -7,6 +7,7 @@ namespace Services
 {
     public class SoftEOTLogService
     {
+        // Offset set to zero as injecting old messages out-of-order can cause issues with rules processing in the web app.
         private const int TIME_RECEIVED_OFFSET_MINUTES = 5;
 
         private const string FILE_NAME_PREFIX_HOT = "hot";
@@ -39,28 +40,58 @@ namespace Services
 
             StartBeaconHealthServices(appSettings);
 
-            ProcessTelemetryLogFiles(logDirectoryPath);
+            ProcessTelemetryLogFiles(appSettings);
 
             // Keep the app running...
             Console.ReadLine();
         }
 
-        private static void ProcessTelemetryLogFiles(string logDirectoryPath)
+        private static void ProcessTelemetryLogFiles(AppSettings appSettings)
         {
             var lastPositions = new Dictionary<string, long>();
+            string? lastDirectory = null;
 
             while (true)
             {
                 try
                 {
+                    var logDirectoryPath = appSettings.LogDirectoryPath;
+                    
+                    if (string.IsNullOrEmpty(logDirectoryPath) || !Directory.Exists(logDirectoryPath))
+                    {
+                        LogError($"Telemetry log file directory path is not valid: {logDirectoryPath}");
+                        Thread.Sleep(1000);
+                        continue;
+                    }
+
+                    // If directory changed, clear the lastPositions dictionary to start fresh
+                    // This ensures we don't skip files when switching to a new directory
+                    if (lastDirectory != logDirectoryPath)
+                    {
+                        lastDirectory = logDirectoryPath;
+                        lastPositions.Clear();
+                        Console.WriteLine($"Log directory changed to: {logDirectoryPath}");
+                    }
+
                     // Get log files that weren't deleted due to age
                     var todaysLogFilePaths = Directory.GetFiles(logDirectoryPath, "*.log");
+
+                    if (todaysLogFilePaths.Length == 0)
+                    {
+                        // No files found - just wait and try again
+                        Thread.Sleep(1000);
+                        continue;
+                    }
 
                     ProcessLogFiles(lastPositions, todaysLogFilePaths);
                 }
                 catch (IOException ex)
                 {
                     LogError("Error reading the file: " + ex.Message);
+                }
+                catch (Exception ex)
+                {
+                    LogError($"Unexpected error in log processing loop: {ex.GetType().Name}: {ex.Message}");
                 }
 
                 Thread.Sleep(1000); // Wait before checking the files again.
@@ -160,52 +191,86 @@ namespace Services
             if (!lastPositions.ContainsKey(logFilePath))
             {
                 lastPositions[logFilePath] = 0L;
+                Console.WriteLine($"[LOG] Monitoring file: {Path.GetFileName(logFilePath)}");
             }
 
-            using FileStream fileStream = new(logFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-            fileStream.Seek(lastPositions[logFilePath], SeekOrigin.Begin);
-
-            using StreamReader reader = new(fileStream);
-
-            while (!reader.EndOfStream)
+            try
             {
-                var line = reader.ReadLine();
+                using FileStream fileStream = new(logFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                fileStream.Seek(lastPositions[logFilePath], SeekOrigin.Begin);
 
-                if (IsHeaderRow(line))
+                using StreamReader reader = new(fileStream);
+
+                while (!reader.EndOfStream)
                 {
-                    continue;
-                }
+                    var line = reader.ReadLine();
 
-                if (Path.GetFileName(logFilePath).Contains(FILE_NAME_PREFIX_HOT, StringComparison.OrdinalIgnoreCase) ||
-                    Path.GetFileName(logFilePath).Contains(FILE_NAME_PREFIX_EOT, StringComparison.OrdinalIgnoreCase))
-                {
-                    var hotPacket = HotEotDeserializer.Deserialize(line);
-
-                    if (hotPacket.TimeReceived.ToLocalTime() <= DateTime.Now.AddMinutes(-TIME_RECEIVED_OFFSET_MINUTES))
+                    if (IsHeaderRow(line))
                     {
-                        continue; // Ignore packets older than 5 minutes
+                        continue;
                     }
 
-                    Console.WriteLine(line);
-
-                    HotEotPacketReceived?.Invoke(null, new HotEotPacketEventArgs(hotPacket));
-                }
-
-                if (Path.GetFileName(logFilePath).StartsWith(FILE_NAME_PREFIX_DPU, StringComparison.OrdinalIgnoreCase))
-                {
-                    var dpuPacket = DpuDeserializer.Deserialize(line);
-
-                    if (dpuPacket.TimeReceived.ToLocalTime() <= DateTime.Now.AddMinutes(-TIME_RECEIVED_OFFSET_MINUTES))
+                    if (Path.GetFileName(logFilePath).Contains(FILE_NAME_PREFIX_HOT, StringComparison.OrdinalIgnoreCase) ||
+                        Path.GetFileName(logFilePath).Contains(FILE_NAME_PREFIX_EOT, StringComparison.OrdinalIgnoreCase))
                     {
-                        continue; // Ignore packets older than 5 minutes
+                        try
+                        {
+                            var hotPacket = HotEotDeserializer.Deserialize(line);
+
+                            // Only apply time filter if offset is configured; offset=0 means accept all packets
+                            if (TIME_RECEIVED_OFFSET_MINUTES > 0 && hotPacket.TimeReceived.ToLocalTime() <= DateTime.Now.AddMinutes(-TIME_RECEIVED_OFFSET_MINUTES))
+                            {
+                                lastPositions[logFilePath] = fileStream.Position;
+                                continue; // Ignore packets older than TIME_RECEIVED_OFFSET_MINUTES minutes
+                            }
+
+                            Console.WriteLine(line);
+
+                            HotEotPacketReceived?.Invoke(null, new HotEotPacketEventArgs(hotPacket));
+                        }
+                        catch (Exception ex)
+                        {
+                            LogError($"Error deserializing HOT/EOT packet from {Path.GetFileName(logFilePath)}: {ex.GetType().Name}: {ex.Message}");
+                        }
                     }
 
-                    Console.WriteLine(line);
+                    if (Path.GetFileName(logFilePath).StartsWith(FILE_NAME_PREFIX_DPU, StringComparison.OrdinalIgnoreCase))
+                    {
+                        try
+                        {
+                            var dpuPacket = DpuDeserializer.Deserialize(line);
 
-                    DpuPacketReceived?.Invoke(null, new DpuPacketEventArgs(dpuPacket));
+                            // Only apply time filter if offset is configured; offset=0 means accept all packets
+                            if (TIME_RECEIVED_OFFSET_MINUTES > 0 && dpuPacket.TimeReceived.ToLocalTime() <= DateTime.Now.AddMinutes(-TIME_RECEIVED_OFFSET_MINUTES))
+                            {
+                                lastPositions[logFilePath] = fileStream.Position;
+                                continue; // Ignore packets older than TIME_RECEIVED_OFFSET_MINUTES minutes
+                            }
+
+                            Console.WriteLine(line);
+
+                            DpuPacketReceived?.Invoke(null, new DpuPacketEventArgs(dpuPacket));
+                        }
+                        catch (Exception ex)
+                        {
+                            LogError($"Error deserializing DPU packet from {Path.GetFileName(logFilePath)}: {ex.GetType().Name}: {ex.Message}");
+                        }
+                    }
+
+                    lastPositions[logFilePath] = fileStream.Position;
                 }
-
-                lastPositions[logFilePath] = fileStream.Position;
+            }
+            catch (FileNotFoundException ex)
+            {
+                LogError($"Log file not found: {Path.GetFileName(logFilePath)} - {ex.Message}");
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                LogError($"Permission denied reading: {Path.GetFileName(logFilePath)} - {ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                LogError($"Error processing {Path.GetFileName(logFilePath)}: {ex.GetType().Name}: {ex.Message}");
             }
         }
 

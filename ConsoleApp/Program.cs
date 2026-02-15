@@ -3,8 +3,24 @@ using Services.Models;
 using System.Text.Json;
 
 var environment = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ?? "Production";
-string configPath = $"appsettings.{environment}.json";
-const string firstRunFlagPath = "firstrun.flag";
+
+// Store config and flag in AppData (persists across ClickOnce updates)
+var appDataPath = Path.Combine(
+    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+    "RugbyJunctionTrainTracker");
+
+// Ensure the directory exists
+Directory.CreateDirectory(appDataPath);
+
+string configPath = Path.Combine(appDataPath, $"appsettings.{environment}.json");
+string firstRunFlagPath = Path.Combine(appDataPath, "firstrun.flag");
+
+// For ClickOnce compatibility, resolve bundled config from the application directory
+// instead of using a relative path that might not work in different deployment scenarios
+string bundledConfigPath = Path.Combine(
+    AppContext.BaseDirectory,  // Gets the application's base directory (works correctly with ClickOnce)
+    $"appsettings.{environment}.json"
+);
 
 void ShowSettingsSummary(AppSettings? appSettings)
 {
@@ -29,11 +45,11 @@ void PromptAndUpdateSettings(AppSettings? appSettings)
     if (appSettings != null)
     {
         // Validate LogDirectoryPath
-        string logDirInput;
+        string logDirInput = string.Empty;
         while (true)
         {
             Console.Write($"Enter Log Directory Path [{appSettings.LogDirectoryPath}]: ");
-            logDirInput = Console.ReadLine();
+            logDirInput = Console.ReadLine() ?? string.Empty;
             if (string.IsNullOrWhiteSpace(logDirInput))
             {
                 // Use existing value if nothing entered
@@ -57,18 +73,22 @@ void PromptAndUpdateSettings(AppSettings? appSettings)
                 appSettings.Subscribers[0].Beacon.BeaconID = beaconIdInput;
 
             // Validate API Key as GUID
-            string apiKeyInput;
+            string apiKeyInput = string.Empty;
             while (true)
             {
-                Console.Write($"Enter the API Key (GUID): ");
-                apiKeyInput = Console.ReadLine();
+                Console.Write($"Enter the API Key [{appSettings.Subscribers[0].ApiSettings.ApiKey}]: ");
+                apiKeyInput = Console.ReadLine() ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(apiKeyInput))
+                {
+                    apiKeyInput = appSettings.Subscribers[0].ApiSettings.ApiKey;
+                }
                 if (!string.IsNullOrWhiteSpace(apiKeyInput) && Guid.TryParse(apiKeyInput, out _))
                 {
                     appSettings.Subscribers[0].ApiSettings.ApiKey = apiKeyInput;
                     break;
                 }
                 Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("Invalid API Key. Please enter a valid GUID.");
+                Console.WriteLine("Invalid API Key. Please enter a valid value.");
                 Console.ResetColor();
             }
         }
@@ -82,9 +102,30 @@ void PromptAndUpdateSettings(AppSettings? appSettings)
     ShowSettingsSummary(appSettings);
 }
 
-var json = File.ReadAllText(configPath);
-var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-var appSettings = JsonSerializer.Deserialize<AppSettings>(json, options);
+// Load configuration - prefer user config, fallback to bundled config
+AppSettings? appSettings;
+if (File.Exists(configPath))
+{
+    // User has previously configured the app
+    var json = File.ReadAllText(configPath);
+    var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+    appSettings = JsonSerializer.Deserialize<AppSettings>(json, options);
+}
+else
+{
+    // First time or bundled config
+    var json = File.ReadAllText(bundledConfigPath);
+    var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+    appSettings = JsonSerializer.Deserialize<AppSettings>(json, options);
+}
+
+if (appSettings == null)
+{
+    Console.ForegroundColor = ConsoleColor.Red;
+    Console.WriteLine("Failed to load application settings.");
+    Console.ResetColor();
+    return;
+}
 
 // Only prompt and update config on first run
 if (!File.Exists(firstRunFlagPath))
@@ -97,19 +138,16 @@ else
     ShowSettingsSummary(appSettings);
 }
 
-// Listen for Ctrl+U in a background task
-Task.Run(() =>
-{
-    while (true)
-    {
-        var keyInfo = Console.ReadKey(true);
-        if (keyInfo.Key == ConsoleKey.U && keyInfo.Modifiers.HasFlag(ConsoleModifiers.Control))
-        {
-            Console.WriteLine("\nCtrl+U detected. Update configuration:");
-            PromptAndUpdateSettings(appSettings);
-        }
-    }
-});
+// Start processing telemetry logs on a background task
+_ = Task.Run(() => SoftEOTLogService.ProcessLogs(appSettings));
 
-// Start processing telemetry logs
-SoftEOTLogService.ProcessLogs(appSettings);
+// Listen for Ctrl+U in the main thread
+while (true)
+{
+    var keyInfo = Console.ReadKey(true);
+    if (keyInfo.Key == ConsoleKey.U && keyInfo.Modifiers.HasFlag(ConsoleModifiers.Control))
+    {
+        Console.WriteLine("\nCtrl+U detected. Update configuration:");
+        PromptAndUpdateSettings(appSettings);
+    }
+}
