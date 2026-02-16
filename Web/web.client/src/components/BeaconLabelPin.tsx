@@ -37,8 +37,9 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
 }) => {
     // Fetch most recent history entry from same API as BeaconHistoryModal to ensure timestamp accuracy
     const [fetchedLastUpdateTime, setFetchedLastUpdateTime] = useState<string | null>(null);
-    const [fetchedDirection, setFetchedDirection] = useState<string | null>(null);
+    const [fetchedDirection, setFetchedDirection] = useState<string | null | undefined>(undefined); // undefined = not yet fetched
 
+    // Always update both timestamp and direction together, even if direction is null
     const updateFromHistory = async (bypassCache = false) => {
         if (!beaconPin.beaconID) return;
         try {
@@ -46,10 +47,14 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
             if (latest?.lastUpdate) {
                 const d = new Date(latest.lastUpdate);
                 setFetchedLastUpdateTime(d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }));
-                setFetchedDirection(latest.direction || null);
+                setFetchedDirection(Object.prototype.hasOwnProperty.call(latest, 'direction') ? latest.direction : null);
+            } else {
+                // If no latest record, only clear direction
+                setFetchedDirection(null);
             }
         } catch (e) {
             console.error('Error fetching latest beacon history:', e);
+            setFetchedDirection(null);
         }
     };
 
@@ -57,7 +62,9 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
         updateFromHistory(false);
     }, [beaconPin.beaconID, beaconPin.subdivisionID]);
 
-    // On live map pin changes (e.g., SignalR updates), prefer immediate pin data and then refresh history without cache
+    // On live map pin changes (e.g., SignalR updates), update immediately from the latest mapPins data
+    // Do NOT fetch from history API here as it creates a race condition causing flickering
+    // Only update timestamp from live data, NOT direction - always use verified history data for direction
     useEffect(() => {
         if (!beaconPin.beaconID || !mapPins.length) return;
         const latestForBeacon = mapPins
@@ -74,17 +81,15 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
         if (latestForBeacon?.lastUpdate) {
             const d = new Date(latestForBeacon.lastUpdate);
             setFetchedLastUpdateTime(d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }));
-            setFetchedDirection(latestForBeacon.direction);
+            // Never override direction from history with live data - only history is authoritative
         }
-
-        // Then force a fresh pull from history to stay aligned with log
-        updateFromHistory(true);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [mapPins, beaconPin.beaconID, beaconPin.subdivisionID]);
 
     // Use fetched data if available, otherwise fall back to props
+    // For direction: only use fallback prop if history hasn't been fetched yet
     const actualLastUpdateTime = fetchedLastUpdateTime || lastUpdateTime;
-    const actualDirection = fetchedDirection || direction;
+    const actualDirection = fetchedDirection !== undefined ? fetchedDirection : direction;
 
     // Sizing and style logic
     const base = 1 + (zoom - 7) * 0.09;
