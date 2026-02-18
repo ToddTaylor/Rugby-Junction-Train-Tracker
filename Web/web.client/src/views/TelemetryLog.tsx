@@ -77,15 +77,6 @@ function TelemetryLog() {
         { field: 'moving', headerName: 'Moving', width: 100, type: 'boolean' },
         { field: 'source', headerName: 'Source', width: 100 },
         {
-            field: 'createdAt',
-            headerName: 'Created At',
-            width: 200,
-            renderCell: (params: any) =>
-                params.row?.createdAt
-                    ? format(parseISO(params.row.createdAt), 'yyyy-MM-dd h:mm:ss aa')
-                    : '',
-        },
-        {
             field: 'lastUpdate',
             headerName: 'Last Update',
             width: 200,
@@ -97,7 +88,7 @@ function TelemetryLog() {
         {
             field: 'discarded',
             headerName: 'Discarded',
-            width: 180,
+            width: 360,
             renderCell: (params: any) => {
                 const reason = params.row?.discardReason;
                 if (reason && reason.trim()) {
@@ -268,6 +259,35 @@ function TelemetryLog() {
                     maxHeight: 600,
                     minHeight: 400,
                     width: '100%',
+                    backgroundColor: '#fff',
+                    color: '#222',
+                    '& .MuiDataGrid-columnHeaders': {
+                        backgroundColor: '#f5f5f5',
+                        color: '#222',
+                    },
+                    '& .MuiDataGrid-columnHeader': {
+                        backgroundColor: '#f5f5f5',
+                        color: '#222',
+                    },
+                    '& .MuiDataGrid-columnHeaderTitle': {
+                        color: '#222',
+                        fontWeight: 600,
+                    },
+                    '& .MuiDataGrid-cell': {
+                        color: '#222',
+                    },
+                    '& .MuiDataGrid-row:hover': {
+                        backgroundColor: '#f0f0f0',
+                    },
+                    '& .MuiTablePagination-root': {
+                        color: '#222',
+                    },
+                    '& .MuiTablePagination-toolbar': {
+                        backgroundColor: '#f5f5f5',
+                    },
+                    '& .MuiIconButton-root': {
+                        color: '#222',
+                    },
                 }}
                 getRowClassName={(params) => params.row.discarded ? 'discarded-row' : ''}
             />

@@ -5,7 +5,7 @@
   margin: 0 auto;
   background-color: #1a1a1a;
   min-height: 100vh;
-  color: #222;
+  color: #e0e0e0;
 }
 
 .admin-header {
@@ -56,17 +56,17 @@
 /* DataGrid overrides */
 .MuiDataGrid-root {
   background-color: #2a2a2a;
-   color: #222;
+  color: #e0e0e0;
   border-radius: 8px;
 }
 
 .MuiDataGrid-columnHeaders {
   background-color: #333;
-  color: #222;
+  color: #e0e0e0;
 }
 
 .MuiDataGrid-cell {
-  color: #222;
+  color: #e0e0e0;
 }
 
 .MuiDataGrid-row:hover {
