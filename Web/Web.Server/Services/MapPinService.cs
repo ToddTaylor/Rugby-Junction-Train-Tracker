@@ -169,17 +169,7 @@ namespace Web.Server.Services
                                     if (existingMapPinSameDPUTrainID != null || existingMapPinHasNoDPU)
                                     {
                                         // Add the DPU address to the existing map pin.
-
-                                        existingMapPinWithinTimeThreshold.Addresses.Add(
-                                            new Address
-                                            {
-                                                AddressID = telemetry.AddressID,
-                                                DpuTrainID = telemetry.TrainID,
-                                                Source = telemetry.Source,
-                                                CreatedAt = _timeProvider.UtcNow,
-                                                LastUpdate = _timeProvider.UtcNow
-                                            });
-
+                                        existingMapPinWithinTimeThreshold.Addresses.Add(CreateAddress(telemetry));
                                         mapPin = existingMapPinWithinTimeThreshold;
                                     }
 
@@ -192,16 +182,7 @@ namespace Web.Server.Services
                                     // Note: WSOR seems to run trains with multiple HOT.
                                     // Since this is a single-track railroad beacon,
                                     // it's assumed to be the same train.
-
-                                    existingMapPinWithinTimeThreshold.Addresses.Add(
-                                        new Address
-                                        {
-                                            AddressID = telemetry.AddressID,
-                                            Source = telemetry.Source,
-                                            CreatedAt = _timeProvider.UtcNow,
-                                            LastUpdate = _timeProvider.UtcNow
-                                        });
-
+                                    existingMapPinWithinTimeThreshold.Addresses.Add(CreateAddress(telemetry));
                                     mapPin = existingMapPinWithinTimeThreshold;
 
                                     break;
@@ -216,26 +197,13 @@ namespace Web.Server.Services
                                     if (existingMapPinEOT == null)
                                     {
                                         // Train has no EOT yet - add it.
-                                        existingMapPinWithinTimeThreshold.Addresses.Add(
-                                            new Address
-                                            {
-                                                AddressID = telemetry.AddressID,
-                                                Source = telemetry.Source,
-                                                CreatedAt = _timeProvider.UtcNow,
-                                                LastUpdate = _timeProvider.UtcNow
-                                            });
-
+                                        existingMapPinWithinTimeThreshold.Addresses.Add(CreateAddress(telemetry));
                                         mapPin = existingMapPinWithinTimeThreshold;
                                     }
                                     else
                                     {
                                         // Train already has an EOT - discard duplicate EOT telemetry.
-
-                                        telemetry.DiscardReason = $"Multiple EOT in Time Threshold";
-                                        telemetry.Discarded = true;
-
-                                        await _telemetryRepository.UpdateAsync(telemetry);
-
+                                        await DiscardTelemetryAsync(telemetry, "Multiple EOT in Time Threshold");
                                         return;
                                     }
 
@@ -248,84 +216,14 @@ namespace Web.Server.Services
                         if (telemetry.Source == SourceEnum.DPU)
                         {
                             // DPU must match on train ID on the same railroad to be the same train.
-
-                            if (!telemetry.TrainID.HasValue)
+                            mapPin = await TryMatchAndUpdateDpuMapPinAsync(telemetry);
+                            
+                            if (mapPin == null && telemetry.Discarded)
                             {
-                                // Invalid DPU telemetry with no TrainID. Update telemetry with discard reason and exit.
-                                telemetry.DiscardReason = $"DPU Missing TrainID";
-                                telemetry.Discarded = true;
-                                await _telemetryRepository.UpdateAsync(telemetry);
+                                // Telemetry was discarded during DPU matching
                                 return;
                             }
-
-                            // Get an existing map pin with the same DPU train ID within the DPU time threshold,
-                            // even if it's a different beacon. SoftDPU uses a 1 hour time threshold for the movements window.
-                            var existingMapPinByDpuTrainID = await _mapPinRepository.GetByTrainIdAsync(telemetry.TrainID.Value, TIME_THRESHOLD_DPU_MINUTES);
-
-                            var foundMatchingDpuMapPin = existingMapPinByDpuTrainID != null;
-
-                            if (foundMatchingDpuMapPin)
-                            {
-                                // Existing map pin found matching DPU train ID.
-
-                                var notTheSameBeacon = !telemetry.Beacon.BeaconRailroads
-                                    .Any(br =>
-                                          br.BeaconID == existingMapPinByDpuTrainID!.BeaconID &&
-                                          br.Subdivision.DpuCapable);
-
-                                if (notTheSameBeacon)
-                                {
-                                    // Existing map pin is from different beacon, potentially a different railroad.
-
-                                    var notTheSameRailroad = !telemetry.Beacon.BeaconRailroads
-                                        .Any(br =>
-                                            br.Subdivision.RailroadID == existingMapPinByDpuTrainID.BeaconRailroad.Subdivision.RailroadID &&
-                                            br.Subdivision.DpuCapable);
-
-                                    if (notTheSameRailroad)
-                                    {
-                                        // No matching railroad found between existing map pin and telemetry.
-
-                                        // This is a different railroad's DPU train ID.  Update telemetry log with discard reason and exit.
-                                        telemetry.DiscardReason = $"DPU Invalid Railroad";
-                                        telemetry.Discarded = true;
-
-                                        await _telemetryRepository.UpdateAsync(telemetry);
-
-                                        return;
-                                    }
-                                }
-
-                                // Existing map pin is from same beacon railroad as the telemetry.
-
-                                // Add the DPU address to the existing map pin.
-                                existingMapPinByDpuTrainID!.Addresses.Add(
-                                    new Address
-                                    {
-                                        AddressID = telemetry.AddressID,
-                                        DpuTrainID = telemetry.TrainID,
-                                        Source = telemetry.Source,
-                                        CreatedAt = _timeProvider.UtcNow,
-                                        LastUpdate = _timeProvider.UtcNow
-
-                                    });
-
-                                // Determine if the map pin should be discarded based on telemetry and map pin rules.
-
-                                var mapPinDiscarded = await ShouldDiscardMapPin(telemetry, existingMapPinByDpuTrainID);
-
-                                if (mapPinDiscarded)
-                                {
-                                    // Map pin rule(s) failed, discard reason already recorded in telemetry
-                                    return;
-                                }
-
-                                // Update the existing map pin with new telemetry data in case the map pin moved.
-
-                                mapPin = await this.UpdateMapPin(telemetry, existingMapPinByDpuTrainID);
-                            }
-
-                            // No previous map pin matching DPU train ID.
+                            // No previous map pin matching DPU train ID - fall through to create new map pin.
                         }
                     }
 
@@ -341,84 +239,14 @@ namespace Web.Server.Services
                     if (telemetry.Source == SourceEnum.DPU)
                     {
                         // DPU must match on train ID on the same railroad to be the same train.
-
-                        if (!telemetry.TrainID.HasValue)
+                        mapPin = await TryMatchAndUpdateDpuMapPinAsync(telemetry);
+                        
+                        if (mapPin == null && telemetry.Discarded)
                         {
-                            // Invalid DPU telemetry with no TrainID. Update telemetry with discard reason and exit.
-                            telemetry.DiscardReason = $"DPU Missing TrainID";
-                            telemetry.Discarded = true;
-                            await _telemetryRepository.UpdateAsync(telemetry);
+                            // Telemetry was discarded during DPU matching
                             return;
                         }
-
-                        // Get an existing map pin with the same DPU train ID within the DPU time threshold,
-                        // even if it's a different beacon. SoftDPU uses a 1 hour time threshold for the movements window.
-                        var existingMapPinByDpuTrainID = await _mapPinRepository.GetByTrainIdAsync(telemetry.TrainID.Value, TIME_THRESHOLD_DPU_MINUTES);
-
-                        var foundMatchingDpuMapPin = existingMapPinByDpuTrainID != null;
-
-                        if (foundMatchingDpuMapPin)
-                        {
-                            // Existing map pin found matching DPU train ID.
-
-                            var notTheSameBeacon = !telemetry.Beacon.BeaconRailroads
-                                .Any(br =>
-                                      br.BeaconID == existingMapPinByDpuTrainID!.BeaconID &&
-                                      br.Subdivision.DpuCapable);
-
-                            if (notTheSameBeacon)
-                            {
-                                // Existing map pin is from different beacon, potentially a different railroad.
-
-                                var notTheSameRailroad = !telemetry.Beacon.BeaconRailroads
-                                    .Any(br =>
-                                        br.Subdivision.RailroadID == existingMapPinByDpuTrainID.BeaconRailroad.Subdivision.RailroadID &&
-                                        br.Subdivision.DpuCapable);
-
-                                if (notTheSameRailroad)
-                                {
-                                    // No matching railroad found between existing map pin and telemetry.
-
-                                    // This is a different railroad's DPU train ID.  Update telemetry log with discard reason and exit.
-                                    telemetry.DiscardReason = $"DPU Invalid Railroad";
-                                    telemetry.Discarded = true;
-
-                                    await _telemetryRepository.UpdateAsync(telemetry);
-
-                                    return;
-                                }
-                            }
-
-                            // Existing map pin is from same beacon railroad as the telemetry.
-
-                            // Add the DPU address to the existing map pin.
-                            existingMapPinByDpuTrainID!.Addresses.Add(
-                                new Address
-                                {
-                                    AddressID = telemetry.AddressID,
-                                    DpuTrainID = telemetry.TrainID,
-                                    Source = telemetry.Source,
-                                    CreatedAt = _timeProvider.UtcNow,
-                                    LastUpdate = _timeProvider.UtcNow
-
-                                });
-
-                            // Determine if the map pin should be discarded based on telemetry and map pin rules.
-
-                            var mapPinDiscarded = await ShouldDiscardMapPin(telemetry, existingMapPinByDpuTrainID);
-
-                            if (mapPinDiscarded)
-                            {
-                                // Map pin rule(s) failed, discard reason already recorded in telemetry
-                                return;
-                            }
-
-                            // Update the existing map pin with new telemetry data in case the map pin moved.
-
-                            mapPin = await this.UpdateMapPin(telemetry, existingMapPinByDpuTrainID);
-                        }
-                        // No previous map pin matching DPU train ID.
-                        // Fall through to create new map pin below.
+                        // No previous map pin matching DPU train ID - fall through to create new map pin.
                     }
                 }
             }
@@ -439,17 +267,8 @@ namespace Web.Server.Services
                     if (sourceDoesNotMatch)
                     {
                         // The address ID matches, but the source is different (e.g., HOT vs EOT).
-
                         // Add the new source address to the existing map pin.
-                        existingExactMatchMapPin.Addresses.Add(
-                            new Address
-                            {
-                                AddressID = telemetry.AddressID,
-                                DpuTrainID = null,
-                                Source = telemetry.Source,
-                                CreatedAt = _timeProvider.UtcNow,
-                                LastUpdate = _timeProvider.UtcNow
-                            });
+                        existingExactMatchMapPin.Addresses.Add(CreateAddress(telemetry));
                     }
                 }
 
@@ -484,6 +303,98 @@ namespace Web.Server.Services
             var mapPinDTO = _mapper.Map<MapPinDTO>(upsertedMapPin);
 
             await _hubContext.Clients.All.SendCoreAsync(NotificationMethods.MapPinUpdate, [mapPinDTO], default);
+        }
+
+        /// <summary>
+        /// Creates an Address object from telemetry data.
+        /// </summary>
+        private Address CreateAddress(Telemetry telemetry)
+        {
+            return new Address
+            {
+                AddressID = telemetry.AddressID,
+                DpuTrainID = telemetry.TrainID,
+                Source = telemetry.Source,
+                CreatedAt = _timeProvider.UtcNow,
+                LastUpdate = _timeProvider.UtcNow
+            };
+        }
+
+        /// <summary>
+        /// Discards telemetry with a specific reason and updates the repository.
+        /// </summary>
+        private async Task DiscardTelemetryAsync(Telemetry telemetry, string reason)
+        {
+            telemetry.DiscardReason = reason;
+            telemetry.Discarded = true;
+            await _telemetryRepository.UpdateAsync(telemetry);
+        }
+
+        /// <summary>
+        /// Attempts to match DPU telemetry to an existing map pin by train ID.
+        /// Returns the updated map pin if successful, null otherwise.
+        /// Returns null without error if no match found or if telemetry should be discarded.
+        /// </summary>
+        private async Task<MapPin?> TryMatchAndUpdateDpuMapPinAsync(Telemetry telemetry)
+        {
+            if (!telemetry.TrainID.HasValue)
+            {
+                // Invalid DPU telemetry with no TrainID. Update telemetry with discard reason and exit.
+                await DiscardTelemetryAsync(telemetry, "DPU Missing TrainID");
+                return null;
+            }
+
+            // Get an existing map pin with the same DPU train ID within the DPU time threshold,
+            // even if it's a different beacon. SoftDPU uses a 1 hour time threshold for the movements window.
+            var existingMapPinByDpuTrainID = await _mapPinRepository.GetByTrainIdAsync(telemetry.TrainID.Value, TIME_THRESHOLD_DPU_MINUTES);
+
+            if (existingMapPinByDpuTrainID == null)
+            {
+                // No previous map pin matching DPU train ID.
+                return null;
+            }
+
+            // Existing map pin found matching DPU train ID.
+
+            var notTheSameBeacon = !telemetry.Beacon.BeaconRailroads
+                .Any(br =>
+                      br.BeaconID == existingMapPinByDpuTrainID.BeaconID &&
+                      br.Subdivision.DpuCapable);
+
+            if (notTheSameBeacon)
+            {
+                // Existing map pin is from different beacon, potentially a different railroad.
+
+                var notTheSameRailroad = !telemetry.Beacon.BeaconRailroads
+                    .Any(br =>
+                        br.Subdivision.RailroadID == existingMapPinByDpuTrainID.BeaconRailroad.Subdivision.RailroadID &&
+                        br.Subdivision.DpuCapable);
+
+                if (notTheSameRailroad)
+                {
+                    // No matching railroad found between existing map pin and telemetry.
+                    // This is a different railroad's DPU train ID.  Update telemetry log with discard reason and exit.
+                    await DiscardTelemetryAsync(telemetry, "DPU Invalid Railroad");
+                    return null;
+                }
+            }
+
+            // Existing map pin is from same beacon railroad as the telemetry.
+
+            // Add the DPU address to the existing map pin.
+            existingMapPinByDpuTrainID.Addresses.Add(CreateAddress(telemetry));
+
+            // Determine if the map pin should be discarded based on telemetry and map pin rules.
+            var mapPinDiscarded = await ShouldDiscardMapPin(telemetry, existingMapPinByDpuTrainID);
+
+            if (mapPinDiscarded)
+            {
+                // Map pin rule(s) failed, discard reason already recorded in telemetry
+                return null;
+            }
+
+            // Update the existing map pin with new telemetry data in case the map pin moved.
+            return await UpdateMapPin(telemetry, existingMapPinByDpuTrainID);
         }
 
         /// <summary>
