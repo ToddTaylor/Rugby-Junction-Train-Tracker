@@ -13,10 +13,11 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
     return <Navigate to="/login" replace />;
   }
 
-  // Check if user has Admin role
+  // Allow Admin or Custodian
   const isAdmin = session.roles?.includes('Admin');
-  
-  if (!isAdmin) {
+  const isCustodian = session.roles?.includes('Custodian');
+
+  if (!isAdmin && !isCustodian) {
     return <Navigate to="/" replace />;
   }
 

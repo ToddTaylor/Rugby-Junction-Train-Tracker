@@ -27,7 +27,7 @@ namespace Web.Server.Data
             {
                 dbContext.Roles.AddRange(
                     new Role { RoleId = 1, RoleName = "Admin", Description = "Full access" },
-                    new Role { RoleId = 2, RoleName = "Editor", Description = "Can edit content" },
+                    new Role { RoleId = 2, RoleName = "Custodian", Description = "Custodian access" },
                     new Role { RoleId = 3, RoleName = "Viewer", Description = "Read-only access" }
                 );
             }

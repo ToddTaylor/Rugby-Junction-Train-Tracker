@@ -1,27 +1,27 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { DataGrid } from '@mui/x-data-grid';
 import { Subdivision, CreateSubdivision, UpdateSubdivision } from '../types/Subdivision';
 import { Railroad } from '../types/Railroad';
+import { User } from '../types/User';
 import { getSubdivisions, createSubdivision, updateSubdivision, deleteSubdivision } from '../api/subdivisions';
 import { getRailroads } from '../api/railroads';
 import { getTrackageRights, replaceTrackageRights } from '../api/subdivisionTrackageRights';
+import { getUsers } from '../api/users';
 import './AdminSubdivisions.css';
 import TextField from '@mui/material/TextField';
 import Tooltip from '@mui/material/Tooltip';
 import IconButton from '@mui/material/IconButton';
 import ClearIcon from '@mui/icons-material/Clear';
+import { useAuth } from '../hooks/useAuth';
 
-type SortField = 'name' | 'railroad';
-type SortDirection = 'asc' | 'desc' | null;
 
 export const AdminSubdivisions: React.FC = () => {
   const [subdivisions, setSubdivisions] = useState<Subdivision[]>([]);
   const [railroads, setRailroads] = useState<Railroad[]>([]);
+  const [custodianUsers, setCustodianUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortField, setSortField] = useState<SortField | null>('name');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
-  const [currentPage, setCurrentPage] = useState(1);
   const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [selectedSubdivision, setSelectedSubdivision] = useState<Subdivision | null>(null);
@@ -30,16 +30,28 @@ export const AdminSubdivisions: React.FC = () => {
     railroadID: 0,
     dpuCapable: false,
     localTrainAddressIDs: '',
+    custodianId: null,
   });
   const [formErrors, setFormErrors] = useState<string[]>([]);
   const [selectedTrackageRailroad, setSelectedTrackageRailroad] = useState<number>(0);
   const [selectedTrackageSubdivisions, setSelectedTrackageSubdivisions] = useState<number[]>([]);
+  const [selectedCustodianId, setSelectedCustodianId] = useState<number | null>(null);
 
-  const itemsPerPage = 10;
+  const { session } = useAuth();
+  const isCustodian = session?.roles?.includes('Custodian');
+  const userId = session?.userId;
 
   useEffect(() => {
     loadData();
+    loadCustodians();
   }, []);
+
+  async function loadCustodians() {
+    const usersResult = await getUsers();
+    if (usersResult.errors.length === 0 && usersResult.data) {
+      setCustodianUsers(usersResult.data.filter(u => u.roles.includes('Custodian')));
+    }
+  }
 
   async function loadData() {
     setLoading(true);
@@ -65,48 +77,21 @@ export const AdminSubdivisions: React.FC = () => {
     setLoading(false);
   }
 
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      if (sortDirection === 'asc') {
-        setSortDirection('desc');
-      } else if (sortDirection === 'desc') {
-        setSortDirection(null);
-        setSortField(null);
-      } else {
-        setSortDirection('asc');
-      }
-    } else {
-      setSortField(field);
-      setSortDirection('asc');
+  // Filter subdivisions for custodians and search
+  const filteredSubdivisions = useMemo(() => {
+    let filtered = subdivisions;
+    if (isCustodian && userId) {
+      filtered = filtered.filter(s => s.custodianId === userId);
     }
-    setCurrentPage(1);
-  };
-
-  const sortedSubdivisions = useMemo(() => {
-    let filtered = subdivisions.filter(
-      (sub) =>
-        sub.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        sub.railroad.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
-    if (sortField && sortDirection) {
-      filtered = [...filtered].sort((a, b) => {
-        const aValue = a[sortField];
-        const bValue = b[sortField];
-        const modifier = sortDirection === 'asc' ? 1 : -1;
-        return aValue.localeCompare(bValue) * modifier;
-      });
+    if (searchTerm.trim()) {
+      const term = searchTerm.trim().toLowerCase();
+      filtered = filtered.filter(s =>
+        s.name.toLowerCase().includes(term) ||
+        s.railroad.toLowerCase().includes(term)
+      );
     }
-
     return filtered;
-  }, [subdivisions, searchTerm, sortField, sortDirection]);
-
-  const paginatedSubdivisions = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    return sortedSubdivisions.slice(startIndex, startIndex + itemsPerPage);
-  }, [sortedSubdivisions, currentPage]);
-
-  const totalPages = Math.ceil(sortedSubdivisions.length / itemsPerPage);
+  }, [subdivisions, isCustodian, userId, searchTerm]);
 
   const handleCreate = () => {
     setModalMode('create');
@@ -116,7 +101,9 @@ export const AdminSubdivisions: React.FC = () => {
       railroadID: railroads.length > 0 ? railroads[0].id : 0,
       dpuCapable: false,
       localTrainAddressIDs: '',
+      custodianId: null,
     });
+    setSelectedCustodianId(null);
     setFormErrors([]);
     setSelectedTrackageRailroad(0);
     setSelectedTrackageSubdivisions([]);
@@ -131,7 +118,9 @@ export const AdminSubdivisions: React.FC = () => {
       railroadID: subdivision.railroadID,
       dpuCapable: subdivision.dpuCapable,
       localTrainAddressIDs: subdivision.localTrainAddressIDs || '',
+      custodianId: subdivision.custodianId ?? null,
     });
+    setSelectedCustodianId(subdivision.custodianId ?? null);
     setFormErrors([]);
 
     // Load trackage rights for this subdivision
@@ -201,7 +190,7 @@ export const AdminSubdivisions: React.FC = () => {
     }
 
     if (modalMode === 'create') {
-      const result = await createSubdivision(formData);
+      const result = await createSubdivision({ ...formData, custodianId: selectedCustodianId });
       if (result.errors.length > 0) {
         setFormErrors(result.errors);
       } else {
@@ -213,10 +202,24 @@ export const AdminSubdivisions: React.FC = () => {
         await loadData();
       }
     } else if (selectedSubdivision) {
-      const updateData: UpdateSubdivision = {
-        id: selectedSubdivision.id,
-        ...formData,
-      };
+      let updateData: UpdateSubdivision;
+      if (isCustodian) {
+        // Only update localTrainAddressIDs for custodians
+        updateData = {
+          id: selectedSubdivision.id,
+          railroadID: selectedSubdivision.railroadID,
+          dpuCapable: selectedSubdivision.dpuCapable,
+          name: selectedSubdivision.name,
+          localTrainAddressIDs: formData.localTrainAddressIDs,
+          custodianId: selectedSubdivision.custodianId,
+        };
+      } else {
+        updateData = {
+          id: selectedSubdivision.id,
+          ...formData,
+          custodianId: selectedCustodianId,
+        };
+      }
       const result = await updateSubdivision(selectedSubdivision.id, updateData);
       if (result.errors.length > 0) {
         setFormErrors(result.errors);
@@ -239,26 +242,13 @@ export const AdminSubdivisions: React.FC = () => {
     });
   };
 
-  const getSortIcon = (field: SortField) => {
-    const icon = sortField !== field ? '⇅' : sortDirection === 'asc' ? '⬆' : '⬇';
-    return <span style={{ fontSize: '1.2em', marginLeft: '0.3em' }}>{icon}</span>;
-  };
-
   if (loading) {
     return <div className="admin-subdivisions-container"><p>Loading subdivisions...</p></div>;
   }
 
   return (
     <div className="admin-subdivisions-container">
-      <div className="admin-header">
-        <h1>Subdivisions</h1>
-        <button className="btn-primary" onClick={handleCreate}>
-          Add Subdivision
-        </button>
-      </div>
-
       {error && <div className="error-message">{error}</div>}
-
       <div className="admin-controls">
         <div className="search-bar">
           <TextField
@@ -268,7 +258,6 @@ export const AdminSubdivisions: React.FC = () => {
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value);
-              setCurrentPage(1);
             }}
             className="admin-input"
             fullWidth
@@ -286,63 +275,117 @@ export const AdminSubdivisions: React.FC = () => {
           </Tooltip>
         </div>
         <div className="right-controls">
-          <div className="results-info">
-            Showing {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, sortedSubdivisions.length)} of {sortedSubdivisions.length} subdivisions
-          </div>
-          {totalPages > 1 && (
-            <div className="pagination">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                <button
-                  key={page}
-                  className={currentPage === page ? 'active' : ''}
-                  onClick={() => setCurrentPage(page)}
-                >
-                  {page}
-                </button>
-              ))}
-            </div>
+          {!isCustodian && (
+            <button className="btn-primary" onClick={handleCreate}>
+              Add Subdivision
+            </button>
           )}
-
         </div>
       </div>
-
-      <table className="admin-table">
-        <thead>
-          <tr>
-            <th onClick={() => handleSort('name')} className="sortable">
-              Name {getSortIcon('name')}
-            </th>
-            <th onClick={() => handleSort('railroad')} className="sortable">
-              Railroad {getSortIcon('railroad')}
-            </th>
-            <th>DPU Capable</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {paginatedSubdivisions.map((subdivision) => (
-            <tr key={subdivision.id}>
-              <td>{subdivision.name}</td>
-              <td>{subdivision.railroad}</td>
-              <td>{subdivision.dpuCapable ? 'Yes' : 'No'}</td>
-              <td>
-                <button
-                  className="btn-edit"
-                  onClick={() => handleEdit(subdivision)}
-                >
-                  Edit
-                </button>
-                <button
-                  className="btn-delete"
-                  onClick={() => handleDelete(subdivision.id)}
-                >
-                  Delete
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div style={{ height: 600, width: '100%', marginTop: 16 }}>
+        <DataGrid
+          rows={filteredSubdivisions.map(sub => ({
+            ...sub,
+            custodianName: custodianUsers.find(u => u.id === sub.custodianId)
+              ? `${custodianUsers.find(u => u.id === sub.custodianId)!.firstName} ${custodianUsers.find(u => u.id === sub.custodianId)!.lastName}`
+              : '',
+          }))}
+          columns={[
+            { field: 'name', headerName: 'Name', flex: 1 },
+            { field: 'railroad', headerName: 'Railroad', flex: 1 },
+            { field: 'dpuCapable', headerName: 'DPU Capable', flex: 1, valueGetter: (params: any) => params.row && params.row.dpuCapable ? 'Yes' : 'No' },
+            { field: 'custodianName', headerName: 'Custodian', flex: 1 },
+            {
+              field: 'actions',
+              headerName: 'Actions',
+              flex: 1,
+              sortable: false,
+              renderCell: (params: any) => (
+                <>
+                  <button className="btn-edit" onClick={() => handleEdit(params.row)}>Edit</button>
+                  {!isCustodian && (
+                    <button className="btn-delete" onClick={() => handleDelete(params.row.id)}>Delete</button>
+                  )}
+                </>
+              ),
+            },
+          ]}
+          pageSizeOptions={[10, 25, 50]}
+          disableRowSelectionOnClick
+          sx={{
+            maxHeight: 750,
+            minHeight: 550,
+            width: '100%',
+            backgroundColor: '#2a2a2a',
+            color: '#e0e0e0',
+            border: '1px solid #444',
+            borderRadius: 1,
+            '& .MuiDataGrid-main': {
+              backgroundColor: '#2a2a2a',
+            },
+            '& .MuiDataGrid-virtualScroller': {
+              backgroundColor: '#2a2a2a',
+            },
+            '& .MuiDataGrid-filler': {
+              backgroundColor: '#333 !important',
+              borderColor: '#444 !important',
+            },
+            '& .MuiDataGrid-scrollbarFiller': {
+              backgroundColor: '#333 !important',
+            },
+            '& .MuiDataGrid-columnHeadersWrapper': {
+              backgroundColor: '#333 !important',
+              borderColor: '#444 !important',
+            },
+            '& .MuiDataGrid-columnHeadersInner': {
+              backgroundColor: '#333 !important',
+            },
+            '& .MuiDataGrid-columnHeaders': {
+              backgroundColor: '#333 !important',
+              color: '#e0e0e0',
+              borderColor: '#444 !important',
+            },
+            '& .MuiDataGrid-columnHeader': {
+              backgroundColor: '#333 !important',
+              color: '#e0e0e0',
+              borderColor: '#444 !important',
+            },
+            '& .MuiDataGrid-columnHeaderTitle': {
+              color: '#e0e0e0',
+              fontWeight: 600,
+            },
+            '& .MuiDataGrid-columnSeparator': {
+              backgroundColor: 'transparent !important',
+            },
+            '& .MuiDataGrid-cell': {
+              color: '#e0e0e0',
+              borderColor: '#444',
+            },
+            '& .MuiDataGrid-row:hover': {
+              backgroundColor: '#3a3a3a',
+            },
+            '& .MuiDataGrid-row.Mui-selected': {
+              backgroundColor: '#1e3a5f !important',
+              '&:hover': {
+                backgroundColor: '#0d47a1 !important',
+              },
+            },
+            '& .MuiTablePagination-root': {
+              color: '#e0e0e0',
+            },
+            '& .MuiTablePagination-toolbar': {
+              backgroundColor: '#333',
+            },
+            '& .MuiIconButton-root': {
+              color: '#e0e0e0',
+            },
+            '& .MuiIconButton-root.Mui-disabled': {
+              color: '#555 !important',
+              opacity: 0.5,
+            },
+          }}
+        />
+      </div>
 
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
@@ -362,10 +405,11 @@ export const AdminSubdivisions: React.FC = () => {
                   type="text"
                   id="name"
                   value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   required
+                  readOnly={isCustodian && modalMode === 'edit'}
+                  disabled={isCustodian && modalMode === 'edit'}
+                  style={isCustodian && modalMode === 'edit' ? { backgroundColor: '#222', color: '#888', cursor: 'not-allowed' } : {}}
                 />
               </div>
               <div className="form-group">
@@ -373,10 +417,9 @@ export const AdminSubdivisions: React.FC = () => {
                 <select
                   id="railroad"
                   value={formData.railroadID}
-                  onChange={(e) =>
-                    setFormData({ ...formData, railroadID: parseInt(e.target.value) })
-                  }
+                  onChange={(e) => setFormData({ ...formData, railroadID: parseInt(e.target.value) })}
                   required
+                  disabled={isCustodian && modalMode === 'edit'}
                 >
                   <option value={0}>-- Select Railroad --</option>
                   {railroads.map((railroad) => (
@@ -386,28 +429,28 @@ export const AdminSubdivisions: React.FC = () => {
                   ))}
                 </select>
               </div>
-
-              <div className="form-group">
-                <label htmlFor="trackageRailroad">Trackage Rights on Railroad:</label>
-                <select
-                  id="trackageRailroad"
-                  value={selectedTrackageRailroad}
-                  onChange={(e) => {
-                    setSelectedTrackageRailroad(parseInt(e.target.value) || 0);
-                  }}
-                >
-                  <option value={0}>-- None / Select a railroad --</option>
-                  {railroads
-                    .filter(r => r.id !== formData.railroadID)
-                    .map(railroad => (
-                      <option key={railroad.id} value={railroad.id}>
-                        {railroad.name}
-                      </option>
-                    ))}
-                </select>
-              </div>
-
-              {selectedTrackageRailroad > 0 && (
+              {!isCustodian && (
+                <div className="form-group">
+                  <label htmlFor="trackageRailroad">Trackage Rights on Railroad:</label>
+                  <select
+                    id="trackageRailroad"
+                    value={selectedTrackageRailroad}
+                    onChange={(e) => {
+                      setSelectedTrackageRailroad(parseInt(e.target.value) || 0);
+                    }}
+                  >
+                    <option value={0}>-- None / Select a railroad --</option>
+                    {railroads
+                      .filter(r => r.id !== formData.railroadID)
+                      .map(railroad => (
+                        <option key={railroad.id} value={railroad.id}>
+                          {railroad.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              )}
+              {!isCustodian && selectedTrackageRailroad > 0 && (
                 <div className="form-group">
                   <label>Select Subdivisions to Grant Trackage Rights:</label>
                   <div className="checkbox-list">
@@ -429,35 +472,51 @@ export const AdminSubdivisions: React.FC = () => {
                   </div>
                 </div>
               )}
-
-              <div className="form-group checkbox-group">
-                <label htmlFor="dpuCapable">
-                  <input
-                    type="checkbox"
-                    id="dpuCapable"
-                    checked={formData.dpuCapable}
-                    onChange={(e) =>
-                      setFormData({ ...formData, dpuCapable: e.target.checked })
-                    }
-                  />
-                  DPU Capable
-                </label>
-              </div>
+              {!isCustodian && (
+                <div className="form-group checkbox-group">
+                  <label htmlFor="dpuCapable">
+                    <input
+                      type="checkbox"
+                      id="dpuCapable"
+                      checked={formData.dpuCapable}
+                      onChange={(e) => setFormData({ ...formData, dpuCapable: e.target.checked })}
+                    />
+                    DPU Capable
+                  </label>
+                </div>
+              )}
               <div className="form-group">
                 <label htmlFor="localTrainAddressIDs">Local Train Address IDs:</label>
                 <div className="form-help">Enter Address IDs that are considered local trains in this subdivision. Separate with commas or new lines.</div>
                 <textarea
                   id="localTrainAddressIDs"
                   value={formData.localTrainAddressIDs || ''}
-                  onChange={(e) =>
-                    setFormData({ ...formData, localTrainAddressIDs: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, localTrainAddressIDs: e.target.value })}
                   placeholder="Enter comma or line-separated Address IDs (e.g., 1234, 5678 or one per line)"
                   rows={4}
+                  readOnly={!(isCustodian && modalMode === 'edit') ? false : false /* Only this field is editable for custodian */}
                 />
               </div>
+              {!isCustodian && (
+                <div className="form-group">
+                  <label htmlFor="custodian">Custodian:</label>
+                  <select
+                    id="custodian"
+                    value={selectedCustodianId ?? ''}
+                    onChange={e => setSelectedCustodianId(e.target.value ? parseInt(e.target.value) : null)}
+                    disabled={isCustodian && modalMode === 'edit'}
+                  >
+                    <option value="">-- None --</option>
+                    {custodianUsers.map(user => (
+                      <option key={user.id} value={user.id}>
+                        {user.firstName} {user.lastName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div className="modal-actions">
-                <button type="submit" className="btn-primary">
+                <button type="submit" className="btn-primary" disabled={isCustodian && modalMode === 'edit' && !formData.localTrainAddressIDs}>
                   {modalMode === 'create' ? 'Create' : 'Update'}
                 </button>
                 <button

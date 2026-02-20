@@ -50,7 +50,7 @@ const RailMap: React.FC = () => {
 
     // Auth for admin button
     const { session, logout } = useAuth();
-    const isAdmin = session?.roles?.includes('Admin');
+    const isAdmin = session?.roles?.includes('Admin') || session?.roles?.includes('Custodian');
 
     // Use custom hooks for data
     const { trackData, trackDataLoaded, trackDataLoading } = useRailways();

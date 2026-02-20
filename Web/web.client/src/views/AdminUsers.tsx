@@ -26,8 +26,9 @@ const AdminUsers: React.FC = () => {
     lastName: '',
     email: '',
     isActive: true,
-    roles: ['Viewer'],
+    roles: [],
   });
+  const [availableRoles, setAvailableRoles] = useState<string[]>([]);
 
   // Pagination, search, and sort state
   const [currentPage, setCurrentPage] = useState(1);
@@ -36,11 +37,24 @@ const AdminUsers: React.FC = () => {
   const [sortField, setSortField] = useState<'firstName' | 'lastName' | 'email'>('lastName');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
-  const availableRoles = ['Admin', 'User', 'Viewer'];
 
   useEffect(() => {
     loadUsers();
+    loadRoles();
   }, []);
+
+  const loadRoles = async () => {
+    try {
+      const { data, errors } = await (await import('../api/roles')).getRoles();
+      if (errors.length > 0) {
+        setError(errors.join(', '));
+      } else {
+        setAvailableRoles(data || []);
+      }
+    } catch (err) {
+      setError('Failed to load roles');
+    }
+  };
 
   const loadUsers = async () => {
     setLoading(true);
@@ -61,7 +75,7 @@ const AdminUsers: React.FC = () => {
       lastName: '',
       email: '',
       isActive: true,
-      roles: ['Viewer'],
+      roles: availableRoles.length > 0 ? [availableRoles[0]] : [],
     });
     setShowModal(true);
   };
@@ -384,18 +398,22 @@ const AdminUsers: React.FC = () => {
               <div className="form-group">
                 <label>Role</label>
                 <div className="roles-radio-grid">
-                  {availableRoles.map(role => (
-                    <div key={role} className="role-radio-row">
-                      <input
-                        type="radio"
-                        name="role"
-                        checked={formData.roles.includes(role)}
-                        onChange={() => handleRoleChange(role)}
-                        className="role-radio-btn"
-                      />
-                      <span className="role-radio-label-text">{role}</span>
-                    </div>
-                  ))}
+                  {availableRoles.length === 0 ? (
+                    <span>Loading roles...</span>
+                  ) : (
+                    availableRoles.map(role => (
+                      <div key={role} className="role-radio-row">
+                        <input
+                          type="radio"
+                          name="role"
+                          checked={formData.roles.includes(role)}
+                          onChange={() => handleRoleChange(role)}
+                          className="role-radio-btn"
+                        />
+                        <span className="role-radio-label-text">{role}</span>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
 

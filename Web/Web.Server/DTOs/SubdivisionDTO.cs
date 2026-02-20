@@ -17,6 +17,7 @@
         public required DateTime CreatedAt { get; set; }
 
         public required DateTime LastUpdate { get; set; }
+        public int? CustodianId { get; set; }
 
     }
 }

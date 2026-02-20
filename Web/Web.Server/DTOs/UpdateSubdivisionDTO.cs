@@ -6,6 +6,7 @@ namespace Web.Server.DTOs
     {
         public required int ID { get; set; }
 
+
         public override bool Equals(object? obj)
         {
             return Equals(obj as UpdateSubdivisionDTO);
@@ -18,12 +19,13 @@ namespace Web.Server.DTOs
                    RailroadID == other.RailroadID &&
                    DpuCapable == other.DpuCapable &&
                    Name == other.Name &&
-                   ID == other.ID;
+                   ID == other.ID &&
+                   CustodianId == other.CustodianId;
         }
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(base.GetHashCode(), RailroadID, DpuCapable, Name, ID);
+            return HashCode.Combine(base.GetHashCode(), RailroadID, DpuCapable, Name, ID, CustodianId);
         }
 
         public static bool operator ==(UpdateSubdivisionDTO? left, UpdateSubdivisionDTO? right)

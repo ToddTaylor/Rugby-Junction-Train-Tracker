@@ -5,6 +5,10 @@ namespace Web.Server.Entities
 {
     public class Subdivision : EntityBase, IEquatable<Subdivision?>
     {
+        public int? CustodianId { get; set; }
+
+        public User? Custodian { get; set; }
+
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int ID { get; set; }

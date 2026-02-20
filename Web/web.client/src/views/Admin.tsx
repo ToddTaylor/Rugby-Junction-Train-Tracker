@@ -1,20 +1,24 @@
 import React from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import './Admin.css';
+import { useAuth } from '../hooks/useAuth';
 
 const Admin: React.FC = () => {
   const location = useLocation();
+  const { session } = useAuth();
+  const isAdmin = session?.roles?.includes('Admin');
 
+  // Only show menu items allowed for the current role
   const menuItems = [
-    { path: '/admin/beacons', label: 'Beacons', icon: '📡' },
-    { path: '/admin/beacon-railroads', label: 'Beacon Railroads', icon: '🗺️' },
-    { path: '/admin/railroads', label: 'Railroads', icon: '🚂' },
+    ...(isAdmin ? [
+      { path: '/admin/beacons', label: 'Beacons', icon: '📡' },
+      { path: '/admin/beacon-railroads', label: 'Beacon Railroads', icon: '🗺️' },
+      { path: '/admin/railroads', label: 'Railroads', icon: '🚂' },
+      { path: '/admin/users', label: 'Users', icon: '👥' },
+    ] : []),
+    // Both Admin and Custodian can see these:
     { path: '/admin/subdivisions', label: 'Subdivisions', icon: '🛤️' },
     { path: '/admin/telemetry', label: 'Telemetry Log', icon: '📋' },
-    { path: '/admin/users', label: 'Users', icon: '👥' },
-    // Future menu items can be added here
-    // { path: '/admin/settings', label: 'Settings', icon: '⚙️' },
-    // { path: '/admin/reports', label: 'Reports', icon: '📊' },
   ];
 
   return (

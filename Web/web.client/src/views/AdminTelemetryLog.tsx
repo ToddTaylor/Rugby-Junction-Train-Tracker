@@ -338,7 +338,7 @@ function AdminTelemetryLog() {
                             fontWeight: 600,
                         },
                         '& .MuiDataGrid-columnSeparator': {
-                            backgroundColor: '#444 !important',
+                            backgroundColor: 'transparent !important',
                         },
                         '& .MuiDataGrid-cell': {
                             color: '#e0e0e0',

@@ -21,6 +21,12 @@ namespace Web.Server.Repositories
             subdivision.CreatedAt = _timeProvider.UtcNow;
             subdivision.LastUpdate = subdivision.CreatedAt;
 
+            // Attach custodian if provided
+            if (subdivision.CustodianId.HasValue)
+            {
+                subdivision.Custodian = await _context.Users.FindAsync(subdivision.CustodianId.Value);
+            }
+
             _context.Subdivisions.Add(subdivision);
             await _context.SaveChangesAsync();
             return subdivision;
@@ -51,11 +57,24 @@ namespace Web.Server.Repositories
                 throw new KeyNotFoundException("Subdivision not found.");
             }
 
+
             existingSubdivision.Name = sudivision.Name;
             existingSubdivision.RailroadID = sudivision.RailroadID;
             existingSubdivision.DpuCapable = sudivision.DpuCapable;
             existingSubdivision.LocalTrainAddressIDs = sudivision.LocalTrainAddressIDs;
             existingSubdivision.LastUpdate = _timeProvider.UtcNow;
+
+            // Update custodian if provided
+            if (sudivision.CustodianId.HasValue)
+            {
+                existingSubdivision.CustodianId = sudivision.CustodianId;
+                existingSubdivision.Custodian = await _context.Users.FindAsync(sudivision.CustodianId.Value);
+            }
+            else
+            {
+                existingSubdivision.CustodianId = null;
+                existingSubdivision.Custodian = null;
+            }
 
             await _context.SaveChangesAsync();
             return existingSubdivision;
