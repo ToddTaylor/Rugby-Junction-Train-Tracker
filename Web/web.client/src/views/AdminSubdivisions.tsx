@@ -77,12 +77,9 @@ export const AdminSubdivisions: React.FC = () => {
     setLoading(false);
   }
 
-  // Filter subdivisions for custodians and search
+  // Filter subdivisions for search only (custodians see all, but edit only their own)
   const filteredSubdivisions = useMemo(() => {
     let filtered = subdivisions;
-    if (isCustodian && userId) {
-      filtered = filtered.filter(s => s.custodianId === userId);
-    }
     if (searchTerm.trim()) {
       const term = searchTerm.trim().toLowerCase();
       filtered = filtered.filter(s =>
@@ -91,7 +88,7 @@ export const AdminSubdivisions: React.FC = () => {
       );
     }
     return filtered;
-  }, [subdivisions, isCustodian, userId, searchTerm]);
+  }, [subdivisions, searchTerm]);
 
   const handleCreate = () => {
     setModalMode('create');
@@ -300,14 +297,24 @@ export const AdminSubdivisions: React.FC = () => {
               headerName: 'Actions',
               flex: 1,
               sortable: false,
-              renderCell: (params: any) => (
-                <>
-                  <button className="btn-edit" onClick={() => handleEdit(params.row)}>Edit</button>
-                  {!isCustodian && (
-                    <button className="btn-delete" onClick={() => handleDelete(params.row.id)}>Delete</button>
-                  )}
-                </>
-              ),
+              renderCell: (params: any) => {
+                const canEdit = !isCustodian || (isCustodian && userId && params.row.custodianId === userId);
+                return (
+                  <>
+                    {canEdit && (
+                      <button
+                        className="btn-edit"
+                        onClick={() => handleEdit(params.row)}
+                      >
+                        Edit
+                      </button>
+                    )}
+                    {!isCustodian && (
+                      <button className="btn-delete" onClick={() => handleDelete(params.row.id)}>Delete</button>
+                    )}
+                  </>
+                );
+              },
             },
           ]}
           pageSizeOptions={[10, 25, 50]}
