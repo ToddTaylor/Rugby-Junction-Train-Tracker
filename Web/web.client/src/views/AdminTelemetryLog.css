@@ -68,6 +68,39 @@
 .MuiDataGrid-cell {
   color: #e0e0e0;
 }
+/* Remove circle background from sort icon */
+.MuiDataGrid-sortButton,
+.MuiIconButton-root.MuiDataGrid-sortButton {
+  background: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  min-width: 0 !important;
+  width: auto !important;
+  height: auto !important;
+}
+.MuiDataGrid-sortButton,
+.MuiIconButton-root.MuiDataGrid-sortButton {
+  background: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  min-width: 0 !important;
+  width: auto !important;
+  height: auto !important;
+}
+
+/* Override DataGrid sort icon for better visibility */
+.MuiDataGrid-sortIcon {
+  color: #4a9eff !important;
+  font-size: 1.5em !important;
+  background: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  margin: 0 2px !important;
+  filter: none !important;
+}
 
 .MuiDataGrid-row:hover {
   background-color: #2d2d2d;
