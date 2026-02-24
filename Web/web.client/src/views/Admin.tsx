@@ -7,6 +7,7 @@ const Admin: React.FC = () => {
   const location = useLocation();
   const { session } = useAuth();
   const isAdmin = session?.roles?.includes('Admin');
+  const isCustodian = session?.roles?.includes('Custodian');
 
   // Only show menu items allowed for the current role
   const menuItems = [
@@ -14,9 +15,9 @@ const Admin: React.FC = () => {
       { path: '/admin/beacons', label: 'Beacons', icon: '📡' },
       { path: '/admin/beacon-railroads', label: 'Beacon Railroads', icon: '🗺️' },
       { path: '/admin/railroads', label: 'Railroads', icon: '🚂' },
-      { path: '/admin/users', label: 'Users', icon: '👥' },
     ] : []),
     // Both Admin and Custodian can see these:
+    { path: '/admin/users', label: 'Users', icon: '👥' },
     { path: '/admin/subdivisions', label: 'Subdivisions', icon: '🛤️' },
     { path: '/admin/telemetry', label: 'Telemetry Log', icon: '📋' },
   ];

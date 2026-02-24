@@ -362,7 +362,12 @@ export const AdminSubdivisions: React.FC = () => {
               fontWeight: 600,
             },
             '& .MuiDataGrid-columnSeparator': {
-              backgroundColor: 'transparent !important',
+              backgroundColor: '#444 !important',
+              width: '1px',
+              opacity: 1,
+            },
+            '& .MuiDataGrid-columnSeparator[data-field="actions"]': {
+              display: 'none',
             },
             '& .MuiDataGrid-cell': {
               color: '#e0e0e0',

@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { useAuth } from '../hooks/useAuth';
+import { DataGrid, GridRenderCellParams } from '@mui/x-data-grid';
 import { User, CreateUser, UpdateUser } from '../types/User';
 import { getUsers, createUser, updateUser, deleteUser } from '../api/users';
 import './AdminUsers.css';
@@ -16,6 +18,13 @@ const formatDate = (dateString: string): string => {
 };
 
 const AdminUsers: React.FC = () => {
+    // Role-based access control
+    const { session } = useAuth();
+    const isAdmin = session?.roles?.includes('Admin');
+    const isCustodian = session?.roles?.includes('Custodian');
+    if (!isAdmin && !isCustodian) {
+      return <div style={{ color: '#e0e0e0', background: '#1a1a1a', padding: '2em' }}>You do not have permission to view this page.</div>;
+    }
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -31,11 +40,9 @@ const AdminUsers: React.FC = () => {
   const [availableRoles, setAvailableRoles] = useState<string[]>([]);
 
   // Pagination, search, and sort state
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortField, setSortField] = useState<'firstName' | 'lastName' | 'email'>('lastName');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [sortField] = useState<'firstName' | 'lastName' | 'email'>('lastName');
+  const [sortDirection] = useState<'asc' | 'desc'>('asc');
 
 
   useEffect(() => {
@@ -170,15 +177,6 @@ const AdminUsers: React.FC = () => {
     }));
   };
 
-  const handleSort = (field: 'firstName' | 'lastName' | 'email') => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortDirection('asc');
-    }
-    setCurrentPage(1);
-  };
 
   // Filter users based on search query
   const filteredUsers = users.filter(user => {
@@ -210,21 +208,12 @@ const AdminUsers: React.FC = () => {
     }
   });
 
-  const getSortIcon = (field: 'firstName' | 'lastName' | 'email') => {
-    const icon = sortField !== field ? '⇅' : sortDirection === 'asc' ? '⬆' : '⬇';
-    return <span style={{ fontSize: '1.2em', marginLeft: '0.3em' }}>{icon}</span>;
-  };
-
-  // Paginate sorted users
-  const totalPages = Math.ceil(sortedUsers.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedUsers = sortedUsers.slice(startIndex, endIndex);
+  // DataGrid paging (future-ready)
+  const paginatedUsers = sortedUsers; // DataGrid will handle paging
 
   // Reset to page 1 when search changes
   const handleSearchChange = (query: string) => {
     setSearchQuery(query);
-    setCurrentPage(1);
   };
 
   if (loading) {
@@ -233,17 +222,11 @@ const AdminUsers: React.FC = () => {
 
   return (
     <div className="admin-users">
-      <div className="admin-users-header">
-        <h1>Users</h1>
-        <button className="btn-primary" onClick={handleCreate}>
-          Add User
-        </button>
-      </div>
 
       {error && <div className="error-message">{error}</div>}
 
-      <div className="users-controls">
-        <div className="search-box">
+      <div className="users-controls" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <div className="search-box" style={{ display: 'flex', alignItems: 'center', gap: 8, maxWidth: 400 }}>
           <TextField
             label="Filter by Name or Email"
             variant="outlined"
@@ -251,7 +234,8 @@ const AdminUsers: React.FC = () => {
             value={searchQuery}
             onChange={(e) => handleSearchChange(e.target.value)}
             className="admin-input"
-            fullWidth
+            fullWidth={false}
+            style={{ width: '100%', minWidth: 200, maxWidth: 400 }}
           />
           <Tooltip title="Clear filters">
             <IconButton
@@ -265,90 +249,164 @@ const AdminUsers: React.FC = () => {
             </IconButton>
           </Tooltip>
         </div>
-        <div className="right-controls">
-          <div className="results-info">
-            Showing {startIndex + 1}-{Math.min(endIndex, sortedUsers.length)} of {sortedUsers.length} users
-          </div>
-          {totalPages > 1 && (
-            <div className="pagination">
-              <button
-                className="pagination-btn"
-                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                disabled={currentPage === 1}
-              >
-                Previous
-              </button>
-
-              <div className="pagination-pages">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                  <button
-                    key={page}
-                    className={`pagination-page ${currentPage === page ? 'active' : ''}`}
-                    onClick={() => setCurrentPage(page)}
-                  >
-                    {page}
-                  </button>
-                ))}
-              </div>
-
-              <button
-                className="pagination-btn"
-                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                disabled={currentPage === totalPages}
-              >
-                Next
-              </button>
-            </div>
-          )}
-        </div>
+        {isAdmin && (
+          <button className="btn-primary" onClick={handleCreate} style={{ marginLeft: 16 }}>
+            Add User
+          </button>
+        )}
       </div>
 
       <div className="admin-table-container">
-        <table className="admin-table">
-          <thead>
-            <tr>
-              <th className="sortable" onClick={() => handleSort('lastName')}>
-                Last Name {getSortIcon('lastName')}
-              </th>
-              <th className="sortable" onClick={() => handleSort('firstName')}>
-                First Name {getSortIcon('firstName')}
-              </th>
-              <th className="sortable" onClick={() => handleSort('email')}>
-                Email {getSortIcon('email')}
-              </th>
-              <th>Last Active</th>
-              <th>Roles</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {paginatedUsers.map(user => (
-              <tr key={user.id}>
-                <td>{user.lastName}</td>
-                <td>{user.firstName}</td>
-                <td>{user.email}</td>
-                <td>{user.lastActive ? formatDate(user.lastActive) : 'Never'}</td>
-                <td>
-                  <div className="roles-badges">
-                    {user.roles.map(role => (
-                      <span key={role} className="role-badge">{role}</span>
-                    ))}
-                  </div>
-                </td>
-                <td>
-                  <span className={`status-badge ${user.isActive ? 'active' : 'inactive'}`}>
-                    {user.isActive ? 'Active' : 'Inactive'}
-                  </span>
-                </td>
-                <td className="actions-cell">
-                  <button className="btn-edit" onClick={() => handleEdit(user)}>Edit</button>
-                  <button className="btn-delete" onClick={() => handleDelete(user.id)}>Delete</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div style={{ height: 600, width: '100%' }}>
+          <DataGrid
+            rows={paginatedUsers.map(u => ({ ...u, id: u.id }))}
+            columns={(() => {
+              const maskEmail = (email: string) => {
+                if (!email) return '';
+                // Show first 2 chars, then mask, then show domain
+                const [name, domain] = email.split('@');
+                if (!name || !domain) return email;
+                if (name.length <= 2) return '*'.repeat(name.length) + '@' + domain;
+                return name.slice(0, 2) + '***@' + domain;
+              };
+              const baseColumns = [
+                { field: 'lastName', headerName: 'Last Name', width: 160 },
+                { field: 'firstName', headerName: 'First Name', width: 160 },
+                {
+                  field: 'email',
+                  headerName: 'Email',
+                  width: 220,
+                  renderCell: (params: GridRenderCellParams<User, string>) => (
+                    isCustodian
+                      ? <span>{maskEmail(params.value ?? '')}</span>
+                      : <span>{params.value}</span>
+                  ),
+                },
+                {
+                  field: 'lastActive',
+                  headerName: 'Last Active',
+                  width: 140,
+                  renderCell: (params: GridRenderCellParams<User, string>) => params.value ? formatDate(params.value) : 'Never',
+                },
+                {
+                  field: 'roles',
+                  headerName: 'Roles',
+                  width: 180,
+                  renderCell: (params: GridRenderCellParams<User, string[]>) => (
+                    <div className="roles-badges">
+                      {params.value && params.value.map((role: string) => (
+                        <span key={role} className="role-badge">{role}</span>
+                      ))}
+                    </div>
+                  ),
+                },
+                {
+                  field: 'isActive',
+                  headerName: 'Status',
+                  width: 120,
+                  renderCell: (params: GridRenderCellParams<User, boolean>) => (
+                    <span
+                      style={{
+                        color: params.value ? '#4caf50' : '#f44336',
+                        fontWeight: 600,
+                        fontSize: '1rem',
+                      }}
+                    >
+                      {params.value ? 'Active' : 'Inactive'}
+                    </span>
+                  ),
+                },
+              ];
+              if (isAdmin) {
+                baseColumns.push({
+                  field: 'actions',
+                  headerName: 'Actions',
+                  width: 180,
+                  renderCell: (params: GridRenderCellParams<User>) => (
+                    <div className="actions-cell" style={{ display: 'flex', alignItems: 'center', height: '100%', gap: 8 }}>
+                      <button className="btn-edit" style={{ minWidth: 70, padding: '8px 16px', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', height: '36px' }} onClick={() => handleEdit(params.row)}>Edit</button>
+                      <button className="btn-delete" style={{ minWidth: 70, padding: '8px 16px', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', height: '36px' }} onClick={() => handleDelete(params.row.id)}>Delete</button>
+                    </div>
+                  ),
+                });
+              }
+              return baseColumns;
+            })()}
+            pageSizeOptions={[10, 25, 50]}
+            initialState={{
+              pagination: { paginationModel: { pageSize: 10, page: 0 } },
+            }}
+            sx={{
+              backgroundColor: '#2a2a2a',
+              color: '#e0e0e0',
+              border: '1px solid #444',
+              borderRadius: 1,
+              '& .MuiDataGrid-columnHeaders': {
+                backgroundColor: '#333',
+                color: '#e0e0e0',
+                borderColor: '#444 !important',
+              },
+              '& .MuiDataGrid-columnHeadersWrapper': {
+                backgroundColor: '#333 !important',
+                borderColor: '#444 !important',
+              },
+              '& .MuiDataGrid-columnHeadersInner': {
+                backgroundColor: '#333 !important',
+              },
+              '& .MuiDataGrid-filler': {
+                backgroundColor: '#333 !important',
+                borderColor: '#444 !important',
+              },
+              '& .MuiDataGrid-scrollbarFiller': {
+                backgroundColor: '#333 !important',
+              },
+              '& .MuiDataGrid-columnHeader': {
+                backgroundColor: '#333 !important',
+                color: '#e0e0e0',
+                borderColor: '#444 !important',
+              },
+              '& .MuiDataGrid-columnHeaderTitle': {
+                color: '#e0e0e0',
+                fontWeight: 600,
+              },
+              '& .MuiDataGrid-cell': {
+                color: '#e0e0e0',
+                borderColor: '#444',
+              },
+              '& .MuiDataGrid-row:hover': {
+                backgroundColor: '#3a3a3a',
+              },
+              '& .MuiDataGrid-row.Mui-selected': {
+                backgroundColor: '#1e3a5f !important',
+                '&:hover': {
+                  backgroundColor: '#0d47a1 !important',
+                },
+              },
+              '& .MuiIconButton-root': {
+                color: '#e0e0e0',
+              },
+              '& .MuiIconButton-root.Mui-disabled': {
+                color: '#555 !important',
+                opacity: 0.5,
+              },
+              '& .MuiDataGrid-sortButton, & .MuiIconButton-root.MuiDataGrid-sortButton': {
+                background: 'none !important',
+                boxShadow: 'none !important',
+                borderRadius: '0 !important',
+                padding: '0 !important',
+                minWidth: '0 !important',
+                width: 'auto !important',
+                height: 'auto !important',
+              },
+              '& .MuiTablePagination-root': {
+                color: '#e0e0e0',
+              },
+              '& .MuiTablePagination-toolbar': {
+                backgroundColor: '#333',
+              },
+            }}
+          />
+        </div>
       </div>
 
       {showModal && (
