@@ -12,7 +12,7 @@ namespace Web.Server.Services.Rules
     {
         public const int TIME_WINDOW_MINUTES = 30;
 
-        private const string DISCARD_REASON = "DPU Ping-Pong";
+        public const string DISCARD_REASON = "DPU Ping-Pong";
 
         private readonly ITelemetryRepository _telemetryRepository;
 
@@ -42,6 +42,7 @@ namespace Web.Server.Services.Rules
             }
 
             recentTelemetry.RemoveAt(0); // Remove the most recent telemetry which is the current one being evaluated.
+            recentTelemetry.RemoveAll(t => t.Discarded == true);
 
             if (await BeaconIdAlreadyUsed(context.Telemetry.BeaconID, recentTelemetry[0].BeaconID, recentTelemetry))
             {

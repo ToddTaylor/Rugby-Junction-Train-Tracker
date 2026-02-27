@@ -3013,6 +3013,202 @@ namespace Web.ServerTests.Services
         }
 
         /// <summary>
+        /// Test ensures that if a matching DPU train ID is found on an existing map pin from 
+        /// the same railroad but with a different DPU address ID and there was existing "ping pong"
+        /// behavior, the new DPU telemetry is discarded.
+        /// 
+        /// Example:
+        ///
+        /// Beacon AddressID TrainID Action
+        /// ----------------------------------
+        /// Sussex 21348     123     Discarded <-- This is the case this test verifies.
+        /// Sussex 47622     123     Discarded
+        /// Rugby  47622     123
+        /// Rugby  47622     123
+        /// Sussex 47622     123
+        /// </summary>
+        [TestMethod]
+        public async Task UpsertMapPin_DPUsNewAddressIdSameTrainIdPingPongShouldBeDiscarded()
+        {
+            // Arrange
+            var CNSussexBeacon = TestData.CN_Sussex_WI(_timeProviderMock.Object.UtcNow);
+            var CNRugbyJunctionBeacon = TestData.CN_RugbyJunction_WI(_timeProviderMock.Object.UtcNow);
+            var addressID21348 = 21348;
+            var addressID47622 = 47622;
+            var trainID = 123;
+
+            var telemetry = new Telemetry
+            {
+                BeaconID = CNSussexBeacon.BeaconID,
+                Beacon = new Beacon
+                {
+                    ID = CNSussexBeacon.BeaconID,
+                    Name = CNSussexBeacon.Beacon.Name,
+                    BeaconRailroads = new[]
+                    {
+                        CNSussexBeacon
+                    },
+                },
+                AddressID = addressID21348,
+                TrainID = trainID,
+                Source = SourceEnum.DPU,
+                Moving = true,
+                CreatedAt = _timeProviderMock.Object.UtcNow,
+                LastUpdate = _timeProviderMock.Object.UtcNow
+            };
+
+            var fromMapPin = new MapPin
+            {
+                ID = 234,
+                BeaconID = CNRugbyJunctionBeacon.BeaconID,
+                SubdivisionId = CNRugbyJunctionBeacon.Subdivision.ID,
+                Direction = "N",
+                CreatedAt = _timeProviderMock.Object.UtcNow.AddMinutes(-2),
+                LastUpdate = _timeProviderMock.Object.UtcNow,
+                BeaconRailroad = CNRugbyJunctionBeacon,
+                Moving = telemetry.Moving,
+                CreatedRailroadID = CNSussexBeacon.Subdivision.RailroadID,
+                Addresses =
+                [
+                    new Address
+                    {
+                        AddressID = addressID47622,
+                        DpuTrainID = trainID,
+                        Source = SourceEnum.DPU,
+                        CreatedAt = _timeProviderMock.Object.UtcNow.AddMinutes(-1),
+                        LastUpdate = _timeProviderMock.Object.UtcNow.AddMinutes(-1)
+                    }
+                ],
+            };
+
+            var toMapPinBeforeUpdate = new MapPin
+            {
+                ID = 234,
+                BeaconID = CNSussexBeacon.BeaconID,
+                SubdivisionId = CNSussexBeacon.Subdivision.ID,
+                CreatedAt = _timeProviderMock.Object.UtcNow,
+                LastUpdate = _timeProviderMock.Object.UtcNow,
+                BeaconRailroad = CNSussexBeacon,
+                Moving = telemetry.Moving,
+                CreatedRailroadID = CNSussexBeacon.Subdivision.RailroadID,
+                Addresses =
+                    [
+                        new Address
+                        {
+                            AddressID = addressID21348,
+                            DpuTrainID = trainID,
+                            Source = SourceEnum.DPU,
+                            CreatedAt = _timeProviderMock.Object.UtcNow,
+                            LastUpdate = _timeProviderMock.Object.UtcNow
+                        }
+                    ],
+            };
+
+            var toMapPinAfterUpdate = toMapPinBeforeUpdate.Clone();
+            toMapPinAfterUpdate.ID = 936; // ID returned after insert.
+
+            var toMapPinObjects = new object[]
+            {
+                new MapPinDTO
+                {
+                    ID = toMapPinAfterUpdate.ID,
+                    Direction = "N",
+                    BeaconID = telemetry.BeaconID,
+                    BeaconName = CNRugbyJunctionBeacon.Beacon.Name,
+                    Railroad = CNRugbyJunctionBeacon.Subdivision.Railroad.Name,
+                    Subdivision = CNRugbyJunctionBeacon.Subdivision.Name,
+                    SubdivisionID = CNRugbyJunctionBeacon.Subdivision.ID,
+                    Latitude = CNRugbyJunctionBeacon.Latitude,
+                    Longitude = CNRugbyJunctionBeacon.Longitude,
+                    Milepost = CNRugbyJunctionBeacon.Milepost,
+                    Moving = telemetry.Moving,
+                    CreatedAt = _timeProviderMock.Object.UtcNow.AddMinutes(-2),
+                    LastUpdate = _timeProviderMock.Object.UtcNow,
+                    Addresses =
+                    [
+                        new AddressDTO
+                        {
+                            AddressID = addressID21348,
+                            Source = SourceEnum.DPU
+                        },
+                        new AddressDTO
+                        {
+                            AddressID = addressID47622,
+                            Source = SourceEnum.DPU
+                        }
+                    ],
+                }
+             };
+
+            _mapPinRepositoryMock.Setup(r => r.GetByAddressIdAsync(telemetry.AddressID, telemetry.TrainID))
+                .ReturnsAsync((MapPin?)null);
+            _mapPinRepositoryMock.Setup(r => r.GetByTrainIdAsync(telemetry.TrainID.Value, MapPinService.TIME_THRESHOLD_DPU_MINUTES))
+                .ReturnsAsync(fromMapPin);
+            _beaconRailroadServiceMock.Setup(b => b.GetByIdAsync(telemetry.BeaconID, fromMapPin.SubdivisionId))
+                .ReturnsAsync(CNRugbyJunctionBeacon);
+            _beaconRailroadServiceMock.Setup(b => b.GetByIdAsync(fromMapPin.BeaconID, fromMapPin.SubdivisionId))
+                .ReturnsAsync(CNSussexBeacon);
+            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(toMapPinBeforeUpdate))
+                .ReturnsAsync(toMapPinAfterUpdate);
+
+            var minutesAgo = telemetry.CreatedAt.AddMinutes(-DpuAntiPingPongRule.TIME_WINDOW_MINUTES);
+            _telemetryRepositoryMock.Setup(r => r.GetRecentsForTrainWithinTimeOffsetAsync(trainID, CNSussexBeacon.Subdivision.RailroadID, minutesAgo))
+                .ReturnsAsync(
+                [
+                    new Telemetry
+                    {
+                        TrainID = trainID,
+                        AddressID = addressID21348,
+                        BeaconID = CNSussexBeacon.BeaconID,
+                        Discarded = false,
+                        CreatedAt = telemetry.CreatedAt
+                    },
+                    new Telemetry
+                    {
+                        TrainID = trainID,
+                        AddressID = addressID47622,
+                        BeaconID = CNSussexBeacon.BeaconID,
+                        DiscardReason = DpuAntiPingPongRule.DISCARD_REASON,
+                        Discarded = true,
+                        CreatedAt = telemetry.CreatedAt.AddMinutes(-3)
+                    },
+                    new Telemetry
+                    {
+                        TrainID = trainID,
+                        AddressID = addressID47622,
+                        BeaconID = CNRugbyJunctionBeacon.BeaconID,
+                        Discarded = false,
+                        CreatedAt = telemetry.CreatedAt.AddMinutes(-5)
+                    },
+                    new Telemetry
+                    {
+                        TrainID = trainID,
+                        AddressID = addressID47622,
+                        BeaconID = CNSussexBeacon.BeaconID,
+                        Discarded = false,
+                        CreatedAt = telemetry.CreatedAt
+                    },
+                ]);
+
+            _clientProxyMock.Setup(proxy => proxy.SendCoreAsync(
+                NotificationMethods.MapPinUpdate, toMapPinObjects, default))
+                    .Returns(Task.CompletedTask);
+            _hubContextMock.Setup(h => h.Clients).Returns(_hubClientsMock.Object);
+            _hubClientsMock.Setup(h => h.All).Returns(_clientProxyMock.Object);
+
+            // Act
+            await _service.UpsertMapPin(telemetry);
+
+            // Assert
+            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(It.IsAny<MapPin>()), Times.Never);
+
+            _clientProxyMock?.Verify(proxy => proxy.SendCoreAsync(
+                NotificationMethods.MapPinUpdate,
+                It.IsAny<object[]>(),
+                default), Times.Never);
+        }
+
+        /// <summary>
         /// Tests the scenario where DPUs with the same train ID and a large time gap on the same beacon are merged.
         /// Based on actual telemetry data.
         /// </summary>
