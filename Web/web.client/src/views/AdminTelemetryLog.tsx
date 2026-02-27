@@ -1,3 +1,4 @@
+import { adminDataGridSx } from '../components/DataGridStyles';
 import { useEffect, useState } from "react";
 import './Admin.css';
 import '../App.css';
@@ -287,86 +288,7 @@ function AdminTelemetryLog() {
                     rows={filteredData}
                     columns={columns}
                     pageSizeOptions={[5, 10, 25]}
-                    columnVisibilityModel={{
-                        id: false,
-                    }}
-                    initialState={{
-                        pagination: {
-                            paginationModel: { pageSize: 25, page: 0 },
-                        },
-                    }}
-                    sx={{
-                        maxHeight: 750,
-                        minHeight: 550,
-                        width: '100%',
-                        backgroundColor: '#2a2a2a',
-                        color: '#e0e0e0',
-                        border: '1px solid #444',
-                        borderRadius: 1,
-                        '& .MuiDataGrid-main': {
-                            backgroundColor: '#2a2a2a',
-                        },
-                        '& .MuiDataGrid-virtualScroller': {
-                            backgroundColor: '#2a2a2a',
-                        },
-                        '& .MuiDataGrid-filler': {
-                            backgroundColor: '#333 !important',
-                            borderColor: '#444 !important',
-                        },
-                        '& .MuiDataGrid-scrollbarFiller': {
-                            backgroundColor: '#333 !important',
-                        },
-                        '& .MuiDataGrid-columnHeadersWrapper': {
-                            backgroundColor: '#333 !important',
-                            borderColor: '#444 !important',
-                        },
-                        '& .MuiDataGrid-columnHeadersInner': {
-                            backgroundColor: '#333 !important',
-                        },
-                        '& .MuiDataGrid-columnHeaders': {
-                            backgroundColor: '#333 !important',
-                            color: '#e0e0e0',
-                            borderColor: '#444 !important',
-                        },
-                        '& .MuiDataGrid-columnHeader': {
-                            backgroundColor: '#333 !important',
-                            color: '#e0e0e0',
-                            borderColor: '#444 !important',
-                        },
-                        '& .MuiDataGrid-columnHeaderTitle': {
-                            color: '#e0e0e0',
-                            fontWeight: 600,
-                        },
-                        '& .MuiDataGrid-columnSeparator': {
-                            backgroundColor: 'transparent !important',
-                        },
-                        '& .MuiDataGrid-cell': {
-                            color: '#e0e0e0',
-                            borderColor: '#444',
-                        },
-                        '& .MuiDataGrid-row:hover': {
-                            backgroundColor: '#3a3a3a',
-                        },
-                        '& .MuiDataGrid-row.Mui-selected': {
-                            backgroundColor: '#1e3a5f !important',
-                            '&:hover': {
-                                backgroundColor: '#0d47a1 !important',
-                            },
-                        },
-                        '& .MuiTablePagination-root': {
-                            color: '#e0e0e0',
-                        },
-                        '& .MuiTablePagination-toolbar': {
-                            backgroundColor: '#333',
-                        },
-                        '& .MuiIconButton-root': {
-                            color: '#e0e0e0',
-                        },
-                        '& .MuiIconButton-root.Mui-disabled': {
-                            color: '#555 !important',
-                            opacity: 0.5,
-                        },
-                    }}
+                    sx={adminDataGridSx}
                     getRowClassName={(params) => params.row.discarded ? 'discarded-row' : ''}
                 />
             </Box>

@@ -7,7 +7,6 @@ const Admin: React.FC = () => {
   const location = useLocation();
   const { session } = useAuth();
   const isAdmin = session?.roles?.includes('Admin');
-  const isCustodian = session?.roles?.includes('Custodian');
 
   // Only show menu items allowed for the current role
   const menuItems = [

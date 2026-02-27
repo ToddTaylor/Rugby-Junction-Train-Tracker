@@ -1,3 +1,4 @@
+import { adminDataGridSx } from '../components/DataGridStyles';
 import React, { useState, useEffect, useMemo } from 'react';
 import { DataGrid } from '@mui/x-data-grid';
 import { Subdivision, CreateSubdivision, UpdateSubdivision } from '../types/Subdivision';
@@ -319,83 +320,7 @@ export const AdminSubdivisions: React.FC = () => {
           ]}
           pageSizeOptions={[10, 25, 50]}
           disableRowSelectionOnClick
-          sx={{
-            maxHeight: 750,
-            minHeight: 550,
-            width: '100%',
-            backgroundColor: '#2a2a2a',
-            color: '#e0e0e0',
-            border: '1px solid #444',
-            borderRadius: 1,
-            '& .MuiDataGrid-main': {
-              backgroundColor: '#2a2a2a',
-            },
-            '& .MuiDataGrid-virtualScroller': {
-              backgroundColor: '#2a2a2a',
-            },
-            '& .MuiDataGrid-filler': {
-              backgroundColor: '#333 !important',
-              borderColor: '#444 !important',
-            },
-            '& .MuiDataGrid-scrollbarFiller': {
-              backgroundColor: '#333 !important',
-            },
-            '& .MuiDataGrid-columnHeadersWrapper': {
-              backgroundColor: '#333 !important',
-              borderColor: '#444 !important',
-            },
-            '& .MuiDataGrid-columnHeadersInner': {
-              backgroundColor: '#333 !important',
-            },
-            '& .MuiDataGrid-columnHeaders': {
-              backgroundColor: '#333 !important',
-              color: '#e0e0e0',
-              borderColor: '#444 !important',
-            },
-            '& .MuiDataGrid-columnHeader': {
-              backgroundColor: '#333 !important',
-              color: '#e0e0e0',
-              borderColor: '#444 !important',
-            },
-            '& .MuiDataGrid-columnHeaderTitle': {
-              color: '#e0e0e0',
-              fontWeight: 600,
-            },
-            '& .MuiDataGrid-columnSeparator': {
-              backgroundColor: '#444 !important',
-              width: '1px',
-              opacity: 1,
-            },
-            '& .MuiDataGrid-columnSeparator[data-field="actions"]': {
-              display: 'none',
-            },
-            '& .MuiDataGrid-cell': {
-              color: '#e0e0e0',
-              borderColor: '#444',
-            },
-            '& .MuiDataGrid-row:hover': {
-              backgroundColor: '#3a3a3a',
-            },
-            '& .MuiDataGrid-row.Mui-selected': {
-              backgroundColor: '#1e3a5f !important',
-              '&:hover': {
-                backgroundColor: '#0d47a1 !important',
-              },
-            },
-            '& .MuiTablePagination-root': {
-              color: '#e0e0e0',
-            },
-            '& .MuiTablePagination-toolbar': {
-              backgroundColor: '#333',
-            },
-            '& .MuiIconButton-root': {
-              color: '#e0e0e0',
-            },
-            '& .MuiIconButton-root.Mui-disabled': {
-              color: '#555 !important',
-              opacity: 0.5,
-            },
-          }}
+          sx={adminDataGridSx}
         />
       </div>
 
@@ -504,38 +429,14 @@ export const AdminSubdivisions: React.FC = () => {
                   id="localTrainAddressIDs"
                   value={formData.localTrainAddressIDs || ''}
                   onChange={(e) => setFormData({ ...formData, localTrainAddressIDs: e.target.value })}
-                  placeholder="Enter comma or line-separated Address IDs (e.g., 1234, 5678 or one per line)"
                   rows={4}
-                  readOnly={!(isCustodian && modalMode === 'edit') ? false : false /* Only this field is editable for custodian */}
                 />
               </div>
-              {!isCustodian && (
-                <div className="form-group">
-                  <label htmlFor="custodian">Custodian:</label>
-                  <select
-                    id="custodian"
-                    value={selectedCustodianId ?? ''}
-                    onChange={e => setSelectedCustodianId(e.target.value ? parseInt(e.target.value) : null)}
-                    disabled={isCustodian && modalMode === 'edit'}
-                  >
-                    <option value="">-- None --</option>
-                    {custodianUsers.map(user => (
-                      <option key={user.id} value={user.id}>
-                        {user.firstName} {user.lastName}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
               <div className="modal-actions">
-                <button type="submit" className="btn-primary" disabled={isCustodian && modalMode === 'edit' && !formData.localTrainAddressIDs}>
+                <button type="submit" className="btn-primary">
                   {modalMode === 'create' ? 'Create' : 'Update'}
                 </button>
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={() => setShowModal(false)}
-                >
+                <button type="button" className="btn-secondary" onClick={() => setShowModal(false)}>
                   Cancel
                 </button>
               </div>

@@ -1,3 +1,4 @@
+import { adminDataGridSx } from '../components/DataGridStyles';
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { DataGrid, GridRenderCellParams } from '@mui/x-data-grid';
@@ -260,65 +261,70 @@ const AdminUsers: React.FC = () => {
         <div style={{ height: 600, width: '100%' }}>
           <DataGrid
             rows={paginatedUsers.map(u => ({ ...u, id: u.id }))}
-            columns={(() => {
-              const maskEmail = (email: string) => {
-                if (!email) return '';
-                // Show first 2 chars, then mask, then show domain
-                const [name, domain] = email.split('@');
-                if (!name || !domain) return email;
-                if (name.length <= 2) return '*'.repeat(name.length) + '@' + domain;
-                return name.slice(0, 2) + '***@' + domain;
-              };
-              const baseColumns = [
-                { field: 'lastName', headerName: 'Last Name', width: 160 },
-                { field: 'firstName', headerName: 'First Name', width: 160 },
-                {
-                  field: 'email',
-                  headerName: 'Email',
-                  width: 220,
-                  renderCell: (params: GridRenderCellParams<User, string>) => (
-                    isCustodian
-                      ? <span>{maskEmail(params.value ?? '')}</span>
-                      : <span>{params.value}</span>
-                  ),
+            columns={[
+              {
+                field: 'lastName',
+                headerName: 'Last Name',
+                width: 160,
+              },
+              {
+                field: 'firstName',
+                headerName: 'First Name',
+                width: 160,
+              },
+              {
+                field: 'email',
+                headerName: 'Email',
+                width: 220,
+                renderCell: (params: GridRenderCellParams<User, string>) => {
+                  const maskEmail = (email: string) => {
+                    if (!email) return '';
+                    const [name, domain] = email.split('@');
+                    if (!name || !domain) return email;
+                    if (name.length <= 2) return '*'.repeat(name.length) + '@' + domain;
+                    return name.slice(0, 2) + '***@' + domain;
+                  };
+                  return isCustodian
+                    ? <span>{maskEmail(params.value ?? '')}</span>
+                    : <span>{params.value}</span>;
                 },
+              },
+              {
+                field: 'lastActive',
+                headerName: 'Last Active',
+                width: 140,
+                renderCell: (params: GridRenderCellParams<User, string>) => params.value ? formatDate(params.value) : 'Never',
+              },
+              {
+                field: 'roles',
+                headerName: 'Roles',
+                width: 180,
+                renderCell: (params: GridRenderCellParams<User, string[]>) => (
+                  <div className="roles-badges">
+                    {params.value && params.value.map((role: string) => (
+                      <span key={role} className="role-badge">{role}</span>
+                    ))}
+                  </div>
+                ),
+              },
+              {
+                field: 'isActive',
+                headerName: 'Status',
+                width: 120,
+                renderCell: (params: GridRenderCellParams<User, boolean>) => (
+                  <span
+                    style={{
+                      color: params.value ? '#4caf50' : '#f44336',
+                      fontWeight: 600,
+                      fontSize: '1rem',
+                    }}
+                  >
+                    {params.value ? 'Active' : 'Inactive'}
+                  </span>
+                ),
+              },
+              ...(isAdmin ? [
                 {
-                  field: 'lastActive',
-                  headerName: 'Last Active',
-                  width: 140,
-                  renderCell: (params: GridRenderCellParams<User, string>) => params.value ? formatDate(params.value) : 'Never',
-                },
-                {
-                  field: 'roles',
-                  headerName: 'Roles',
-                  width: 180,
-                  renderCell: (params: GridRenderCellParams<User, string[]>) => (
-                    <div className="roles-badges">
-                      {params.value && params.value.map((role: string) => (
-                        <span key={role} className="role-badge">{role}</span>
-                      ))}
-                    </div>
-                  ),
-                },
-                {
-                  field: 'isActive',
-                  headerName: 'Status',
-                  width: 120,
-                  renderCell: (params: GridRenderCellParams<User, boolean>) => (
-                    <span
-                      style={{
-                        color: params.value ? '#4caf50' : '#f44336',
-                        fontWeight: 600,
-                        fontSize: '1rem',
-                      }}
-                    >
-                      {params.value ? 'Active' : 'Inactive'}
-                    </span>
-                  ),
-                },
-              ];
-              if (isAdmin) {
-                baseColumns.push({
                   field: 'actions',
                   headerName: 'Actions',
                   width: 180,
@@ -328,83 +334,14 @@ const AdminUsers: React.FC = () => {
                       <button className="btn-delete" style={{ minWidth: 70, padding: '8px 16px', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', height: '36px' }} onClick={() => handleDelete(params.row.id)}>Delete</button>
                     </div>
                   ),
-                });
-              }
-              return baseColumns;
-            })()}
+                },
+              ] : []),
+            ]}
             pageSizeOptions={[10, 25, 50]}
             initialState={{
               pagination: { paginationModel: { pageSize: 10, page: 0 } },
             }}
-            sx={{
-              backgroundColor: '#2a2a2a',
-              color: '#e0e0e0',
-              border: '1px solid #444',
-              borderRadius: 1,
-              '& .MuiDataGrid-columnHeaders': {
-                backgroundColor: '#333',
-                color: '#e0e0e0',
-                borderColor: '#444 !important',
-              },
-              '& .MuiDataGrid-columnHeadersWrapper': {
-                backgroundColor: '#333 !important',
-                borderColor: '#444 !important',
-              },
-              '& .MuiDataGrid-columnHeadersInner': {
-                backgroundColor: '#333 !important',
-              },
-              '& .MuiDataGrid-filler': {
-                backgroundColor: '#333 !important',
-                borderColor: '#444 !important',
-              },
-              '& .MuiDataGrid-scrollbarFiller': {
-                backgroundColor: '#333 !important',
-              },
-              '& .MuiDataGrid-columnHeader': {
-                backgroundColor: '#333 !important',
-                color: '#e0e0e0',
-                borderColor: '#444 !important',
-              },
-              '& .MuiDataGrid-columnHeaderTitle': {
-                color: '#e0e0e0',
-                fontWeight: 600,
-              },
-              '& .MuiDataGrid-cell': {
-                color: '#e0e0e0',
-                borderColor: '#444',
-              },
-              '& .MuiDataGrid-row:hover': {
-                backgroundColor: '#3a3a3a',
-              },
-              '& .MuiDataGrid-row.Mui-selected': {
-                backgroundColor: '#1e3a5f !important',
-                '&:hover': {
-                  backgroundColor: '#0d47a1 !important',
-                },
-              },
-              '& .MuiIconButton-root': {
-                color: '#e0e0e0',
-              },
-              '& .MuiIconButton-root.Mui-disabled': {
-                color: '#555 !important',
-                opacity: 0.5,
-              },
-              '& .MuiDataGrid-sortButton, & .MuiIconButton-root.MuiDataGrid-sortButton': {
-                background: 'none !important',
-                boxShadow: 'none !important',
-                borderRadius: '0 !important',
-                padding: '0 !important',
-                minWidth: '0 !important',
-                width: 'auto !important',
-                height: 'auto !important',
-              },
-              '& .MuiTablePagination-root': {
-                color: '#e0e0e0',
-              },
-              '& .MuiTablePagination-toolbar': {
-                backgroundColor: '#333',
-              },
-            }}
+            sx={adminDataGridSx}
           />
         </div>
       </div>
