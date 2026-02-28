@@ -14,6 +14,7 @@ namespace Web.Server.Services
     {
         public const int TIME_THRESHOLD_MINUTES = 2;
         public const int TIME_THRESHOLD_DPU_MINUTES = 60;
+        public const int SPEED_THRESHOLD_MPH = 50;
 
         private readonly int _stationaryDirectionNullThresholdHours;
 
@@ -222,7 +223,7 @@ namespace Web.Server.Services
                         {
                             // DPU must match on train ID on the same railroad to be the same train.
                             mapPin = await TryMatchAndUpdateDpuMapPinAsync(telemetry);
-                            
+
                             if (mapPin == null && telemetry.Discarded)
                             {
                                 // Telemetry was discarded during DPU matching
@@ -245,7 +246,7 @@ namespace Web.Server.Services
                     {
                         // DPU must match on train ID on the same railroad to be the same train.
                         mapPin = await TryMatchAndUpdateDpuMapPinAsync(telemetry);
-                        
+
                         if (mapPin == null && telemetry.Discarded)
                         {
                             // Telemetry was discarded during DPU matching
@@ -380,6 +381,24 @@ namespace Web.Server.Services
                     // No matching railroad found between existing map pin and telemetry.
                     // This is a different railroad's DPU train ID.  Update telemetry log with discard reason and exit.
                     await DiscardTelemetryAsync(telemetry, "DPU Invalid Railroad");
+                    return null;
+                }
+
+                // Different beacon, same railroad.
+
+                // Apply speed sanity test to make sure the same train ID isn't being used twice
+                // on the same railroad on the same day (This DOES happen on CN!)
+
+                var milesApart = Math.Abs(existingMapPinByDpuTrainID.BeaconRailroad.Milepost - telemetry.Beacon.BeaconRailroads.First(br => br.Subdivision.RailroadID == existingMapPinByDpuTrainID.BeaconRailroad.Subdivision.RailroadID).Milepost);
+                var hoursApart = (telemetry.CreatedAt - existingMapPinByDpuTrainID.LastUpdate).TotalHours;
+                var speedMph = milesApart / hoursApart;
+
+                if (speedMph > SPEED_THRESHOLD_MPH)
+                {
+                    // The existing map pin and telemetry are too far apart given the time difference, indicating that the
+                    // same train ID is being used for different trains on the same railroad.
+
+                    // Returning null here will result in a new map pin being created for the telemetry.
                     return null;
                 }
             }
