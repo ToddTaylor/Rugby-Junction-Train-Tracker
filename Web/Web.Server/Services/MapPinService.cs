@@ -115,7 +115,12 @@ namespace Web.Server.Services
                     BeaconRailroad = h.BeaconRailroad
                 });
 
-            return mapPins.Concat(historyMapPins);
+            // Concatenate and sort by Direction (northbound, southbound, etc.)
+            var allPins = mapPins.Concat(historyMapPins);
+            // Nulls last, then alphabetically
+            var sortedPins = allPins.OrderBy(mp => mp.Direction == null ? 1 : 0)
+                                   .ThenBy(mp => mp.Direction ?? "");
+            return sortedPins;
         }
 
         public async Task<MapPin?> GetMapPinByIdAsync(int addressID, int? trainID)

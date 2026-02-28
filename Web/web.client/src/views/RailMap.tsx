@@ -235,6 +235,7 @@ const RailMap: React.FC = () => {
 
     // Memoize sorting, grouping, and offset calculations to avoid recomputation on unrelated renders
     const { groupedPins } = useMemo(() => {
+        // Sort pins by lastUpdate, then by direction within each beacon group
         const sorted: MapPin[] = [...mapPins]
             .sort((a, b) => new Date(b.lastUpdate).getTime() - new Date(a.lastUpdate).getTime())
             .map(pin => ({ ...pin }));
@@ -243,6 +244,16 @@ const RailMap: React.FC = () => {
             const key = `${pin.latitude},${pin.longitude}`;
             (grouped[key] ||= []).push(pin);
         });
+        // Now sort each group by direction (nulls last, then alphabetically)
+        Object.keys(grouped).forEach(key => {
+            grouped[key] = grouped[key].sort((a, b) => {
+                if (a.direction === b.direction) return 0;
+                if (a.direction === null || a.direction === undefined) return 1;
+                if (b.direction === null || b.direction === undefined) return -1;
+                return a.direction.localeCompare(b.direction);
+            });
+        });
+        // After sorting by direction, apply spacing for overlapping pins
         const offsets: MapPin[] = [];
         Object.values(grouped).forEach(group => {
             const n = group.length;
@@ -258,8 +269,8 @@ const RailMap: React.FC = () => {
                 });
             }
         });
-        // offsetMarkers result not used directly; only groupedPins needed for downstream filtering
-        return { groupedPins: grouped };
+        // groupedPins is used for downstream filtering, offsets for marker placement
+        return { groupedPins: grouped, offsetMarkers: offsets };
     }, [mapPins, mapZoom]);
 
     // Prune pins older than 10 minutes on a timer so they disappear even if no new data arrives
