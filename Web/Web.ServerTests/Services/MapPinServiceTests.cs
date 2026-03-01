@@ -2341,6 +2341,149 @@ namespace Web.ServerTests.Services
         }
 
         /// <summary>
+        /// Test ensures that if a train with HOT and EOT is between two beacons that the "from" beacon 
+        /// telemetry is discarded before applying the DPU anti-ping pong rule.
+        /// </summary>
+        [TestMethod]
+        public async Task UpsertMapPin_DiscardMapPin_HOTEOTAntiPingPong()
+        {
+            // Arrange
+            var CNSussexBeacon = TestData.CN_Sussex_WI(_timeProviderMock.Object.UtcNow);
+            var CNWaukeshaBeacon = TestData.CN_Waukesha_WI(_timeProviderMock.Object.UtcNow);
+            var addressID = 20917;
+
+            var calculatedDirection = "N";
+
+            var telemetry = new Telemetry
+            {
+                BeaconID = CNSussexBeacon.BeaconID,
+                Beacon = new Beacon
+                {
+                    ID = CNSussexBeacon.BeaconID,
+                    Name = CNSussexBeacon.Beacon.Name,
+                    BeaconRailroads = [
+                        CNSussexBeacon
+                    ]
+                },
+                AddressID = addressID,
+                Source = SourceEnum.EOT,
+                Moving = true,
+                CreatedAt = _timeProviderMock.Object.UtcNow,
+                LastUpdate = _timeProviderMock.Object.UtcNow
+            };
+
+            var previousMapPin = new MapPin
+            {
+                ID = 0,
+                BeaconID = CNSussexBeacon.BeaconID,
+                SubdivisionId = CNSussexBeacon.Subdivision.ID,
+                Direction = calculatedDirection,
+                CreatedAt = _timeProviderMock.Object.UtcNow,
+                LastUpdate = _timeProviderMock.Object.UtcNow,
+                BeaconRailroad = CNSussexBeacon,
+                Moving = null,
+                Addresses =
+                [
+                    new Address
+                    {
+                        AddressID = addressID,
+                        Source = SourceEnum.HOT,
+                        CreatedAt = _timeProviderMock.Object.UtcNow.AddMinutes(-2),
+                        LastUpdate = _timeProviderMock.Object.UtcNow.AddMinutes(-2)
+                    }
+                ]
+            };
+
+            _mapPinRepositoryMock.Setup(r => r.GetByAddressIdAsync(telemetry.AddressID, telemetry.TrainID))
+                .ReturnsAsync(previousMapPin);
+            _beaconRailroadServiceMock.Setup(s => s.GetByIdAsync(previousMapPin.BeaconID, previousMapPin.SubdivisionId))
+                .ReturnsAsync(CNSussexBeacon);
+            _beaconRailroadServiceMock.Setup(s => s.GetByIdAsync(previousMapPin.BeaconID, previousMapPin.SubdivisionId))
+                .ReturnsAsync(CNWaukeshaBeacon);
+
+            var minutesAgo = telemetry.CreatedAt.AddMinutes(-DpuAntiPingPongRule.TIME_WINDOW_MINUTES);
+            _telemetryRepositoryMock.Setup(r => r.GetRecentsWithinTimeOffsetAsync(addressID, CNSussexBeacon.Subdivision.RailroadID, minutesAgo))
+                .ReturnsAsync(
+                [
+                    // Sussex tried to steal the train back. This is the new telemetry that should get
+                    // deleted before the DPU anti-ping pong rule is applied. 
+                    new Telemetry
+                    {
+                        AddressID = addressID,
+                        BeaconID = CNSussexBeacon.BeaconID,
+                        Discarded = false,
+                        Source = SourceEnum.EOT,
+                        CreatedAt = telemetry.CreatedAt.AddMinutes(-34)
+                    },
+                    new Telemetry
+                    {
+                        AddressID = addressID,
+                        BeaconID = CNWaukeshaBeacon.BeaconID,
+                        Discarded = false,
+                        Source = SourceEnum.HOT,
+                        CreatedAt = telemetry.CreatedAt.AddMinutes(-30)
+                    },
+                    new Telemetry
+                    {
+                        AddressID = addressID,
+                        BeaconID = CNWaukeshaBeacon.BeaconID,
+                        Discarded = false,
+                        Source = SourceEnum.HOT,
+                        CreatedAt = telemetry.CreatedAt.AddMinutes(-31)
+                    },
+                    new Telemetry
+                    {
+                        AddressID = addressID,
+                        BeaconID = CNWaukeshaBeacon.BeaconID,
+                        Discarded = false,
+                        Source = SourceEnum.HOT,
+                        CreatedAt = telemetry.CreatedAt.AddMinutes(-32)
+                    },
+                    new Telemetry
+                    {
+                        AddressID = addressID,
+                        BeaconID = CNWaukeshaBeacon.BeaconID,
+                        Discarded = false,
+                        Source = SourceEnum.HOT,
+                        CreatedAt = telemetry.CreatedAt.AddMinutes(-33)
+                    },
+                    // Sussex was the previous location for the anti-ping pong rule.
+                    new Telemetry
+                    {
+                        AddressID = addressID,
+                        BeaconID = CNSussexBeacon.BeaconID,
+                        Discarded = false,
+                        Source = SourceEnum.EOT,
+                        CreatedAt = telemetry.CreatedAt.AddMinutes(-34)
+                    },
+                    new Telemetry
+                    {
+                        AddressID = addressID,
+                        BeaconID = CNSussexBeacon.BeaconID,
+                        Discarded = false,
+                        Source = SourceEnum.EOT,
+                        CreatedAt = telemetry.CreatedAt.AddMinutes(-35)
+                    }
+                ]);
+
+            _hubContextMock.Setup(h => h.Clients).Returns(_hubClientsMock.Object);
+            _hubClientsMock.Setup(h => h.All).Returns(_clientProxyMock.Object);
+
+            // Act
+            await _service.UpsertMapPin(telemetry);
+
+            // Assert
+            _telemetryRepositoryMock.Verify(r => r.UpdateAsync(telemetry), Times.Once);
+
+            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(It.IsAny<MapPin>()), Times.Never);
+
+            _clientProxyMock?.Verify(proxy => proxy.SendCoreAsync(
+                NotificationMethods.MapPinUpdate,
+                It.IsAny<object[]>(),
+                default), Times.Never);
+        }
+
+        /// <summary>
         /// Test that when DPU telemetry arrives with existing DPU address, the map pin is updated correctly.
         /// </summary>
         [TestMethod]
@@ -3147,7 +3290,7 @@ namespace Web.ServerTests.Services
             _beaconRailroadServiceMock.Setup(b => b.GetByIdAsync(telemetry.BeaconID, fromMapPin.SubdivisionId))
                 .ReturnsAsync(CNRugbyJunctionBeacon);
             _beaconRailroadServiceMock.Setup(b => b.GetByIdAsync(fromMapPin.BeaconID, fromMapPin.SubdivisionId))
-                .ReturnsAsync(CNSussexBeacon);
+                .ReturnsAsync(CNRugbyJunctionBeacon);
             _mapPinRepositoryMock.Setup(r => r.UpsertAsync(toMapPinBeforeUpdate))
                 .ReturnsAsync(toMapPinAfterUpdate);
 
@@ -3384,7 +3527,6 @@ namespace Web.ServerTests.Services
                 It.Is<object[]>(args => args[0].Equals(toMapPinObjects[0])),
                 default), Times.Once);
         }
-
 
         /// <summary>
         /// Tests the scenario where DPUs with the same train ID and a large time gap on the same beacon are merged.

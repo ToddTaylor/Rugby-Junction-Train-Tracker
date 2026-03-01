@@ -403,10 +403,7 @@ namespace Web.Server.Services
                 }
             }
 
-            // Existing map pin is from same beacon railroad as the telemetry.
-
-            // Add the DPU address to the existing map pin.
-            existingMapPinByDpuTrainID.Addresses.Add(CreateAddress(telemetry));
+            // Existing map pin is from same railroad as the telemetry.
 
             // Determine if the map pin should be discarded based on telemetry and map pin rules.
             var mapPinDiscarded = await ShouldDiscardMapPin(telemetry, existingMapPinByDpuTrainID);
@@ -416,6 +413,9 @@ namespace Web.Server.Services
                 // Map pin rule(s) failed, discard reason already recorded in telemetry
                 return null;
             }
+
+            // Add the DPU address to the existing map pin.
+            existingMapPinByDpuTrainID.Addresses.Add(CreateAddress(telemetry));
 
             // Update the existing map pin with new telemetry data in case the map pin moved.
             return await UpdateMapPin(telemetry, existingMapPinByDpuTrainID);
@@ -552,7 +552,7 @@ namespace Web.Server.Services
                 return true;
             }
 
-            var differentBeacon = telemetry.BeaconID != existingMapPinToUpdate.BeaconID;
+            var differentBeacon = toBeaconRailroad.BeaconID != fromBeaconRailroad.BeaconID;
 
             if (differentBeacon)
             {
