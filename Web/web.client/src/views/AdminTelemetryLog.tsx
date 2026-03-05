@@ -2,7 +2,6 @@ import { adminDataGridSx } from '../components/DataGridStyles';
 import { useEffect, useState } from "react";
 import './Admin.css';
 import '../App.css';
-import './TelemetryLog.css';
 import './AdminSubdivisions.css';
 import './AdminTelemetryLog.css';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';

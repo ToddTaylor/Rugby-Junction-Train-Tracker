@@ -1,7 +1,6 @@
 ﻿import { BrowserRouter, Route, Routes, Navigate } from 'react-router-dom'
 import RailMap from "./views/RailMap";
 import MapPinsLog from './views/MapPinsLog';
-import TelemetryLog from './views/TelemetryLog';
 import WebCams from './views/WebCams';
 import Login from './views/Login';
 import Admin from './views/Admin';
@@ -30,7 +29,6 @@ function App() {
                     <Route index element={<PrivateRoute><RailMap /></PrivateRoute>} />
                     <Route path="railmap" element={<PrivateRoute><RailMap /></PrivateRoute>} />
                     <Route path="mappinslog" element={<PrivateRoute><MapPinsLog /></PrivateRoute>} />
-                    <Route path="telemetrylog" element={<PrivateRoute><TelemetryLog /></PrivateRoute>} />
                     <Route path="webcams" element={<PrivateRoute><WebCams /></PrivateRoute>} />
                     <Route path="admin" element={<AdminRoute><Admin /></AdminRoute>}>
                         <Route index element={<Navigate to="/admin/telemetry" replace />} />

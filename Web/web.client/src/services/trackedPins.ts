@@ -39,16 +39,32 @@ import { getAuthToken } from './auth';
 // Service for tracked map pins (uses API when available, falls back to localStorage)
 export const TRACKED_KEY = 'trackedMapPins';
 export const TRACK_COLORS = [
+    // Red
     '#FF3366', // Bright pink/red
-    '#00FFFF', // Cyan
-    '#00FF00', // Lime green
-    '#FF00FF', // Magenta
+    '#DC143C', // Crimson
+    '#FF1493', // Deep pink
+    '#FF6347', // Tomato
+    // Orange
+    '#FFD700', // Gold
+    // Yellow
     '#FFFF00', // Yellow
-    '#FF6600', // Orange
-    '#00FF99', // Spring green
-    '#FF0099', // Hot pink
+    // Green
+    '#00FF00', // Lime green
     '#66FF00', // Chartreuse
+    '#7FFF00', // Chartreuse green
+    '#228B22', // Forest green
+    '#00FF99', // Spring green
+    // Blue
     '#0099FF', // Sky blue
+    '#1E90FF', // Dodger blue
+    '#00CED1', // Dark turquoise
+    // Indigo
+    '#483D8B', // Dark slate blue
+    '#8A2BE2', // Blue violet
+    // Violet
+    '#C71585', // Medium violet red
+    '#FF00FF', // Magenta
+    '#FF0099', // Hot pink
 ];
 
 export type TrackedPin = {
