@@ -15,6 +15,20 @@ Directory.CreateDirectory(appDataPath);
 string configPath = Path.Combine(appDataPath, $"appsettings.{environment}.json");
 string firstRunFlagPath = Path.Combine(appDataPath, "firstrun.flag");
 
+// If firstRunFlagPath is missing, delete all files in appDataPath before loading config
+if (!File.Exists(firstRunFlagPath))
+{
+    try
+    {
+        var filesToDelete = Directory.GetFiles(appDataPath);
+        foreach (var file in filesToDelete)
+        {
+            try { File.Delete(file); } catch { /* Ignore errors */ }
+        }
+    }
+    catch { /* Ignore errors */ }
+}
+
 // For ClickOnce compatibility, resolve bundled config from the application directory
 // instead of using a relative path that might not work in different deployment scenarios
 string bundledConfigPath = Path.Combine(
@@ -119,6 +133,63 @@ else
     appSettings = JsonSerializer.Deserialize<AppSettings>(json, options);
 }
 
+// Load additional Subscriber configs from C:\\TrainTracker\\Subscribers
+try
+{
+    string? optionalSubscribersPath = null;
+    if (appSettings != null)
+    {
+        var type = appSettings.GetType();
+        var prop = type.GetProperty("OptionalSubscribersPath");
+        if (prop != null)
+        {
+            optionalSubscribersPath = prop.GetValue(appSettings) as string;
+        }
+        else
+        {
+            // Try to get from JSON if not mapped in class
+            var json = JsonSerializer.Serialize(appSettings);
+            using var doc = JsonDocument.Parse(json);
+            if (doc.RootElement.TryGetProperty("OptionalSubscribersPath", out var pathElement))
+            {
+                optionalSubscribersPath = pathElement.GetString();
+            }
+        }
+    }
+
+    if (!string.IsNullOrWhiteSpace(optionalSubscribersPath) && Directory.Exists(optionalSubscribersPath))
+    {
+        var subscriberFiles = Directory.GetFiles(optionalSubscribersPath, "*.json");
+        foreach (var file in subscriberFiles)
+        {
+            try
+            {
+                var extJson = File.ReadAllText(file);
+                using var doc = JsonDocument.Parse(extJson);
+                if (doc.RootElement.TryGetProperty("Subscriber", out var subscriberElement))
+                {
+                    var subscriber = subscriberElement.Deserialize<Services.Models.Subscriber>(new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                    if (subscriber != null && appSettings != null)
+                    {
+                        // Avoid duplicate IDs
+                        if (!appSettings.Subscribers.Any(s => s.ID == subscriber.ID))
+                        {
+                            appSettings.Subscribers.Add(subscriber);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine($"Warning: Failed to load subscriber from {file}: {ex.Message}");
+                Console.ResetColor();
+            }
+        }
+    }
+}
+catch { /* Ignore errors, continue if path doesn't exist or files are invalid */ }
+
 if (appSettings == null)
 {
     Console.ForegroundColor = ConsoleColor.Red;
@@ -130,6 +201,17 @@ if (appSettings == null)
 // Only prompt and update config on first run
 if (!File.Exists(firstRunFlagPath))
 {
+    // Delete all files in the appDataPath directory (including previous appsettings files)
+    try
+    {
+        var filesToDelete = Directory.GetFiles(appDataPath);
+        foreach (var file in filesToDelete)
+        {
+            try { File.Delete(file); } catch { /* Ignore errors */ }
+        }
+    }
+    catch { /* Ignore errors */ }
+
     PromptAndUpdateSettings(appSettings);
 }
 else

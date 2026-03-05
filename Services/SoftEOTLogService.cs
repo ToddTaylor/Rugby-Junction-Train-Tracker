@@ -56,7 +56,7 @@ namespace Services
                 try
                 {
                     var logDirectoryPath = appSettings.LogDirectoryPath;
-                    
+
                     if (string.IsNullOrEmpty(logDirectoryPath) || !Directory.Exists(logDirectoryPath))
                     {
                         LogError($"Telemetry log file directory path is not valid: {logDirectoryPath}");
@@ -100,31 +100,37 @@ namespace Services
 
         private static void AddDpuEventSubscribers(AppSettings appsettings)
         {
-            List<String> subscribers = appsettings.DpuPacketSubscription.Subscribers;
+            var subscribersWithDpu = appsettings.Subscribers
+                .Where(s => !string.IsNullOrEmpty(s.DpuPacketSubscriber))
+                .ToList();
 
-            if (subscribers == null)
+            if (subscribersWithDpu.Count == 0)
             {
                 LogError("No DPU subscribers found in the configuration.");
+                return;
             }
 
-            foreach (var subscriber in subscribers)
+            foreach (var subscriber in subscribersWithDpu)
             {
-                SubscribeToPacketEvent(appsettings, subscriber, "DpuPacketReceived", "OnDpuPacketReceived");
+                SubscribeToPacketEvent(appsettings, subscriber.DpuPacketSubscriber!, "DpuPacketReceived", "OnDpuPacketReceived");
             }
         }
 
         private static void AddHotEotEventSubscribers(AppSettings appsettings)
         {
-            List<String> subscribers = appsettings.HotEotPacketSubscription.Subscribers;
+            var subscribersWithHotEot = appsettings.Subscribers
+                .Where(s => !string.IsNullOrEmpty(s.HotEotPacketSubscriber))
+                .ToList();
 
-            if (subscribers == null)
+            if (subscribersWithHotEot.Count == 0)
             {
                 LogError("No HOT / EOT subscribers found in the configuration.");
+                return;
             }
 
-            foreach (var subscriber in subscribers)
+            foreach (var subscriber in subscribersWithHotEot)
             {
-                SubscribeToPacketEvent(appsettings, subscriber, "HotEotPacketReceived", "OnHotEotPacketReceived");
+                SubscribeToPacketEvent(appsettings, subscriber.HotEotPacketSubscriber!, "HotEotPacketReceived", "OnHotEotPacketReceived");
             }
         }
 
@@ -138,23 +144,26 @@ namespace Services
 
             var logFiles = Directory.GetFiles(logDirectoryPath, "*.log");
 
-            // Find the most recent eot*.log file
-            var latestEotFile = logFiles
-                .Where(f => Path.GetFileName(f).ToLower().StartsWith("eot"))
-                .OrderByDescending(f => File.GetLastWriteTime(f))
-                .FirstOrDefault();
+            // Prefixes to preserve latest file for each
+            var prefixes = new[] { "eot", "hot", "dpu1", "dpu2", "dpu3", "dpu4" };
+            var latestFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            // Find the most recent dpu*.log file
-            var latestDpuFile = logFiles
-                .Where(f => Path.GetFileName(f).ToLower().StartsWith("dpu"))
-                .OrderByDescending(f => File.GetLastWriteTime(f))
-                .FirstOrDefault();
+            foreach (var prefix in prefixes)
+            {
+                var latestFile = logFiles
+                    .Where(f => Path.GetFileName(f).ToLower().StartsWith(prefix))
+                    .OrderByDescending(f => File.GetLastWriteTime(f))
+                    .FirstOrDefault();
+                if (!string.IsNullOrEmpty(latestFile))
+                {
+                    latestFiles.Add(latestFile);
+                }
+            }
 
             foreach (var file in logFiles)
             {
-                // Skip deletion if it's the most recent eot or dpu file
-                if (string.Equals(file, latestEotFile, StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(file, latestDpuFile, StringComparison.OrdinalIgnoreCase))
+                // Skip deletion if it's the most recent file for any of the prefixes
+                if (latestFiles.Contains(file))
                 {
                     continue;
                 }
@@ -162,102 +171,45 @@ namespace Services
                 try
                 {
                     File.Delete(file);
-                    Console.WriteLine($"Deleted file: {Path.GetFileName(file)}");
+                    Console.WriteLine($"Deleted old log file: {Path.GetFileName(file)}");
                 }
                 catch (Exception ex)
                 {
-                    LogError($"Error deleting {Path.GetFileName(file)}: {ex.Message}");
+                    LogError($"Failed to delete {Path.GetFileName(file)}: {ex.Message}");
                 }
             }
-        }
-
-        private static void LogError(string message)
-        {
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.Error.WriteLine(message);
-            Console.ResetColor();
         }
 
         private static void ProcessLogFiles(Dictionary<string, long> lastPositions, string[] logFilePaths)
         {
             foreach (var logFilePath in logFilePaths)
             {
-                ProcessLogFile(lastPositions, logFilePath);
+                long lastPosition = lastPositions.ContainsKey(logFilePath) ? lastPositions[logFilePath] : 0;
+                ProcessLogFile(lastPositions, logFilePath, lastPosition);
             }
         }
 
-        private static void ProcessLogFile(Dictionary<string, long> lastPositions, string logFilePath)
+        private static void ProcessLogFile(Dictionary<string, long> lastPositions, string logFilePath, long lastPosition)
         {
-            if (!lastPositions.ContainsKey(logFilePath))
-            {
-                lastPositions[logFilePath] = 0L;
-                Console.WriteLine($"[LOG] Monitoring file: {Path.GetFileName(logFilePath)}");
-            }
-
             try
             {
-                using FileStream fileStream = new(logFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-                fileStream.Seek(lastPositions[logFilePath], SeekOrigin.Begin);
-
-                using StreamReader reader = new(fileStream);
-
-                while (!reader.EndOfStream)
+                using (var fileStream = new FileStream(logFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                 {
-                    var line = reader.ReadLine();
+                    fileStream.Seek(lastPosition, SeekOrigin.Begin);
 
-                    if (IsHeaderRow(line))
+                    using (var reader = new StreamReader(fileStream))
                     {
-                        continue;
-                    }
-
-                    if (Path.GetFileName(logFilePath).Contains(FILE_NAME_PREFIX_HOT, StringComparison.OrdinalIgnoreCase) ||
-                        Path.GetFileName(logFilePath).Contains(FILE_NAME_PREFIX_EOT, StringComparison.OrdinalIgnoreCase))
-                    {
-                        try
+                        string? line;
+                        while ((line = reader.ReadLine()) != null)
                         {
-                            var hotPacket = HotEotDeserializer.Deserialize(line);
-
-                            // Only apply time filter if offset is configured; offset=0 means accept all packets
-                            if (TIME_RECEIVED_OFFSET_MINUTES > 0 && hotPacket.TimeReceived.ToLocalTime() <= DateTime.Now.AddMinutes(-TIME_RECEIVED_OFFSET_MINUTES))
+                            if (!IsHeaderRow(line))
                             {
-                                lastPositions[logFilePath] = fileStream.Position;
-                                continue; // Ignore packets older than TIME_RECEIVED_OFFSET_MINUTES minutes
+                                ProcessLogLine(line, logFilePath);
                             }
-
-                            Console.WriteLine(line);
-
-                            HotEotPacketReceived?.Invoke(null, new HotEotPacketEventArgs(hotPacket));
                         }
-                        catch (Exception ex)
-                        {
-                            LogError($"Error deserializing HOT/EOT packet from {Path.GetFileName(logFilePath)}: {ex.GetType().Name}: {ex.Message}");
-                        }
+                        // Update last position after reading all lines, while stream is still open
+                        lastPositions[logFilePath] = fileStream.Position;
                     }
-
-                    if (Path.GetFileName(logFilePath).StartsWith(FILE_NAME_PREFIX_DPU, StringComparison.OrdinalIgnoreCase))
-                    {
-                        try
-                        {
-                            var dpuPacket = DpuDeserializer.Deserialize(line);
-
-                            // Only apply time filter if offset is configured; offset=0 means accept all packets
-                            if (TIME_RECEIVED_OFFSET_MINUTES > 0 && dpuPacket.TimeReceived.ToLocalTime() <= DateTime.Now.AddMinutes(-TIME_RECEIVED_OFFSET_MINUTES))
-                            {
-                                lastPositions[logFilePath] = fileStream.Position;
-                                continue; // Ignore packets older than TIME_RECEIVED_OFFSET_MINUTES minutes
-                            }
-
-                            Console.WriteLine(line);
-
-                            DpuPacketReceived?.Invoke(null, new DpuPacketEventArgs(dpuPacket));
-                        }
-                        catch (Exception ex)
-                        {
-                            LogError($"Error deserializing DPU packet from {Path.GetFileName(logFilePath)}: {ex.GetType().Name}: {ex.Message}");
-                        }
-                    }
-
-                    lastPositions[logFilePath] = fileStream.Position;
                 }
             }
             catch (FileNotFoundException ex)
@@ -291,16 +243,19 @@ namespace Services
 
         private static void StartBeaconHealthServices(AppSettings appSettings)
         {
-            var services = appSettings.BeaconHealthServices.Services;
+            var subscribersWithHealthService = appSettings.Subscribers
+                .Where(s => !string.IsNullOrEmpty(s.HealthService))
+                .ToList();
 
-            if (services == null || services.Count == 0)
+            if (subscribersWithHealthService.Count == 0)
             {
                 LogError("No beacon health services in the configuration.");
+                return;
             }
 
-            foreach (var service in services)
+            foreach (var subscriber in subscribersWithHealthService)
             {
-                StartBeaconHealthService(appSettings, service, "Start");
+                StartBeaconHealthService(appSettings, subscriber.HealthService!, "Start");
             }
         }
 
@@ -342,6 +297,60 @@ namespace Services
                     }
                 }
             }
+        }
+
+        private static void ProcessLogLine(string line, string logFilePath)
+        {
+            if (Path.GetFileName(logFilePath).Contains(FILE_NAME_PREFIX_HOT, StringComparison.OrdinalIgnoreCase) ||
+                Path.GetFileName(logFilePath).Contains(FILE_NAME_PREFIX_EOT, StringComparison.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    var hotPacket = HotEotDeserializer.Deserialize(line);
+
+                    // Only apply time filter if offset is configured; offset=0 means accept all packets
+                    if (TIME_RECEIVED_OFFSET_MINUTES > 0 && hotPacket.TimeReceived.ToLocalTime() <= DateTime.Now.AddMinutes(-TIME_RECEIVED_OFFSET_MINUTES))
+                    {
+                        return; // Ignore packets older than TIME_RECEIVED_OFFSET_MINUTES minutes
+                    }
+
+                    Console.WriteLine(line);
+
+                    HotEotPacketReceived?.Invoke(null, new HotEotPacketEventArgs(hotPacket));
+                }
+                catch (Exception ex)
+                {
+                    LogError($"Error deserializing HOT/EOT packet from {Path.GetFileName(logFilePath)}: {ex.GetType().Name}: {ex.Message}");
+                }
+            }
+            else if (Path.GetFileName(logFilePath).StartsWith(FILE_NAME_PREFIX_DPU, StringComparison.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    var dpuPacket = DpuDeserializer.Deserialize(line);
+
+                    // Only apply time filter if offset is configured; offset=0 means accept all packets
+                    if (TIME_RECEIVED_OFFSET_MINUTES > 0 && dpuPacket.TimeReceived.ToLocalTime() <= DateTime.Now.AddMinutes(-TIME_RECEIVED_OFFSET_MINUTES))
+                    {
+                        return; // Ignore packets older than TIME_RECEIVED_OFFSET_MINUTES minutes
+                    }
+
+                    Console.WriteLine(line);
+
+                    DpuPacketReceived?.Invoke(null, new DpuPacketEventArgs(dpuPacket));
+                }
+                catch (Exception ex)
+                {
+                    LogError($"Error deserializing DPU packet from {Path.GetFileName(logFilePath)}: {ex.GetType().Name}: {ex.Message}");
+                }
+            }
+        }
+
+        private static void LogError(string message)
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine($"[ERROR] {message}");
+            Console.ResetColor();
         }
     }
 }
