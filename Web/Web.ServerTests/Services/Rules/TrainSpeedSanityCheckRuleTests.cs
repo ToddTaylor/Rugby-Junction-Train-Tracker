@@ -1,4 +1,6 @@
+using Moq;
 using Web.Server.Entities;
+using Web.Server.Repositories;
 using Web.Server.Services.Rules;
 
 namespace Web.ServerTests.Services.Rules
@@ -7,40 +9,55 @@ namespace Web.ServerTests.Services.Rules
     public class TrainSpeedSanityCheckRuleTests
     {
         private TrainSpeedSanityCheckRule _rule = null!;
+        private Mock<ITelemetryRepository> _mockTelemetryRepository = null!;
 
         [TestInitialize]
         public void Setup()
         {
-            _rule = new TrainSpeedSanityCheckRule();
+            _mockTelemetryRepository = new Mock<ITelemetryRepository>();
+            _rule = new TrainSpeedSanityCheckRule(_mockTelemetryRepository.Object);
         }
 
         [TestMethod]
-        public async Task ShouldDiscardAsync_ReturnsFalse_WhenTimeDifferenceIsZero()
+        public async Task ShouldDiscardAsync_ReturnsFalse_WhenLessThanTwoTelemetryEntries()
         {
             // Arrange
             var currentTime = DateTime.UtcNow;
 
-            var fromBeacon = new BeaconRailroad
+            var subdivision = new Subdivision { RailroadID = 1 };
+            var beaconRailroad = new BeaconRailroad
             {
                 BeaconID = 1,
-                Latitude = 43.0,
-                Longitude = -88.0,
-                LastUpdate = currentTime
+                Milepost = 10.0,
+                Subdivision = subdivision
             };
 
-            var toBeacon = new BeaconRailroad
+            var beacon = new Beacon
             {
-                BeaconID = 2,
-                Latitude = 43.1,
-                Longitude = -88.1,
-                LastUpdate = currentTime
+                ID = 1,
+                BeaconRailroads = new List<BeaconRailroad> { beaconRailroad }
             };
 
-            var context = new MapPinRuleContext
+            var telemetry = new Telemetry
             {
-                FromBeaconRailroad = fromBeacon,
-                ToBeaconRailroad = toBeacon
+                BeaconID = 1,
+                AddressID = 100,
+                CreatedAt = currentTime,
+                Beacon = beacon
             };
+
+            var context = new TelemetryRuleContext
+            {
+                Telemetry = telemetry,
+                RailroadId = 1,
+                ToMilepost = beaconRailroad.Milepost,
+                FromMilepost = double.NaN // No prior beacon
+            };
+
+            // Only one telemetry entry
+            _mockTelemetryRepository
+                .Setup(r => r.GetRecentsWithinTimeOffsetAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<DateTime>()))
+                .ReturnsAsync(new List<Telemetry> { telemetry });
 
             // Act
             var result = await _rule.ShouldDiscardAsync(context);
@@ -56,248 +73,271 @@ namespace Web.ServerTests.Services.Rules
             var currentTime = DateTime.UtcNow;
             var previousTime = currentTime.AddMinutes(-60); // 1 hour earlier
 
-            // Beacons approximately 1 mile apart
-            var fromBeacon = new BeaconRailroad
-            {
-                BeaconID = 1,
-                Latitude = 43.294944,
-                Longitude = -88.253118,
-                LastUpdate = previousTime
-            };
+            var subdivision = new Subdivision { RailroadID = 1 };
 
-            var toBeacon = new BeaconRailroad
+            var currentBeaconRailroad = new BeaconRailroad
             {
                 BeaconID = 2,
-                Latitude = 43.304944,
-                Longitude = -88.243118,
-                LastUpdate = currentTime
+                Milepost = 11.0,
+                Subdivision = subdivision
             };
 
-            var context = new MapPinRuleContext
+            var priorBeaconRailroad = new BeaconRailroad
             {
-                FromBeaconRailroad = fromBeacon,
-                ToBeaconRailroad = toBeacon
+                BeaconID = 1,
+                Milepost = 10.0,
+                Subdivision = subdivision
             };
+
+            var currentBeacon = new Beacon
+            {
+                ID = 2,
+                BeaconRailroads = new List<BeaconRailroad> { currentBeaconRailroad }
+            };
+
+            var priorBeacon = new Beacon
+            {
+                ID = 1,
+                BeaconRailroads = new List<BeaconRailroad> { priorBeaconRailroad }
+            };
+
+            var currentTelemetry = new Telemetry
+            {
+                BeaconID = 2,
+                AddressID = 100,
+                CreatedAt = currentTime,
+                Beacon = currentBeacon
+            };
+
+            var priorTelemetry = new Telemetry
+            {
+                BeaconID = 1,
+                AddressID = 100,
+                CreatedAt = previousTime,
+                Beacon = priorBeacon
+            };
+
+            var context = new TelemetryRuleContext
+            {
+                Telemetry = currentTelemetry,
+                RailroadId = 1,
+                ToMilepost = currentBeaconRailroad.Milepost,
+                FromMilepost = priorBeaconRailroad.Milepost
+            };
+
+            _mockTelemetryRepository
+                .Setup(r => r.GetRecentsWithinTimeOffsetAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<DateTime>()))
+                .ReturnsAsync(new List<Telemetry> { currentTelemetry, priorTelemetry });
 
             // Act
             var result = await _rule.ShouldDiscardAsync(context);
 
-            // Assert - ~1 mile in 1 hour = 1 mph, which is well below 35 mph
+            // Assert - 1 mile in 60 minutes, adjusted 1 - 4 - 0.75 = negative (0) = 0 mph
             Assert.IsFalse(result.ShouldDiscard);
         }
 
         [TestMethod]
-        public async Task ShouldDiscardAsync_ReturnsFalse_WhenSpeedEquals35Mph()
-        {
-            // Arrange
-            var currentTime = DateTime.UtcNow;
-            var previousTime = currentTime.AddMinutes(-60); // 1 hour earlier
-
-            // Beacons approximately 35 miles apart
-            // Using rough coordinates for ~35 miles distance
-            var fromBeacon = new BeaconRailroad
-            {
-                BeaconID = 1,
-                Latitude = 43.0,
-                Longitude = -88.0,
-                LastUpdate = previousTime
-            };
-
-            var toBeacon = new BeaconRailroad
-            {
-                BeaconID = 2,
-                Latitude = 43.5,
-                Longitude = -88.0,
-                LastUpdate = currentTime
-            };
-
-            var context = new MapPinRuleContext
-            {
-                FromBeaconRailroad = fromBeacon,
-                ToBeaconRailroad = toBeacon
-            };
-
-            // Act
-            var result = await _rule.ShouldDiscardAsync(context);
-
-            // Assert - At the threshold, should not discard
-            Assert.IsFalse(result.ShouldDiscard);
-        }
-
-        [TestMethod]
-        public async Task ShouldDiscardAsync_ReturnsTrue_WhenSpeedExceeds35Mph()
+        public async Task ShouldDiscardAsync_ReturnsTrue_WhenSpeedExceeds60Mph()
         {
             // Arrange
             var currentTime = DateTime.UtcNow;
             var previousTime = currentTime.AddMinutes(-20); // 20 minutes earlier
 
-            // Beacons approximately 35 miles apart
-            var fromBeacon = new BeaconRailroad
-            {
-                BeaconID = 1,
-                Latitude = 43.0,
-                Longitude = -88.0,
-                LastUpdate = previousTime
-            };
+            var subdivision = new Subdivision { RailroadID = 1 };
 
-            var toBeacon = new BeaconRailroad
+            var currentBeaconRailroad = new BeaconRailroad
             {
                 BeaconID = 2,
-                Latitude = 43.5,
-                Longitude = -88.0,
-                LastUpdate = currentTime
+                Milepost = 70.0,
+                Subdivision = subdivision
             };
 
-            var context = new MapPinRuleContext
-            {
-                FromBeaconRailroad = fromBeacon,
-                ToBeaconRailroad = toBeacon
-            };
-
-            // Act
-            var result = await _rule.ShouldDiscardAsync(context);
-
-            // Assert - ~35 miles in 20 minutes = 73.4 mph, which exceeds threshold
-            Assert.IsTrue(result.ShouldDiscard);
-            Assert.AreEqual("Train Speed Sanity Check", result.Reason);
-        }
-
-        [TestMethod]
-        public async Task ShouldDiscardAsync_ReturnsTrue_WhenSpeedSignificantlyExceeds35Mph()
-        {
-            // Arrange
-            var currentTime = DateTime.UtcNow;
-            var previousTime = currentTime.AddMinutes(-10); // 10 minutes earlier
-
-            // Beacons approximately 35 miles apart
-            var fromBeacon = new BeaconRailroad
+            var priorBeaconRailroad = new BeaconRailroad
             {
                 BeaconID = 1,
-                Latitude = 43.0,
-                Longitude = -88.0,
-                LastUpdate = previousTime
+                Milepost = 10.0,
+                Subdivision = subdivision
             };
 
-            var toBeacon = new BeaconRailroad
+            var currentBeacon = new Beacon
+            {
+                ID = 2,
+                BeaconRailroads = new List<BeaconRailroad> { currentBeaconRailroad }
+            };
+
+            var priorBeacon = new Beacon
+            {
+                ID = 1,
+                BeaconRailroads = new List<BeaconRailroad> { priorBeaconRailroad }
+            };
+
+            var currentTelemetry = new Telemetry
             {
                 BeaconID = 2,
-                Latitude = 43.5,
-                Longitude = -88.0,
-                LastUpdate = currentTime
+                AddressID = 100,
+                CreatedAt = currentTime,
+                Beacon = currentBeacon
             };
 
-            var context = new MapPinRuleContext
-            {
-                FromBeaconRailroad = fromBeacon,
-                ToBeaconRailroad = toBeacon
-            };
-
-            // Act
-            var result = await _rule.ShouldDiscardAsync(context);
-
-            // Assert - ~35 miles in 10 minutes = 210 mph, which is way over threshold
-            Assert.IsTrue(result.ShouldDiscard);
-            Assert.AreEqual("Train Speed Sanity Check", result.Reason);
-        }
-
-        [TestMethod]
-        public async Task ShouldDiscardAsync_ReturnsFalse_WhenSameBeaconRepeated()
-        {
-            // Arrange
-            var currentTime = DateTime.UtcNow;
-            var previousTime = currentTime.AddMinutes(-10);
-
-            var beacon = new BeaconRailroad
+            var priorTelemetry = new Telemetry
             {
                 BeaconID = 1,
-                Latitude = 43.0,
-                Longitude = -88.0,
-                LastUpdate = previousTime
+                AddressID = 100,
+                CreatedAt = previousTime,
+                Beacon = priorBeacon
             };
 
-            var context = new MapPinRuleContext
+            var context = new TelemetryRuleContext
             {
-                FromBeaconRailroad = beacon,
-                ToBeaconRailroad = beacon
+                Telemetry = currentTelemetry,
+                RailroadId = 1,
+                ToMilepost = currentBeaconRailroad.Milepost,
+                FromMilepost = priorBeaconRailroad.Milepost
             };
+
+            _mockTelemetryRepository
+                .Setup(r => r.GetRecentsWithinTimeOffsetAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<DateTime>()))
+                .ReturnsAsync(new List<Telemetry> { currentTelemetry, priorTelemetry });
 
             // Act
             var result = await _rule.ShouldDiscardAsync(context);
 
-            // Assert - Same beacon repeating, 0 distance in 10 minutes = 0 mph
-            Assert.IsFalse(result.ShouldDiscard);
+            // Assert - 60 miles in 20 minutes, adjusted: 60 - 4 - 0.75 = 55.25 miles
+            // Speed: 55.25 / (20/60) = 165.75 mph, exceeds 60 mph threshold
+            Assert.IsTrue(result.ShouldDiscard);
+            Assert.Contains(TrainSpeedSanityCheckRule.DISCARD_REASON, result.Reason);
         }
 
         [TestMethod]
         public async Task ShouldDiscardAsync_ReturnsFalse_WhenNegativeTimeDifference()
         {
-            // Arrange - Edge case where current time is before previous time (shouldn't happen but test edge case)
+            // Arrange
             var currentTime = DateTime.UtcNow;
             var futureTime = currentTime.AddMinutes(10);
 
-            var fromBeacon = new BeaconRailroad
-            {
-                BeaconID = 1,
-                Latitude = 43.0,
-                Longitude = -88.0,
-                LastUpdate = futureTime // Future timestamp
-            };
+            var subdivision = new Subdivision { RailroadID = 1 };
 
-            var toBeacon = new BeaconRailroad
+            var currentBeaconRailroad = new BeaconRailroad
             {
                 BeaconID = 2,
-                Latitude = 43.5,
-                Longitude = -88.0,
-                LastUpdate = currentTime
+                Milepost = 70.0,
+                Subdivision = subdivision
             };
 
-            var context = new MapPinRuleContext
+            var priorBeaconRailroad = new BeaconRailroad
             {
-                FromBeaconRailroad = fromBeacon,
-                ToBeaconRailroad = toBeacon
+                BeaconID = 1,
+                Milepost = 10.0,
+                Subdivision = subdivision
             };
+
+            var currentBeacon = new Beacon
+            {
+                ID = 2,
+                BeaconRailroads = new List<BeaconRailroad> { currentBeaconRailroad }
+            };
+
+            var priorBeacon = new Beacon
+            {
+                ID = 1,
+                BeaconRailroads = new List<BeaconRailroad> { priorBeaconRailroad }
+            };
+
+            var currentTelemetry = new Telemetry
+            {
+                BeaconID = 2,
+                AddressID = 100,
+                CreatedAt = currentTime,
+                Beacon = currentBeacon
+            };
+
+            var priorTelemetry = new Telemetry
+            {
+                BeaconID = 1,
+                AddressID = 100,
+                CreatedAt = futureTime,
+                Beacon = priorBeacon
+            };
+
+            var context = new TelemetryRuleContext
+            {
+                Telemetry = currentTelemetry,
+                RailroadId = 1,
+                ToMilepost = currentBeaconRailroad.Milepost,
+                FromMilepost = priorBeaconRailroad.Milepost
+            };
+
+            _mockTelemetryRepository
+                .Setup(r => r.GetRecentsWithinTimeOffsetAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<DateTime>()))
+                .ReturnsAsync(new List<Telemetry> { currentTelemetry, priorTelemetry });
+
+            // Act
+            var result = await _rule.ShouldDiscardAsync(context);
+
+            // Assert - Negative time difference
+            Assert.IsFalse(result.ShouldDiscard);
+        }
+
+        [TestMethod]
+        public async Task ShouldDiscardAsync_ReturnsFalse_WhenMissingBeaconRailroad()
+        {
+            // Arrange
+            var currentTime = DateTime.UtcNow;
+            var previousTime = currentTime.AddMinutes(-60);
+
+            var subdivision = new Subdivision { RailroadID = 1 };
+
+            var currentBeaconRailroad = new BeaconRailroad
+            {
+                BeaconID = 2,
+                Milepost = 11.0,
+                Subdivision = subdivision
+            };
+
+            var currentBeacon = new Beacon
+            {
+                ID = 2,
+                BeaconRailroads = new List<BeaconRailroad> { currentBeaconRailroad }
+            };
+
+            var priorBeacon = new Beacon
+            {
+                ID = 1,
+                BeaconRailroads = new List<BeaconRailroad>() // No matching railroad
+            };
+
+            var currentTelemetry = new Telemetry
+            {
+                BeaconID = 2,
+                AddressID = 100,
+                CreatedAt = currentTime,
+                Beacon = currentBeacon
+            };
+
+            var priorTelemetry = new Telemetry
+            {
+                BeaconID = 1,
+                AddressID = 100,
+                CreatedAt = previousTime,
+                Beacon = priorBeacon
+            };
+
+            var context = new TelemetryRuleContext
+            {
+                Telemetry = currentTelemetry,
+                RailroadId = 1,
+                ToMilepost = currentBeaconRailroad.Milepost,
+                FromMilepost = 0.0 // No valid milepost for prior beacon
+            };
+
+            _mockTelemetryRepository
+                .Setup(r => r.GetRecentsWithinTimeOffsetAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<DateTime>()))
+                .ReturnsAsync(new List<Telemetry> { currentTelemetry, priorTelemetry });
 
             // Act
             var result = await _rule.ShouldDiscardAsync(context);
 
             // Assert
-            Assert.IsFalse(result.ShouldDiscard);
-        }
-
-        [TestMethod]
-        public async Task ShouldDiscardAsync_ReturnsFalse_WhenVeryCloseBeaconsWithinThreshold()
-        {
-            // Arrange
-            var currentTime = DateTime.UtcNow;
-            var previousTime = currentTime.AddSeconds(-30); // Only 30 seconds apart
-
-            // Beacons very close (same location essentially)
-            var fromBeacon = new BeaconRailroad
-            {
-                BeaconID = 1,
-                Latitude = 43.294944,
-                Longitude = -88.253118,
-                LastUpdate = previousTime
-            };
-
-            var toBeacon = new BeaconRailroad
-            {
-                BeaconID = 2,
-                Latitude = 43.294950, // Very close
-                Longitude = -88.253120,
-                LastUpdate = currentTime
-            };
-
-            var context = new MapPinRuleContext
-            {
-                FromBeaconRailroad = fromBeacon,
-                ToBeaconRailroad = toBeacon
-            };
-
-            // Act
-            var result = await _rule.ShouldDiscardAsync(context);
-
-            // Assert - Very small distance in short time
             Assert.IsFalse(result.ShouldDiscard);
         }
     }

@@ -561,7 +561,9 @@ namespace Web.Server.Services
                 var context = new TelemetryRuleContext
                 {
                     Telemetry = telemetry,
-                    RailroadId = toBeaconRailroad.Subdivision.RailroadID
+                    RailroadId = toBeaconRailroad.Subdivision.RailroadID,
+                    ToMilepost = toBeaconRailroad.Milepost,
+                    FromMilepost = fromBeaconRailroad.Milepost
                 };
 
                 var telemetryRuleResult = await _telemetryRuleEngine.ShouldDiscardAsync(context);

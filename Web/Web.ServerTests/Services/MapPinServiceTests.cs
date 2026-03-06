@@ -54,13 +54,13 @@ namespace Web.ServerTests.Services
             // Initialize real rule engines with actual rules (same as production)
             var mapPinRules = new List<IMapPinRule>
             {
-                new TrainSpeedSanityCheckRule(),
                 new TrackageRightsRule(_trackageRightRepositoryMock.Object)
             };
             _mapPinRuleEngine = new MapPinRuleEngine(mapPinRules);
 
             var telemetryRules = new List<ITelemetryRule>
             {
+                new TrainSpeedSanityCheckRule(_telemetryRepositoryMock.Object),
                 new DpuAntiPingPongRule(_telemetryRepositoryMock.Object),
                 new EotHotAntiPingPongRule(_telemetryRepositoryMock.Object)
             };
@@ -2411,6 +2411,14 @@ namespace Web.ServerTests.Services
                     {
                         AddressID = addressID,
                         BeaconID = CNSussexBeacon.BeaconID,
+                        Beacon = new Beacon
+                        {
+                            ID = CNSussexBeacon.BeaconID,
+                            Name = CNSussexBeacon.Beacon.Name,
+                            BeaconRailroads = [
+                                CNSussexBeacon
+                            ]
+                        },
                         Discarded = false,
                         Source = SourceEnum.EOT,
                         CreatedAt = telemetry.CreatedAt.AddMinutes(-34)
@@ -2419,6 +2427,14 @@ namespace Web.ServerTests.Services
                     {
                         AddressID = addressID,
                         BeaconID = CNWaukeshaBeacon.BeaconID,
+                        Beacon = new Beacon
+                        {
+                            ID = CNWaukeshaBeacon.BeaconID,
+                            Name = CNWaukeshaBeacon.Beacon.Name,
+                            BeaconRailroads = [
+                                CNWaukeshaBeacon
+                            ]
+                        },
                         Discarded = false,
                         Source = SourceEnum.HOT,
                         CreatedAt = telemetry.CreatedAt.AddMinutes(-30)
@@ -2427,6 +2443,14 @@ namespace Web.ServerTests.Services
                     {
                         AddressID = addressID,
                         BeaconID = CNWaukeshaBeacon.BeaconID,
+                        Beacon = new Beacon
+                        {
+                            ID = CNWaukeshaBeacon.BeaconID,
+                            Name = CNWaukeshaBeacon.Beacon.Name,
+                            BeaconRailroads = [
+                                CNWaukeshaBeacon
+                            ]
+                        },
                         Discarded = false,
                         Source = SourceEnum.HOT,
                         CreatedAt = telemetry.CreatedAt.AddMinutes(-31)
@@ -2435,6 +2459,14 @@ namespace Web.ServerTests.Services
                     {
                         AddressID = addressID,
                         BeaconID = CNWaukeshaBeacon.BeaconID,
+                        Beacon = new Beacon
+                        {
+                            ID = CNWaukeshaBeacon.BeaconID,
+                            Name = CNWaukeshaBeacon.Beacon.Name,
+                            BeaconRailroads = [
+                                CNWaukeshaBeacon
+                            ]
+                        },
                         Discarded = false,
                         Source = SourceEnum.HOT,
                         CreatedAt = telemetry.CreatedAt.AddMinutes(-32)
@@ -2443,6 +2475,14 @@ namespace Web.ServerTests.Services
                     {
                         AddressID = addressID,
                         BeaconID = CNWaukeshaBeacon.BeaconID,
+                        Beacon = new Beacon
+                        {
+                            ID = CNWaukeshaBeacon.BeaconID,
+                            Name = CNWaukeshaBeacon.Beacon.Name,
+                            BeaconRailroads = [
+                                CNWaukeshaBeacon
+                            ]
+                        },
                         Discarded = false,
                         Source = SourceEnum.HOT,
                         CreatedAt = telemetry.CreatedAt.AddMinutes(-33)

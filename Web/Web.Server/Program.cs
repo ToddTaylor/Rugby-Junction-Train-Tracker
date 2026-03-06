@@ -143,14 +143,14 @@ try
     builder.Services.AddScoped<ISubdivisionTrackageRightService, SubdivisionTrackageRightService>();
     builder.Services.AddScoped<IEmailService, EmailService>();
 
-    // Register telemetry rules
+    // Register telemetry rules - Order matters!
     builder.Services.AddScoped<ITelemetryRule, DpuAntiPingPongRule>();
     builder.Services.AddScoped<ITelemetryRule, EotHotAntiPingPongRule>();
+    builder.Services.AddScoped<ITelemetryRule, TrainSpeedSanityCheckRule>();
     builder.Services.AddScoped<ITelemetryRuleEngine, TelemetryRuleEngine>();
 
     // Register map pin rules - Order matters!
     builder.Services.AddScoped<IMapPinRule, TrackageRightsRule>();
-    //builder.Services.AddScoped<IMapPinRule, TrainSpeedSanityCheckRule>(); // Temporary: Disabled due to Neenah issues.
     builder.Services.AddScoped<IMapPinRuleEngine, MapPinRuleEngine>();
 
     builder.Services.AddScoped<ITimeProvider, SystemTimeProvider>();
