@@ -14,6 +14,7 @@ interface BeaconMarkersProps {
     onBeaconClick?: (beaconID: string, beaconName: string, subdivisionID?: string, railroad?: string, subdivision?: string) => void;
     trackedPins?: TrackedPin[];
     mapPins?: MapPin[];
+    hourFormat?: string;
 }
 
 const BeaconMarkers: React.FC<BeaconMarkersProps> = ({ 
@@ -23,7 +24,8 @@ const BeaconMarkers: React.FC<BeaconMarkersProps> = ({
     beaconLastUpdateMap, 
     onBeaconClick,
     trackedPins = [],
-    mapPins = []
+    mapPins = [],
+    hourFormat = '24'
 }) => {
     // Vertical offset for label marker (in degrees latitude, approx 7px)
     const getLabelOffsetLat = (lat: number, zoom: number) => {
@@ -129,6 +131,7 @@ const BeaconMarkers: React.FC<BeaconMarkersProps> = ({
                                 trackedPins={trackedPins}
                                 mapPins={mapPins}
                                 horizontalShift={horizontalShift}
+                                hourFormat={hourFormat}
                             />
                         )}
                     </React.Fragment>

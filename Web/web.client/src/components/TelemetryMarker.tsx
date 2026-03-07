@@ -38,6 +38,7 @@ interface TelemetryMarkerProps {
     maxPinAgeMinutes?: number;
     trackedPins: TrackedPin[];
     longitudeOffset?: number;
+    hourFormat?: string;
 }
 
 const formatDirection = (dir?: string | null): string => {
@@ -61,7 +62,8 @@ const formatDirection = (dir?: string | null): string => {
     return map[dir.toUpperCase()] || 'Unknown Direction';
 };
 
-const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'light' }> = ({ pin, size, maxPinAgeMinutes, mapTheme, trackedPins, longitudeOffset = 0 }) => {
+const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'light' }> = ({ pin, size, maxPinAgeMinutes, mapTheme, trackedPins, longitudeOffset = 0, hourFormat = '24' }) => {
+    // hourFormat is destructured from props with default '24'
     // Inject dark mode popup CSS override once per page load
     useEffect(() => {
         const styleId = 'leaflet-popup-darkmode-style';
@@ -188,7 +190,17 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
                 MP ${pin.milepost}<br/>
                 ${formatDirection(pin.direction)}<br/>
                 ${pin.moving === true ? "Moving<br/>" : pin.moving === false ? "Not Moving<br/>" : ''}
-                ${format(parseISO(pin.lastUpdate), 'h:mm aa')}<br/>
+                ${(() => {
+                    try {
+                        if (hourFormat === '12') {
+                            return format(parseISO(pin.lastUpdate), 'h:mm aa');
+                        } else {
+                            return format(parseISO(pin.lastUpdate), 'HH:mm');
+                        }
+                    } catch {
+                        return pin.lastUpdate;
+                    }
+                })()}<br/>
                 ${addressLines}
                 <span id='${trackTextId}' style='cursor:pointer;text-decoration:underline;display:inline-flex;align-items:center;'>${trackingIcon}${trackText}</span>
             </div>
@@ -285,7 +297,7 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
                 observer.disconnect();
             }
         };
-    }, [pin.id, pin.beaconID, pin.beaconName, pin.railroad, pin.subdivision, pin.milepost, pin.direction, pin.moving, pin.lastUpdate, pin.addresses, isTracked, trackColor, mapTheme]);
+    }, [pin.id, pin.beaconID, pin.beaconName, pin.railroad, pin.subdivision, pin.milepost, pin.direction, pin.moving, pin.lastUpdate, pin.addresses, isTracked, trackColor, mapTheme, hourFormat]);
 
     // Use ArrowMapPin as the icon, with rotation and border color
     const createCustomIcon = () => {

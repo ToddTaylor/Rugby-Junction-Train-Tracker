@@ -1,3 +1,9 @@
+/* Hide app-title on mobile */
+@media (max-width: 600px) {
+  .app-title--responsive {
+    display: none !important;
+  }
+}
 /* ---------- Root & Base Styles ---------- */
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;

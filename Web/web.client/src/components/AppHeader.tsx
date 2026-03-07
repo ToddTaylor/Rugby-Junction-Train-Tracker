@@ -18,8 +18,8 @@ const AppHeader: React.FC = () => {
 
   return (
     <header className="app-header">
-      <img src="/rugbyjunction.svg" alt="Rugby Junction Logo" className="app-logo" />
-      <span className="app-title">Train Tracker</span>
+      <img src="/rugbyjunction.svg" alt="Rugby Junction Train Tracker" className="app-logo" />
+      <span className="app-title app-title--responsive">Train Tracker</span>
       {isAdminPage && (
         <a href="/railmap" className="btn-back-header">
           Back to RailMap

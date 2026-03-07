@@ -20,6 +20,7 @@ interface BeaconLabelPinProps {
     trackedPins?: TrackedPin[];
     mapPins?: MapPin[];
     horizontalShift?: number;
+    hourFormat?: string;
 }
 
 const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({ 
@@ -33,7 +34,8 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
     onClick, 
     trackedPins = [],
     mapPins = [],
-    horizontalShift = 0
+    horizontalShift = 0,
+    hourFormat = '24'
 }) => {
     // Fetch most recent history entry from same API as BeaconHistoryModal to ensure timestamp accuracy
     const [fetchedLastUpdateTime, setFetchedLastUpdateTime] = useState<string | null>(null);
@@ -46,7 +48,13 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
             const latest = await fetchBeaconLatestFromHistory(beaconPin.beaconID, beaconPin.subdivisionID, { bypassCache });
             if (latest?.lastUpdate) {
                 const d = new Date(latest.lastUpdate);
-                setFetchedLastUpdateTime(d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }));
+                let formattedTime;
+                if (hourFormat === '12') {
+                    formattedTime = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
+                } else {
+                    formattedTime = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+                }
+                setFetchedLastUpdateTime(formattedTime);
                 setFetchedDirection(Object.prototype.hasOwnProperty.call(latest, 'direction') ? latest.direction : null);
             } else {
                 // If no latest record, only clear direction
@@ -60,7 +68,7 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
 
     useEffect(() => {
         updateFromHistory(false);
-    }, [beaconPin.beaconID, beaconPin.subdivisionID]);
+    }, [beaconPin.beaconID, beaconPin.subdivisionID, hourFormat]);
 
     // On live map pin changes (e.g., SignalR updates), update immediately from the latest mapPins data
     // Do NOT fetch from history API here as it creates a race condition causing flickering
@@ -80,11 +88,17 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
 
         if (latestForBeacon?.lastUpdate) {
             const d = new Date(latestForBeacon.lastUpdate);
-            setFetchedLastUpdateTime(d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }));
+            let formattedTime;
+            if (hourFormat === '12') {
+                formattedTime = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
+            } else {
+                formattedTime = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+            }
+            setFetchedLastUpdateTime(formattedTime);
             // Never override direction from history with live data - only history is authoritative
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [mapPins, beaconPin.beaconID, beaconPin.subdivisionID]);
+    }, [mapPins, beaconPin.beaconID, beaconPin.subdivisionID, hourFormat]);
 
     // Use fetched data if available, otherwise fall back to props
     // For direction: only use fallback prop if history hasn't been fetched yet

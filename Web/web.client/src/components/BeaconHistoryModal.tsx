@@ -28,9 +28,10 @@ interface BeaconHistoryModalProps {
     lastUpdate?: string | null;
     mapPins?: MapPin[];
     trackedPins?: TrackedPin[];
+    hourFormat?: string;
 }
 
-export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdivisionID, railroad: _railroad, subdivision: _subdivision, theme, lastUpdate, trackedPins: propTrackedPins }: BeaconHistoryModalProps) {
+export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdivisionID, railroad: _railroad, subdivision: _subdivision, theme, lastUpdate, trackedPins: propTrackedPins, hourFormat }: BeaconHistoryModalProps) {
     const [loading, setLoading] = useState(false);
     const [history, setHistory] = useState<MapPinHistory[]>([]);
     const [error, setError] = useState<string | null>(null);
@@ -139,7 +140,11 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdiv
             width: 85,
             valueFormatter: (params) => {
                 try {
-                    return format(parseISO(params as string), 'h:mm aa');
+                    if (hourFormat === '12') {
+                        return format(parseISO(params as string), 'h:mm aa');
+                    } else {
+                        return format(parseISO(params as string), 'HH:mm');
+                    }
                 } catch {
                     return params as string;
                 }

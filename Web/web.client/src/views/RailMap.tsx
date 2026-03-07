@@ -588,6 +588,7 @@ const RailMap: React.FC = () => {
     }, []);
 
     const [mapTheme, setMapTheme] = useState(() => localStorage.getItem('mapTheme') || 'dark');
+    const [hourFormat, setHourFormat] = useState(() => localStorage.getItem('hourFormat') || '24');
 
     // Set or remove the 'dark' class on <body> for global dark mode styling
     useEffect(() => {
@@ -602,6 +603,14 @@ const RailMap: React.FC = () => {
         setMapTheme(prev => {
             const next = prev === 'dark' ? 'light' : 'dark';
             localStorage.setItem('mapTheme', next);
+            return next;
+        });
+    };
+
+    const handleToggleHourFormat = () => {
+        setHourFormat(prev => {
+            const next = prev === '24' ? '12' : '24';
+            localStorage.setItem('hourFormat', next);
             return next;
         });
     };
@@ -662,6 +671,26 @@ const RailMap: React.FC = () => {
                             style={{ width: 28, height: 28, cursor: 'pointer' }}
                             onClick={handleToggleTheme}
                         />
+                        <button
+                            onClick={handleToggleHourFormat}
+                            style={{
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                padding: 0,
+                                marginLeft: 8,
+                                display: 'flex',
+                                alignItems: 'center',
+                                width: 28,
+                                height: 28,
+                            }}
+                            title={hourFormat === '12' ? 'Switch to 24-hour format' : 'Switch to 12-hour format'}
+                        >
+                            <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="14" cy="14" r="13" stroke="#fff" strokeWidth="2" fill={mapTheme === 'dark' ? '#222' : '#fff'} />
+                                <text x="50%" y="50%" textAnchor="middle" dominantBaseline="central" fontSize="13" fontWeight="bold" fill="#fff">{hourFormat}</text>
+                            </svg>
+                        </button>
                     </span>
                     {/* Logout button at the far right */}
                     <button
@@ -734,6 +763,7 @@ const RailMap: React.FC = () => {
                     }}
                     trackedPins={trackedPinsState}
                     mapPins={mapPins}
+                    hourFormat={hourFormat}
                 />}
 
                 {/* Telemetry markers */}
@@ -743,6 +773,7 @@ const RailMap: React.FC = () => {
                     maxPinAgeMinutes={MAX_PIN_AGE_MINUTES}
                     trackedPins={trackedPinsState}
                     mapTheme={mapTheme as 'dark' | 'light'}
+                    hourFormat={hourFormat}
                 />}
 
             </MapContainer>
@@ -760,6 +791,7 @@ const RailMap: React.FC = () => {
                 lastUpdate={beaconLastUpdateMap?.[makeBeaconKey(selectedBeaconID, selectedSubdivisionID)]?.lastUpdate}
                 mapPins={mapPins}
                 trackedPins={trackedPinsState}
+                hourFormat={hourFormat}
             />
         </>
     );
