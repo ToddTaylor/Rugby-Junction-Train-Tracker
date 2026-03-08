@@ -18,6 +18,8 @@ namespace Web.Server.Entities
 
         public int? TrainID { get; set; }
 
+        public decimal? BrakePipePressure { get; set; }
+
         public bool? Moving { get; set; }
 
         /// <summary>
@@ -44,18 +46,19 @@ namespace Web.Server.Entities
 
         public bool Equals(Telemetry? other)
         {
-                 return other is not null &&
-                     CreatedAt == other.CreatedAt &&
-                     LastUpdate == other.LastUpdate &&
-                     ID == other.ID &&
-                     BeaconID == other.BeaconID &&
-                     EqualityComparer<Beacon>.Default.Equals(Beacon, other.Beacon) &&
-                     AddressID == other.AddressID &&
-                     TrainID == other.TrainID &&
-                     Moving == other.Moving &&
-                     Source == other.Source &&
-                     Discarded == other.Discarded &&
-                     DiscardReason == other.DiscardReason;
+            return other is not null &&
+                CreatedAt == other.CreatedAt &&
+                LastUpdate == other.LastUpdate &&
+                ID == other.ID &&
+                BeaconID == other.BeaconID &&
+                EqualityComparer<Beacon>.Default.Equals(Beacon, other.Beacon) &&
+                AddressID == other.AddressID &&
+                TrainID == other.TrainID &&
+                BrakePipePressure == other.BrakePipePressure &&
+                Moving == other.Moving &&
+                Source == other.Source &&
+                Discarded == other.Discarded &&
+                DiscardReason == other.DiscardReason;
         }
 
         public override int GetHashCode()
@@ -68,6 +71,7 @@ namespace Web.Server.Entities
             hash.Add(Beacon);
             hash.Add(AddressID);
             hash.Add(TrainID);
+            hash.Add(BrakePipePressure);
             hash.Add(Moving);
             hash.Add(Source);
             hash.Add(Discarded);

@@ -55,8 +55,8 @@ namespace Web.Server.Services
             telemetry.Beacon = beacon;
 
             // Set telemetry timestamps and default state
-            telemetry.CreatedAt = _timeProvider.UtcNow;
-            telemetry.LastUpdate = _timeProvider.UtcNow;
+            telemetry.CreatedAt = telemetry.CreatedAt;
+            telemetry.LastUpdate = telemetry.LastUpdate;
             telemetry.Discarded = false;
 
             // Insert new telemetry for historical logging purposes

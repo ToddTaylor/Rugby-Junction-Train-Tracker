@@ -61,6 +61,7 @@ namespace Web.Server.Repositories
             existingTelemetry.Beacon = telemetry.Beacon;
             existingTelemetry.AddressID = telemetry.AddressID;
             existingTelemetry.TrainID = telemetry.TrainID;
+            existingTelemetry.BrakePipePressure = telemetry.BrakePipePressure;
             existingTelemetry.Moving = telemetry.Moving;
             existingTelemetry.Source = telemetry.Source;
             existingTelemetry.Discarded = telemetry.Discarded;

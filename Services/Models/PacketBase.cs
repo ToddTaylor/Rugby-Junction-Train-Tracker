@@ -4,7 +4,7 @@ namespace Services.Models
 {
     public class PacketBase
     {
-        [JsonPropertyName("BreakPipePressure")]
+        [JsonPropertyName("BrakePipePressure")]
         public decimal? BP { get; set; }
 
         [JsonPropertyName("MovementRailroad")]

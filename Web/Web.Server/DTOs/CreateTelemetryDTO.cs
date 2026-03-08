@@ -20,6 +20,11 @@
         public int? TrainID { get; set; }
 
         /// <summary>
+        /// Optional: The brake pipe pressure of the EOT or DPU.
+        /// </summary>
+        public decimal? BrakePipePressure { get; set; }
+
+        /// <summary>
         /// Optional: The moving status of the train from SoftEOT's MOT value.
         /// </summary>
         public bool? Moving { get; set; }

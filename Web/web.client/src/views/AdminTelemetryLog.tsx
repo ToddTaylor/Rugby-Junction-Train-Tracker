@@ -78,8 +78,7 @@ function AdminTelemetryLog() {
     });
 
     const columns: GridColDef[] = [
-        { field: 'id', headerName: 'ID' },
-        { field: 'beaconName', headerName: 'Beacon Name', width: 240 },
+        { field: 'beaconName', headerName: 'Beacon Name', width: 140 },
         { field: 'addressID', headerName: 'Address ID', width: 100 },
         { field: 'trainID', headerName: 'Train ID', width: 100 },
         {
@@ -91,6 +90,15 @@ function AdminTelemetryLog() {
                 params.row?.moving
                     ? <span style={{ color: '#4caf50', fontSize: '1.2em', fontWeight: 'bold' }}>✓</span>
                     : <span style={{ color: '#f44336', fontSize: '1.2em', fontWeight: 'bold' }}>✕</span>,
+        },
+        {
+            field: 'brakePipePressure',
+            headerName: 'BP',
+            width: 100,
+            renderCell: (params: any) =>
+                params.row?.brakePipePressure !== undefined && params.row?.brakePipePressure !== null
+                    ? <span>{params.row.brakePipePressure}</span>
+                    : <span>-</span>,
         },
         { field: 'source', headerName: 'Source', width: 100 },
         {
@@ -105,7 +113,7 @@ function AdminTelemetryLog() {
         {
             field: 'discarded',
             headerName: 'Discarded',
-            width: 360,
+            width: 550,
             renderCell: (params: any) => {
                 const reason = params.row?.discardReason;
                 if (reason && reason.trim()) {

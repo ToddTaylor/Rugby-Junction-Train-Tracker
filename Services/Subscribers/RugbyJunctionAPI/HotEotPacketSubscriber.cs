@@ -54,6 +54,7 @@ namespace Services.Subscribers.RugbyJunctionAPI
                 BeaconID = _subscriber.Beacon.BeaconID,
                 AddressID = addressId,
                 TrainID = null,
+                BrakePipePressure = e.Packet.BP,
                 Moving = (e.Packet.MOT.HasValue) ? Convert.ToBoolean(e.Packet.MOT) : null,
                 Source = e.Packet.SRC,
                 Timestamp = e.Packet.TimeReceived

@@ -15,6 +15,8 @@ namespace Web.Server.DTOs
 
         public int? TrainID { get; set; }
 
+        public decimal? BrakePipePressure { get; set; }
+
         public bool? Moving { get; set; }
 
         /// <summary>
@@ -44,18 +46,19 @@ namespace Web.Server.DTOs
 
         public bool Equals(TelemetryDTO? other)
         {
-                 return other is not null &&
-                     ID == other.ID &&
-                     BeaconID == other.BeaconID &&
-                     BeaconName == other.BeaconName &&
-                     AddressID == other.AddressID &&
-                     TrainID == other.TrainID &&
-                     Moving == other.Moving &&
-                     Source == other.Source &&
-                     Discarded == other.Discarded &&
-                     DiscardReason == other.DiscardReason &&
-                     CreatedAt == other.CreatedAt &&
-                     LastUpdate == other.LastUpdate;
+            return other is not null &&
+                ID == other.ID &&
+                BeaconID == other.BeaconID &&
+                BeaconName == other.BeaconName &&
+                AddressID == other.AddressID &&
+                TrainID == other.TrainID &&
+                BrakePipePressure == other.BrakePipePressure &&
+                Moving == other.Moving &&
+                Source == other.Source &&
+                Discarded == other.Discarded &&
+                DiscardReason == other.DiscardReason &&
+                CreatedAt == other.CreatedAt &&
+                LastUpdate == other.LastUpdate;
         }
 
         public override int GetHashCode()
@@ -66,6 +69,7 @@ namespace Web.Server.DTOs
             hash.Add(BeaconName);
             hash.Add(AddressID);
             hash.Add(TrainID);
+            hash.Add(BrakePipePressure);
             hash.Add(Moving);
             hash.Add(Source);
             hash.Add(Discarded);

@@ -52,6 +52,7 @@ namespace Services.Subscribers.RugbyJunctionAPI
                 BeaconID = _subscriber.Beacon.BeaconID,
                 AddressID = int.Parse(e.Packet.ADDR),
                 TrainID = int.Parse(e.Packet.TRID),
+                BrakePipePressure = e.Packet.BP,
                 Moving = this.IsMoving(e.Packet),
                 Source = "DPU",
                 Timestamp = e.Packet.TimeReceived

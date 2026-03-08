@@ -32,6 +32,12 @@ namespace Services.Subscribers.RugbyJunctionAPI
         public int? TrainID { get; set; }
 
         /// <summary>
+        /// Indicates the brake pressure of the train. Only applies to EOT or DPU telemetry.
+        /// </summary>
+        [JsonPropertyName("BrakePipePressure")]
+        public decimal? BrakePipePressure { get; set; }
+
+        /// <summary>
         /// Indicates whether the train is moving. Only applies to EOT telemetry.
         /// </summary>
         [JsonPropertyName("Moving")]
