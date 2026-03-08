@@ -60,7 +60,7 @@ namespace Web.Server.BackgroundServices
                 {
                     var mapper = scope.ServiceProvider.GetRequiredService<IMapper>();
                     var telemetryService = scope.ServiceProvider.GetRequiredService<ITelemetryService>();
-                    var telemetry = mapper.Map<Web.Server.Entities.Telemetry>(telemetryDTO);
+                    var telemetry = mapper.Map<Entities.Telemetry>(telemetryDTO);
 
                     _logger.LogDebug($"[InMemoryQueue] Mapped Telemetry entity: BeaconID={telemetry.BeaconID}, AddressID={telemetry.AddressID}, Source={telemetry.Source}");
 

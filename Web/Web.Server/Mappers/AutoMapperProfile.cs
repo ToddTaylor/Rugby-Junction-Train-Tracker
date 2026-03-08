@@ -112,6 +112,8 @@ namespace Web.Server.Mappers
 
             CreateMap<CreateTelemetryDTO, Telemetry>()
                 .ForPath(dest => dest.Beacon.ID, opt => opt.MapFrom(src => src.BeaconID))
+                    .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.Timestamp))
+                    .ForMember(dest => dest.LastUpdate, opt => opt.MapFrom(src => src.Timestamp))
                 .ReverseMap()
                 .ForPath(dest => dest.BeaconID, opt => opt.MapFrom(src => src.Beacon.ID));
 

@@ -16,7 +16,7 @@ namespace Web.Server.Repositories
 
         Task<IEnumerable<MapPin>> GetLatestAsync();
 
-        Task<MapPin> UpsertAsync(MapPin mapPin);
+        Task<MapPin> UpsertAsync(MapPin mapPin, DateTime telemetryTimestamp);
 
         Task<bool> DeleteAsync(int id);
     }

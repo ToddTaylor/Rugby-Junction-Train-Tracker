@@ -299,7 +299,7 @@ namespace Web.Server.Services
                 isNewMapPin = true;
             }
 
-            var upsertedMapPin = await _mapPinRepository.UpsertAsync(mapPin!);
+            var upsertedMapPin = await _mapPinRepository.UpsertAsync(mapPin!, telemetry.LastUpdate);
 
             // Save or update history record
             // - For new map pins: creates a new history record
@@ -321,8 +321,8 @@ namespace Web.Server.Services
                 AddressID = telemetry.AddressID,
                 DpuTrainID = telemetry.TrainID,
                 Source = telemetry.Source,
-                CreatedAt = _timeProvider.UtcNow,
-                LastUpdate = _timeProvider.UtcNow
+                CreatedAt = telemetry.LastUpdate,
+                LastUpdate = telemetry.LastUpdate
             };
         }
 
@@ -436,8 +436,8 @@ namespace Web.Server.Services
                     AddressID = telemetry.AddressID,
                     DpuTrainID = telemetry.TrainID,
                     Source = telemetry.Source,
-                    CreatedAt = _timeProvider.UtcNow,
-                    LastUpdate = _timeProvider.UtcNow
+                    CreatedAt = telemetry.LastUpdate,
+                    LastUpdate = telemetry.LastUpdate
                 }
             ];
 
@@ -682,12 +682,6 @@ namespace Web.Server.Services
 
             newMapPin.BeaconRailroad = toBeaconRailroad;
             newMapPin.BeaconID = telemetry.BeaconID;
-            newMapPin.LastUpdate = _timeProvider.UtcNow;
-
-            foreach (var address in newMapPin.Addresses)
-            {
-                address.LastUpdate = _timeProvider.UtcNow;
-            }
 
             // Update IsLocal flag based on new subdivision
             newMapPin.IsLocal = IsLocalTrain(telemetry.AddressID, toBeaconRailroad.Subdivision);

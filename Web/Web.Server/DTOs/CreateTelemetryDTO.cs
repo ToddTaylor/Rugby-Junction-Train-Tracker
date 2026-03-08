@@ -30,6 +30,11 @@
         /// </summary>
         public required string Source { get; set; }
 
+        /// <summary>
+        /// The timestamp of the telemetry event.
+        /// </summary>
+        public required DateTime Timestamp { get; set; }
+
         public override bool Equals(object? obj)
         {
             return Equals(obj as CreateTelemetryDTO);
@@ -42,7 +47,8 @@
                    AddressID == other.AddressID &&
                    TrainID == other.TrainID &&
                    Moving == other.Moving &&
-                   Source == other.Source;
+                   Source == other.Source &&
+                   Timestamp == other.Timestamp;
         }
 
         public override int GetHashCode()

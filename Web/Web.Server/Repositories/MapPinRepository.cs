@@ -119,7 +119,7 @@ namespace Web.Server.Repositories
             }
         }
 
-        public async Task<MapPin> UpsertAsync(MapPin mapPin)
+        public async Task<MapPin> UpsertAsync(MapPin mapPin, DateTime telemetryTimestamp)
         {
             // Find existing map pin by matching address ID(s) and subdivision.
             var mapPinBAddressIds = mapPin.Addresses
@@ -132,8 +132,8 @@ namespace Web.Server.Repositories
 
             if (existingMapPin == null)
             {
-                mapPin.CreatedAt = _timeProvider.UtcNow;
-                mapPin.LastUpdate = _timeProvider.UtcNow;
+                mapPin.CreatedAt = telemetryTimestamp;
+                mapPin.LastUpdate = telemetryTimestamp;
 
                 mapPin.BeaconRailroad = null;
 
@@ -150,7 +150,7 @@ namespace Web.Server.Repositories
                 existingMapPin.IsLocal = mapPin.IsLocal;
 
                 // No created at update.
-                existingMapPin.LastUpdate = _timeProvider.UtcNow;
+                existingMapPin.LastUpdate = telemetryTimestamp;
 
                 // Update addresses collection
                 existingMapPin.Addresses = mapPin.Addresses;

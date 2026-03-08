@@ -18,8 +18,6 @@ namespace Web.Server.Repositories
 
         public async Task<Telemetry> AddAsync(Telemetry telemetry)
         {
-            telemetry.CreatedAt = _timeProvider.UtcNow;
-            telemetry.LastUpdate = telemetry.CreatedAt;
 
             telemetry.Beacon = null;
 
@@ -67,7 +65,7 @@ namespace Web.Server.Repositories
             existingTelemetry.Source = telemetry.Source;
             existingTelemetry.Discarded = telemetry.Discarded;
             existingTelemetry.DiscardReason = telemetry.DiscardReason;
-            existingTelemetry.LastUpdate = _timeProvider.UtcNow;
+            existingTelemetry.LastUpdate = telemetry.LastUpdate;
 
             await _context.SaveChangesAsync();
             return existingTelemetry;

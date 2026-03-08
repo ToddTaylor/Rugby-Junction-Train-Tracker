@@ -233,7 +233,7 @@ namespace Web.ServerTests.Services
                 .ReturnsAsync((MapPin?)null);
             _mapPinRepositoryMock.Setup(r => r.GetByTimeThreshold(telemetry.BeaconID, WSORRugbyJunctionBeacon.Subdivision.RailroadID, 5))
                 .ReturnsAsync((MapPin?)null);
-            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(expectedMapPinBeforeInsert))
+            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(expectedMapPinBeforeInsert, telemetry.LastUpdate))
                 .ReturnsAsync(expectedMapPinAfterInsert);
 
             _clientProxyMock.Setup(proxy => proxy.SendCoreAsync(
@@ -246,7 +246,7 @@ namespace Web.ServerTests.Services
             await _service.UpsertMapPin(telemetry);
 
             // Assert
-            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(expectedMapPinBeforeInsert), Times.Once);
+            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(expectedMapPinBeforeInsert, telemetry.LastUpdate), Times.Once);
 
             _clientProxyMock?.Verify(proxy => proxy.SendCoreAsync(
                 NotificationMethods.MapPinUpdate,
@@ -338,7 +338,7 @@ namespace Web.ServerTests.Services
                 .ReturnsAsync((MapPin?)null);
             _mapPinRepositoryMock.Setup(r => r.GetByTimeThreshold(telemetry.BeaconID, WSORRugbyJunctionBeacon.SubdivisionID, 5))
                 .ReturnsAsync((MapPin?)null);
-            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(expectedMapPinBeforeInsert))
+            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(expectedMapPinBeforeInsert, telemetry.LastUpdate))
                 .ReturnsAsync(expectedMapPinAfterInsert);
 
             _clientProxyMock.Setup(proxy => proxy.SendCoreAsync(
@@ -351,7 +351,7 @@ namespace Web.ServerTests.Services
             await _service.UpsertMapPin(telemetry);
 
             // Assert
-            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(expectedMapPinBeforeInsert), Times.Once);
+            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(expectedMapPinBeforeInsert, telemetry.LastUpdate), Times.Once);
 
             _clientProxyMock?.Verify(proxy => proxy.SendCoreAsync(
                 NotificationMethods.MapPinUpdate,
@@ -415,7 +415,7 @@ namespace Web.ServerTests.Services
                 SubdivisionId = CNRugbyJunctionBeacon.Subdivision.ID,
                 Direction = "N",
                 CreatedAt = _timeProviderMock.Object.UtcNow,
-                LastUpdate = telemetry.LastUpdate,
+                LastUpdate = _timeProviderMock.Object.UtcNow,
                 BeaconRailroad = CNRugbyJunctionBeacon,
                 Moving = telemetry.Moving,
                 CreatedRailroadID = CNRugbyJunctionBeacon.Subdivision.RailroadID,
@@ -426,7 +426,7 @@ namespace Web.ServerTests.Services
                         AddressID = 12345,
                         Source = SourceEnum.EOT,
                         CreatedAt = _timeProviderMock.Object.UtcNow.AddMinutes(-2),
-                        LastUpdate = _timeProviderMock.Object.UtcNow
+                        LastUpdate = _timeProviderMock.Object.UtcNow.AddMinutes(-2)
                     },
                     new Address
                     {
@@ -478,7 +478,7 @@ namespace Web.ServerTests.Services
                 .ReturnsAsync(fromMapPin);
             _beaconRailroadServiceMock.Setup(b => b.GetByIdAsync(telemetry.BeaconID, fromMapPin.SubdivisionId))
                 .ReturnsAsync(CNRugbyJunctionBeacon);
-            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(toMapPinBeforeUpdate))
+            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(toMapPinBeforeUpdate, telemetry.LastUpdate))
                 .ReturnsAsync(toMapPinAfterUpdate);
 
             _clientProxyMock.Setup(proxy => proxy.SendCoreAsync(
@@ -491,7 +491,7 @@ namespace Web.ServerTests.Services
             await _service.UpsertMapPin(telemetry);
 
             // Assert
-            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(toMapPinBeforeUpdate), Times.Once);
+            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(toMapPinBeforeUpdate, telemetry.LastUpdate), Times.Once);
 
             _clientProxyMock?.Verify(proxy => proxy.SendCoreAsync(
                 NotificationMethods.MapPinUpdate,
@@ -620,7 +620,7 @@ namespace Web.ServerTests.Services
                 .ReturnsAsync((MapPin?)null);
             _trackageRightRepositoryMock.Setup(r => r.GetByFromSubdivisionAsync(WSORHartfordBeacon.SubdivisionID))
                 .ReturnsAsync(subdivisionTrackageRights);
-            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(expectedMapPinBeforeInsert))
+            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(expectedMapPinBeforeInsert, telemetry.LastUpdate))
                 .ReturnsAsync(expectedMapPinAfterInsert);
 
             _beaconRailroadServiceMock.Setup(b => b.GetByIdAsync(telemetry.BeaconID, previousMapPin.SubdivisionId))
@@ -640,7 +640,7 @@ namespace Web.ServerTests.Services
             await _service.UpsertMapPin(telemetry);
 
             // Assert
-            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(expectedMapPinBeforeInsert), Times.Once);
+            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(expectedMapPinBeforeInsert, telemetry.LastUpdate), Times.Once);
 
             _clientProxyMock?.Verify(proxy => proxy.SendCoreAsync(
                 NotificationMethods.MapPinUpdate,
@@ -791,7 +791,7 @@ namespace Web.ServerTests.Services
                 .ReturnsAsync(toBeaconRailroads[0]);
             _beaconRailroadServiceMock.Setup(s => s.GetByIdAsync(fromMapPin.BeaconID, fromMapPin.SubdivisionId))
                 .ReturnsAsync(fromBeaconRailroads[0]);
-            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(It.IsAny<MapPin>()))
+            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(It.IsAny<MapPin>(), It.IsAny<DateTime>()))
                 .ReturnsAsync(toMapPinAfterUpdate);
 
             _clientProxyMock.Setup(proxy => proxy.SendCoreAsync(
@@ -808,7 +808,7 @@ namespace Web.ServerTests.Services
                 mp.Addresses.Count == 2 &&
                 mp.Addresses.Any(a => a.Source == fromSource && a.AddressID == telemetry.AddressID) &&
                 mp.Addresses.Any(a => a.Source == toSource && a.AddressID == telemetry.AddressID)
-            )), Times.Once);
+            ), telemetry.LastUpdate), Times.Once);
 
             _clientProxyMock?.Verify(proxy => proxy.SendCoreAsync(
                 NotificationMethods.MapPinUpdate,
@@ -946,7 +946,7 @@ namespace Web.ServerTests.Services
                 .ReturnsAsync(toBeaconRailroads[0]);
             _beaconRailroadServiceMock.Setup(s => s.GetByIdAsync(fromMapPin.BeaconID, fromMapPin.SubdivisionId))
                 .ReturnsAsync(fromBeaconRailroads[0]);
-            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(toMapPinBeforeUpdate))
+            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(toMapPinBeforeUpdate, telemetry.LastUpdate))
                 .ReturnsAsync(toMapPinAfterUpdate);
 
             _clientProxyMock.Setup(proxy => proxy.SendCoreAsync(
@@ -959,7 +959,7 @@ namespace Web.ServerTests.Services
             await _service.UpsertMapPin(telemetry);
 
             // Assert
-            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(toMapPinBeforeUpdate), Times.Once);
+            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(toMapPinBeforeUpdate, telemetry.LastUpdate), Times.Once);
 
             _clientProxyMock?.Verify(proxy => proxy.SendCoreAsync(
                 NotificationMethods.MapPinUpdate,
@@ -1002,7 +1002,7 @@ namespace Web.ServerTests.Services
                 AddressID = 23424,
                 Source = SourceEnum.HOT,
                 Moving = true,
-                CreatedAt = _timeProviderMock.Object.UtcNow.AddMinutes(1),
+                CreatedAt = _timeProviderMock.Object.UtcNow.AddMinutes(2),
                 LastUpdate = _timeProviderMock.Object.UtcNow.AddMinutes(2)
             };
 
@@ -1052,6 +1052,8 @@ namespace Web.ServerTests.Services
             };
 
             var toMapPinAfterUpdate = toMapPinBeforeUpdate.Clone();
+            toMapPinAfterUpdate.LastUpdate = telemetry.LastUpdate;
+            toMapPinAfterUpdate.Addresses.ToList()[0].LastUpdate = telemetry.LastUpdate;
 
             var expectedMapPinObjects = new object[]
             {
@@ -1069,7 +1071,7 @@ namespace Web.ServerTests.Services
                     Milepost = CNSussexBeacon.Milepost,
                     Moving = telemetry.Moving,
                     CreatedAt = _timeProviderMock.Object.UtcNow,
-                    LastUpdate = _timeProviderMock.Object.UtcNow,
+                    LastUpdate = telemetry.LastUpdate,
                     Addresses =
                     [
                         new AddressDTO
@@ -1097,7 +1099,7 @@ namespace Web.ServerTests.Services
                 .ReturnsAsync(fromBeaconRailroads[1]); // WSOR is second in array.
             _trackageRightRepositoryMock.Setup(r => r.GetByFromSubdivisionAsync(WSORRugbyJunctionBeacon.SubdivisionID))
                 .ReturnsAsync(subdivisionTrackageRights);
-            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(toMapPinBeforeUpdate))
+            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(toMapPinBeforeUpdate, telemetry.LastUpdate))
                 .ReturnsAsync(toMapPinAfterUpdate);
 
             _clientProxyMock.Setup(proxy => proxy.SendCoreAsync(
@@ -1110,7 +1112,7 @@ namespace Web.ServerTests.Services
             await _service.UpsertMapPin(telemetry);
 
             // Assert
-            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(toMapPinBeforeUpdate), Times.Once);
+            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(toMapPinBeforeUpdate, telemetry.LastUpdate), Times.Once);
 
             _clientProxyMock?.Verify(proxy => proxy.SendCoreAsync(
                 NotificationMethods.MapPinUpdate,
@@ -1238,7 +1240,7 @@ namespace Web.ServerTests.Services
                 .ReturnsAsync(toBeaconRailroads[0]);
             _beaconRailroadServiceMock.Setup(s => s.GetByIdAsync(fromMapPin.BeaconID, fromMapPin.SubdivisionId))
                 .ReturnsAsync(fromBeaconRailroads[0]);
-            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(toMapPinBeforeUpdate))
+            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(toMapPinBeforeUpdate, telemetry.LastUpdate))
                 .ReturnsAsync(toMapPinAfterUpdate);
 
             _clientProxyMock.Setup(proxy => proxy.SendCoreAsync(
@@ -1251,7 +1253,7 @@ namespace Web.ServerTests.Services
             await _service.UpsertMapPin(telemetry);
 
             // Assert
-            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(toMapPinBeforeUpdate), Times.Once);
+            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(toMapPinBeforeUpdate, telemetry.LastUpdate), Times.Once);
 
             _clientProxyMock?.Verify(proxy => proxy.SendCoreAsync(
                 NotificationMethods.MapPinUpdate,
@@ -1296,7 +1298,7 @@ namespace Web.ServerTests.Services
                 AddressID = toAddressID,
                 Source = toSource,
                 Moving = true,
-                CreatedAt = _timeProviderMock.Object.UtcNow.AddMinutes(1),
+                CreatedAt = _timeProviderMock.Object.UtcNow.AddMinutes(2),
                 LastUpdate = _timeProviderMock.Object.UtcNow.AddMinutes(2)
             };
 
@@ -1345,13 +1347,16 @@ namespace Web.ServerTests.Services
                     {
                         AddressID = toAddressID,
                         Source = toSource,
-                        CreatedAt = _timeProviderMock.Object.UtcNow,
-                        LastUpdate = _timeProviderMock.Object.UtcNow,
+                        CreatedAt = telemetry.CreatedAt,
+                        LastUpdate = telemetry.LastUpdate
                     }
                 ],
             };
 
-            var toMapPinAfterUpdate = toMapPinBeforeUpdate;
+            var toMapPinAfterUpdate = toMapPinBeforeUpdate.Clone();
+            toMapPinAfterUpdate.LastUpdate = telemetry.LastUpdate;
+            toMapPinAfterUpdate.Addresses.ToList()[0].LastUpdate = telemetry.LastUpdate;
+            toMapPinAfterUpdate.Addresses.ToList()[1].LastUpdate = telemetry.LastUpdate;
 
             var toMapPinObjects = new object[]
             {
@@ -1369,7 +1374,7 @@ namespace Web.ServerTests.Services
                     Milepost = CNSussexBeacon.Milepost,
                     Moving = telemetry.Moving,
                     CreatedAt = _timeProviderMock.Object.UtcNow,
-                    LastUpdate = _timeProviderMock.Object.UtcNow,
+                    LastUpdate = telemetry.LastUpdate,
                     Addresses =
                     [
                         new AddressDTO
@@ -1392,7 +1397,7 @@ namespace Web.ServerTests.Services
                 .ReturnsAsync(fromMapPin);
             _beaconRailroadServiceMock.Setup(s => s.GetByIdAsync(fromMapPin.BeaconID, fromMapPin.SubdivisionId))
                 .ReturnsAsync(beaconRailroads[0]);
-            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(toMapPinBeforeUpdate))
+            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(toMapPinBeforeUpdate, telemetry.LastUpdate))
                 .ReturnsAsync(toMapPinAfterUpdate);
 
             _clientProxyMock.Setup(proxy => proxy.SendCoreAsync(
@@ -1405,7 +1410,7 @@ namespace Web.ServerTests.Services
             await _service.UpsertMapPin(telemetry);
 
             // Assert
-            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(toMapPinBeforeUpdate), Times.Once);
+            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(toMapPinBeforeUpdate, telemetry.LastUpdate), Times.Once);
 
             _clientProxyMock?.Verify(proxy => proxy.SendCoreAsync(
                 NotificationMethods.MapPinUpdate,
@@ -1442,7 +1447,7 @@ namespace Web.ServerTests.Services
                 AddressID = toAddressID,
                 Source = SourceEnum.HOT,
                 Moving = true,
-                CreatedAt = _timeProviderMock.Object.UtcNow.AddMinutes(1),
+                CreatedAt = _timeProviderMock.Object.UtcNow.AddMinutes(2),
                 LastUpdate = _timeProviderMock.Object.UtcNow.AddMinutes(2)
             };
 
@@ -1491,13 +1496,16 @@ namespace Web.ServerTests.Services
                     {
                         AddressID = toAddressID,
                         Source = SourceEnum.HOT,
-                        CreatedAt = _timeProviderMock.Object.UtcNow,
-                        LastUpdate = _timeProviderMock.Object.UtcNow,
+                        CreatedAt = telemetry.CreatedAt,
+                        LastUpdate = telemetry.LastUpdate,
                     }
                 ],
             };
 
-            var toMapPinAfterUpdate = toMapPinBeforeUpdate;
+            var toMapPinAfterUpdate = toMapPinBeforeUpdate.Clone();
+            toMapPinAfterUpdate.LastUpdate = telemetry.LastUpdate;
+            toMapPinAfterUpdate.Addresses.ToList()[0].LastUpdate = telemetry.LastUpdate;
+            toMapPinAfterUpdate.Addresses.ToList()[1].LastUpdate = telemetry.LastUpdate;
 
             var toMapPinObjects = new object[]
             {
@@ -1515,7 +1523,7 @@ namespace Web.ServerTests.Services
                     Milepost = CNSussexBeacon.Milepost,
                     Moving = telemetry.Moving,
                     CreatedAt = _timeProviderMock.Object.UtcNow,
-                    LastUpdate = _timeProviderMock.Object.UtcNow,
+                    LastUpdate = telemetry.LastUpdate,
                     Addresses =
                     [
                         new AddressDTO
@@ -1538,7 +1546,7 @@ namespace Web.ServerTests.Services
                 .ReturnsAsync(fromMapPin);
             _beaconRailroadServiceMock.Setup(s => s.GetByIdAsync(fromMapPin.BeaconID, fromMapPin.SubdivisionId))
                 .ReturnsAsync(beaconRailroads[0]);
-            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(toMapPinBeforeUpdate))
+            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(toMapPinBeforeUpdate, telemetry.LastUpdate))
                 .ReturnsAsync(toMapPinAfterUpdate);
 
             _clientProxyMock.Setup(proxy => proxy.SendCoreAsync(
@@ -1551,7 +1559,7 @@ namespace Web.ServerTests.Services
             await _service.UpsertMapPin(telemetry);
 
             // Assert
-            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(toMapPinBeforeUpdate), Times.Once);
+            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(toMapPinBeforeUpdate, telemetry.LastUpdate), Times.Once);
 
             _clientProxyMock?.Verify(proxy => proxy.SendCoreAsync(
                 NotificationMethods.MapPinUpdate,
@@ -1588,7 +1596,7 @@ namespace Web.ServerTests.Services
                 AddressID = toAddressID,
                 Source = SourceEnum.EOT,
                 Moving = true,
-                CreatedAt = _timeProviderMock.Object.UtcNow.AddMinutes(1),
+                CreatedAt = _timeProviderMock.Object.UtcNow.AddMinutes(2),
                 LastUpdate = _timeProviderMock.Object.UtcNow.AddMinutes(2)
             };
 
@@ -1631,19 +1639,22 @@ namespace Web.ServerTests.Services
                         AddressID = fromAddressID,
                         Source = SourceEnum.HOT,
                         CreatedAt = _timeProviderMock.Object.UtcNow,
-                        LastUpdate = _timeProviderMock.Object.UtcNow
+                        LastUpdate = _timeProviderMock.Object.UtcNow,
                     },
                     new Address
                     {
                         AddressID = toAddressID,
                         Source = SourceEnum.EOT,
-                        CreatedAt = _timeProviderMock.Object.UtcNow,
-                        LastUpdate = _timeProviderMock.Object.UtcNow
+                        CreatedAt = telemetry.CreatedAt,
+                        LastUpdate = telemetry.LastUpdate
                     }
                 ],
             };
 
-            var toMapPinAfterUpdate = toMapPinBeforeUpdate;
+            var toMapPinAfterUpdate = toMapPinBeforeUpdate.Clone();
+            toMapPinAfterUpdate.LastUpdate = telemetry.LastUpdate;
+            toMapPinAfterUpdate.Addresses.ToList()[0].LastUpdate = telemetry.LastUpdate;
+            toMapPinAfterUpdate.Addresses.ToList()[1].LastUpdate = telemetry.LastUpdate;
 
             var toMapPinObjects = new object[]
             {
@@ -1661,7 +1672,7 @@ namespace Web.ServerTests.Services
                     Milepost = CNSussexBeacon.Milepost,
                     Moving = telemetry.Moving,
                     CreatedAt = _timeProviderMock.Object.UtcNow,
-                    LastUpdate = _timeProviderMock.Object.UtcNow,
+                    LastUpdate = telemetry.LastUpdate,
                     Addresses =
                     [
                         new AddressDTO
@@ -1684,7 +1695,7 @@ namespace Web.ServerTests.Services
                 .ReturnsAsync(fromMapPin);
             _beaconRailroadServiceMock.Setup(s => s.GetByIdAsync(fromMapPin.BeaconID, fromMapPin.SubdivisionId))
                 .ReturnsAsync(beaconRailroads[0]);
-            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(toMapPinBeforeUpdate))
+            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(toMapPinBeforeUpdate, telemetry.LastUpdate))
                 .ReturnsAsync(toMapPinAfterUpdate);
 
             _clientProxyMock.Setup(proxy => proxy.SendCoreAsync(
@@ -1697,7 +1708,7 @@ namespace Web.ServerTests.Services
             await _service.UpsertMapPin(telemetry);
 
             // Assert
-            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(toMapPinBeforeUpdate), Times.Once);
+            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(toMapPinBeforeUpdate, telemetry.LastUpdate), Times.Once);
 
             _clientProxyMock?.Verify(proxy => proxy.SendCoreAsync(
                 NotificationMethods.MapPinUpdate,
@@ -1768,7 +1779,7 @@ namespace Web.ServerTests.Services
 
             // Assert
             _telemetryRepositoryMock.Verify(r => r.UpdateAsync(telemetry), Times.Once());
-            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(It.IsAny<MapPin>()), Times.Never);
+            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(It.IsAny<MapPin>(), It.IsAny<DateTime>()), Times.Never);
         }
 
         /// <summary>
@@ -1867,7 +1878,7 @@ namespace Web.ServerTests.Services
                 .ReturnsAsync((MapPin?)null);
             _mapPinRepositoryMock.Setup(r => r.GetByTrainIdAsync(telemetry.TrainID.Value, MapPinService.TIME_THRESHOLD_DPU_MINUTES))
                 .ReturnsAsync((MapPin?)null);
-            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(expectedMapPinBeforeUpdate))
+            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(expectedMapPinBeforeUpdate, telemetry.LastUpdate))
                 .ReturnsAsync(expectedMapPinAfterUpdate);
 
             _clientProxyMock.Setup(proxy => proxy.SendCoreAsync(
@@ -1880,7 +1891,7 @@ namespace Web.ServerTests.Services
             await _service.UpsertMapPin(telemetry);
 
             // Assert
-            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(expectedMapPinBeforeUpdate), Times.Once);
+            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(expectedMapPinBeforeUpdate, telemetry.LastUpdate), Times.Once);
 
             _clientProxyMock?.Verify(proxy => proxy.SendCoreAsync(
                 NotificationMethods.MapPinUpdate,
@@ -1973,8 +1984,8 @@ namespace Web.ServerTests.Services
                 SubdivisionId = CNRugbyJunctionBeacon.Subdivision.ID,
                 CreatedRailroadID = CNRugbyJunctionBeacon.Subdivision.RailroadID,
                 Direction = null, // Can't calculate direction for DPU
-                CreatedAt = _timeProviderMock.Object.UtcNow.AddMinutes(2),
-                LastUpdate = _timeProviderMock.Object.UtcNow.AddMinutes(2),
+                CreatedAt = telemetry.CreatedAt,
+                LastUpdate = telemetry.LastUpdate,
                 BeaconRailroad = CNRugbyJunctionBeacon,
                 Moving = telemetry.Moving,
                 Addresses =
@@ -1984,8 +1995,8 @@ namespace Web.ServerTests.Services
                         AddressID = toAddressID,
                         DpuTrainID = toTrainID,
                         Source = toSource,
-                        CreatedAt = _timeProviderMock.Object.UtcNow,
-                        LastUpdate = _timeProviderMock.Object.UtcNow
+                        CreatedAt = telemetry.CreatedAt,
+                        LastUpdate = telemetry.LastUpdate
                     }
                 ],
             };
@@ -2008,8 +2019,8 @@ namespace Web.ServerTests.Services
                     Longitude = CNRugbyJunctionBeacon.Longitude,
                     Milepost = CNRugbyJunctionBeacon.Milepost,
                     Moving = telemetry.Moving,
-                    CreatedAt = _timeProviderMock.Object.UtcNow.AddMinutes(2),
-                    LastUpdate = _timeProviderMock.Object.UtcNow.AddMinutes(2),
+                    CreatedAt = telemetry.CreatedAt,
+                    LastUpdate = telemetry.LastUpdate,
                     Addresses =
                     [
                         new AddressDTO
@@ -2027,7 +2038,7 @@ namespace Web.ServerTests.Services
                 .ReturnsAsync(fromMapPin);
             _beaconRailroadServiceMock.Setup(s => s.GetByIdAsync(fromMapPin.BeaconID, fromMapPin.SubdivisionId))
                 .ReturnsAsync(beaconRailroads[0]);
-            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(toMapPinBeforeUpdate))
+            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(toMapPinBeforeUpdate, telemetry.LastUpdate))
                 .ReturnsAsync(toMapPinAfterUpdate);
 
             _clientProxyMock.Setup(proxy => proxy.SendCoreAsync(
@@ -2040,7 +2051,7 @@ namespace Web.ServerTests.Services
             await _service.UpsertMapPin(telemetry);
 
             // Assert
-            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(toMapPinBeforeUpdate), Times.Once);
+            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(toMapPinBeforeUpdate, telemetry.LastUpdate), Times.Once);
 
             _clientProxyMock?.Verify(proxy => proxy.SendCoreAsync(
                 NotificationMethods.MapPinUpdate,
@@ -2179,7 +2190,7 @@ namespace Web.ServerTests.Services
                 .ReturnsAsync(previousMapPin);
             _beaconRailroadServiceMock.Setup(s => s.GetByIdAsync(previousMapPin.BeaconID, previousMapPin.SubdivisionId))
                 .ReturnsAsync(beaconRailroads[0]);
-            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(expectedMapPinBeforeInsert))
+            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(expectedMapPinBeforeInsert, telemetry.LastUpdate))
                 .ReturnsAsync(expectedMapPinAfterInsert);
 
             _clientProxyMock.Setup(proxy => proxy.SendCoreAsync(
@@ -2192,7 +2203,7 @@ namespace Web.ServerTests.Services
             await _service.UpsertMapPin(telemetry);
 
             // Assert
-            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(expectedMapPinBeforeInsert), Times.Once);
+            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(expectedMapPinBeforeInsert, telemetry.LastUpdate), Times.Once);
 
             _clientProxyMock?.Verify(proxy => proxy.SendCoreAsync(
                 NotificationMethods.MapPinUpdate,
@@ -2319,7 +2330,7 @@ namespace Web.ServerTests.Services
                 .ReturnsAsync(previousMapPin);
             _beaconRailroadServiceMock.Setup(s => s.GetByIdAsync(previousMapPin.BeaconID, previousMapPin.SubdivisionId))
                 .ReturnsAsync(beaconRailroads[0]);
-            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(expectedMapPinBeforeInsert))
+            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(expectedMapPinBeforeInsert, telemetry.LastUpdate))
                 .ReturnsAsync(expectedMapPinAfterInsert);
 
             _clientProxyMock.Setup(proxy => proxy.SendCoreAsync(
@@ -2332,7 +2343,7 @@ namespace Web.ServerTests.Services
             await _service.UpsertMapPin(telemetry);
 
             // Assert
-            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(expectedMapPinBeforeInsert), Times.Once);
+            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(expectedMapPinBeforeInsert, telemetry.LastUpdate), Times.Once);
 
             _clientProxyMock?.Verify(proxy => proxy.SendCoreAsync(
                 NotificationMethods.MapPinUpdate,
@@ -2515,7 +2526,7 @@ namespace Web.ServerTests.Services
             // Assert
             _telemetryRepositoryMock.Verify(r => r.UpdateAsync(telemetry), Times.Once);
 
-            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(It.IsAny<MapPin>()), Times.Never);
+            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(It.IsAny<MapPin>(), It.IsAny<DateTime>()), Times.Never);
 
             _clientProxyMock?.Verify(proxy => proxy.SendCoreAsync(
                 NotificationMethods.MapPinUpdate,
@@ -2572,8 +2583,8 @@ namespace Web.ServerTests.Services
                 .ReturnsAsync(previousMapPin);
             _beaconRailroadServiceMock.Setup(b => b.GetByIdAsync(telemetry.BeaconID, beaconRailroad.SubdivisionID))
                 .ReturnsAsync(beaconRailroad);
-            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(It.IsAny<MapPin>()))
-                .ReturnsAsync((MapPin mp) => mp);
+            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(It.IsAny<MapPin>(), It.IsAny<DateTime>()))
+                .ReturnsAsync((MapPin mp, DateTime dt) => mp);
             _hubContextMock.Setup(h => h.Clients).Returns(_hubClientsMock.Object);
             _hubClientsMock.Setup(h => h.All).Returns(_clientProxyMock.Object);
             _clientProxyMock.Setup(proxy => proxy.SendCoreAsync(It.IsAny<string>(), It.IsAny<object[]>(), default))
@@ -2587,7 +2598,7 @@ namespace Web.ServerTests.Services
                 mp.Addresses.Count == 2 &&
                 mp.Addresses.Any(a => a.Source == SourceEnum.HOT && a.AddressID == 12345) &&
                 mp.Addresses.Any(a => a.Source == SourceEnum.DPU && a.AddressID == 54321)
-            )), Times.Once);
+            ), It.IsAny<DateTime>()), Times.Once);
         }
 
         /// <summary>
@@ -2642,8 +2653,8 @@ namespace Web.ServerTests.Services
                 .ReturnsAsync(previousMapPin);
             _beaconRailroadServiceMock.Setup(b => b.GetByIdAsync(telemetry.BeaconID, beaconRailroad.SubdivisionID))
                 .ReturnsAsync(beaconRailroad);
-            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(It.IsAny<MapPin>()))
-                .ReturnsAsync((MapPin mp) => mp);
+            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(It.IsAny<MapPin>(), It.IsAny<DateTime>()))
+                .ReturnsAsync((MapPin mp, DateTime dt) => mp);
             _hubContextMock.Setup(h => h.Clients).Returns(_hubClientsMock.Object);
             _hubClientsMock.Setup(h => h.All).Returns(_clientProxyMock.Object);
             _clientProxyMock.Setup(proxy => proxy.SendCoreAsync(It.IsAny<string>(), It.IsAny<object[]>(), default))
@@ -2658,7 +2669,7 @@ namespace Web.ServerTests.Services
                 mp.Addresses.First().AddressID == 12345 &&
                 mp.Addresses.First().Source == SourceEnum.HOT &&
                 mp.LastUpdate == _timeProviderMock.Object.UtcNow
-            )), Times.Once);
+            ), It.IsAny<DateTime>()), Times.Once);
         }
 
         /// <summary>
@@ -2708,8 +2719,8 @@ namespace Web.ServerTests.Services
                 .ReturnsAsync(previousMapPin);
             _beaconRailroadServiceMock.Setup(b => b.GetByIdAsync(telemetry.BeaconID, beaconRailroad.SubdivisionID))
                 .ReturnsAsync(beaconRailroad);
-            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(It.IsAny<MapPin>()))
-                .ReturnsAsync((MapPin mp) => mp);
+            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(It.IsAny<MapPin>(), It.IsAny<DateTime>()))
+                .ReturnsAsync((MapPin mp, DateTime dt) => mp);
             _hubContextMock.Setup(h => h.Clients).Returns(_hubClientsMock.Object);
             _hubClientsMock.Setup(h => h.All).Returns(_clientProxyMock.Object);
             _clientProxyMock.Setup(proxy => proxy.SendCoreAsync(It.IsAny<string>(), It.IsAny<object[]>(), default))
@@ -2724,7 +2735,7 @@ namespace Web.ServerTests.Services
             // Assert - direction should still be "N"
             _mapPinRepositoryMock.Verify(r => r.UpsertAsync(It.Is<MapPin>(mp =>
                 mp.Direction == "N"
-            )), Times.Once);
+            ), It.IsAny<DateTime>()), Times.Once);
         }
 
         /// <summary>
@@ -2780,8 +2791,8 @@ namespace Web.ServerTests.Services
                 .ReturnsAsync(previousMapPin);
             _beaconRailroadServiceMock.Setup(b => b.GetByIdAsync(telemetry.BeaconID, beaconRailroad.SubdivisionID))
                 .ReturnsAsync(beaconRailroad);
-            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(It.IsAny<MapPin>()))
-                .ReturnsAsync((MapPin mp) => mp);
+            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(It.IsAny<MapPin>(), It.IsAny<DateTime>()))
+                .ReturnsAsync((MapPin mp, DateTime dt) => mp);
             _hubContextMock.Setup(h => h.Clients).Returns(_hubClientsMock.Object);
             _hubClientsMock.Setup(h => h.All).Returns(_clientProxyMock.Object);
             _clientProxyMock.Setup(proxy => proxy.SendCoreAsync(It.IsAny<string>(), It.IsAny<object[]>(), default))
@@ -2793,7 +2804,7 @@ namespace Web.ServerTests.Services
             // Assert - Moving should still be true (not updated to null)
             _mapPinRepositoryMock.Verify(r => r.UpsertAsync(It.Is<MapPin>(mp =>
                 mp.Moving == null
-            )), Times.Once);
+            ), It.IsAny<DateTime>()), Times.Once);
         }
 
         /// <summary>
@@ -2888,14 +2899,17 @@ namespace Web.ServerTests.Services
                         AddressID = toAddressID,
                         DpuTrainID = toTrainID,
                         Source = toSource,
-                        CreatedAt = _timeProviderMock.Object.UtcNow,
-                        LastUpdate = _timeProviderMock.Object.UtcNow
+                        CreatedAt = telemetry.CreatedAt,
+                        LastUpdate = telemetry.LastUpdate
                     }
                 ],
             };
 
             var toMapPinAfterUpdate = toMapPinBeforeUpdate.Clone();
             toMapPinAfterUpdate.ID = 936; // ID returned after insert.
+            toMapPinAfterUpdate.LastUpdate = telemetry.LastUpdate;
+            toMapPinAfterUpdate.Addresses.ToList()[0].LastUpdate = telemetry.LastUpdate;
+            toMapPinAfterUpdate.Addresses.ToList()[1].LastUpdate = telemetry.LastUpdate;
 
             var toMapPinObjects = new object[]
             {
@@ -2913,7 +2927,7 @@ namespace Web.ServerTests.Services
                     Milepost = CNRugbyJunctionBeacon.Milepost,
                     Moving = telemetry.Moving,
                     CreatedAt = _timeProviderMock.Object.UtcNow,
-                    LastUpdate = _timeProviderMock.Object.UtcNow,
+                    LastUpdate = telemetry.LastUpdate,
                     Addresses =
                     [
                         new AddressDTO
@@ -2938,7 +2952,7 @@ namespace Web.ServerTests.Services
                 .ReturnsAsync(CNRugbyJunctionBeacon);
             _beaconRailroadServiceMock.Setup(b => b.GetByIdAsync(fromMapPin.BeaconID, fromMapPin.SubdivisionId))
                 .ReturnsAsync(CNSussexBeacon);
-            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(toMapPinBeforeUpdate))
+            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(toMapPinBeforeUpdate, It.IsAny<DateTime>()))
                 .ReturnsAsync(toMapPinAfterUpdate);
 
             _clientProxyMock.Setup(proxy => proxy.SendCoreAsync(
@@ -2951,7 +2965,7 @@ namespace Web.ServerTests.Services
             await _service.UpsertMapPin(telemetry);
 
             // Assert
-            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(toMapPinBeforeUpdate), Times.Once);
+            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(toMapPinBeforeUpdate, It.IsAny<DateTime>()), Times.Once);
 
             _clientProxyMock?.Verify(proxy => proxy.SendCoreAsync(
                 NotificationMethods.MapPinUpdate,
@@ -3031,7 +3045,7 @@ namespace Web.ServerTests.Services
             // Assert
             _telemetryRepositoryMock.Verify(r => r.UpdateAsync(telemetry), Times.Once);
 
-            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(It.IsAny<MapPin>()), Times.Never);
+            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(It.IsAny<MapPin>(), It.IsAny<DateTime>()), Times.Never);
 
             _clientProxyMock?.Verify(proxy => proxy.SendCoreAsync(
                 NotificationMethods.MapPinUpdate,
@@ -3105,7 +3119,7 @@ namespace Web.ServerTests.Services
                 SubdivisionId = CNRugbyJunctionBeacon.Subdivision.ID,
                 Direction = "N",
                 CreatedAt = _timeProviderMock.Object.UtcNow.AddMinutes(-15),
-                LastUpdate = _timeProviderMock.Object.UtcNow,
+                LastUpdate = _timeProviderMock.Object.UtcNow.AddMinutes(-15),
                 BeaconRailroad = CNRugbyJunctionBeacon,
                 Moving = telemetry.Moving,
                 CreatedRailroadID = CNSussexBeacon.Subdivision.RailroadID,
@@ -3117,7 +3131,7 @@ namespace Web.ServerTests.Services
                         DpuTrainID = fromTrainID,
                         Source = SourceEnum.DPU,
                         CreatedAt = _timeProviderMock.Object.UtcNow.AddMinutes(-15),
-                        LastUpdate = _timeProviderMock.Object.UtcNow,
+                        LastUpdate = _timeProviderMock.Object.UtcNow.AddMinutes(-15),
                     },
                     new Address
                     {
@@ -3132,6 +3146,9 @@ namespace Web.ServerTests.Services
 
             var toMapPinAfterUpdate = toMapPinBeforeUpdate.Clone();
             toMapPinAfterUpdate.ID = 936; // ID returned after insert.
+            toMapPinAfterUpdate.LastUpdate = telemetry.LastUpdate;
+            toMapPinAfterUpdate.Addresses.ToList()[0].LastUpdate = telemetry.LastUpdate;
+            toMapPinAfterUpdate.Addresses.ToList()[1].LastUpdate = telemetry.LastUpdate;
 
             var toMapPinObjects = new object[]
             {
@@ -3149,7 +3166,7 @@ namespace Web.ServerTests.Services
                     Milepost = CNRugbyJunctionBeacon.Milepost,
                     Moving = telemetry.Moving,
                     CreatedAt = _timeProviderMock.Object.UtcNow.AddMinutes(-15),
-                    LastUpdate = _timeProviderMock.Object.UtcNow,
+                    LastUpdate = telemetry.LastUpdate,
                     Addresses =
                     [
                         new AddressDTO
@@ -3174,7 +3191,7 @@ namespace Web.ServerTests.Services
                 .ReturnsAsync(CNRugbyJunctionBeacon);
             _beaconRailroadServiceMock.Setup(b => b.GetByIdAsync(fromMapPin.BeaconID, fromMapPin.SubdivisionId))
                 .ReturnsAsync(CNSussexBeacon);
-            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(toMapPinBeforeUpdate))
+            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(toMapPinBeforeUpdate, It.IsAny<DateTime>()))
                 .ReturnsAsync(toMapPinAfterUpdate);
 
             _clientProxyMock.Setup(proxy => proxy.SendCoreAsync(
@@ -3187,7 +3204,7 @@ namespace Web.ServerTests.Services
             await _service.UpsertMapPin(telemetry);
 
             // Assert
-            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(toMapPinBeforeUpdate), Times.Once);
+            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(toMapPinBeforeUpdate, It.IsAny<DateTime>()), Times.Once);
 
             _clientProxyMock?.Verify(proxy => proxy.SendCoreAsync(
                 NotificationMethods.MapPinUpdate,
@@ -3331,7 +3348,7 @@ namespace Web.ServerTests.Services
                 .ReturnsAsync(CNRugbyJunctionBeacon);
             _beaconRailroadServiceMock.Setup(b => b.GetByIdAsync(fromMapPin.BeaconID, fromMapPin.SubdivisionId))
                 .ReturnsAsync(CNRugbyJunctionBeacon);
-            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(toMapPinBeforeUpdate))
+            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(toMapPinBeforeUpdate, It.IsAny<DateTime>()))
                 .ReturnsAsync(toMapPinAfterUpdate);
 
             var minutesAgo = telemetry.CreatedAt.AddMinutes(-DpuAntiPingPongRule.TIME_WINDOW_MINUTES);
@@ -3383,7 +3400,7 @@ namespace Web.ServerTests.Services
             await _service.UpsertMapPin(telemetry);
 
             // Assert
-            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(It.IsAny<MapPin>()), Times.Never);
+            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(It.IsAny<MapPin>(), It.IsAny<DateTime>()), Times.Never);
 
             _clientProxyMock?.Verify(proxy => proxy.SendCoreAsync(
                 NotificationMethods.MapPinUpdate,
@@ -3525,7 +3542,7 @@ namespace Web.ServerTests.Services
                 .ReturnsAsync(CNWaukesha);
             _beaconRailroadServiceMock.Setup(b => b.GetByIdAsync(fromMapPin.BeaconID, fromMapPin.SubdivisionId))
                 .ReturnsAsync(CNJunctionCity);
-            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(toMapPinBeforeUpdate))
+            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(toMapPinBeforeUpdate, It.IsAny<DateTime>()))
                 .ReturnsAsync(toMapPinAfterUpdate);
 
             var minutesAgo = telemetry.CreatedAt.AddMinutes(-DpuAntiPingPongRule.TIME_WINDOW_MINUTES);
@@ -3560,7 +3577,7 @@ namespace Web.ServerTests.Services
             await _service.UpsertMapPin(telemetry);
 
             // Assert
-            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(toMapPinBeforeUpdate), Times.Once);
+            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(toMapPinBeforeUpdate, It.IsAny<DateTime>()), Times.Once);
 
             _clientProxyMock?.Verify(proxy => proxy.SendCoreAsync(
                 NotificationMethods.MapPinUpdate,
@@ -3631,7 +3648,7 @@ namespace Web.ServerTests.Services
                 SubdivisionId = CNSussexBeacon.Subdivision.ID,
                 Direction = null,
                 CreatedAt = _timeProviderMock.Object.UtcNow.AddMinutes(-60),
-                LastUpdate = _timeProviderMock.Object.UtcNow,
+                LastUpdate = _timeProviderMock.Object.UtcNow.AddMinutes(-60),
                 BeaconRailroad = CNSussexBeacon,
                 Moving = telemetry.Moving,
                 CreatedRailroadID = CNSussexBeacon.Subdivision.RailroadID,
@@ -3643,21 +3660,24 @@ namespace Web.ServerTests.Services
                         DpuTrainID = trainID,
                         Source = SourceEnum.DPU,
                         CreatedAt = _timeProviderMock.Object.UtcNow.AddMinutes(-60),
-                        LastUpdate = _timeProviderMock.Object.UtcNow,
+                        LastUpdate = _timeProviderMock.Object.UtcNow.AddMinutes(-60),
                     },
                     new Address
                     {
                         AddressID = toAddressID,
                         DpuTrainID = trainID,
                         Source = SourceEnum.DPU,
-                        CreatedAt = _timeProviderMock.Object.UtcNow,
-                        LastUpdate = _timeProviderMock.Object.UtcNow
+                        CreatedAt = telemetry.CreatedAt,
+                        LastUpdate = telemetry.LastUpdate
                     }
                 ],
             };
 
             var toMapPinAfterUpdate = toMapPinBeforeUpdate.Clone();
             toMapPinAfterUpdate.ID = 936; // ID returned after insert.
+            toMapPinAfterUpdate.LastUpdate = telemetry.LastUpdate;
+            toMapPinAfterUpdate.Addresses.ToList()[0].LastUpdate = telemetry.LastUpdate;
+            toMapPinAfterUpdate.Addresses.ToList()[1].LastUpdate = telemetry.LastUpdate;
 
             var toMapPinObjects = new object[]
             {
@@ -3675,7 +3695,7 @@ namespace Web.ServerTests.Services
                     Milepost = CNSussexBeacon.Milepost,
                     Moving = telemetry.Moving,
                     CreatedAt = _timeProviderMock.Object.UtcNow.AddMinutes(-60),
-                    LastUpdate = _timeProviderMock.Object.UtcNow,
+                    LastUpdate = telemetry.LastUpdate,
                     Addresses =
                     [
                         new AddressDTO
@@ -3700,7 +3720,7 @@ namespace Web.ServerTests.Services
                 .ReturnsAsync(CNSussexBeacon);
             _beaconRailroadServiceMock.Setup(b => b.GetByIdAsync(fromMapPin.BeaconID, fromMapPin.SubdivisionId))
                 .ReturnsAsync(CNSussexBeacon);
-            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(toMapPinBeforeUpdate))
+            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(toMapPinBeforeUpdate, It.IsAny<DateTime>()))
                 .ReturnsAsync(toMapPinAfterUpdate);
 
             _clientProxyMock.Setup(proxy => proxy.SendCoreAsync(
@@ -3713,7 +3733,7 @@ namespace Web.ServerTests.Services
             await _service.UpsertMapPin(telemetry);
 
             // Assert
-            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(toMapPinBeforeUpdate), Times.Once);
+            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(toMapPinBeforeUpdate, It.IsAny<DateTime>()), Times.Once);
 
             _clientProxyMock?.Verify(proxy => proxy.SendCoreAsync(
                 NotificationMethods.MapPinUpdate,
@@ -3824,7 +3844,7 @@ namespace Web.ServerTests.Services
                     t.DiscardReason == TrainSpeedSanityCheckRule.DISCARD_REASON)),
                 Times.Once);
 
-            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(It.IsAny<MapPin>()), Times.Never);
+            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(It.IsAny<MapPin>(), It.IsAny<DateTime>()), Times.Never);
             _clientProxyMock?.Verify(proxy => proxy.SendCoreAsync(
                 NotificationMethods.MapPinUpdate,
                 It.IsAny<object[]>(),
