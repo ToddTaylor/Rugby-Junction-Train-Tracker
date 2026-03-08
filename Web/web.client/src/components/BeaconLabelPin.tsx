@@ -154,17 +154,14 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
         return `<span style="display:inline-block;align-self:center;transform:rotate(${rotate}deg);"><svg width="${size}" height="${size}" viewBox="0 0 16 16"><polygon points="8,2 14,14 2,14" fill="${color}" /></svg></span>`;
     }
 
-    let statusText = '';
-    if (actualLastUpdateTime) {
-        statusText = `<span style="display:inline-flex;align-items:center;gap:4px;">Last Train: ${actualDirection ? getDirectionArrowSvg(actualDirection, 16, statusTextColor) : ''} ${actualLastUpdateTime}</span>`;
-    } else {
-        statusText = '<span style="display:inline-flex;align-items:center;">Last Train: N/A</span>';
-    }
-
-    // For single beacon labels, show the same statusText (including N/A when no data)
-    const statusTextForSingleBeacon = statusText;
-    
-    // ...existing code...
+    // Memoize status text so it updates when either actualDirection or actualLastUpdateTime changes
+    const statusTextForSingleBeacon = React.useMemo(() => {
+        if (actualLastUpdateTime) {
+            return `<span style="display:inline-flex;align-items:center;gap:4px;">Last Train: ${actualDirection ? getDirectionArrowSvg(actualDirection, 16, statusTextColor) : ''} ${actualLastUpdateTime}</span>`;
+        } else {
+            return '<span style="display:inline-flex;align-items:center;">Last Train: N/A</span>';
+        }
+    }, [actualDirection, actualLastUpdateTime, statusTextColor]);
     
     // Tracked trains last seen at this beacon (whether or not the map pin is still visible)
     const trackedTrainsAtBeacon = Array.from(
@@ -337,7 +334,7 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
                                 ${beaconPin.railroad ? `<span style="position: absolute; bottom: -5px; right: 4px; font-size: 9px; font-weight: 400; background: #005aa9; color: #fff; padding: 0px 3px; border-radius: 3px; white-space: nowrap; line-height: 1.2;">${beaconPin.railroad.toUpperCase()}</span>` : ''}
                             </div>
                         </div>
-                        ${statusText ? `<div class="beacon-status" style="
+                        ${statusTextForSingleBeacon ? `<div class="beacon-status" style="
                             display: inline-block;
                             margin-top: 4px;
                             background:${statusBg};
@@ -352,7 +349,7 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
                             border-radius:${statusRadius};
                             cursor:pointer;
                             pointer-events:auto;
-                        ">${statusText}</div>` : ''}
+                        ">${statusTextForSingleBeacon}</div>` : ''}
                         ${trackedTrainsAtBeacon.length > 0 ? `<div style="display: flex; flex-direction: column; gap: 2px; align-items: ${arrowOnRight ? 'flex-end' : 'flex-start'}; margin-top: 4px;">
                                 ${trackedTrainsAtBeacon.map(train => `
                                     <div class="track-indicator" data-train-id="${train.id}" data-symbol="${train.symbol || ''}" style="
@@ -465,7 +462,6 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
                 beaconPin.beaconName, 
                 beaconPin.railroad, 
                 beaconPin.subdivisionID,
-                statusText,
                 statusTextForSingleBeacon,
                 trackedTrainsAtBeacon,
                 labelBg, 
