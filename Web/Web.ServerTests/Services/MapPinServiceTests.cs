@@ -2739,11 +2739,11 @@ namespace Web.ServerTests.Services
         }
 
         /// <summary>
-        /// Test ensures that when telemetry has no Moving value (null), map pin Moving property is nulled. 
-        /// Make no assumptions about whether the train is moving or not.
+        /// Test ensures that when telemetry has no Moving value (null) but existing MapPin has Moving = true,
+        /// the MapPin's Moving value is not overwritten to null.
         /// </summary>
         [TestMethod]
-        public async Task UpsertMapPin_MovingNull_NotUpdated()
+        public async Task UpsertMapPin_CalculateMotion_ExistingMovingNotOverwritten()
         {
             // Arrange
             var beaconRailroad = TestData.CN_RugbyJunction_WI(_timeProviderMock.Object.UtcNow);
@@ -2803,7 +2803,139 @@ namespace Web.ServerTests.Services
 
             // Assert - Moving should still be true (not updated to null)
             _mapPinRepositoryMock.Verify(r => r.UpsertAsync(It.Is<MapPin>(mp =>
-                mp.Moving == null
+                mp.Moving == true
+            ), It.IsAny<DateTime>()), Times.Once);
+        }
+
+        [TestMethod]
+        public async Task UpsertMapPin_CalculateMotion_BrakePressureApplied()
+        {
+            // Arrange
+            var beaconRailroad = TestData.CN_RugbyJunction_WI(_timeProviderMock.Object.UtcNow);
+            var telemetry = new Telemetry
+            {
+                BeaconID = beaconRailroad.BeaconID,
+                Beacon = new Beacon()
+                {
+                    ID = beaconRailroad.BeaconID,
+                    BeaconRailroads = new List<BeaconRailroad>
+                    {
+                        beaconRailroad
+                    }
+                },
+                AddressID = 12345,
+                BrakePipePressure = 86, // Above 85 PSI indicates moving.
+                Source = SourceEnum.DPU,
+                Moving = null,
+                CreatedAt = _timeProviderMock.Object.UtcNow,
+                LastUpdate = _timeProviderMock.Object.UtcNow.AddMinutes(1)
+            };
+
+            var previousMapPin = new MapPin
+            {
+                ID = 100,
+                BeaconID = beaconRailroad.BeaconID,
+                SubdivisionId = beaconRailroad.Subdivision.ID,
+                Direction = "N",
+                CreatedAt = _timeProviderMock.Object.UtcNow.AddMinutes(-10),
+                LastUpdate = _timeProviderMock.Object.UtcNow,
+                BeaconRailroad = beaconRailroad,
+                Moving = null, // Previously no indication of moving.
+                CreatedRailroadID = beaconRailroad.Subdivision.RailroadID,
+                Addresses =
+                [
+                    new Address {
+                        AddressID = 12345,
+                        Source = SourceEnum.HOT,
+                        CreatedAt = _timeProviderMock.Object.UtcNow.AddMinutes(-10),
+                        LastUpdate = _timeProviderMock.Object.UtcNow
+                    }
+                ]
+            };
+
+            _mapPinRepositoryMock.Setup(r => r.GetByAddressIdAsync(telemetry.AddressID, telemetry.TrainID))
+                .ReturnsAsync(previousMapPin);
+            _beaconRailroadServiceMock.Setup(b => b.GetByIdAsync(telemetry.BeaconID, beaconRailroad.SubdivisionID))
+                .ReturnsAsync(beaconRailroad);
+            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(It.IsAny<MapPin>(), It.IsAny<DateTime>()))
+                .ReturnsAsync((MapPin mp, DateTime dt) => mp);
+            _hubContextMock.Setup(h => h.Clients).Returns(_hubClientsMock.Object);
+            _hubClientsMock.Setup(h => h.All).Returns(_clientProxyMock.Object);
+            _clientProxyMock.Setup(proxy => proxy.SendCoreAsync(It.IsAny<string>(), It.IsAny<object[]>(), default))
+                .Returns(Task.CompletedTask);
+
+            // Act
+            await _service.UpsertMapPin(telemetry);
+
+            // Assert - Moving should still be true (not updated to null)
+            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(It.Is<MapPin>(mp =>
+                mp.Moving == true
+            ), It.IsAny<DateTime>()), Times.Once);
+        }
+
+        [TestMethod]
+        public async Task UpsertMapPin_CalculateMotion_MotionIndicatorOn()
+        {
+            // Arrange
+            var beaconRailroad = TestData.CN_RugbyJunction_WI(_timeProviderMock.Object.UtcNow);
+            var telemetry = new Telemetry
+            {
+                BeaconID = beaconRailroad.BeaconID,
+                Beacon = new Beacon()
+                {
+                    ID = beaconRailroad.BeaconID,
+                    BeaconRailroads = new List<BeaconRailroad>
+                    {
+                        beaconRailroad
+                    }
+                },
+                AddressID = 12345,
+                BrakePipePressure = 70, // Above 85 PSI indicates moving.
+                Source = SourceEnum.EOT,
+                Moving = null,
+                CreatedAt = _timeProviderMock.Object.UtcNow,
+                LastUpdate = _timeProviderMock.Object.UtcNow.AddMinutes(1)
+            };
+
+            var previousMapPin = new MapPin
+            {
+                ID = 100,
+                BeaconID = beaconRailroad.BeaconID,
+                SubdivisionId = beaconRailroad.Subdivision.ID,
+                Direction = "N",
+                CreatedAt = _timeProviderMock.Object.UtcNow.AddMinutes(-10),
+                LastUpdate = _timeProviderMock.Object.UtcNow,
+                BeaconRailroad = beaconRailroad,
+                Moving = null, // Previously no indication of moving.
+                CreatedRailroadID = beaconRailroad.Subdivision.RailroadID,
+                Addresses =
+                [
+                    new Address {
+                        AddressID = 12345,
+                        Source = SourceEnum.HOT,
+                        CreatedAt = _timeProviderMock.Object.UtcNow.AddMinutes(-10),
+                        LastUpdate = _timeProviderMock.Object.UtcNow
+                    }
+                ]
+            };
+
+            _mapPinRepositoryMock.Setup(r => r.GetByAddressIdAsync(telemetry.AddressID, telemetry.TrainID))
+                .ReturnsAsync(previousMapPin);
+            _beaconRailroadServiceMock.Setup(b => b.GetByIdAsync(telemetry.BeaconID, beaconRailroad.SubdivisionID))
+                .ReturnsAsync(beaconRailroad);
+            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(It.IsAny<MapPin>(), It.IsAny<DateTime>()))
+                .ReturnsAsync((MapPin mp, DateTime dt) => mp);
+            _hubContextMock.Setup(h => h.Clients).Returns(_hubClientsMock.Object);
+            _hubClientsMock.Setup(h => h.All).Returns(_clientProxyMock.Object);
+            _clientProxyMock.Setup(proxy => proxy.SendCoreAsync(It.IsAny<string>(), It.IsAny<object[]>(), default))
+                .Returns(Task.CompletedTask);
+
+            // Act
+            await _service.UpsertMapPin(telemetry);
+
+            // Assert - Moving should still be true (not updated to null)
+            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(It.Is<MapPin>(mp =>
+                mp.Moving == false
             ), It.IsAny<DateTime>()), Times.Once);
         }
 

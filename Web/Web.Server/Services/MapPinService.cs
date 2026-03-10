@@ -685,14 +685,7 @@ namespace Web.Server.Services
 
             // Update IsLocal flag based on new subdivision
             newMapPin.IsLocal = IsLocalTrain(telemetry.AddressID, toBeaconRailroad.Subdivision);
-
-            // Reset moving status on update to recalculate based on new telemetry. Don't assume previous moving status.
-            newMapPin.Moving = null;
-
-            if (telemetry.Moving.HasValue)
-            {
-                newMapPin.Moving = telemetry.Moving;
-            }
+            newMapPin.Moving = CalculateMotion(existingMapPinToUpdate.Moving, telemetry.BrakePipePressure, telemetry.Moving);
 
             await this.UpdateBeaconTimestamp(toBeaconRailroad);
 
@@ -705,6 +698,39 @@ namespace Web.Server.Services
             var toGeoCoordinate = new GeoCoordinate(toBeaconRailroad.Latitude, toBeaconRailroad.Longitude);
 
             return DirectionService.GetDirection(fromGeoCoordinate, toGeoCoordinate, toBeaconRailroad.Direction).ToString();
+        }
+
+        [Obsolete("EOT telemetery moving indicator is being phased-out due to inaccuracy.", false)]
+        private static bool? CalculateMotion(bool? existingMoving, decimal? telemetryBrakePipePressure, bool? telemetryMotion)
+        {
+            var motionFromBrakePipe = CalculateMotion(existingMoving, telemetryBrakePipePressure);
+
+            if (motionFromBrakePipe.HasValue)
+            {
+                return motionFromBrakePipe.Value;
+            }
+            else
+            {
+                return telemetryMotion;
+            }
+        }
+
+        private static bool? CalculateMotion(bool? existingMoving, decimal? telemetryBrakePipePressure)
+        {
+            if (existingMoving.HasValue && !telemetryBrakePipePressure.HasValue)
+            {
+                // Don't update moving status if the new telemetry doesn't have moving or brake pipe pressure data.
+                return existingMoving.Value;
+            }
+
+            var minimumBrakePSI = 85;
+
+            if (telemetryBrakePipePressure.HasValue)
+            {
+                return (telemetryBrakePipePressure.Value > minimumBrakePSI);
+            }
+
+            return null;
         }
 
         private async Task UpdateBeaconTimestamp(BeaconRailroad beaconRailroad)
