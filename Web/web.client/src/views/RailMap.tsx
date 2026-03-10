@@ -1,4 +1,5 @@
 ﻿import React, { useEffect, useState, useRef, useMemo } from 'react';
+import HamburgerMenu from '../components/HamburgerMenu';
 import {
     MapContainer,
     TileLayer,
@@ -641,78 +642,63 @@ const RailMap: React.FC = () => {
         }
     };
 
+    // Hamburger menu state
+    const [menuOpen, setMenuOpen] = useState(false);
+    // Hamburger icon
+    const hamburgerIcon = (
+        <img
+            src={`/icons/hamburger.svg${cacheBuster}`}
+            alt="Menu"
+            style={{ width: 32, height: 32 }}
+        />
+    );
+    // Menu items
+    const menuItems = [
+        {
+            icon: <img src={`/icons/settings.svg${cacheBuster}`} alt="Admin settings" style={{ width: 26, height: 26 }} />,
+            label: 'Admin Settings',
+            onClick: () => { window.location.href = '/admin'; },
+            visible: !!isAdmin,
+        },
+        {
+            icon: <img src={mapTheme === 'dark' ? `/icons/moon.svg${cacheBuster}` : `/icons/sun.svg${cacheBuster}`} alt={mapTheme === 'dark' ? 'Dark mode' : 'Light mode'} style={{ width: 28, height: 28 }} />,
+            label: mapTheme === 'dark' ? 'Dark Mode' : 'Light Mode',
+            onClick: handleToggleTheme,
+            visible: true,
+        },
+        {
+            icon: (
+                <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="14" cy="14" r="13" stroke="#fff" strokeWidth="2" fill={mapTheme === 'dark' ? '#222' : 'transparent'} />
+                    <text x="50%" y="50%" textAnchor="middle" dominantBaseline="central" fontSize="13" fontWeight="bold" fill="#fff">{hourFormat}</text>
+                </svg>
+            ),
+            label: hourFormat === '12' ? '12-hour Format' : '24-hour Format',
+            onClick: handleToggleHourFormat,
+            visible: true,
+        },
+        {
+            icon: <img src={`/icons/logout.svg${cacheBuster}`} alt="Log out" style={{ width: 26, height: 26 }} />,
+            label: 'Log Out',
+            onClick: handleLogout,
+            visible: true,
+        },
+    ];
     return (
         <>
-            <div style={{ position: 'absolute', top: 14, right: 10, zIndex: 1000, display: 'flex', alignItems: 'center', width: '100%', justifyContent: 'flex-end' }}>
-                {/* Settings (admin) icon, then theme toggle, then logout at far right */}
-                <div style={{ display: 'flex', alignItems: 'center', marginLeft: 'auto' }}>
-                    {isAdmin && (
-                        <a href="/admin" style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            padding: 0,
-                            marginRight: 12,
-                        }}>
-                            <img
-                                src={`/icons/settings.svg${cacheBuster}`}
-                                alt="Admin settings"
-                                style={{ width: 26, height: 26 }}
-                            />
-                        </a>
-                    )}
-                    <span style={{ display: 'flex', alignItems: 'center', marginRight: 4 }}>
-                        <img
-                            src={mapTheme === 'dark' ? `/icons/moon.svg${cacheBuster}` : `/icons/sun.svg${cacheBuster}`}
-                            alt={mapTheme === 'dark' ? 'Dark mode' : 'Light mode'}
-                            style={{ width: 28, height: 28, cursor: 'pointer' }}
-                            onClick={handleToggleTheme}
-                        />
-                        <button
-                            onClick={handleToggleHourFormat}
-                            style={{
-                                background: 'none',
-                                border: 'none',
-                                cursor: 'pointer',
-                                padding: 0,
-                                marginLeft: 8,
-                                display: 'flex',
-                                alignItems: 'center',
-                                width: 28,
-                                height: 28,
-                            }}
-                            title={hourFormat === '12' ? 'Switch to 24-hour format' : 'Switch to 12-hour format'}
-                        >
-                            <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <circle cx="14" cy="14" r="13" stroke="#fff" strokeWidth="2" fill={mapTheme === 'dark' ? '#222' : '#fff'} />
-                                <text x="50%" y="50%" textAnchor="middle" dominantBaseline="central" fontSize="13" fontWeight="bold" fill="#fff">{hourFormat}</text>
-                            </svg>
-                        </button>
-                    </span>
-                    {/* Logout button at the far right */}
-                    <button
-                        onClick={handleLogout}
-                        style={{
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            padding: 0,
-                            marginLeft: 12,
-                            display: 'flex',
-                            alignItems: 'center',
-                        }}
-                        title="Log out"
-                    >
-                        <img
-                            src={`/icons/logout.svg${cacheBuster}`}
-                            alt="Log out"
-                            style={{ width: 26, height: 26 }}
-                        />
-                    </button>
-                </div>
+            <div style={{ position: 'absolute', top: 14, right: 10, zIndex: 1000 }}>
+                <button
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                    onClick={() => setMenuOpen(v => !v)}
+                    aria-label="Open menu"
+                >
+                    {hamburgerIcon}
+                </button>
+                <HamburgerMenu
+                    items={menuItems}
+                    open={menuOpen}
+                    onClose={() => setMenuOpen(false)}
+                />
             </div>
             <MapContainer
                 center={mapCenter}
