@@ -10,6 +10,8 @@ namespace Web.Server.Services
 {
     public class TelemetryService : ITelemetryService
     {
+        private const int STALE_TELEMETRY_THRESHOLD_MINUTES = 5;
+
         private readonly ITelemetryRepository _telemetryRepository;
         private readonly IBeaconService _beaconService;
         private readonly IBeaconRailroadService _beaconRailroadService;
@@ -55,9 +57,17 @@ namespace Web.Server.Services
             telemetry.Beacon = beacon;
 
             // Set telemetry timestamps and default state
-            telemetry.CreatedAt = telemetry.CreatedAt;
-            telemetry.LastUpdate = telemetry.LastUpdate;
             telemetry.Discarded = false;
+
+            // Discard telemetry if it's stale (i.e. if the beacon hasn't updated in a while, the
+            // telemetry is likely inaccurate and not worth showing on the map).
+            var staleThreshold = _timeProvider.UtcNow.AddMinutes(-STALE_TELEMETRY_THRESHOLD_MINUTES);
+
+            if (telemetry.LastUpdate <= staleThreshold)
+            {
+                telemetry.Discarded = true;
+                telemetry.DiscardReason = $"Stale Telemetry. (More than {STALE_TELEMETRY_THRESHOLD_MINUTES} minutes old.)";
+            }
 
             // Insert new telemetry for historical logging purposes
             telemetry = await _telemetryRepository.AddAsync(telemetry);

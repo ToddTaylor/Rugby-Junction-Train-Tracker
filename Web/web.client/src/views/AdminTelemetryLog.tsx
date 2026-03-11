@@ -117,7 +117,7 @@ function AdminTelemetryLog() {
             renderCell: (params: any) => {
                 const reason = params.row?.discardReason;
                 if (reason && reason.trim()) {
-                    return <span style={{ color: '#d32f2f', fontWeight: 500 }}>{reason}</span>;
+                    return <span>{reason}</span>;
                 }
                 return <span>{params.row?.discarded ? 'Yes' : 'No'}</span>;
             },
