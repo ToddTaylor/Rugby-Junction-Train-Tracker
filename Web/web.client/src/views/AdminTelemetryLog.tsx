@@ -14,8 +14,32 @@ import { format, parseISO } from "date-fns";
 function AdminTelemetryLog() {
     const [telemetries, setTelemetries] = useState<Telemetry[]>([]);
     const [addressIdFilter, setAddressIdFilter] = useState<string>('');
+        // Handler for clicking addressID hyperlink
+        const handleAddressIdClick = (addressID: string) => {
+            setBeaconNameFilter([]);
+            setAddressIdFilter('');
+            setTrainIdFilter('');
+            setSourceFilter([]);
+            setAddressIdFilter(addressID);
+        };
     const [trainIdFilter, setTrainIdFilter] = useState<string>('');
+        // Handler for clicking trainID hyperlink
+        const handleTrainIdClick = (trainID: string) => {
+            setBeaconNameFilter([]);
+            setAddressIdFilter('');
+            setTrainIdFilter('');
+            setSourceFilter([]);
+            setTrainIdFilter(trainID);
+        };
     const [beaconNameFilter, setBeaconNameFilter] = useState<string[]>([]);
+        // Handler for clicking beaconName hyperlink
+        const handleBeaconNameClick = (beaconName: string) => {
+            setBeaconNameFilter([]);
+            setAddressIdFilter('');
+            setTrainIdFilter('');
+            setSourceFilter([]);
+            setBeaconNameFilter([beaconName]);
+        };
     const [sourceFilter, setSourceFilter] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState(false);
 
@@ -78,18 +102,83 @@ function AdminTelemetryLog() {
     });
 
     const columns: GridColDef[] = [
-        { field: 'beaconName', headerName: 'Beacon Name', width: 140 },
-        { field: 'addressID', headerName: 'Address ID', width: 100 },
-        { field: 'trainID', headerName: 'Train ID', width: 100 },
+        {
+            field: 'beaconName',
+            headerName: 'Beacon Name',
+            width: 140,
+            renderCell: (params: any) => {
+                const beaconName = params.row?.beaconName;
+                if (!beaconName) return <span>-</span>;
+                return (
+                    <a
+                        href="#"
+                        style={{ color: '#4a9eff', textDecoration: 'underline', cursor: 'pointer' }}
+                        onClick={e => {
+                            e.preventDefault();
+                            handleBeaconNameClick(beaconName);
+                        }}
+                    >
+                        {beaconName}
+                    </a>
+                );
+            },
+        },
+        {
+            field: 'addressID',
+            headerName: 'Address ID',
+            width: 100,
+            renderCell: (params: any) => {
+                const addressID = params.row?.addressID;
+                if (addressID === undefined || addressID === null) return <span>-</span>;
+                return (
+                    <a
+                        href="#"
+                        style={{ color: '#4a9eff', textDecoration: 'underline', cursor: 'pointer' }}
+                        onClick={e => {
+                            e.preventDefault();
+                            handleAddressIdClick(String(addressID));
+                        }}
+                    >
+                        {addressID}
+                    </a>
+                );
+            },
+        },
+        {
+            field: 'trainID',
+            headerName: 'Train ID',
+            width: 100,
+            renderCell: (params: any) => {
+                const trainID = params.row?.trainID;
+                if (trainID === undefined || trainID === null) return <span>-</span>;
+                return (
+                    <a
+                        href="#"
+                        style={{ color: '#4a9eff', textDecoration: 'underline', cursor: 'pointer' }}
+                        onClick={e => {
+                            e.preventDefault();
+                            handleTrainIdClick(String(trainID));
+                        }}
+                    >
+                        {trainID}
+                    </a>
+                );
+            },
+        },
         {
             field: 'moving',
             headerName: 'Moving',
             width: 100,
             type: 'boolean',
-            renderCell: (params: any) =>
-                params.row?.moving
-                    ? <span style={{ color: '#4caf50', fontSize: '1.2em', fontWeight: 'bold' }}>✓</span>
-                    : <span style={{ color: '#f44336', fontSize: '1.2em', fontWeight: 'bold' }}>✕</span>,
+                renderCell: (params: any) => {
+                    const moving = params.row?.moving;
+                    if (moving === null || moving === undefined) {
+                        return <span>-</span>;
+                    }
+                    return moving
+                        ? <span style={{ color: '#4caf50', fontSize: '1.2em', fontWeight: 'bold' }}>✓</span>
+                        : <span style={{ color: '#f44336', fontSize: '1.2em', fontWeight: 'bold' }}>✕</span>;
+                },
         },
         {
             field: 'brakePipePressure',
@@ -106,9 +195,9 @@ function AdminTelemetryLog() {
             headerName: 'Last Update',
             width: 200,
             renderCell: (params: any) =>
-                params.row?.lastUpdate
-                    ? format(parseISO(params.row.lastUpdate), 'yyyy-MM-dd h:mm:ss aa')
-                    : '',
+                    params.row?.lastUpdate
+                        ? format(parseISO(params.row.lastUpdate), 'yyyy-MM-dd HH:mm:ss')
+                        : '',
         },
         {
             field: 'discarded',
