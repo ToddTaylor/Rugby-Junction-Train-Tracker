@@ -685,7 +685,7 @@ namespace Web.Server.Services
 
             // Update IsLocal flag based on new subdivision
             newMapPin.IsLocal = IsLocalTrain(telemetry.AddressID, toBeaconRailroad.Subdivision);
-            newMapPin.Moving = CalculateMotion(existingMapPinToUpdate.Moving, telemetry.BrakePipePressure, telemetry.Moving);
+            newMapPin.Moving = CalculateMotion(existingMapPinToUpdate, telemetry);
 
             await this.UpdateBeaconTimestamp(toBeaconRailroad);
 
@@ -700,34 +700,24 @@ namespace Web.Server.Services
             return DirectionService.GetDirection(fromGeoCoordinate, toGeoCoordinate, toBeaconRailroad.Direction).ToString();
         }
 
-        [Obsolete("EOT telemetery moving indicator is being phased-out due to inaccuracy.", false)]
-        private static bool? CalculateMotion(bool? existingMoving, decimal? telemetryBrakePipePressure, bool? telemetryMotion)
+        private static bool? CalculateMotion(MapPin existingMapPin, Telemetry telemetry)
         {
-            var motionFromBrakePipe = CalculateMotion(existingMoving, telemetryBrakePipePressure);
+            var minimumBrakePSI = 82;
 
-            if (motionFromBrakePipe.HasValue)
+            if (telemetry.BrakePipePressure.HasValue)
             {
-                return motionFromBrakePipe.Value;
-            }
-            else
-            {
-                return telemetryMotion;
-            }
-        }
-
-        private static bool? CalculateMotion(bool? existingMoving, decimal? telemetryBrakePipePressure)
-        {
-            if (existingMoving.HasValue && !telemetryBrakePipePressure.HasValue)
-            {
-                // Don't update moving status if the new telemetry doesn't have moving or brake pipe pressure data.
-                return existingMoving.Value;
+                return (telemetry.BrakePipePressure.Value >= minimumBrakePSI);
             }
 
-            var minimumBrakePSI = 85;
-
-            if (telemetryBrakePipePressure.HasValue)
+            if (telemetry.Moving.HasValue)
             {
-                return (telemetryBrakePipePressure.Value > minimumBrakePSI);
+                return telemetry.Moving.Value;
+            }
+
+            if (existingMapPin.Moving.HasValue && telemetry.Source == SourceEnum.HOT)
+            {
+                // HOT contains no movement information, so don't update existing moving status.
+                return existingMapPin.Moving;
             }
 
             return null;
