@@ -714,12 +714,15 @@ namespace Web.Server.Services
                 return telemetry.Moving.Value;
             }
 
-            if (existingMapPin.Moving.HasValue && telemetry.Source == SourceEnum.HOT)
+            var sameBeacon = existingMapPin.BeaconID == telemetry.BeaconID;
+
+            if (existingMapPin.Moving.HasValue && sameBeacon && telemetry.Source == SourceEnum.HOT)
             {
                 // HOT contains no movement information, so don't update existing moving status.
                 return existingMapPin.Moving;
             }
 
+            // No brake pipe pressure, no movement status, or moving status is unknown HOT - default to null (unknown).
             return null;
         }
 
