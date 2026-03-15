@@ -2,6 +2,7 @@ using AutoMapper;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using System.Diagnostics.CodeAnalysis;
 using Web.Server.DTOs;
@@ -44,8 +45,8 @@ namespace Web.ServerTests.Services
 
             var config = new MapperConfiguration(cfg =>
             {
-                cfg.AddProfile<AutoMapperProfile>();
-            });
+                cfg.AddProfile(new AutoMapperProfile());
+            }, new NullLoggerFactory());
             _mapper = config.CreateMapper();
 
             _configurationMock.Setup(c => c.GetSection("ApplicationSettings:StationaryDirectionNullThresholdHours").Value)

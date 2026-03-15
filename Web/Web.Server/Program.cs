@@ -57,7 +57,7 @@ try
     });
 
     // Add services to the container.
-    builder.Services.AddAutoMapper(typeof(AutoMapperProfile));
+    builder.Services.AddAutoMapper(cfg => cfg.AddProfile<AutoMapperProfile>());
     builder.Services.AddControllers()
         .AddJsonOptions(options =>
         {

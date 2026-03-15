@@ -16,7 +16,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="AutoMapper" Version="14.0.0" />
+		<PackageReference Include="AutoMapper" Version="16.1.1" />
 		<PackageReference Include="Mailtrap" Version="3.0.0" />
 		<PackageReference Include="Mailtrap.Abstractions" Version="3.0.0" />
 		<PackageReference Include="Microsoft.AspNetCore.Http.Connections" Version="1.2.0" />
