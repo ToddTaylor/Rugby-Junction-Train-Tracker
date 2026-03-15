@@ -258,12 +258,12 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdiv
                             },
                         }}
                     >
-                        {isTracked && trackedColor && (
+                        {params.row.isLocal ? (
                             <Box
                                 sx={{
                                     width: 14,
                                     height: 14,
-                                    backgroundColor: trackedColor,
+                                    backgroundColor: '#FFD700',
                                     borderRadius: '50%',
                                     border: '1px solid rgba(0, 0, 0, 0.5)',
                                     display: 'flex',
@@ -274,33 +274,54 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdiv
                                     color: '#000',
                                     flexShrink: 0,
                                 }}
-                                title="Tracked"
+                                title="Local Train"
                             >
-                                T
+                                L
                             </Box>
-                        )}
-                        {!isTracked && (
-                            <Box
-                                onClick={handleTrackClick}
-                                sx={{
-                                    width: 14,
-                                    height: 14,
-                                    backgroundColor: '#cccccc',
-                                    borderRadius: '50%',
-                                    border: '1px solid rgba(0, 0, 0, 0.3)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    fontSize: '9px',
-                                    fontWeight: '900',
-                                    color: '#666',
-                                    flexShrink: 0,
-                                    cursor: 'pointer',
-                                }}
-                                title="Track this train"
-                            >
-                                T
-                            </Box>
+                        ) : (
+                            isTracked && trackedColor ? (
+                                <Box
+                                    sx={{
+                                        width: 14,
+                                        height: 14,
+                                        backgroundColor: trackedColor,
+                                        borderRadius: '50%',
+                                        border: '1px solid rgba(0, 0, 0, 0.5)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontSize: '9px',
+                                        fontWeight: '900',
+                                        color: '#000',
+                                        flexShrink: 0,
+                                    }}
+                                    title="Tracked"
+                                >
+                                    T
+                                </Box>
+                            ) : (
+                                <Box
+                                    onClick={handleTrackClick}
+                                    sx={{
+                                        width: 14,
+                                        height: 14,
+                                        backgroundColor: '#cccccc',
+                                        borderRadius: '50%',
+                                        border: '1px solid rgba(0, 0, 0, 0.3)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontSize: '9px',
+                                        fontWeight: '900',
+                                        color: '#666',
+                                        flexShrink: 0,
+                                        cursor: 'pointer',
+                                    }}
+                                    title="Track this train"
+                                >
+                                    T
+                                </Box>
+                            )
                         )}
                         {symbol && (
                             <span 

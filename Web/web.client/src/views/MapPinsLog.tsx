@@ -172,27 +172,7 @@ function MapPinsLog() {
                 
                 return (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        {isTracked && trackedColor && (
-                            <Box
-                                sx={{
-                                    width: 14,
-                                    height: 14,
-                                    backgroundColor: trackedColor,
-                                    borderRadius: '50%',
-                                    border: '1px solid rgba(0, 0, 0, 0.5)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    fontSize: '9px',
-                                    fontWeight: '900',
-                                    color: '#000',
-                                    flexShrink: 0,
-                                }}
-                            >
-                                T
-                            </Box>
-                        )}
-                        {isLocal && (
+                        {isLocal ? (
                             <Box
                                 sx={{
                                     width: 14,
@@ -211,6 +191,27 @@ function MapPinsLog() {
                             >
                                 L
                             </Box>
+                        ) : (
+                            isTracked && trackedColor && (
+                                <Box
+                                    sx={{
+                                        width: 14,
+                                        height: 14,
+                                        backgroundColor: trackedColor,
+                                        borderRadius: '50%',
+                                        border: '1px solid rgba(0, 0, 0, 0.5)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontSize: '9px',
+                                        fontWeight: '900',
+                                        color: '#000',
+                                        flexShrink: 0,
+                                    }}
+                                >
+                                    T
+                                </Box>
+                            )
                         )}
                         {symbol && (
                             <span 

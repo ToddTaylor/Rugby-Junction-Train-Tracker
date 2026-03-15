@@ -106,14 +106,35 @@ namespace Web.Server.Services
             // Add history entries for beacons that don't have a current MapPin
             var historyMapPins = historyLatest
                 .Where(h => !existingKeys.Contains($"{h.BeaconID}|{h.SubdivisionId}"))
-                .Select(h => new MapPin
-                {
-                    BeaconID = h.BeaconID,
-                    SubdivisionId = h.SubdivisionId,
-                    CreatedRailroadID = h.CreatedRailroadID,
-                    Direction = h.Direction,
-                    LastUpdate = h.LastUpdate,
-                    BeaconRailroad = h.BeaconRailroad
+                .Select(h => {
+                    int? primaryAddressID = null;
+                    if (!string.IsNullOrWhiteSpace(h.AddressesJson))
+                    {
+                        try
+                        {
+                            var addresses = System.Text.Json.JsonSerializer.Deserialize<List<dynamic>>(h.AddressesJson);
+                            if (addresses != null && addresses.Count > 0 && addresses[0].AddressID != null)
+                            {
+                                primaryAddressID = (int)addresses[0].AddressID;
+                            }
+                        }
+                        catch { /* ignore parse errors */ }
+                    }
+                    bool isLocal = false;
+                    if (primaryAddressID.HasValue && h.BeaconRailroad?.Subdivision != null)
+                    {
+                        isLocal = IsLocalTrain(primaryAddressID.Value, h.BeaconRailroad.Subdivision);
+                    }
+                    return new MapPin
+                    {
+                        BeaconID = h.BeaconID,
+                        SubdivisionId = h.SubdivisionId,
+                        CreatedRailroadID = h.CreatedRailroadID,
+                        Direction = h.Direction,
+                        LastUpdate = h.LastUpdate,
+                        BeaconRailroad = h.BeaconRailroad,
+                        IsLocal = isLocal
+                    };
                 });
 
             // Concatenate and sort by Direction (northbound, southbound, etc.)
