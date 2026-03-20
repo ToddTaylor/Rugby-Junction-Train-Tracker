@@ -72,5 +72,18 @@ namespace Web.Server.Repositories
             await _context.SaveChangesAsync();
             return mapPinHistory;
         }
+
+            public async Task DeleteByOriginalMapPinIdAsync(int mapPinId)
+            {
+                var records = await _context.MapPinHistories
+                    .Where(mph => mph.OriginalMapPinID == mapPinId)
+                    .ToListAsync();
+
+                if (records.Count > 0)
+                {
+                    _context.MapPinHistories.RemoveRange(records);
+                    await _context.SaveChangesAsync();
+                }
+            }
     }
 }

@@ -31,6 +31,13 @@ namespace Web.Server.Repositories
                 .FirstOrDefaultAsync(utp => utp.UserId == userId && utp.MapPinId == mapPinId && utp.ExpiresUtc > DateTime.UtcNow);
         }
 
+        public async Task<IEnumerable<UserTrackedPin>> GetByMapPinIdAsync(int mapPinId)
+        {
+            return await _context.UserTrackedPins
+                .Where(utp => utp.MapPinId == mapPinId)
+                .ToListAsync();
+        }
+
         public async Task<UserTrackedPin> AddAsync(UserTrackedPin trackedPin)
         {
             _context.UserTrackedPins.Add(trackedPin);
@@ -77,6 +84,70 @@ namespace Web.Server.Repositories
             if (expired.Any())
             {
                 _context.UserTrackedPins.RemoveRange(expired);
+                await _context.SaveChangesAsync();
+            }
+        }
+
+        public async Task UpdateMapPinIdAsync(int oldMapPinId, int newMapPinId)
+        {
+            var sourceTrackedPins = await _context.UserTrackedPins
+                .Where(utp => utp.MapPinId == oldMapPinId)
+                .ToListAsync();
+
+            if (sourceTrackedPins.Count == 0)
+            {
+                return;
+            }
+
+            var destinationPins = (await _context.UserTrackedPins
+                .Where(utp => utp.MapPinId == newMapPinId)
+                .ToListAsync())
+                .ToDictionary(utp => utp.UserId, utp => utp);
+
+            var toDelete = new List<UserTrackedPin>();
+            var toMove = new List<UserTrackedPin>();
+            var destinationToUpdate = new Dictionary<int, UserTrackedPin>();
+
+            foreach (var sourcePin in sourceTrackedPins)
+            {
+                if (destinationPins.TryGetValue(sourcePin.UserId, out var destinationPin))
+                {
+                    // If both pins are tracked by the same user, keep a single tracking row
+                    // and preserve the first-tracked symbol text.
+                    if (!string.IsNullOrWhiteSpace(sourcePin.Symbol))
+                    {
+                        destinationPin.Symbol = sourcePin.Symbol;
+                    }
+
+                    destinationPin.LastUpdate = DateTime.UtcNow;
+                    destinationToUpdate[destinationPin.ID] = destinationPin;
+                    toDelete.Add(sourcePin);
+                }
+                else
+                {
+                    sourcePin.MapPinId = newMapPinId;
+                    sourcePin.LastUpdate = DateTime.UtcNow;
+                    toMove.Add(sourcePin);
+                }
+            }
+
+            if (toDelete.Count > 0)
+            {
+                _context.UserTrackedPins.RemoveRange(toDelete);
+            }
+
+            if (destinationToUpdate.Count > 0)
+            {
+                _context.UserTrackedPins.UpdateRange(destinationToUpdate.Values);
+            }
+
+            if (toMove.Count > 0)
+            {
+                _context.UserTrackedPins.UpdateRange(toMove);
+            }
+
+            if (toDelete.Count > 0 || toMove.Count > 0 || destinationToUpdate.Count > 0)
+            {
                 await _context.SaveChangesAsync();
             }
         }

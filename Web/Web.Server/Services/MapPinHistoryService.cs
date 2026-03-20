@@ -32,6 +32,11 @@ namespace Web.Server.Services
             return await _repository.GetByOriginalMapPinIdAsync(mapPinId);
         }
 
+            public async Task DeleteHistoryByOriginalMapPinIdAsync(int mapPinId)
+            {
+                await _repository.DeleteByOriginalMapPinIdAsync(mapPinId);
+            }
+
         public async Task<IEnumerable<MapPinHistory>> GetHistoryByBeaconIdAsync(int beaconId, int? subdivisionId = null, int? limit = null)
         {
             var histories = await _repository.GetByBeaconIdAsync(beaconId, subdivisionId, limit);

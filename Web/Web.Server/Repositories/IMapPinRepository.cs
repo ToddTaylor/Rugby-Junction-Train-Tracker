@@ -4,7 +4,7 @@ namespace Web.Server.Repositories
 {
     public interface IMapPinRepository
     {
-        Task<MapPin?> GetByAddressIdAsync(int addressID, int? trainID);
+        Task<MapPin?> GetByAddressIdAsync(int addressID);
 
         Task<MapPin?> GetByTimeThreshold(int beaconID, int railroadID, int minutesThreshold);
 
@@ -15,6 +15,8 @@ namespace Web.Server.Repositories
         Task<IEnumerable<MapPin>> GetAllAsync(int? minutes);
 
         Task<IEnumerable<MapPin>> GetLatestAsync();
+
+        Task<IEnumerable<MapPin>> GetAllByBeaconAsync(int beaconID, int subdivisionID, int? minutesThreshold = null);
 
         Task<MapPin> UpsertAsync(MapPin mapPin, DateTime telemetryTimestamp);
 

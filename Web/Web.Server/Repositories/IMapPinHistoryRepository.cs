@@ -9,5 +9,6 @@ namespace Web.Server.Repositories
         Task<IEnumerable<MapPinHistory>> GetLatestPerBeaconAsync();
         Task<MapPinHistory> AddAsync(MapPinHistory mapPinHistory);
         Task<MapPinHistory> UpdateAsync(MapPinHistory mapPinHistory);
+            Task DeleteByOriginalMapPinIdAsync(int mapPinId);
     }
 }

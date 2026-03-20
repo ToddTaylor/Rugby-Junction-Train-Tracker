@@ -186,27 +186,43 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdiv
                     .join(', ');
                 
                 // Check if this train is currently tracked
-                // Match history addresses with current MapPins, then check if those MapPins are tracked
+                // Resolve to the best tracked pin candidate for this history row.
+                // Prefer the row's original map pin ID, then beacon/subdivision-aligned matches,
+                // then any address overlap as a final fallback.
                 let isTracked = false;
                 let trackedColor = undefined;
                 let symbol = undefined;
                 
-                // Find if any address in history matches a tracked pin
                 let matchedMapPinId: string | undefined;
-                for (const addr of addresses) {
-                    // Check if this address is in any tracked pin's addresses
-                    const tracked = trackedPins.find(tp => 
-                        Array.isArray(tp.addresses) && tp.addresses.some((a: { id: string; source: string }) => 
+                const rowOriginalMapPinId = params.row?.originalMapPinID ? String(params.row.originalMapPinID) : undefined;
+
+                const addressMatchedTrackedPins = trackedPins.filter(tp =>
+                    Array.isArray(tp.addresses) && tp.addresses.some((a: { id: string; source: string }) =>
+                        addresses.some((addr: { source: string; addressID: number }) =>
                             a.id === String(addr.addressID) && a.source === addr.source
                         )
-                    );
-                    if (tracked) {
-                        isTracked = true;
-                        trackedColor = tracked.color;
-                        symbol = tracked.symbol;
-                        matchedMapPinId = tracked.id;
-                        break;
-                    }
+                    )
+                );
+
+                const trackedByOriginalMapPinId = rowOriginalMapPinId
+                    ? trackedPins.find(tp => String(tp.id) === rowOriginalMapPinId)
+                    : undefined;
+
+                const trackedAtCurrentBeacon = addressMatchedTrackedPins.find(tp =>
+                    String(tp.lastBeaconID || '') === String(beaconID || '') &&
+                    String(tp.lastSubdivisionID || '') === String(subdivisionID || '')
+                );
+
+                const bestTrackedPin =
+                    trackedByOriginalMapPinId ??
+                    trackedAtCurrentBeacon ??
+                    addressMatchedTrackedPins[0];
+
+                if (bestTrackedPin) {
+                    isTracked = true;
+                    trackedColor = bestTrackedPin.color;
+                    symbol = bestTrackedPin.symbol;
+                    matchedMapPinId = bestTrackedPin.id;
                 }
 
                 const handleSymbolClick = (e: React.MouseEvent) => {
@@ -392,7 +408,22 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdiv
     const handleModalUntrack = async () => {
         if (selectedMapPinId) {
             try {
-                await removeTrackedMapPin(selectedMapPinId);
+                const selectedAddressSet = new Set(
+                    (modalAddresses || []).map(addr => `${addr.id}|${addr.source}`)
+                );
+
+                const overlappingTrackedIds = trackedPins
+                    .filter(tp =>
+                        Array.isArray(tp.addresses) &&
+                        tp.addresses.some(addr => selectedAddressSet.has(`${addr.id}|${addr.source}`))
+                    )
+                    .map(tp => tp.id);
+
+                const idsToRemove = Array.from(new Set([selectedMapPinId, ...overlappingTrackedIds]));
+
+                for (const trackedId of idsToRemove) {
+                    await removeTrackedMapPin(trackedId);
+                }
                 // Immediately refresh tracked pins from API to update the grid
                 const updatedPins = await refreshTrackedPinsFromApi();
                 if (!propTrackedPins) {

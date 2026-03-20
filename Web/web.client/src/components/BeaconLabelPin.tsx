@@ -70,9 +70,8 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
         updateFromHistory(false);
     }, [beaconPin.beaconID, beaconPin.subdivisionID, hourFormat]);
 
-    // On live map pin changes (e.g., SignalR updates), update immediately from the latest mapPins data
-    // Do NOT fetch from history API here as it creates a race condition causing flickering
-    // Only update timestamp from live data, NOT direction - always use verified history data for direction
+    // On live map pin changes (e.g., SignalR updates), update immediately from the latest mapPins data.
+    // Keep timestamp and direction in sync so the status arrow always matches the displayed "Last Train" time.
     useEffect(() => {
         if (!beaconPin.beaconID || !mapPins.length) return;
         const latestForBeacon = mapPins
@@ -95,7 +94,7 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
                 formattedTime = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
             }
             setFetchedLastUpdateTime(formattedTime);
-            // Never override direction from history with live data - only history is authoritative
+            setFetchedDirection(latestForBeacon.direction ?? null);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [mapPins, beaconPin.beaconID, beaconPin.subdivisionID, hourFormat]);
@@ -163,24 +162,84 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
         }
     }, [actualDirection, actualLastUpdateTime, statusTextColor]);
     
-    // Tracked trains last seen at this beacon (whether or not the map pin is still visible)
-    const trackedTrainsAtBeacon = Array.from(
-        new Map(
-            trackedPins
-                .filter(trackedPin => 
+    type ResolvedTrackedTrain = {
+        rowKey: string;
+        actionTrackedId: string;
+        mapPinId?: number;
+        color: string;
+        symbol?: string;
+        addresses: Array<{ id: string; source: string }>;
+        score: number;
+    };
+
+    const trackedTrainsAtBeacon = React.useMemo(() => {
+        const toAddressList = (pin: MapPin): Array<{ id: string; source: string }> =>
+            Array.isArray(pin.addresses)
+                ? pin.addresses.map(addr => ({ id: String(addr.addressID), source: addr.source }))
+                : [];
+
+        const sameBeaconAndSubdivision = (pin: MapPin): boolean =>
+            String(pin.beaconID || '') === String(beaconPin.beaconID || '') &&
+            String(pin.subdivisionID || '') === String(beaconPin.subdivisionID || '');
+
+        const addressOverlaps = (trackedPin: TrackedPin, pin: MapPin): boolean => {
+            if (!Array.isArray(trackedPin.addresses) || trackedPin.addresses.length === 0 || !Array.isArray(pin.addresses)) {
+                return false;
+            }
+
+            return trackedPin.addresses.some(tpAddr =>
+                pin.addresses.some(mpAddr => tpAddr.id === String(mpAddr.addressID) && tpAddr.source === mpAddr.source)
+            );
+        };
+
+        const resolvedRows = trackedPins
+            .map((trackedPin): ResolvedTrackedTrain | null => {
+                const directMapPin = mapPins.find(mp => String(mp.id) === String(trackedPin.id));
+                const matchedByAddress = mapPins.find(mp => sameBeaconAndSubdivision(mp) && addressOverlaps(trackedPin, mp));
+                const resolvedMapPin = directMapPin ?? matchedByAddress;
+
+                const trackedAtBeaconByLocation =
                     String(trackedPin.lastBeaconID || '') === String(beaconPin.beaconID || '') &&
-                    String(trackedPin.lastSubdivisionID || '') === String(beaconPin.subdivisionID || '')
-                )
-                .map(trackedPin => [
-                    trackedPin.id, // Use id as the key for deduplication
-                    {
-                        id: trackedPin.id,
-                        color: trackedPin.color,
-                        symbol: trackedPin.symbol
-                    }
-                ])
-        ).values()
-    );
+                    String(trackedPin.lastSubdivisionID || '') === String(beaconPin.subdivisionID || '');
+
+                const trackedAtBeaconByResolvedPin = !!resolvedMapPin && sameBeaconAndSubdivision(resolvedMapPin);
+
+                if (!trackedAtBeaconByLocation && !trackedAtBeaconByResolvedPin) {
+                    return null;
+                }
+
+                const actionTrackedId = resolvedMapPin ? String(resolvedMapPin.id) : trackedPin.id;
+                const addresses = resolvedMapPin
+                    ? toAddressList(resolvedMapPin)
+                    : (trackedPin.addresses ? [...trackedPin.addresses] : []);
+
+                // Prefer rows already aligned to the live map pin ID and rows with symbol text.
+                const score =
+                    (String(trackedPin.id) === actionTrackedId ? 2 : 0) +
+                    (trackedPin.symbol ? 1 : 0);
+
+                return {
+                    rowKey: `${trackedPin.id}:${trackedPin.symbol || ''}`,
+                    actionTrackedId,
+                    mapPinId: resolvedMapPin?.id ? Number(resolvedMapPin.id) : trackedPin.mapPinId,
+                    color: trackedPin.color,
+                    symbol: trackedPin.symbol,
+                    addresses,
+                    score
+                };
+            })
+            .filter((row): row is ResolvedTrackedTrain => row !== null);
+
+        const deduped = new Map<string, ResolvedTrackedTrain>();
+        for (const row of resolvedRows) {
+            const existing = deduped.get(row.actionTrackedId);
+            if (!existing || row.score > existing.score) {
+                deduped.set(row.actionTrackedId, row);
+            }
+        }
+
+        return Array.from(deduped.values());
+    }, [trackedPins, mapPins, beaconPin.beaconID, beaconPin.subdivisionID]);
     
     const handleStatusClick = () => {
         if (onClick && beaconPin.beaconID && beaconPin.beaconName) {
@@ -210,13 +269,13 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
                 const currentSymbol = trackIndicator.getAttribute('data-symbol');
                 if (trainId) {
                     e.stopPropagation();
+                    const resolvedTrain = trackedTrainsAtBeacon.find(t => t.actionTrackedId === trainId);
                     const trackedPin = trackedPins.find(p => p.id === trainId);
-                    const mapPin = mapPins.find(mp => String(mp.id) === trainId);
-                    const addresses = mapPin?.addresses?.map(addr => ({id: String(addr.addressID), source: addr.source}))
+                    const addresses = resolvedTrain?.addresses
                         || (trackedPin?.addresses ? [...trackedPin.addresses] : []);
                     setSelectedTrainId(trainId);
                     setSelectedSymbol(currentSymbol || '');
-                    setSelectedMapPinId(trackedPin?.mapPinId || (mapPin?.id ? Number(mapPin.id) : undefined));
+                    setSelectedMapPinId(resolvedTrain?.mapPinId || trackedPin?.mapPinId);
                     setSelectedAddresses(addresses);
                     setModalOpen(true);
                     return;
@@ -262,7 +321,22 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
     const handleUntrackTrain = async () => {
         if (selectedTrainId) {
             try {
-                await removeTrackedMapPin(selectedTrainId);
+                const selectedAddressSet = new Set(
+                    (selectedAddresses || []).map(addr => `${addr.id}|${addr.source}`)
+                );
+
+                const overlappingTrackedIds = trackedPins
+                    .filter(tp =>
+                        Array.isArray(tp.addresses) &&
+                        tp.addresses.some(addr => selectedAddressSet.has(`${addr.id}|${addr.source}`))
+                    )
+                    .map(tp => tp.id);
+
+                const idsToRemove = Array.from(new Set([selectedTrainId, ...overlappingTrackedIds]));
+
+                for (const trackedId of idsToRemove) {
+                    await removeTrackedMapPin(trackedId);
+                }
                 // Optionally update parent state if needed
             } catch (error) {
                 console.error('Failed to untrack train:', error);
@@ -352,7 +426,7 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
                         ">${statusTextForSingleBeacon}</div>` : ''}
                         ${trackedTrainsAtBeacon.length > 0 ? `<div style="display: flex; flex-direction: column; gap: 2px; align-items: ${arrowOnRight ? 'flex-end' : 'flex-start'}; margin-top: 4px;">
                                 ${trackedTrainsAtBeacon.map(train => `
-                                    <div class="track-indicator" data-train-id="${train.id}" data-symbol="${train.symbol || ''}" style="
+                                    <div class="track-indicator" data-train-id="${train.actionTrackedId}" data-symbol="${train.symbol || ''}" style="
                                         display: flex;
                                         align-items: center;
                                         gap: 2px;
@@ -418,7 +492,7 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
                             ">${statusTextForSingleBeacon}</div>` : ''}
                             ${trackedTrainsAtBeacon.length > 0 ? `<div style="display: flex; flex-direction: column; gap: 2px; margin-top: 4px; align-items: center;">
                                 ${trackedTrainsAtBeacon.map(train => `
-                                    <div class="track-indicator" data-train-id="${train.id}" data-symbol="${train.symbol || ''}" style="
+                                    <div class="track-indicator" data-train-id="${train.actionTrackedId}" data-symbol="${train.symbol || ''}" style="
                                         display: flex;
                                         align-items: center;
                                         gap: 2px;

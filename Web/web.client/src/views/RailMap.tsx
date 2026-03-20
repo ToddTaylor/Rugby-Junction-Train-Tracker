@@ -164,6 +164,20 @@ const RailMap: React.FC = () => {
                         .then(pins => setTrackedPinsState(pins || getTrackedMapPins()));
                 }
             }
+                // Fallback: when no tracked pin matches by ID, try matching by address content.
+                // This handles the DPU "no-match" case where a new map pin is created with a
+                // different ID, leaving the old tracked entry pointing to the stale prior beacon.
+                else if (!tracked && addresses && mapPin.beaconID && mapPin.subdivisionID) {
+                    const matchedByAddress = trackedPins.find(tp =>
+                        tp.addresses && tp.addresses.some(a =>
+                            addresses.some(b => a.id === b.id && a.source === b.source)
+                        )
+                    );
+                    if (matchedByAddress) {
+                        updateTrackedPinLocation(matchedByAddress.id, mapPin.beaconID, mapPin.subdivisionID, mapPin.beaconName)
+                            .then(pins => setTrackedPinsState(pins || getTrackedMapPins()));
+                    }
+                }
             
             setMapPins((prevPins: MapPin[]) => updateMapPins(prevPins, mapPin));
             

@@ -31,21 +31,16 @@ namespace Web.Server.Repositories
         }
 
         /// <summary>
-        /// Get MapPin by AddressID and optional TrainID. If TrainID is null, only an HOT/EOT match is performed (AddressID only).
+        /// Get MapPin by AddressID only for HOT/EOT only. (DpuTrainID is null)
         /// The addresses collection of the returned MapPin may contain addresses not queried for as all
         /// related addresses are returned.
         /// </summary>
         /// <param name="addressID">The HOT/EOT ID or the DPU ADDR value.</param>
-        /// <param name="trainID">The DPU train ID.</param>
         /// <returns>MapPin containing matching in addresses collection or null if not found.</returns>
-        public async Task<MapPin?> GetByAddressIdAsync(int addressID, int? trainID)
+        public async Task<MapPin?> GetByAddressIdAsync(int addressID)
         {
             var mapPin = await _context.MapPins
-                .Where(mp => mp.Addresses.Any(a =>
-                    a.AddressID == addressID &&
-                    ((trainID == null && a.DpuTrainID == null) ||
-                     (trainID != null && a.DpuTrainID == trainID))
-                ))
+                .Where(mp => mp.Addresses.Any(a => a.AddressID == addressID && a.DpuTrainID == null))
                 .OrderByDescending(mp => mp.LastUpdate)
                 .Include(mp => mp.Addresses)
                 .Include(mp => mp.BeaconRailroad)
@@ -119,6 +114,24 @@ namespace Web.Server.Repositories
             }
         }
 
+        public async Task<IEnumerable<MapPin>> GetAllByBeaconAsync(int beaconID, int subdivisionID, int? minutesThreshold = null)
+        {
+            var query = _context.MapPins
+                .Where(mp => mp.BeaconID == beaconID && mp.SubdivisionId == subdivisionID);
+
+            if (minutesThreshold.HasValue)
+            {
+                query = query.Where(mp => mp.LastUpdate >= _timeProvider.UtcNow.AddMinutes(-minutesThreshold.Value));
+            }
+
+            return await query
+                .Include(mp => mp.Addresses)
+                .Include(mp => mp.BeaconRailroad)
+                .Include(mp => mp.BeaconRailroad.Subdivision)
+                .Include(mp => mp.BeaconRailroad.Subdivision.Railroad)
+                .ToListAsync();
+        }
+
         public async Task<MapPin> UpsertAsync(MapPin mapPin, DateTime telemetryTimestamp)
         {
             // Find existing map pin by matching address ID(s) and subdivision.
@@ -145,9 +158,11 @@ namespace Web.Server.Repositories
                 // Only update LastUpdate and other properties
                 existingMapPin.BeaconID = mapPin.BeaconID;
                 existingMapPin.SubdivisionId = mapPin.SubdivisionId;
+                existingMapPin.CreatedRailroadID = mapPin.CreatedRailroadID;
                 existingMapPin.Direction = mapPin.Direction;
                 existingMapPin.Moving = mapPin.Moving;
                 existingMapPin.IsLocal = mapPin.IsLocal;
+                existingMapPin.BeaconRailroad = mapPin.BeaconRailroad;
 
                 // No created at update.
                 existingMapPin.LastUpdate = telemetryTimestamp;

@@ -4,5 +4,6 @@
     {
         public const string BeaconUpdate = "BeaconUpdate";
         public const string MapPinUpdate = "MapPinUpdate";
+        public const string TrackedPinRemoved = "TrackedPinRemoved";
     }
 }
