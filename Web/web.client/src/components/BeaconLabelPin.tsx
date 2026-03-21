@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import L from 'leaflet';
 import { Marker } from 'react-leaflet';
 import { Beacon } from '../types/Beacon';
@@ -40,9 +40,10 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
     // Fetch most recent history entry from same API as BeaconHistoryModal to ensure timestamp accuracy
     const [fetchedLastUpdateTime, setFetchedLastUpdateTime] = useState<string | null>(null);
     const [fetchedDirection, setFetchedDirection] = useState<string | null | undefined>(undefined); // undefined = not yet fetched
+    const lastLiveUpdateRef = useRef<string | null>(null);
 
     // Always update both timestamp and direction together, even if direction is null
-    const updateFromHistory = async (bypassCache = false) => {
+    const updateFromHistory = useCallback(async (bypassCache = false) => {
         if (!beaconPin.beaconID) return;
         try {
             const latest = await fetchBeaconLatestFromHistory(beaconPin.beaconID, beaconPin.subdivisionID, { bypassCache });
@@ -64,11 +65,11 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
             console.error('Error fetching latest beacon history:', e);
             setFetchedDirection(null);
         }
-    };
+    }, [beaconPin.beaconID, beaconPin.subdivisionID, hourFormat]);
 
     useEffect(() => {
         updateFromHistory(false);
-    }, [beaconPin.beaconID, beaconPin.subdivisionID, hourFormat]);
+    }, [updateFromHistory]);
 
     // On live map pin changes (e.g., SignalR updates), update immediately from the latest mapPins data.
     // Keep timestamp and direction in sync so the status arrow always matches the displayed "Last Train" time.
@@ -94,15 +95,27 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
                 formattedTime = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
             }
             setFetchedLastUpdateTime(formattedTime);
-            setFetchedDirection(latestForBeacon.direction ?? null);
+
+            // Do not clear a previously known direction when live payload omits it.
+            if (latestForBeacon.direction) {
+                setFetchedDirection(latestForBeacon.direction);
+            }
+
+            // Every fresh live timestamp forces a no-cache history refresh so the arrow
+            // redraws with authoritative direction data instead of waiting for a full reload.
+            if (lastLiveUpdateRef.current !== latestForBeacon.lastUpdate) {
+                lastLiveUpdateRef.current = latestForBeacon.lastUpdate;
+                void updateFromHistory(true);
+            }
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [mapPins, beaconPin.beaconID, beaconPin.subdivisionID, hourFormat]);
+    }, [mapPins, beaconPin.beaconID, beaconPin.subdivisionID, hourFormat, updateFromHistory]);
 
     // Use fetched data if available, otherwise fall back to props
     // For direction: only use fallback prop if history hasn't been fetched yet
     const actualLastUpdateTime = fetchedLastUpdateTime || lastUpdateTime;
     const actualDirection = fetchedDirection !== undefined ? fetchedDirection : direction;
+    const markerStatusKey = `${actualLastUpdateTime || 'none'}|${actualDirection || 'none'}`;
 
     // Sizing and style logic
     const base = 1 + (zoom - 7) * 0.09;
@@ -572,7 +585,7 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
         <>
             <Marker
             ref={markerRef}
-            key={`beacon-label-${beaconPin.beaconID ?? idx}`}
+            key={`beacon-label-${beaconPin.beaconID ?? idx}-${markerStatusKey}`}
             position={showArrow 
                 ? [beaconPin.latitude, beaconPin.longitude] 
                 : [getLabelOffsetLat(beaconPin.latitude, zoom), beaconPin.longitude]}
