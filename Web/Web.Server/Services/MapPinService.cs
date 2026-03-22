@@ -478,10 +478,18 @@ namespace Web.Server.Services
                 // on the same railroad on the same day (This DOES happen on CN!)
 
                 var milesApart = Math.Abs(existingMapPinByDpuTrainID.BeaconRailroad.Milepost - telemetry.Beacon.BeaconRailroads.First(br => br.Subdivision.RailroadID == existingMapPinByDpuTrainID.BeaconRailroad.Subdivision.RailroadID).Milepost);
-                var hoursApart = (telemetry.CreatedAt - existingMapPinByDpuTrainID.LastUpdate).TotalHours;
-                var speedMph = milesApart / hoursApart;
 
-                if (speedMph > SPEED_THRESHOLD_MPH)
+                var effectiveMilesApart = TrainSpeedSanityMath.GetAdjustedDistanceMiles(milesApart);
+                var speedMph = TrainSpeedSanityMath.TryGetSpeedMph(effectiveMilesApart, existingMapPinByDpuTrainID.LastUpdate, telemetry.CreatedAt);
+                if (!speedMph.HasValue)
+                {
+                    return Task.FromResult(new DpuMatchResult
+                    {
+                        Status = DpuMatchStatus.Matched
+                    });
+                }
+
+                if (speedMph.Value > SPEED_THRESHOLD_MPH)
                 {
                     // The existing map pin and telemetry are too far apart given the time difference, indicating that the
                     // same train ID is being used for different trains on the same railroad.

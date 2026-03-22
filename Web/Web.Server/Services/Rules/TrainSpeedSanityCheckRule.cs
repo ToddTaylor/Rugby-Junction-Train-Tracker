@@ -27,19 +27,6 @@ namespace Web.Server.Services.Rules
         /// </summary>
         private const int MAX_REALISTIC_SPEED_MPH = 50;
 
-        /// <summary>
-        /// Radio range for each train's telemetry in miles. The train emits telemetry that is captured by beacons
-        /// within this radius, so the actual distance traveled is reduced by this amount from each beacon.
-        /// 
-        /// Number is doubled for the HOT and EOT both reaching to the beacon.
-        /// </summary>
-        private const double TRAIN_RADIO_RANGE_MILES = 3.0 * 2;
-
-        /// <summary>
-        /// Some trains are shorter, some are longer, but a mile can make a difference in the speed calculation.
-        /// </summary>
-        private const double TRAIN_LENGTH_IN_MILES = 1;
-
         private readonly ITelemetryRepository _telemetryRepository;
 
         public TrainSpeedSanityCheckRule(ITelemetryRepository telemetryRepository)
@@ -74,13 +61,7 @@ namespace Web.Server.Services.Rules
             var distanceMiles = Math.Abs(context.ToMilepost - context.FromMilepost);
 
             // Account for train radio range and train length
-            var adjustedDistance = distanceMiles - TRAIN_RADIO_RANGE_MILES - TRAIN_LENGTH_IN_MILES;
-
-            // Ensure adjusted distance doesn't go negative
-            if (adjustedDistance < 0)
-            {
-                adjustedDistance = 0;
-            }
+            var adjustedDistance = TrainSpeedSanityMath.GetAdjustedDistanceMiles(distanceMiles);
 
             // Calculate the time difference between the two telemetry readings
             var timeDifference = currentTelemetry.CreatedAt - priorTelemetry.CreatedAt;
@@ -93,13 +74,16 @@ namespace Web.Server.Services.Rules
             }
 
             // Calculate speed in miles per hour using adjusted distance.
-            var timeHours = timeMinutes / 60.0;
-            var speedMph = adjustedDistance / timeHours;
+            var speedMph = TrainSpeedSanityMath.TryGetSpeedMph(adjustedDistance, priorTelemetry.CreatedAt, currentTelemetry.CreatedAt);
+            if (!speedMph.HasValue)
+            {
+                return TelemetryRuleResult.NotDiscarded();
+            }
 
             // If speed exceeds realistic threshold, discard
-            if (speedMph > MAX_REALISTIC_SPEED_MPH)
+            if (speedMph.Value > MAX_REALISTIC_SPEED_MPH)
             {
-                var discardReason = $"{DISCARD_REASON} ({distanceMiles:F0} miles in {timeMinutes:F0} minutes = {speedMph:F0} MPH > {MAX_REALISTIC_SPEED_MPH} MPH)";
+                var discardReason = $"{DISCARD_REASON} ({distanceMiles:F0} miles in {timeMinutes:F0} minutes = {speedMph.Value:F0} MPH > {MAX_REALISTIC_SPEED_MPH} MPH)";
                 return TelemetryRuleResult.Discarded(discardReason);
             }
 

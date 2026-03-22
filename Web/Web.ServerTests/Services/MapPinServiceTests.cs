@@ -2624,6 +2624,95 @@ namespace Web.ServerTests.Services
         }
 
         /// <summary>
+        /// Regression test for DPU flow: if a train with the same DPU train ID is detected at
+        /// Sussex and then Rugby 10 minutes later with a second DPU address, the existing map pin
+        /// should be updated and direction should be calculated.
+        /// </summary>
+        [TestMethod]
+        public async Task UpsertMapPin_DpuSecondAddress_AfterTenMinutes_CalculatesDirection()
+        {
+            // Arrange
+            var now = _timeProviderMock.Object.UtcNow;
+            var CNSussexBeacon = TestData.CN_Sussex_WI(now);
+            var CNRugbyJunctionBeacon = TestData.CN_RugbyJunction_WI(now);
+            var WSORRugbyJunctionBeacon = TestData.WSOR_RugbyJunction_WI(now);
+
+            var fromAddressID = 90000;
+            var toAddressID = 90001;
+            var trainID = 123;
+
+            var telemetry = new Telemetry
+            {
+                BeaconID = CNRugbyJunctionBeacon.BeaconID,
+                Beacon = new Beacon
+                {
+                    ID = CNRugbyJunctionBeacon.BeaconID,
+                    Name = CNRugbyJunctionBeacon.Beacon.Name,
+                    BeaconRailroads = [CNRugbyJunctionBeacon, WSORRugbyJunctionBeacon]
+                },
+                AddressID = toAddressID,
+                TrainID = trainID,
+                Source = SourceEnum.DPU,
+                Moving = true,
+                CreatedAt = now.AddMinutes(10),
+                LastUpdate = now.AddMinutes(10)
+            };
+
+            var existingMapPin = new MapPin
+            {
+                ID = 234,
+                BeaconID = CNSussexBeacon.BeaconID,
+                SubdivisionId = CNSussexBeacon.Subdivision.ID,
+                Direction = null,
+                CreatedAt = now,
+                LastUpdate = now,
+                BeaconRailroad = CNSussexBeacon,
+                Moving = true,
+                CreatedRailroadID = CNSussexBeacon.Subdivision.RailroadID,
+                Addresses =
+                [
+                    new Address
+                    {
+                        AddressID = fromAddressID,
+                        DpuTrainID = trainID,
+                        Source = SourceEnum.DPU,
+                        CreatedAt = now,
+                        LastUpdate = now
+                    }
+                ]
+            };
+
+            _mapPinRepositoryMock.Setup(r => r.GetByAddressIdAsync(toAddressID))
+                .ReturnsAsync((MapPin?)null);
+            _mapPinRepositoryMock.Setup(r => r.GetByTrainIdAsync(trainID, MapPinService.TIME_THRESHOLD_DPU_MINUTES))
+                .ReturnsAsync(existingMapPin);
+            _beaconRailroadServiceMock.Setup(b => b.GetByIdAsync(existingMapPin.BeaconID, existingMapPin.SubdivisionId))
+                .ReturnsAsync(CNSussexBeacon);
+            _beaconRailroadServiceMock.Setup(b => b.GetByIdAsync(telemetry.BeaconID, existingMapPin.SubdivisionId))
+                .ReturnsAsync(CNRugbyJunctionBeacon);
+            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(It.IsAny<MapPin>(), It.IsAny<DateTime>()))
+                .ReturnsAsync((MapPin mp, DateTime _) => mp);
+
+            _hubContextMock.Setup(h => h.Clients).Returns(_hubClientsMock.Object);
+            _hubClientsMock.Setup(h => h.All).Returns(_clientProxyMock.Object);
+            _clientProxyMock.Setup(proxy => proxy.SendCoreAsync(It.IsAny<string>(), It.IsAny<object[]>(), default))
+                .Returns(Task.CompletedTask);
+
+            // Act
+            await _service.UpsertMapPin(telemetry);
+
+            // Assert
+            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(
+                It.Is<MapPin>(mp =>
+                    mp.ID == existingMapPin.ID &&
+                    mp.BeaconID == CNRugbyJunctionBeacon.BeaconID &&
+                    !string.IsNullOrWhiteSpace(mp.Direction) &&
+                    mp.Addresses.Any(a => a.AddressID == fromAddressID && a.DpuTrainID == trainID) &&
+                    mp.Addresses.Any(a => a.AddressID == toAddressID && a.DpuTrainID == trainID)),
+                telemetry.LastUpdate), Times.Once);
+        }
+
+        /// <summary>
         /// Verifies that if no matching DPU address and train ID is found on existing map pins and
         /// a matching train ID is found on a different railroad, the DPU telemetry is ignored.
         /// </summary>
