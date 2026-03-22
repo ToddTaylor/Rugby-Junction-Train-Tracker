@@ -34,6 +34,8 @@ namespace Web.Server.Entities
         [Required]
         public bool MultipleTracks { get; set; } = false;
 
+        public double? MaxDetectionDistanceMiles { get; set; }
+
         public override bool Equals(object? obj)
         {
             return Equals(obj as BeaconRailroad);
@@ -53,7 +55,8 @@ namespace Web.Server.Entities
                    Longitude == other.Longitude &&
                    EqualityComparer<ICollection<MapPin>>.Default.Equals(MapPins, other.MapPins) &&
                    Milepost == other.Milepost &&
-                   MultipleTracks == other.MultipleTracks;
+                   MultipleTracks == other.MultipleTracks &&
+                   MaxDetectionDistanceMiles == other.MaxDetectionDistanceMiles;
         }
 
         public override int GetHashCode()
@@ -71,6 +74,7 @@ namespace Web.Server.Entities
             hash.Add(MapPins);
             hash.Add(Milepost);
             hash.Add(MultipleTracks);
+            hash.Add(MaxDetectionDistanceMiles);
             return hash.ToHashCode();
         }
 

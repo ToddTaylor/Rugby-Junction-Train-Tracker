@@ -58,6 +58,7 @@ namespace Web.Server.Repositories
             existing.Latitude = beaconRailroad.Latitude;
             existing.Longitude = beaconRailroad.Longitude;
             existing.Milepost = beaconRailroad.Milepost;
+            existing.MaxDetectionDistanceMiles = beaconRailroad.MaxDetectionDistanceMiles;
             existing.MultipleTracks = beaconRailroad.MultipleTracks;
             existing.LastUpdate = _timeProvider.UtcNow;
 
@@ -80,6 +81,24 @@ namespace Web.Server.Repositories
             _context.BeaconRailroads.Remove(beaconRailroad);
             await _context.SaveChangesAsync();
             return true;
+        }
+
+        public async Task<IEnumerable<BeaconRailroad>> GetByRailroadBetweenMilepostsAsync(int railroadId, double minMilepost, double maxMilepost, DateTime? activeAfterUtc = null)
+        {
+            var query = _context.BeaconRailroads
+                .Include(br => br.Subdivision)
+                .Where(br => br.Subdivision.RailroadID == railroadId
+                          && br.Milepost > minMilepost
+                          && br.Milepost < maxMilepost);
+
+            // Optionally filter out beacons that last updated before the threshold (offline beacons)
+            if (activeAfterUtc.HasValue)
+            {
+                var thresholdUtc = activeAfterUtc.Value.ToString("O"); // ISO 8601 format for comparison
+                query = query.Where(br => br.LastUpdate.CompareTo(thresholdUtc) >= 0);
+            }
+
+            return await query.ToListAsync();
         }
     }
 }

@@ -55,6 +55,12 @@ namespace Web.Server.DTOs
         public double Milepost { get; set; }
 
         /// <summary>
+        /// Optional maximum detection distance in miles for this beacon railroad mapping.
+        /// Null means no distance limit.
+        /// </summary>
+        public double? MaxDetectionDistanceMiles { get; set; }
+
+        /// <summary>
         /// Indicates if the beacon is in proximity to multiple tracks at the same 
         /// location for the same railroad.
         /// </summary>
@@ -96,6 +102,7 @@ namespace Web.Server.DTOs
                    Latitude == other.Latitude &&
                    Longitude == other.Longitude &&
                    Milepost == other.Milepost &&
+                   MaxDetectionDistanceMiles == other.MaxDetectionDistanceMiles &&
                    Online == other.Online &&
                    Direction == other.Direction &&
                    CreatedAt == other.CreatedAt &&
@@ -111,6 +118,7 @@ namespace Web.Server.DTOs
             hash.Add(Latitude);
             hash.Add(Longitude);
             hash.Add(Milepost);
+            hash.Add(MaxDetectionDistanceMiles);
             hash.Add(Online);
             hash.Add(Direction);
             hash.Add(CreatedAt);

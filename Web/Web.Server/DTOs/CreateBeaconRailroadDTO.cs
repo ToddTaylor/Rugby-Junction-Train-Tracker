@@ -35,6 +35,12 @@ namespace Web.Server.DTOs
         public double Milepost { get; set; }
 
         /// <summary>
+        /// Optional maximum detection distance in miles for this beacon railroad mapping.
+        /// Null means no distance limit.
+        /// </summary>
+        public double? MaxDetectionDistanceMiles { get; set; }
+
+        /// <summary>
         /// Indicates if the beacon is in proximity to multiple tracks at the same 
         /// location for the same railroad.
         /// </summary>
@@ -65,6 +71,7 @@ namespace Web.Server.DTOs
                    Latitude == other.Latitude &&
                    Longitude == other.Longitude &&
                    Milepost == other.Milepost &&
+                   MaxDetectionDistanceMiles == other.MaxDetectionDistanceMiles &&
                    MultipleTracks == other.MultipleTracks &&
                    Online == other.Online &&
                    Direction == other.Direction;
@@ -72,7 +79,17 @@ namespace Web.Server.DTOs
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(BeaconID, SubdivisionID, Latitude, Longitude, Milepost, MultipleTracks, Online, Direction);
+            HashCode hash = new HashCode();
+            hash.Add(BeaconID);
+            hash.Add(SubdivisionID);
+            hash.Add(Latitude);
+            hash.Add(Longitude);
+            hash.Add(Milepost);
+            hash.Add(MaxDetectionDistanceMiles);
+            hash.Add(MultipleTracks);
+            hash.Add(Online);
+            hash.Add(Direction);
+            return hash.ToHashCode();
         }
 
         public static bool operator ==(CreateBeaconRailroadDTO? left, CreateBeaconRailroadDTO? right)

@@ -30,6 +30,7 @@ const AdminBeaconRailroads = () => {
     latitude: 0,
     longitude: 0,
     milepost: 0,
+    maxDetectionDistanceMiles: null,
     multipleTracks: false,
     online: true,
     direction: 'All'
@@ -130,6 +131,7 @@ const AdminBeaconRailroads = () => {
       latitude: 0,
       longitude: 0,
       milepost: 0,
+      maxDetectionDistanceMiles: null,
       multipleTracks: false,
       online: true,
       direction: 'All'
@@ -146,6 +148,7 @@ const AdminBeaconRailroads = () => {
       latitude: beaconRailroad.latitude,
       longitude: beaconRailroad.longitude,
       milepost: beaconRailroad.milepost,
+      maxDetectionDistanceMiles: beaconRailroad.maxDetectionDistanceMiles,
       multipleTracks: beaconRailroad.multipleTracks,
       online: beaconRailroad.online,
       direction: beaconRailroad.direction
@@ -188,6 +191,11 @@ const AdminBeaconRailroads = () => {
 
     if (formData.longitude < -180 || formData.longitude > 180) {
       setError('Longitude must be between -180 and 180');
+      return;
+    }
+
+    if (formData.maxDetectionDistanceMiles !== null && formData.maxDetectionDistanceMiles <= 0) {
+      setError('Max detection distance must be greater than 0 when provided');
       return;
     }
 
@@ -401,6 +409,27 @@ const AdminBeaconRailroads = () => {
                   />
                 </div>
 
+                <div className="form-group">
+                  <label htmlFor="maxDetectionDistanceMiles">Max Detection Distance (mi)</label>
+                  <input
+                    id="maxDetectionDistanceMiles"
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    value={formData.maxDetectionDistanceMiles ?? ''}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setFormData({
+                        ...formData,
+                        maxDetectionDistanceMiles: value === '' ? null : parseFloat(value)
+                      });
+                    }}
+                    placeholder="Optional (e.g., 10.0)"
+                  />
+                </div>
+              </div>
+
+              <div className="form-row">
                 <div className="form-group">
                   <label htmlFor="direction">Direction *</label>
                   <select

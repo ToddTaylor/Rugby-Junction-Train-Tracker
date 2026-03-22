@@ -20,6 +20,7 @@ namespace Web.Server.DTOs
                    Latitude == other.Latitude &&
                    Longitude == other.Longitude &&
                    Milepost == other.Milepost &&
+                   MaxDetectionDistanceMiles == other.MaxDetectionDistanceMiles &&
                    MultipleTracks == other.MultipleTracks &&
                    Online == other.Online &&
                    Direction == other.Direction &&
@@ -36,6 +37,7 @@ namespace Web.Server.DTOs
             hash.Add(Latitude);
             hash.Add(Longitude);
             hash.Add(Milepost);
+            hash.Add(MaxDetectionDistanceMiles);
             hash.Add(MultipleTracks);
             hash.Add(Online);
             hash.Add(Direction);

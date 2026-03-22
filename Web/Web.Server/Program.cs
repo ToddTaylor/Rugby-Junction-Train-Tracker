@@ -150,6 +150,8 @@ try
     builder.Services.AddScoped<ITelemetryRuleEngine, TelemetryRuleEngine>();
 
     // Register map pin rules - Order matters!
+    builder.Services.AddScoped<IMapPinRule, BeaconSequenceRule>();
+    builder.Services.AddScoped<IMapPinRule, MaxDetectionDistanceRule>();
     builder.Services.AddScoped<IMapPinRule, TrackageRightsRule>();
     builder.Services.AddScoped<IMapPinRuleEngine, MapPinRuleEngine>();
 

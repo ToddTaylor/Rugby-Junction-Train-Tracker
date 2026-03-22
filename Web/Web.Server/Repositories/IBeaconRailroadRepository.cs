@@ -9,5 +9,6 @@ namespace Web.Server.Repositories
         Task<BeaconRailroad?> GetByIdAsync(int beaconId, int subdivisionId);
         Task<BeaconRailroad> UpdateAsync(BeaconRailroad beaconRailroad);
         Task<bool> DeleteAsync(int beaconId, int railroadId);
+        Task<IEnumerable<BeaconRailroad>> GetByRailroadBetweenMilepostsAsync(int railroadId, double minMilepost, double maxMilepost, DateTime? activeAfterUtc = null);
     }
 }

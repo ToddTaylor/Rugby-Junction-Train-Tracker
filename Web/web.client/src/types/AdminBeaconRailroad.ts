@@ -8,6 +8,7 @@ export interface AdminBeaconRailroad {
   latitude: number;
   longitude: number;
   milepost: number;
+  maxDetectionDistanceMiles: number | null;
   multipleTracks: boolean;
   online: boolean;
   direction: Direction;
@@ -21,6 +22,7 @@ export interface CreateBeaconRailroad {
   latitude: number;
   longitude: number;
   milepost: number;
+  maxDetectionDistanceMiles: number | null;
   multipleTracks: boolean;
   online: boolean;
   direction: Direction;
@@ -32,6 +34,7 @@ export interface UpdateBeaconRailroad {
   latitude: number;
   longitude: number;
   milepost: number;
+  maxDetectionDistanceMiles: number | null;
   multipleTracks: boolean;
   online: boolean;
   direction: Direction;
