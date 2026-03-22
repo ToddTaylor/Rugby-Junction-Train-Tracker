@@ -319,6 +319,9 @@ export const AdminSubdivisions: React.FC = () => {
             },
           ]}
           pageSizeOptions={[10, 25, 50]}
+          initialState={{
+            pagination: { paginationModel: { pageSize: 25, page: 0 } },
+          }}
           disableRowSelectionOnClick
           sx={adminDataGridSx}
         />

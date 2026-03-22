@@ -370,20 +370,25 @@ function AdminTelemetryLog() {
                         </IconButton>
                     </Tooltip>
                     <Tooltip title="Refresh data">
-                        <IconButton
-                            aria-label="refresh data"
-                            onClick={fetchTelemetries}
-                            disabled={isLoading}
-                            sx={{ ml: 1, color: '#fff', backgroundColor: '#222', '&:hover': { backgroundColor: '#444' }, '&.Mui-disabled': { color: '#666' } }}
-                        >
-                            <RefreshIcon />
-                        </IconButton>
+                        <span>
+                            <IconButton
+                                aria-label="refresh data"
+                                onClick={fetchTelemetries}
+                                disabled={isLoading}
+                                sx={{ ml: 1, color: '#fff', backgroundColor: '#222', '&:hover': { backgroundColor: '#444' }, '&.Mui-disabled': { color: '#666' } }}
+                            >
+                                <RefreshIcon />
+                            </IconButton>
+                        </span>
                     </Tooltip>
                 </Box>
                 <DataGrid
                     rows={filteredData}
                     columns={columns}
                     pageSizeOptions={[5, 10, 25]}
+                    initialState={{
+                        pagination: { paginationModel: { pageSize: 25, page: 0 } },
+                    }}
                     sx={adminDataGridSx}
                     getRowClassName={(params) => params.row.discarded ? 'discarded-row' : ''}
                 />
