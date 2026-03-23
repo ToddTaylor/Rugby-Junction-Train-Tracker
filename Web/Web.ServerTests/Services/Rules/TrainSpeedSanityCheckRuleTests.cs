@@ -340,5 +340,80 @@ namespace Web.ServerTests.Services.Rules
             // Assert
             Assert.IsFalse(result.ShouldDiscard);
         }
+
+        [TestMethod]
+        public async Task ShouldDiscardAsync_UsesTelemetryBeaconMileposts_WhenContextMilepostsAreWrong()
+        {
+            // Arrange
+            var currentTime = DateTime.UtcNow;
+            var previousTime = currentTime.AddMinutes(-6);
+
+            var cnSubdivision = new Subdivision { RailroadID = 1 };
+            var wsorSubdivision = new Subdivision { RailroadID = 2 };
+
+            var sussexCn = new BeaconRailroad
+            {
+                BeaconID = 2,
+                Milepost = 108.6,
+                Subdivision = cnSubdivision
+            };
+
+            var rugbyCn = new BeaconRailroad
+            {
+                BeaconID = 1,
+                Milepost = 117.2,
+                Subdivision = cnSubdivision
+            };
+
+            var rugbyWsor = new BeaconRailroad
+            {
+                BeaconID = 1,
+                Milepost = 112.16,
+                Subdivision = wsorSubdivision
+            };
+
+            var currentTelemetry = new Telemetry
+            {
+                BeaconID = 2,
+                AddressID = 6709,
+                CreatedAt = currentTime,
+                Beacon = new Beacon
+                {
+                    ID = 2,
+                    BeaconRailroads = [sussexCn]
+                }
+            };
+
+            var priorTelemetry = new Telemetry
+            {
+                BeaconID = 1,
+                AddressID = 6709,
+                CreatedAt = previousTime,
+                Beacon = new Beacon
+                {
+                    ID = 1,
+                    BeaconRailroads = [rugbyWsor, rugbyCn]
+                }
+            };
+
+            var context = new TelemetryRuleContext
+            {
+                Telemetry = currentTelemetry,
+                RailroadId = 1,
+                // Intentionally wrong values to simulate stale/wrong map pin context.
+                ToMilepost = 112.16,
+                FromMilepost = 0.0
+            };
+
+            _mockTelemetryRepository
+                .Setup(r => r.GetRecentsWithinTimeOffsetAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<DateTime>()))
+                .ReturnsAsync([currentTelemetry, priorTelemetry]);
+
+            // Act
+            var result = await _rule.ShouldDiscardAsync(context);
+
+            // Assert
+            Assert.IsFalse(result.ShouldDiscard);
+        }
     }
 }

@@ -104,6 +104,9 @@ namespace Web.Server.Repositories
                     && t.CreatedAt >= sinceUtc
                     && t.Beacon.BeaconRailroads.Any(br => br.Subdivision.RailroadID == railroadId)
                     && t.Discarded == false)
+                .Include(t => t.Beacon)
+                    .ThenInclude(b => b.BeaconRailroads)
+                    .ThenInclude(br => br.Subdivision)
                 .OrderByDescending(t => t.CreatedAt)
                 .ToListAsync();
         }

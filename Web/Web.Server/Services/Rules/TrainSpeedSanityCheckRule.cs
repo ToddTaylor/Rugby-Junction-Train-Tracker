@@ -1,3 +1,4 @@
+using Web.Server.Entities;
 using Web.Server.Repositories;
 
 namespace Web.Server.Services.Rules
@@ -51,14 +52,18 @@ namespace Web.Server.Services.Rules
             var currentTelemetry = recentTelemetry[0];
             var priorTelemetry = recentTelemetry[1];
 
+            // Prefer railroad-specific mileposts from telemetry beacons to avoid stale map pin context.
+            var toMilepost = TryGetMilepostForRailroad(currentTelemetry, context.RailroadId) ?? context.ToMilepost;
+            var fromMilepost = TryGetMilepostForRailroad(priorTelemetry, context.RailroadId) ?? context.FromMilepost;
+
             // Use passed-in milepost values from context.
-            if (double.IsNaN(context.ToMilepost) || double.IsNaN(context.FromMilepost))
+            if (double.IsNaN(toMilepost) || double.IsNaN(fromMilepost))
             {
                 return TelemetryRuleResult.NotDiscarded();
             }
 
             // Calculate the distance between the two beacons using provided milepost values.
-            var distanceMiles = Math.Abs(context.ToMilepost - context.FromMilepost);
+            var distanceMiles = Math.Abs(toMilepost - fromMilepost);
 
             // Account for train radio range and train length
             var adjustedDistance = TrainSpeedSanityMath.GetAdjustedDistanceMiles(distanceMiles);
@@ -88,6 +93,14 @@ namespace Web.Server.Services.Rules
             }
 
             return TelemetryRuleResult.NotDiscarded();
+        }
+
+        private static double? TryGetMilepostForRailroad(Telemetry telemetry, int railroadId)
+        {
+            var beaconRailroad = telemetry.Beacon?.BeaconRailroads?
+                .FirstOrDefault(br => br.Subdivision?.RailroadID == railroadId);
+
+            return beaconRailroad?.Milepost;
         }
     }
 }
