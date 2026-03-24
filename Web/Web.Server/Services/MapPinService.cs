@@ -406,6 +406,13 @@ namespace Web.Server.Services
             return await _mapPinRepository.GetByTrainIdAsync(trainID, TIME_THRESHOLD_DPU_MINUTES);
         }
 
+        private async Task<MapPin?> GetDpuMapPinByAddressAndTrainIdAsync(int addressID, int trainID)
+        {
+            // Prefer an exact DPU address+train match within the DPU time threshold before falling back
+            // to the broader train-only lookup.
+            return await _mapPinRepository.GetByAddressAndTrainIdAsync(addressID, trainID, TIME_THRESHOLD_DPU_MINUTES);
+        }
+
         private async Task<DpuMatchResult> ResolveDpuMatchAsync(Telemetry telemetry)
         {
             if (!telemetry.TrainID.HasValue)
@@ -414,6 +421,20 @@ namespace Web.Server.Services
                 {
                     Status = DpuMatchStatus.Discarded,
                     DiscardReason = "DPU Missing TrainID"
+                };
+            }
+
+            var exactMatchedMapPin = await GetDpuMapPinByAddressAndTrainIdAsync(telemetry.AddressID, telemetry.TrainID.Value);
+            if (exactMatchedMapPin != null)
+            {
+                // Exact match on AddressID + TrainID confirms the same physical DPU device — no speed
+                // or railroad validation is needed. Ambiguity about CN train-ID reuse only arises on
+                // the train-only path (different AddressID, same TrainID). Post-match ShouldDiscardMapPin
+                // still validates the movement via the full rule engine.
+                return new DpuMatchResult
+                {
+                    Status = DpuMatchStatus.Matched,
+                    MatchedMapPin = exactMatchedMapPin
                 };
             }
 
@@ -814,24 +835,24 @@ namespace Web.Server.Services
 
         private static bool? CalculateMotion(MapPin existingMapPin, Telemetry telemetry)
         {
+            var sameBeacon = existingMapPin.BeaconID == telemetry.BeaconID;
+            var sourceContainsNoMovementInfo = (telemetry.Source == SourceEnum.HOT) || (telemetry.Source == SourceEnum.DPU && telemetry.BrakePipePressure == null);
+
+            if (sameBeacon && sourceContainsNoMovementInfo)
+            {
+                return existingMapPin.Moving;
+            }
+
             var minimumBrakePSI = 82;
 
             if (telemetry.BrakePipePressure.HasValue)
             {
-                return (telemetry.BrakePipePressure.Value >= minimumBrakePSI);
+                return telemetry.BrakePipePressure.Value >= minimumBrakePSI;
             }
 
             if (telemetry.Moving.HasValue)
             {
                 return telemetry.Moving.Value;
-            }
-
-            var sameBeacon = existingMapPin.BeaconID == telemetry.BeaconID;
-
-            if (existingMapPin.Moving.HasValue && sameBeacon && telemetry.Source == SourceEnum.HOT)
-            {
-                // HOT contains no movement information, so don't update existing moving status.
-                return existingMapPin.Moving;
             }
 
             // No brake pipe pressure, no movement status, or moving status is unknown HOT - default to null (unknown).

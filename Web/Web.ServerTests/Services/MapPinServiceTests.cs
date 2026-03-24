@@ -49,6 +49,10 @@ namespace Web.ServerTests.Services
             _mapPinRepositoryMock.Setup(r => r.GetAllByBeaconAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<int>()))
                 .ReturnsAsync(new List<MapPin>());
 
+            // Default: no exact DPU address+train match
+            _mapPinRepositoryMock.Setup(r => r.GetByAddressAndTrainIdAsync(It.IsAny<int>(), It.IsAny<int>(), MapPinService.TIME_THRESHOLD_DPU_MINUTES))
+                .ReturnsAsync((MapPin?)null);
+
             // Default: no tracked pins to migrate during merges
             _userTrackedPinRepositoryMock.Setup(r => r.UpdateMapPinIdAsync(It.IsAny<int>(), It.IsAny<int>()))
                 .Returns(Task.CompletedTask);
@@ -2790,6 +2794,171 @@ namespace Web.ServerTests.Services
                 NotificationMethods.MapPinUpdate,
                 It.IsAny<object[]>(),
                 default), Times.Never);
+        }
+
+        /// <summary>
+        /// Verifies that DPU matching first checks for an exact address+train match and does not
+        /// fall back to train-only lookup when an exact match is found.
+        /// </summary>
+        [TestMethod]
+        public async Task UpsertMapPin_DpuAddressAndTrainMatch_UsesExactLookupBeforeTrainOnly()
+        {
+            // Arrange
+            var now = _timeProviderMock.Object.UtcNow;
+
+            var fromBeacon = TestData.CN_Sussex_WI(now.AddMinutes(-10));
+            var toBeacon = TestData.CN_RugbyJunction_WI(now);
+
+            var telemetry = new Telemetry
+            {
+                BeaconID = toBeacon.BeaconID,
+                Beacon = new Beacon
+                {
+                    ID = toBeacon.BeaconID,
+                    Name = toBeacon.Beacon.Name,
+                    BeaconRailroads = [toBeacon]
+                },
+                AddressID = 55501,
+                TrainID = 808,
+                Source = SourceEnum.DPU,
+                Moving = true,
+                CreatedAt = now,
+                LastUpdate = now
+            };
+
+            var existingExactMapPin = new MapPin
+            {
+                ID = 313,
+                BeaconID = fromBeacon.BeaconID,
+                SubdivisionId = fromBeacon.Subdivision.ID,
+                Direction = null,
+                CreatedAt = now.AddMinutes(-10),
+                LastUpdate = now.AddMinutes(-10),
+                BeaconRailroad = fromBeacon,
+                Moving = true,
+                CreatedRailroadID = fromBeacon.Subdivision.RailroadID,
+                Addresses =
+                [
+                    new Address
+                    {
+                        AddressID = telemetry.AddressID,
+                        DpuTrainID = telemetry.TrainID,
+                        Source = SourceEnum.DPU,
+                        CreatedAt = now.AddMinutes(-10),
+                        LastUpdate = now.AddMinutes(-10)
+                    }
+                ]
+            };
+
+            _mapPinRepositoryMock.Setup(r => r.GetByAddressAndTrainIdAsync(telemetry.AddressID, telemetry.TrainID!.Value, MapPinService.TIME_THRESHOLD_DPU_MINUTES))
+                .ReturnsAsync(existingExactMapPin);
+            _beaconRailroadServiceMock.Setup(b => b.GetByIdAsync(existingExactMapPin.BeaconID, existingExactMapPin.SubdivisionId))
+                .ReturnsAsync(fromBeacon);
+            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(It.IsAny<MapPin>(), telemetry.LastUpdate))
+                .ReturnsAsync((MapPin mp, DateTime _) => mp);
+
+            _hubContextMock.Setup(h => h.Clients).Returns(_hubClientsMock.Object);
+            _hubClientsMock.Setup(h => h.All).Returns(_clientProxyMock.Object);
+            _clientProxyMock.Setup(proxy => proxy.SendCoreAsync(It.IsAny<string>(), It.IsAny<object[]>(), default))
+                .Returns(Task.CompletedTask);
+
+            // Act
+            await _service.UpsertMapPin(telemetry);
+
+            // Assert
+            _mapPinRepositoryMock.Verify(r => r.GetByAddressAndTrainIdAsync(telemetry.AddressID, telemetry.TrainID.Value, MapPinService.TIME_THRESHOLD_DPU_MINUTES), Times.Once);
+            _mapPinRepositoryMock.Verify(r => r.GetByTrainIdAsync(It.IsAny<int>(), It.IsAny<int>()), Times.Never);
+            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(
+                It.Is<MapPin>(mp =>
+                    mp.ID == existingExactMapPin.ID &&
+                    mp.BeaconID == toBeacon.BeaconID),
+                telemetry.LastUpdate), Times.Once);
+        }
+
+        /// <summary>
+        /// Verifies that an exact DPU match (same AddressID + TrainID) always resolves as Matched and
+        /// calculates direction on a beacon change, even when the time delta since LastUpdate would produce
+        /// a speed exceeding the threshold used for train-only (CN reuse) detection.
+        /// The speed check only makes sense for the train-only path where AddressID differs.
+        /// </summary>
+        [TestMethod]
+        public async Task UpsertMapPin_ExactMatchDpu_BeaconChange_SpeedWouldExceedThreshold_StillMatchedAndDirectionCalculated()
+        {
+            // Arrange
+            var now = _timeProviderMock.Object.UtcNow;
+
+            var fromBeacon = TestData.CN_Sussex_WI(now.AddMinutes(-1));
+            var toBeacon = TestData.CN_RugbyJunction_WI(now);
+
+            var telemetry = new Telemetry
+            {
+                BeaconID = toBeacon.BeaconID,
+                Beacon = new Beacon
+                {
+                    ID = toBeacon.BeaconID,
+                    Name = toBeacon.Beacon.Name,
+                    BeaconRailroads = [toBeacon]
+                },
+                AddressID = 55501,
+                TrainID = 808,
+                Source = SourceEnum.DPU,
+                Moving = true,
+                CreatedAt = now,
+                LastUpdate = now
+            };
+
+            // Pin was last updated 1 minute ago at Sussex. Sussex→Rugby Jct is ~8.6 miles;
+            // adjusted distance ~1.6 miles in 1 minute produces ~96 MPH — above the 50 MPH
+            // threshold that guards against CN train-ID reuse on the train-only path.
+            // The exact-match path must skip that check and return Matched directly.
+            var existingExactMapPin = new MapPin
+            {
+                ID = 313,
+                BeaconID = fromBeacon.BeaconID,
+                SubdivisionId = fromBeacon.Subdivision.ID,
+                Direction = null,
+                CreatedAt = now.AddMinutes(-1),
+                LastUpdate = now.AddMinutes(-1),
+                BeaconRailroad = fromBeacon,
+                Moving = true,
+                CreatedRailroadID = fromBeacon.Subdivision.RailroadID,
+                Addresses =
+                [
+                    new Address
+                    {
+                        AddressID = telemetry.AddressID,
+                        DpuTrainID = telemetry.TrainID,
+                        Source = SourceEnum.DPU,
+                        CreatedAt = now.AddMinutes(-1),
+                        LastUpdate = now.AddMinutes(-1)
+                    }
+                ]
+            };
+
+            _mapPinRepositoryMock.Setup(r => r.GetByAddressAndTrainIdAsync(telemetry.AddressID, telemetry.TrainID!.Value, MapPinService.TIME_THRESHOLD_DPU_MINUTES))
+                .ReturnsAsync(existingExactMapPin);
+            _beaconRailroadServiceMock.Setup(b => b.GetByIdAsync(existingExactMapPin.BeaconID, existingExactMapPin.SubdivisionId))
+                .ReturnsAsync(fromBeacon);
+            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(It.IsAny<MapPin>(), telemetry.LastUpdate))
+                .ReturnsAsync((MapPin mp, DateTime _) => mp);
+
+            _hubContextMock.Setup(h => h.Clients).Returns(_hubClientsMock.Object);
+            _hubClientsMock.Setup(h => h.All).Returns(_clientProxyMock.Object);
+            _clientProxyMock.Setup(proxy => proxy.SendCoreAsync(It.IsAny<string>(), It.IsAny<object[]>(), default))
+                .Returns(Task.CompletedTask);
+
+            // Act
+            await _service.UpsertMapPin(telemetry);
+
+            // Assert — pin matched and moved to Rugby Jct; direction calculated (not null)
+            _mapPinRepositoryMock.Verify(r => r.GetByAddressAndTrainIdAsync(telemetry.AddressID, telemetry.TrainID.Value, MapPinService.TIME_THRESHOLD_DPU_MINUTES), Times.Once);
+            _mapPinRepositoryMock.Verify(r => r.GetByTrainIdAsync(It.IsAny<int>(), It.IsAny<int>()), Times.Never);
+            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(
+                It.Is<MapPin>(mp =>
+                    mp.ID == existingExactMapPin.ID &&
+                    mp.BeaconID == toBeacon.BeaconID &&
+                    !string.IsNullOrWhiteSpace(mp.Direction)),
+                telemetry.LastUpdate), Times.Once);
         }
 
         /// <summary>
