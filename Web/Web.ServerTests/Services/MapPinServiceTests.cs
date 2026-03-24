@@ -605,7 +605,7 @@ namespace Web.ServerTests.Services
                 CreatedAt = _timeProviderMock.Object.UtcNow,
                 LastUpdate = _timeProviderMock.Object.UtcNow,
                 BeaconRailroad = CNRugbyJunctionBeacon,
-                Moving = telemetry.Moving,
+                Moving = null,
                 CreatedRailroadID = WSORHartfordBeacon.Subdivision.RailroadID,
                 Addresses =
                 [
@@ -636,7 +636,7 @@ namespace Web.ServerTests.Services
                     Latitude = CNRugbyJunctionBeacon.Latitude,
                     Longitude = CNRugbyJunctionBeacon.Longitude,
                     Milepost = CNRugbyJunctionBeacon.Milepost,
-                    Moving = telemetry.Moving,
+                    Moving = null,
                     CreatedAt = _timeProviderMock.Object.UtcNow,
                     LastUpdate = _timeProviderMock.Object.UtcNow,
                     Addresses =
@@ -940,7 +940,7 @@ namespace Web.ServerTests.Services
                 CreatedAt = _timeProviderMock.Object.UtcNow,
                 LastUpdate = _timeProviderMock.Object.UtcNow,
                 BeaconRailroad = CNRugbyJunctionBeacon,
-                Moving = telemetry.Moving,
+                Moving = null,
                 CreatedRailroadID = CNSussexBeacon.Subdivision.RailroadID,
                 Addresses =
                 [
@@ -970,7 +970,7 @@ namespace Web.ServerTests.Services
                     Latitude = CNRugbyJunctionBeacon.Latitude,
                     Longitude = CNRugbyJunctionBeacon.Longitude,
                     Milepost = CNRugbyJunctionBeacon.Milepost,
-                    Moving = telemetry.Moving,
+                    Moving = null,
                     CreatedAt = _timeProviderMock.Object.UtcNow,
                     LastUpdate = _timeProviderMock.Object.UtcNow,
                     Addresses =
@@ -1083,7 +1083,7 @@ namespace Web.ServerTests.Services
                 CreatedAt = _timeProviderMock.Object.UtcNow,
                 LastUpdate = _timeProviderMock.Object.UtcNow,
                 BeaconRailroad = CNSussexBeacon,
-                Moving = telemetry.Moving,
+                Moving = null,
                 CreatedRailroadID = WSORRugbyJunctionBeacon.Subdivision.RailroadID,
                 Addresses =
                 [
@@ -1115,7 +1115,7 @@ namespace Web.ServerTests.Services
                     Latitude = CNSussexBeacon.Latitude,
                     Longitude = CNSussexBeacon.Longitude,
                     Milepost = CNSussexBeacon.Milepost,
-                    Moving = telemetry.Moving,
+                    Moving = null,
                     CreatedAt = _timeProviderMock.Object.UtcNow,
                     LastUpdate = telemetry.LastUpdate,
                     Addresses =
@@ -1234,7 +1234,7 @@ namespace Web.ServerTests.Services
                 CreatedAt = _timeProviderMock.Object.UtcNow,
                 LastUpdate = _timeProviderMock.Object.UtcNow,
                 BeaconRailroad = CNRugbyJunctionBeaconRailroad,
-                Moving = telemetry.Moving,
+                Moving = null,
                 CreatedRailroadID = CNOshkoshBeaconRailroad.Subdivision.RailroadID,
                 Addresses =
                 [
@@ -1264,7 +1264,7 @@ namespace Web.ServerTests.Services
                     Latitude = CNRugbyJunctionBeaconRailroad.Latitude,
                     Longitude = CNRugbyJunctionBeaconRailroad.Longitude,
                     Milepost = CNRugbyJunctionBeaconRailroad.Milepost,
-                    Moving = telemetry.Moving,
+                    Moving = null,
                     CreatedAt = _timeProviderMock.Object.UtcNow,
                     LastUpdate = _timeProviderMock.Object.UtcNow,
                     Addresses =
@@ -2455,9 +2455,9 @@ namespace Web.ServerTests.Services
             // Act
             await _service.UpsertMapPin(telemetry);
 
-            // Assert - Moving should still be true (not updated to null)
+            // Assert - EOT without telemetry.Moving should yield unknown motion.
             _mapPinRepositoryMock.Verify(r => r.UpsertAsync(It.Is<MapPin>(mp =>
-                mp.Moving == false
+                mp.Moving == null
             ), It.IsAny<DateTime>()), Times.Once);
         }
 
@@ -2536,7 +2536,7 @@ namespace Web.ServerTests.Services
                 CreatedAt = _timeProviderMock.Object.UtcNow,
                 LastUpdate = _timeProviderMock.Object.UtcNow,
                 BeaconRailroad = CNRugbyJunctionBeacon,
-                Moving = telemetry.Moving,
+                Moving = null,
                 CreatedRailroadID = CNSussexBeacon.Subdivision.RailroadID,
                 Addresses =
                 [
@@ -2579,7 +2579,7 @@ namespace Web.ServerTests.Services
                     Latitude = CNRugbyJunctionBeacon.Latitude,
                     Longitude = CNRugbyJunctionBeacon.Longitude,
                     Milepost = CNRugbyJunctionBeacon.Milepost,
-                    Moving = telemetry.Moving,
+                    Moving = null,
                     CreatedAt = _timeProviderMock.Object.UtcNow,
                     LastUpdate = telemetry.LastUpdate,
                     Addresses =
@@ -3029,7 +3029,7 @@ namespace Web.ServerTests.Services
                 CreatedAt = _timeProviderMock.Object.UtcNow.AddMinutes(-15),
                 LastUpdate = _timeProviderMock.Object.UtcNow.AddMinutes(-15),
                 BeaconRailroad = CNRugbyJunctionBeacon,
-                Moving = telemetry.Moving,
+                Moving = null,
                 CreatedRailroadID = CNSussexBeacon.Subdivision.RailroadID,
                 Addresses =
                 [
@@ -3072,7 +3072,7 @@ namespace Web.ServerTests.Services
                     Latitude = CNRugbyJunctionBeacon.Latitude,
                     Longitude = CNRugbyJunctionBeacon.Longitude,
                     Milepost = CNRugbyJunctionBeacon.Milepost,
-                    Moving = telemetry.Moving,
+                    Moving = null,
                     CreatedAt = _timeProviderMock.Object.UtcNow.AddMinutes(-15),
                     LastUpdate = telemetry.LastUpdate,
                     Addresses =

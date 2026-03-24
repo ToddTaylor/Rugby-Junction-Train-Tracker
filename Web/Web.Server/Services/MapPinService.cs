@@ -138,7 +138,8 @@ namespace Web.Server.Services
             // Add history entries for beacons that don't have a current MapPin
             var historyMapPins = historyLatest
                 .Where(h => !existingKeys.Contains($"{h.BeaconID}|{h.SubdivisionId}"))
-                .Select(h => {
+                .Select(h =>
+                {
                     int? primaryAddressID = null;
                     if (!string.IsNullOrWhiteSpace(h.AddressesJson))
                     {
@@ -289,7 +290,7 @@ namespace Web.Server.Services
                 existingMapPinToUpdate.Addresses.Add(CreateAddress(telemetry));
             }
         }
-        
+
         private void AddDpuAddressIfMissing(MapPin existingMapPinToUpdate, Telemetry telemetry)
         {
             var dpuAddressAlreadyPresent = existingMapPinToUpdate.Addresses.Any(a =>
@@ -319,7 +320,7 @@ namespace Web.Server.Services
             }
 
             var allPinsAtBeacon = await _mapPinRepository.GetAllByBeaconAsync(upsertedMapPin.BeaconID, upsertedMapPin.SubdivisionId, TIME_THRESHOLD_MINUTES);
-            
+
             // "Duplicates" are defined as other map pins at the same beacon, excluding the just-upserted map pin.
             var duplicates = allPinsAtBeacon.Where(mp => mp.ID != upsertedMapPin.ID).ToList();
 
@@ -352,14 +353,14 @@ namespace Web.Server.Services
                     upsertedMapPin.Addresses.Add(address);
                 }
 
-                    // Inherit direction from the duplicate if the merged pin has none.
-                    if (upsertedMapPin.Direction == null && duplicate.Direction != null)
-                    {
-                        upsertedMapPin.Direction = duplicate.Direction;
-                    }
+                // Inherit direction from the duplicate if the merged pin has none.
+                if (upsertedMapPin.Direction == null && duplicate.Direction != null)
+                {
+                    upsertedMapPin.Direction = duplicate.Direction;
+                }
 
-                    // Delete the duplicate's history so it doesn't create a stale orphan record.
-                    await _mapPinHistoryService.DeleteHistoryByOriginalMapPinIdAsync(duplicate.ID);
+                // Delete the duplicate's history so it doesn't create a stale orphan record.
+                await _mapPinHistoryService.DeleteHistoryByOriginalMapPinIdAsync(duplicate.ID);
 
                 // Preserve tracking data before deleting the duplicate pin.
                 // Migrate all tracked records from the duplicate to the final merged pin.
@@ -845,12 +846,12 @@ namespace Web.Server.Services
 
             var minimumBrakePSI = 82;
 
-            if (telemetry.BrakePipePressure.HasValue)
+            if (telemetry.Source == SourceEnum.DPU && telemetry.BrakePipePressure.HasValue)
             {
                 return telemetry.BrakePipePressure.Value >= minimumBrakePSI;
             }
 
-            if (telemetry.Moving.HasValue)
+            if (telemetry.Source == SourceEnum.EOT && telemetry.Moving.HasValue)
             {
                 return telemetry.Moving.Value;
             }
