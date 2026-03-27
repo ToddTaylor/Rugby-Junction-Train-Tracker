@@ -13,7 +13,10 @@ namespace Web.Server.Services
     public class MapPinService : IMapPinService
     {
         public const int TIME_THRESHOLD_MINUTES = 2;
-        public const int TIME_THRESHOLD_DPU_MINUTES = 60;
+        public const int TIME_THRESHOLD_DPU_TRAIN_ONLY_MINUTES = 60;
+        public const int TIME_THRESHOLD_DPU_EXACT_MINUTES = 360;
+        public const int TIME_THRESHOLD_DPU_SAME_BEACON_TRAIN_ONLY_MAX_AGE_MINUTES = 30;
+        public const int TIME_THRESHOLD_DPU_MINUTES = TIME_THRESHOLD_DPU_TRAIN_ONLY_MINUTES;
         public const int SPEED_THRESHOLD_MPH = 50;
 
         private enum DpuMatchStatus
@@ -256,7 +259,13 @@ namespace Web.Server.Services
                     throw new InvalidOperationException($"Unsupported telemetry source '{telemetry.Source}'.");
             }
 
-            var upsertedMapPin = await _mapPinRepository.UpsertAsync(mapPin!, telemetry.LastUpdate);
+            if (mapPin == null)
+            {
+                await DiscardTelemetryAsync(telemetry, "Failed to create or update map pin.");
+                return;
+            }
+
+            var upsertedMapPin = await _mapPinRepository.UpsertAsync(mapPin, telemetry.LastUpdate);
 
             // If at a single-track beacon, merge any other map pins at the same beacon into this one.
             upsertedMapPin = await MergeSingleTrackDuplicatesAsync(upsertedMapPin, telemetry);
@@ -404,14 +413,14 @@ namespace Web.Server.Services
         {
             // Get an existing map pin with the same DPU train ID within the DPU time threshold,
             // even if it's a different beacon. SoftDPU uses a 1 hour time threshold for the movements window.
-            return await _mapPinRepository.GetByTrainIdAsync(trainID, TIME_THRESHOLD_DPU_MINUTES);
+            return await _mapPinRepository.GetByTrainIdAsync(trainID, TIME_THRESHOLD_DPU_TRAIN_ONLY_MINUTES);
         }
 
         private async Task<MapPin?> GetDpuMapPinByAddressAndTrainIdAsync(int addressID, int trainID)
         {
             // Prefer an exact DPU address+train match within the DPU time threshold before falling back
             // to the broader train-only lookup.
-            return await _mapPinRepository.GetByAddressAndTrainIdAsync(addressID, trainID, TIME_THRESHOLD_DPU_MINUTES);
+            return await _mapPinRepository.GetByAddressAndTrainIdAsync(addressID, trainID, TIME_THRESHOLD_DPU_EXACT_MINUTES);
         }
 
         private async Task<DpuMatchResult> ResolveDpuMatchAsync(Telemetry telemetry)
@@ -468,6 +477,20 @@ namespace Web.Server.Services
         private Task<DpuMatchResult> ValidateMatchedDpuMapPinAsync(Telemetry telemetry, MapPin existingMapPinByDpuTrainID)
         {
             // Existing map pin found matching DPU train ID.
+
+            // Train-only fallback can over-merge when train IDs are reused at the same beacon hours later.
+            // If this is same-beacon and the existing pin is stale, treat as no-match and start a new logical pin.
+            if (telemetry.BeaconID == existingMapPinByDpuTrainID.BeaconID)
+            {
+                var age = telemetry.CreatedAt - existingMapPinByDpuTrainID.LastUpdate;
+                if (age.TotalMinutes > TIME_THRESHOLD_DPU_SAME_BEACON_TRAIN_ONLY_MAX_AGE_MINUTES)
+                {
+                    return Task.FromResult(new DpuMatchResult
+                    {
+                        Status = DpuMatchStatus.NoMatch
+                    });
+                }
+            }
 
             var notTheSameBeacon = !telemetry.Beacon.BeaconRailroads
                 .Any(br =>
