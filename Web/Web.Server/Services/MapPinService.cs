@@ -62,6 +62,7 @@ namespace Web.Server.Services
         private readonly ISubdivisionTrackageRightRepository _trackageRightRepository;
         private readonly IUserTrackedPinRepository _userTrackedPinRepository;
         private readonly ILogger<MapPinService> _logger;
+        private readonly Dictionary<string, Web.Server.Services.Processors.IMapPinProcessor> _processorMap;
 
         public MapPinService(
             IBeaconRailroadService beaconRailroadService,
@@ -76,7 +77,8 @@ namespace Web.Server.Services
             ISubdivisionTrackageRightRepository trackageRightRepository,
             IUserTrackedPinRepository userTrackedPinRepository,
             ILogger<MapPinService> logger,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            Dictionary<string, Web.Server.Services.Processors.IMapPinProcessor> processorMap)
         {
             _beaconRailroadService = beaconRailroadService;
             _hubContext = hubContext;
@@ -90,6 +92,7 @@ namespace Web.Server.Services
             _trackageRightRepository = trackageRightRepository;
             _userTrackedPinRepository = userTrackedPinRepository;
             _logger = logger;
+            _processorMap = processorMap;
             _stationaryDirectionNullThresholdHours = configuration.GetValue<int>("ApplicationSettings:StationaryDirectionNullThresholdHours", 6);
         }
 
@@ -190,73 +193,42 @@ namespace Web.Server.Services
 
         public async Task UpsertMapPin(Telemetry telemetry)
         {
-            MapPin? mapPin;
-            bool isNewMapPin = false;
-
-            switch (telemetry.Source)
+            // Get the processor for this telemetry source
+            if (!_processorMap.TryGetValue(telemetry.Source, out var processor))
             {
-                case SourceEnum.DPU:
-                    var dpuMatch = await ResolveDpuMatchAsync(telemetry);
+                throw new InvalidOperationException($"No processor registered for telemetry source '{telemetry.Source}'.");
+            }
 
-                    switch (dpuMatch.Status)
-                    {
-                        case DpuMatchStatus.Discarded:
-                            await DiscardTelemetryAsync(telemetry, dpuMatch.DiscardReason ?? "DPU Match Discarded");
-                            return;
+            // Run source-specific matching and validation
+            var processorResult = await processor.ProcessAsync(telemetry);
 
-                        case DpuMatchStatus.NoMatch:
-                            // Note: A new map pin will never have a direction as it
-                            // can't be calculated without a previous map pin.
-                            mapPin = await this.CreateMapPin(telemetry);
-                            isNewMapPin = true;
-                            break;
+            // If processor recommends discard, mark telemetry as discarded and exit
+            if (processorResult.DiscardReason != null)
+            {
+                await DiscardTelemetryAsync(telemetry, processorResult.DiscardReason);
+                return;
+            }
 
-                        case DpuMatchStatus.Matched:
-                            var existingDpuMapPin = dpuMatch.MatchedMapPin!;
+            MapPin? mapPin = null;
+            bool isNewMapPin = processorResult.IsNewMapPin;
 
-                            AddDpuAddressIfMissing(existingDpuMapPin, telemetry);
+            if (processorResult.IsNewMapPin)
+            {
+                // Create new map pin
+                // Note: A new map pin will never have a direction as it can't be calculated without a previous map pin.
+                mapPin = await this.CreateMapPin(telemetry);
+            }
+            else
+            {
+                // Existing map pin found; validate before update
+                var existingMapPin = processorResult.MapPin!;
 
-                            if ((await ShouldDiscardMapPin(telemetry, existingDpuMapPin)).Status == MapPinDiscardStatus.Discard)
-                            {
-                                return;
-                            }
+                if ((await ShouldDiscardMapPin(telemetry, existingMapPin)).Status == MapPinDiscardStatus.Discard)
+                {
+                    return;
+                }
 
-                            mapPin = await UpdateMapPin(telemetry, existingDpuMapPin);
-                            isNewMapPin = false;
-                            break;
-
-                        default:
-                            throw new InvalidOperationException($"Unsupported DPU match status '{dpuMatch.Status}'.");
-                    }
-                    break;
-
-                case SourceEnum.EOT:
-                case SourceEnum.HOT:
-                    var existingHotOrEotMapPin = await GetExistingHotOrEotMapPinAsync(telemetry);
-
-                    if (existingHotOrEotMapPin == null)
-                    {
-                        // Note: A new map pin will never have a direction as it
-                        // can't be calculated without a previous map pin.
-                        mapPin = await this.CreateMapPin(telemetry);
-                        isNewMapPin = true;
-                    }
-                    else
-                    {
-                        AddHotOrEotAddressIfMissing(existingHotOrEotMapPin, telemetry);
-
-                        if ((await ShouldDiscardMapPin(telemetry, existingHotOrEotMapPin)).Status == MapPinDiscardStatus.Discard)
-                        {
-                            return;
-                        }
-
-                        mapPin = await UpdateMapPin(telemetry, existingHotOrEotMapPin);
-                        isNewMapPin = false;
-                    }
-                    break;
-
-                default:
-                    throw new InvalidOperationException($"Unsupported telemetry source '{telemetry.Source}'.");
+                mapPin = await UpdateMapPin(telemetry, existingMapPin);
             }
 
             if (mapPin == null)

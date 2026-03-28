@@ -94,7 +94,14 @@ namespace Web.ServerTests.Services
                 _trackageRightRepositoryMock.Object,
                 _userTrackedPinRepositoryMock.Object,
                 _loggerMock.Object,
-                _configurationMock.Object);
+                _configurationMock.Object,
+                new Dictionary<string, Web.Server.Services.Processors.IMapPinProcessor>
+                {
+                    // Use real processors with mocked dependencies
+                    { SourceEnum.DPU, new Web.Server.Services.Processors.DpuMapPinProcessor(_mapPinRepositoryMock.Object, new Microsoft.Extensions.Logging.Abstractions.NullLogger<Web.Server.Services.Processors.DpuMapPinProcessor>()) },
+                    { SourceEnum.HOT, new Web.Server.Services.Processors.HotEotMapPinProcessor(_mapPinRepositoryMock.Object, new Microsoft.Extensions.Logging.Abstractions.NullLogger<Web.Server.Services.Processors.HotEotMapPinProcessor>()) },
+                    { SourceEnum.EOT, new Web.Server.Services.Processors.HotEotMapPinProcessor(_mapPinRepositoryMock.Object, new Microsoft.Extensions.Logging.Abstractions.NullLogger<Web.Server.Services.Processors.HotEotMapPinProcessor>()) }
+                });
         }
 
         [TestMethod]

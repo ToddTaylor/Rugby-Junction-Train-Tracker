@@ -8,11 +8,13 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Web.Server.BackgroundServices;
 using Web.Server.Data;
+using Web.Server.Enums;
 using Web.Server.Hubs;
 using Web.Server.Mappers;
 using Web.Server.Providers;
 using Web.Server.Repositories;
 using Web.Server.Services;
+using Web.Server.Services.Processors;
 using Web.Server.Services.Rules;
 
 // Configure Serilog from appsettings.json (with fallback to code-based configuration)
@@ -129,10 +131,44 @@ try
     builder.Services.AddScoped<IUserTrackedPinRepository, UserTrackedPinRepository>();
     builder.Services.AddScoped<ISubdivisionTrackageRightRepository, SubdivisionTrackageRightRepository>();
 
+    // Map pin processors - register each processor
+    builder.Services.AddScoped<Web.Server.Services.Processors.DpuMapPinProcessor>();
+    builder.Services.AddScoped<Web.Server.Services.Processors.HotEotMapPinProcessor>();
+
     // Custom services
     builder.Services.AddScoped<IBeaconService, BeaconService>();
     builder.Services.AddScoped<IBeaconRailroadService, BeaconRailroadService>();
-    builder.Services.AddScoped<IMapPinService, MapPinService>();
+    
+    // Register MapPinService with processor map factory
+    builder.Services.AddScoped<IMapPinService>(sp =>
+    {
+        var dpu = sp.GetRequiredService<Web.Server.Services.Processors.DpuMapPinProcessor>();
+        var hotEot = sp.GetRequiredService<Web.Server.Services.Processors.HotEotMapPinProcessor>();
+        
+        var processorMap = new Dictionary<string, Web.Server.Services.Processors.IMapPinProcessor>
+        {
+            { SourceEnum.DPU, dpu },
+            { SourceEnum.HOT, hotEot },
+            { SourceEnum.EOT, hotEot },
+        };
+        
+        return new MapPinService(
+            sp.GetRequiredService<Web.Server.Services.IBeaconRailroadService>(),
+            sp.GetRequiredService<Web.Server.Services.IMapPinHistoryService>(),
+            sp.GetRequiredService<Web.Server.Repositories.IMapPinRepository>(),
+            sp.GetRequiredService<Microsoft.AspNetCore.SignalR.IHubContext<Web.Server.Hubs.NotificationHub>>(),
+            sp.GetRequiredService<AutoMapper.IMapper>(),
+            sp.GetRequiredService<Web.Server.Providers.ITimeProvider>(),
+            sp.GetRequiredService<Web.Server.Repositories.ITelemetryRepository>(),
+            sp.GetRequiredService<Web.Server.Services.Rules.IMapPinRuleEngine>(),
+            sp.GetRequiredService<Web.Server.Services.Rules.ITelemetryRuleEngine>(),
+            sp.GetRequiredService<Web.Server.Repositories.ISubdivisionTrackageRightRepository>(),
+            sp.GetRequiredService<Web.Server.Repositories.IUserTrackedPinRepository>(),
+            sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Web.Server.Services.MapPinService>>(),
+            sp.GetRequiredService<Microsoft.Extensions.Configuration.IConfiguration>(),
+            processorMap);
+    });
+
     builder.Services.AddScoped<IMapPinHistoryService, MapPinHistoryService>();
     builder.Services.AddScoped<IUserService, UserService>();
     builder.Services.AddScoped<IRailroadService, RailroadService>();
