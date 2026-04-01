@@ -223,8 +223,13 @@ namespace Web.Server.Services
                 // Existing map pin found; validate before update
                 var existingMapPin = processorResult.MapPin!;
 
-                if ((await ShouldDiscardMapPin(telemetry, existingMapPin)).Status == MapPinDiscardStatus.Discard)
+                var discardDecision = await ShouldDiscardMapPin(telemetry, existingMapPin);
+                if (discardDecision.Status == MapPinDiscardStatus.Discard)
                 {
+                    if (!telemetry.Discarded)
+                    {
+                        await DiscardTelemetryAsync(telemetry, discardDecision.Reason ?? "Map pin discarded.");
+                    }
                     return;
                 }
 

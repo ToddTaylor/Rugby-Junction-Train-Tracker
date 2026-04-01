@@ -72,6 +72,12 @@ namespace Web.Server.Services
             // Insert new telemetry for historical logging purposes
             telemetry = await _telemetryRepository.AddAsync(telemetry);
 
+            // Do not process stale telemetry into a map pin update
+            if (telemetry.Discarded)
+            {
+                return telemetry;
+            }
+
             // Upsert map pin via Map Pin service (telemetry will be saved within)
             await _mapPinsService.UpsertMapPin(telemetry);
 
