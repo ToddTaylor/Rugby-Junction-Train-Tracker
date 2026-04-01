@@ -1,4 +1,4 @@
-using AutoMapper;
+using MapsterMapper;
 using System.Text.Json;
 using Web.Server.Controllers.v1;
 using Web.Server.DTOs;

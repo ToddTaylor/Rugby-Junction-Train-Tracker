@@ -1,4 +1,4 @@
-using AutoMapper;
+using MapsterMapper;
 using Microsoft.AspNetCore.SignalR;
 using Web.Server.DTOs;
 using Web.Server.Entities;

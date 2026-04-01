@@ -1,8 +1,9 @@
-using AutoMapper;
+using MapsterMapper;
+using Mapster;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
@@ -57,11 +58,10 @@ namespace Web.ServerTests.Services
             _userTrackedPinRepositoryMock.Setup(r => r.UpdateMapPinIdAsync(It.IsAny<int>(), It.IsAny<int>()))
                 .Returns(Task.CompletedTask);
 
-            var config = new MapperConfiguration(cfg =>
-            {
-                cfg.AddProfile(new AutoMapperProfile());
-            }, new NullLoggerFactory());
-            _mapper = config.CreateMapper();
+            var config = new TypeAdapterConfig();
+            config.Scan(typeof(MapsterProfile).Assembly);
+            var provider = new ServiceCollection().BuildServiceProvider();
+            _mapper = new ServiceMapper(provider, config);
 
             _configurationMock.Setup(c => c.GetSection("ApplicationSettings:StationaryDirectionNullThresholdHours").Value)
                 .Returns("6");

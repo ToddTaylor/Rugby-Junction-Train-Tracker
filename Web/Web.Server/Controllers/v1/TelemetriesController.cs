@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using MapsterMapper;
 using Microsoft.AspNetCore.Mvc;
 using Web.Server.DTOs;
 using Web.Server.Services;

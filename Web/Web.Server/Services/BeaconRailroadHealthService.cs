@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using MapsterMapper;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Web.Server.Data;

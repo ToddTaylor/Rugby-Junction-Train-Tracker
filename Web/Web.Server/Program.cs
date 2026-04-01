@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.StaticFiles;
+using Mapster;
+using MapsterMapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using Serilog;
@@ -57,13 +59,11 @@ try
         });
     });
 
-    // Add AutoMapper with license key.
-    builder.Services.AddAutoMapper(cfg =>
-    {
-        // Annoying Community edition license key created on 03/29/2026. Needs to be renwed every year.
-        cfg.LicenseKey = "eyJhbGciOiJSUzI1NiIsImtpZCI6Ikx1Y2t5UGVubnlTb2Z0d2FyZUxpY2Vuc2VLZXkvYmJiMTNhY2I1OTkwNGQ4OWI0Y2IxYzg1ZjA4OGNjZjkiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2x1Y2t5cGVubnlzb2Z0d2FyZS5jb20iLCJhdWQiOiJMdWNreVBlbm55U29mdHdhcmUiLCJleHAiOiIxODA2Mjc4NDAwIiwiaWF0IjoiMTc3NDc5OTc5MyIsImFjY291bnRfaWQiOiIwMTlkM2E0ZWZjOWU3MTNhOTgxYzE3Yzg0MzIxNjUwOCIsImN1c3RvbWVyX2lkIjoiY3RtXzAxa214NHpiZW16NGp3NWhlbWRmNzkzMXRtIiwic3ViX2lkIjoiLSIsImVkaXRpb24iOiIwIiwidHlwZSI6IjIifQ.EUX1_Rkp6Rc2F-6OU-kaTI8Y6BdUTU-UiplALhYRo7t7eMJlbceUCpQxOMbn-GHq3MzqoODkBgRjsZL4BX4Kj76UQHZsYbtKrpaNNTq7a4Odq46jBP9hL6U9M3vucWnF-uh6CiLWmmSmn-BHad9fK6QrXdrCDWTE1glEdZuSII7vymgOGdpwC8bj0U2orofHwdz941tw2-hFarKlDHrFdA0DpBKmiAy8mZOo7aXdHsV-TjDtAL4i7TnphOuc7slxiSz54OCXorbCe-EHOzBO1UuV7YL1Ht9cFy9ArRla0s-QzLjsuZE9KOKIBhJXGmP8CFfoUIWPdArGG9kfIbpUjg";
-        cfg.AddProfile<AutoMapperProfile>();
-    });
+    // Register Mapster mappings from the server assembly.
+    var mapsterConfig = TypeAdapterConfig.GlobalSettings;
+    mapsterConfig.Scan(typeof(MapsterProfile).Assembly);
+    builder.Services.AddSingleton(mapsterConfig);
+    builder.Services.AddSingleton<IMapper, ServiceMapper>();
 
     // Add services to the container.
     builder.Services.AddControllers()
@@ -163,7 +163,7 @@ try
             sp.GetRequiredService<Web.Server.Services.IMapPinHistoryService>(),
             sp.GetRequiredService<Web.Server.Repositories.IMapPinRepository>(),
             sp.GetRequiredService<Microsoft.AspNetCore.SignalR.IHubContext<Web.Server.Hubs.NotificationHub>>(),
-            sp.GetRequiredService<AutoMapper.IMapper>(),
+            sp.GetRequiredService<MapsterMapper.IMapper>(),
             sp.GetRequiredService<Web.Server.Providers.ITimeProvider>(),
             sp.GetRequiredService<Web.Server.Repositories.ITelemetryRepository>(),
             sp.GetRequiredService<Web.Server.Services.Rules.IMapPinRuleEngine>(),

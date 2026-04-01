@@ -1,4 +1,4 @@
-using AutoMapper;
+using MapsterMapper;
 using Web.Server.DTOs;
 using Web.Server.Entities;
 using Web.Server.Repositories;

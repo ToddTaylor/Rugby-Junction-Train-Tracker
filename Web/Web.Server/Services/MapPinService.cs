@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using MapsterMapper;
 using Microsoft.AspNetCore.SignalR;
 using Web.Server.DTOs;
 using Web.Server.Entities;
@@ -409,7 +409,7 @@ namespace Web.Server.Services
             var exactMatchedMapPin = await GetDpuMapPinByAddressAndTrainIdAsync(telemetry.AddressID, telemetry.TrainID.Value);
             if (exactMatchedMapPin != null)
             {
-                // Exact match on AddressID + TrainID confirms the same physical DPU device — no speed
+                // Exact match on AddressID + TrainID confirms the same physical DPU device - no speed
                 // or railroad validation is needed. Ambiguity about CN train-ID reuse only arises on
                 // the train-only path (different AddressID, same TrainID). Post-match ShouldDiscardMapPin
                 // still validates the movement via the full rule engine.
