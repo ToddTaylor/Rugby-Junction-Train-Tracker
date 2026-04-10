@@ -1,0 +1,56 @@
+/**
+ * Any CSS included here will be global. The classic template
+ * bundles Infima by default. Infima is a CSS framework designed to
+ * work well for content-centric websites.
+ */
+
+/* You can override the default Infima variables here. */
+/* Light Theme: Red primary, black accents, white background, gray surfaces */
+:root {
+  /* Primary colors */
+  --ifm-color-primary: #C62828;           /* Strong red */
+  --ifm-color-primary-dark: #8E0000;      /* Darker red */
+  --ifm-color-primary-light: #FF6666;     /* Lighter red */
+
+  /* Secondary (neutral) colors */
+  --ifm-color-secondary: #424242;         /* Dark gray for accents */
+  --ifm-font-color-base: #212121;         /* Almost black text */
+  --ifm-font-color-secondary: #616161;    /* Mid gray text */
+
+  /* Links and buttons */
+  --ifm-link-color: var(--ifm-color-primary);
+  --ifm-link-color-hover: var(--ifm-color-primary-dark);
+
+  /* Backgrounds */
+  --ifm-background-color: #FFFFFF;        /* White page background */
+  --ifm-background-surface-color: #F5F5F5;/* Very light gray panels */
+
+  /* Code blocks and borders */
+  --ifm-code-background: #EEEEEE;         /* Light gray code background */
+  --ifm-border-radius: 4px;
+}
+
+/* Dark Theme: Softer red, light gray accents, black backgrounds */
+html[data-theme='dark'] {
+  /* Primary colors */
+  --ifm-color-primary: #FF6666;           /* Lighter red for dark mode */
+  --ifm-color-primary-dark: #C62828;      /* Base red as dark shade */
+  --ifm-color-primary-light: #FF8A80;     /* Soft pastel red */
+
+  /* Secondary (neutral) colors */
+  --ifm-color-secondary: #BDBDBD;         /* Light gray accents */
+  --ifm-font-color-base: #E0E0E0;         /* Pale gray text */
+  --ifm-font-color-secondary: #9E9E9E;    /* Medium gray text */
+
+  /* Links and buttons */
+  --ifm-link-color: var(--ifm-color-primary-light);
+  --ifm-link-color-hover: var(--ifm-color-primary);
+
+  /* Backgrounds */
+  --ifm-background-color: #121212;        /* Deep black background */
+  --ifm-background-surface-color: #1E1E1E;/* Very dark gray panels */
+
+  /* Code blocks and borders */
+  --ifm-code-background: #2C2C2C;         /* Dark gray code background */
+  --ifm-border-radius: 4px;
+}

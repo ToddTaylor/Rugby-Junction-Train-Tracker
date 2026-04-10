@@ -10,7 +10,7 @@ You are planning a feature for the RugbyJunctionTrainTracker application.
 
 ## Step 1: Read Architecture Context
 Start by reading the system overview:
-- [System Overview](../../docs/architecture/system-overview.md)
+- [System Overview](../../Planning/architecture/system-overview.md)
 
 ## Step 2: Identify the Affected Area and Read Instructions
 Based on the feature description, determine which areas are affected:
@@ -22,8 +22,8 @@ Based on the feature description, determine which areas are affected:
 ## Step 3: Read Relevant Implementation Briefs
 If they apply:
 - For map pin or tracked pin behavior: Read [TRACKED_PINS_IMPLEMENTATION.md](../../TRACKED_PINS_IMPLEMENTATION.md)
-- For map pin merging or duplicate beacon behavior: Read [MAP_PIN_MERGING_IMPLEMENTATION.md](../../docs/implementation/MAP_PIN_MERGING_IMPLEMENTATION.md)
-- For beacon direction or live label updates: Read [BEACON_LABEL_DIRECTION_IMPLEMENTATION.md](../../docs/implementation/BEACON_LABEL_DIRECTION_IMPLEMENTATION.md)
+- For map pin merging or duplicate beacon behavior: Read [MAP_PIN_MERGING_IMPLEMENTATION.md](../../Planning/implementation/MAP_PIN_MERGING_IMPLEMENTATION.md)
+- For beacon direction or live label updates: Read [BEACON_LABEL_DIRECTION_IMPLEMENTATION.md](../../Planning/implementation/BEACON_LABEL_DIRECTION_IMPLEMENTATION.md)
 
 ## Step 4: Read Matching Tests
 Inspect the test suite for the affected area:
