@@ -2,7 +2,7 @@
 using Polly.Retry;
 using Services.Models;
 
-namespace Services.Subscribers.RugbyJunctionAPI
+namespace Services.Subscribers.RugbyJunctionAPIBeta
 {
     public class TelemetryApiClient : ApiClient
     {

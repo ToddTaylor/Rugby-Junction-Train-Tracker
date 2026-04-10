@@ -14,12 +14,16 @@ import AdminRoute from './components/AdminRoute';
 import AdminTelemetryLog from './views/AdminTelemetryLog';
 import { useEffect } from 'react';
 import { getUsers } from './api/users';
+import { useAuth } from './hooks/useAuth';
 
 function App() {
-    // On mount, trigger a protected API call to ensure inactive users are logged out immediately
+    const { session } = useAuth();
+    // Only call protected API if user is authenticated to ensure inactive users are logged out
     useEffect(() => {
-        getUsers();
-    }, []);
+        if (session) {
+            getUsers();
+        }
+    }, [session]);
 
     return (
         <>

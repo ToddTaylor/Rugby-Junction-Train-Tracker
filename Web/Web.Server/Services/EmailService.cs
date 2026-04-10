@@ -9,12 +9,15 @@ public class EmailService : IEmailService
 {
     private readonly ILogger<EmailService> _logger;
     private readonly string _apiToken;
+    private readonly string _fromAddress;
 
     public EmailService(ILogger<EmailService> logger, IConfiguration configuration)
     {
         _logger = logger;
         _apiToken = configuration["Mailtrap:ApiToken"]
             ?? throw new InvalidOperationException("Mailtrap:ApiToken configuration is required but was not found.");
+        _fromAddress = configuration["Mailtrap:FromAddress"]
+            ?? throw new InvalidOperationException("Mailtrap:FromAddress configuration is required but was not found.");
     }
 
     public async Task<(bool Success, List<string> Errors)> SendVerificationCodeAsync(string toEmail, string code)
@@ -28,7 +31,7 @@ public class EmailService : IEmailService
 
             var request = SendEmailRequest
                 .Create()
-                .From("admin@rugbyjunction.us", "Rugby Junction")
+                .From(_fromAddress, "Rugby Junction")
                 .To(toEmail)
                 .Subject("Your Rugby Junction Train Tracker Verification Code")
                 .Text($"Your verification code is: {code}")
@@ -50,14 +53,14 @@ public class EmailService : IEmailService
 
             if (response is null || !response.Success)
             {
-                _logger.LogError("Mailtrap send failed. Response: {@Response}", response);
+                _logger.LogError("Mailtrap send failed from {FromAddress}. Response: {@Response}", _fromAddress, response);
                 errors.Add("Failed to send verification email. Please try again later.");
                 return (false, errors);
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send verification code email to {Email}", toEmail);
+            _logger.LogError(ex, "Failed to send verification code email from {FromAddress} to {Email}", _fromAddress, toEmail);
             errors.Add("Failed to send verification email. Please try again later.");
             return (false, errors);
         }

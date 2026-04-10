@@ -45,8 +45,10 @@ void ShowSettingsSummary(AppSettings? appSettings)
         Console.WriteLine($"  Log Directory Path: {appSettings.LogDirectoryPath}");
         if (appSettings.Subscribers != null && appSettings.Subscribers.Count > 0)
         {
-            Console.WriteLine($"  Beacon ID: {appSettings.Subscribers[0].Beacon.BeaconID}");
-            Console.WriteLine($"  API Key: {appSettings.Subscribers[0].ApiSettings.ApiKey}");
+            foreach (var subscriber in appSettings.Subscribers)
+            {
+                Console.WriteLine($"  Subscriber {subscriber.ID} Beacon ID: {subscriber.Beacon.BeaconID}");
+            }
         }
     }
     Console.ResetColor();
@@ -81,29 +83,14 @@ void PromptAndUpdateSettings(AppSettings? appSettings)
 
         if (appSettings.Subscribers != null && appSettings.Subscribers.Count > 0)
         {
-            Console.Write($"Enter Beacon ID for the Subscriber (Integer): ");
-            var beaconIdInput = Console.ReadLine();
-            if (!string.IsNullOrWhiteSpace(beaconIdInput))
-                appSettings.Subscribers[0].Beacon.BeaconID = beaconIdInput;
-
-            // Validate API Key as GUID
-            string apiKeyInput = string.Empty;
-            while (true)
+            foreach (var subscriber in appSettings.Subscribers)
             {
-                Console.Write($"Enter the API Key [{appSettings.Subscribers[0].ApiSettings.ApiKey}]: ");
-                apiKeyInput = Console.ReadLine() ?? string.Empty;
-                if (string.IsNullOrWhiteSpace(apiKeyInput))
+                Console.Write($"Enter Beacon ID for Subscriber {subscriber.ID} [{subscriber.Beacon.BeaconID}]: ");
+                var beaconIdInput = Console.ReadLine();
+                if (!string.IsNullOrWhiteSpace(beaconIdInput))
                 {
-                    apiKeyInput = appSettings.Subscribers[0].ApiSettings.ApiKey;
+                    subscriber.Beacon.BeaconID = beaconIdInput;
                 }
-                if (!string.IsNullOrWhiteSpace(apiKeyInput) && Guid.TryParse(apiKeyInput, out _))
-                {
-                    appSettings.Subscribers[0].ApiSettings.ApiKey = apiKeyInput;
-                    break;
-                }
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("Invalid API Key. Please enter a valid value.");
-                Console.ResetColor();
             }
         }
     }

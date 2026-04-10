@@ -1,7 +1,7 @@
-using Microsoft.AspNetCore.Http.Connections;
-using Microsoft.AspNetCore.StaticFiles;
 using Mapster;
 using MapsterMapper;
+using Microsoft.AspNetCore.Http.Connections;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using Serilog;
@@ -32,7 +32,8 @@ Log.Logger = new LoggerConfiguration()
 
 try
 {
-    Log.Information("Starting Web Server application");
+    var env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
+    Log.Information("Starting Web Server application - Environment: {Environment}", env);
 
     var builder = WebApplication.CreateBuilder(args);
 
@@ -52,10 +53,12 @@ try
     {
         options.AddPolicy(name: corsPolicyName, policy =>
         {
-            policy.WithOrigins("https://localhost:53848", "https://dev.rugbyjunction.us", "https://rugbyjunction.us") // Frontend origin
-                  .AllowAnyHeader()
-                  .AllowAnyMethod()
-                  .AllowCredentials(); // needed if you're using SignalR or cookies
+            policy.SetIsOriginAllowed(origin =>
+                origin.EndsWith(".rugbyjunction.us", StringComparison.OrdinalIgnoreCase) ||
+                origin == "https://localhost:53848") // Frontend origin
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials(); // Needed for SignalR or cookies
         });
     });
 
@@ -81,7 +84,7 @@ try
 
     // Add DbContext with SQLite connection string
     builder.Services.AddDbContext<TelemetryDbContext>(options =>
-        options.UseSqlite(builder.Configuration.GetConnectionString("TelemetryDatabase")));
+       options.UseSqlite(builder.Configuration.GetConnectionString("TelemetryDatabase")));
 
     // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
     builder.Services.AddEndpointsApiExplorer();

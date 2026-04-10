@@ -14,6 +14,21 @@
 
         public async Task InvokeAsync(HttpContext context)
         {
+            // Allow CORS preflight requests to pass through without API key validation.
+            if (HttpMethods.IsOptions(context.Request.Method))
+            {
+                await _next(context);
+                return;
+            }
+
+            // Auth bootstrap endpoints are public and should not require API key.
+            if (context.Request.Path.StartsWithSegments("/api/v1/auth/send-code", StringComparison.OrdinalIgnoreCase) ||
+                context.Request.Path.StartsWithSegments("/api/v1/auth/verify-code", StringComparison.OrdinalIgnoreCase))
+            {
+                await _next(context);
+                return;
+            }
+
             // Bypass Swagger and notification hub endpoints
             if (context.Request.Path.StartsWithSegments("/api"))
             {

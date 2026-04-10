@@ -63,7 +63,10 @@
 
 		<Exec WorkingDirectory="$(SpaRoot)" Command="npm install" />
 
-		<Exec WorkingDirectory="$(SpaRoot)" Command="npm run build " />
+		<!-- Use environment-specific build script based on EnvironmentName from publish profile -->
+		<Exec WorkingDirectory="$(SpaRoot)" Command="npm run build:beta" Condition="'$(EnvironmentName)' == 'beta'" />
+		<Exec WorkingDirectory="$(SpaRoot)" Command="npm run build:production" Condition="'$(EnvironmentName)' == 'production'" />
+		<Exec WorkingDirectory="$(SpaRoot)" Command="npm run build" Condition="'$(EnvironmentName)' != 'beta' and '$(EnvironmentName)' != 'production'" />
 
 		<ItemGroup>
 			<DistFiles Include="$(SpaRoot)\dist\**" />
