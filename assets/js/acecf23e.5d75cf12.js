@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkrugby_junction_train_tracker_docs=self.webpackChunkrugby_junction_train_tracker_docs||[]).push([["3220"],{1912(r){r.exports=JSON.parse('{"blogBasePath":"/Rugby-Junction-Train-Tracker/blog","blogTitle":"Blog","authorsListPath":"/Rugby-Junction-Train-Tracker/blog/authors"}')}}]);
