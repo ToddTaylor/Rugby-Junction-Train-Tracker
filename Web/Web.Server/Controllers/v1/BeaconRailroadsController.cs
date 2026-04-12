@@ -103,6 +103,8 @@ namespace Web.Server.Controllers.v1
                 }
 
                 var beaconRailroad = _mapper.Map<Entities.BeaconRailroad>(dto);
+                beaconRailroad.BeaconID = beaconId;  // Ensure composite key is set
+                beaconRailroad.SubdivisionID = subdivisionId;
 
                 await _service.UpdateAsync(beaconRailroad);
 

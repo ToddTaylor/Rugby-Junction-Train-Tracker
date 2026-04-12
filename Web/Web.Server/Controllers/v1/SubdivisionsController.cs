@@ -83,6 +83,7 @@ namespace Web.Server.Controllers.v1
                 }
 
                 var subdivision = _mapper.Map<Subdivision>(updateSubdivisionDTO);
+                subdivision.ID = id;  // Ensure ID is set for the database update
 
                 try
                 {
