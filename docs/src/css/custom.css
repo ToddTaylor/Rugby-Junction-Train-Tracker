@@ -5,52 +5,26 @@
  */
 
 /* You can override the default Infima variables here. */
-/* Light Theme: Red primary, black accents, white background, gray surfaces */
 :root {
-  /* Primary colors */
-  --ifm-color-primary: #C62828;           /* Strong red */
-  --ifm-color-primary-dark: #8E0000;      /* Darker red */
-  --ifm-color-primary-light: #FF6666;     /* Lighter red */
-
-  /* Secondary (neutral) colors */
-  --ifm-color-secondary: #424242;         /* Dark gray for accents */
-  --ifm-font-color-base: #212121;         /* Almost black text */
-  --ifm-font-color-secondary: #616161;    /* Mid gray text */
-
-  /* Links and buttons */
-  --ifm-link-color: var(--ifm-color-primary);
-  --ifm-link-color-hover: var(--ifm-color-primary-dark);
-
-  /* Backgrounds */
-  --ifm-background-color: #FFFFFF;        /* White page background */
-  --ifm-background-surface-color: #F5F5F5;/* Very light gray panels */
-
-  /* Code blocks and borders */
-  --ifm-code-background: #EEEEEE;         /* Light gray code background */
-  --ifm-border-radius: 4px;
+  --ifm-color-primary: #c62828;
+  --ifm-color-primary-dark: #b62323;
+  --ifm-color-primary-darker: #ac2121;
+  --ifm-color-primary-darkest: #8e1b1b;
+  --ifm-color-primary-light: #cc3e3e;
+  --ifm-color-primary-lighter: #d14f4f;
+  --ifm-color-primary-lightest: #dd7272;
+  --ifm-code-font-size: 95%;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
 }
 
-/* Dark Theme: Softer red, light gray accents, black backgrounds */
-html[data-theme='dark'] {
-  /* Primary colors */
-  --ifm-color-primary: #FF6666;           /* Lighter red for dark mode */
-  --ifm-color-primary-dark: #C62828;      /* Base red as dark shade */
-  --ifm-color-primary-light: #FF8A80;     /* Soft pastel red */
-
-  /* Secondary (neutral) colors */
-  --ifm-color-secondary: #BDBDBD;         /* Light gray accents */
-  --ifm-font-color-base: #E0E0E0;         /* Pale gray text */
-  --ifm-font-color-secondary: #9E9E9E;    /* Medium gray text */
-
-  /* Links and buttons */
-  --ifm-link-color: var(--ifm-color-primary-light);
-  --ifm-link-color-hover: var(--ifm-color-primary);
-
-  /* Backgrounds */
-  --ifm-background-color: #121212;        /* Deep black background */
-  --ifm-background-surface-color: #1E1E1E;/* Very dark gray panels */
-
-  /* Code blocks and borders */
-  --ifm-code-background: #2C2C2C;         /* Dark gray code background */
-  --ifm-border-radius: 4px;
+/* For readability concerns, you should choose a lighter palette in dark mode. */
+[data-theme='dark'] {
+  --ifm-color-primary: #ef5350;
+  --ifm-color-primary-dark: #eb403d;
+  --ifm-color-primary-darker: #e53935;
+  --ifm-color-primary-darkest: #cf2e2b;
+  --ifm-color-primary-light: #f16663;
+  --ifm-color-primary-lighter: #f37977;
+  --ifm-color-primary-lightest: #f8a2a0;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
 }

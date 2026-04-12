@@ -1,0 +1,11 @@
+{
+  "files.associations": {
+    "*.mdx": "markdown"
+  },
+  "[markdown]": {
+    "editor.wordWrap": "on"
+  },
+  "[mdx]": {
+    "editor.wordWrap": "on"
+  }
+}

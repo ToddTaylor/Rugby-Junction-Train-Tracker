@@ -1,34 +1,19 @@
 import {themes as prismThemes} from 'prism-react-renderer';
 import type {Config} from '@docusaurus/types';
-import type {Options as OpenApiPresetOptions, ThemeConfig as OpenApiThemeConfig} from 'docusaurus-preset-openapi';
+import type * as Preset from '@docusaurus/preset-classic';
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
 const config: Config = {
-  url: 'https://toddtaylor.github.io',
-  baseUrl: '/Rugby-Junction-Train-Tracker/',
+  url: 'https://docs.rugbyjunction.us',
+  baseUrl: '/',
   organizationName: 'ToddTaylor',
   projectName: 'Rugby-Junction-Train-Tracker',
+  deploymentBranch: 'gh-pages',
   trailingSlash: false,
-  title: 'Rugby Junction Train Tracker Support',
-  tagline: 'Dinosaurs are cool',
+  title: 'Rugby Junction Train Tracker',
+  tagline: 'A Modern ATCS Monitor Alternative',
   favicon: 'img/favicon.ico',
-
-  // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
-  future: {
-    v4: true, // Improve compatibility with the upcoming Docusaurus v4
-  },
-
-  // Set the production url of your site here
-  //url: 'https://support.rugbyjunction.us',
-  // Set the /<baseUrl>/ pathname under which your site is served
-  // For GitHub pages deployment, it is often '/<projectName>/'
-  //baseUrl: '/',
-
-  // GitHub pages deployment config.
-  // If you aren't using GitHub pages, you don't need these.
-  //organizationName: 'facebook', // Usually your GitHub org/user name.
-  //projectName: 'docusaurus', // Usually your repo name.
 
   onBrokenLinks: 'throw',
 
@@ -48,18 +33,11 @@ const config: Config = {
 
   presets: [
     [
-      'docusaurus-preset-openapi',
+      'classic',
       {
-        api: {
-          path: 'openapi/openapi.yaml',
-          routeBasePath: 'api',
-        },
         docs: {
           sidebarPath: './sidebars.ts',
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
-          editUrl:
-            'https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/',
+          routeBasePath: '/',
         },
         blog: {
           showReadingTime: true,
@@ -67,10 +45,6 @@ const config: Config = {
             type: ['rss', 'atom'],
             xslt: true,
           },
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
-          editUrl:
-            'https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/',
           // Useful options to enforce blogging best practices
           onInlineTags: 'warn',
           onInlineAuthors: 'warn',
@@ -79,71 +53,30 @@ const config: Config = {
         theme: {
           customCss: './src/css/custom.css',
         },
-      } satisfies OpenApiPresetOptions,
+      } satisfies Preset.Options,
     ],
   ],
 
   themeConfig: {
     // Replace with your project's social card
     image: 'img/docusaurus-social-card.jpg',
+    colorMode: {
+      defaultMode: 'dark',
+      respectPrefersColorScheme: true,
+    },
     navbar: {
-      title: 'Rugby Junction Support',
+      title: 'Rugby Junction Train Tracker',
       logo: {
         alt: 'Rugby Junction Logo',
         src: 'img/rugbyjunction.svg',
       },
-      items: [
-        {
-          type: 'docSidebar',
-          sidebarId: 'tutorialSidebar',
-          position: 'left',
-          label: 'Tutorial',
-        },
-        {
-          to: '/api',
-          label: 'API',
-          position: 'left',
-        },
-      ],
-    },
-    footer: {
-      style: 'dark',
-      links: [
-        {
-          title: 'Docs',
-          items: [
-            {
-              label: 'Tutorial',
-              to: '/docs/intro',
-            },
-          ],
-        },
-        {
-          title: 'Community',
-          items: [
-            {
-              label: 'Steel Highway',
-              href: 'https://steel-highway.com/',
-            },
-          ],
-        },
-        {
-          title: 'More',
-          items: [
-            {
-              label: 'Blog',
-              to: '/blog',
-            },
-          ],
-        },
-      ],
-      copyright: `Copyright © ${new Date().getFullYear()} Rugby Junction, Inc.`,
+      items: [],
     },
     prism: {
       theme: prismThemes.github,
       darkTheme: prismThemes.dracula,
     },
-  } satisfies OpenApiThemeConfig,
+  } satisfies Preset.ThemeConfig,
 };
 
 export default config;
