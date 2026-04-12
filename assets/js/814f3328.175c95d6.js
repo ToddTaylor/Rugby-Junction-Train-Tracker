@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkrugby_junction_train_tracker_docs=self.webpackChunkrugby_junction_train_tracker_docs||[]).push([[472],{5513:t=>{t.exports=JSON.parse('{"title":"Recent posts","items":[]}')}}]);

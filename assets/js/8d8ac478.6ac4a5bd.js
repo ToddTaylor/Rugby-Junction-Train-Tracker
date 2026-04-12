@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkrugby_junction_train_tracker_docs=self.webpackChunkrugby_junction_train_tracker_docs||[]).push([[730],{9619:t=>{t.exports=JSON.parse('{"metadata":{"permalink":"/Rugby-Junction-Train-Tracker/blog","page":1,"postsPerPage":10,"totalPages":1,"totalCount":0,"blogDescription":"Blog","blogTitle":"Blog"}}')}}]);

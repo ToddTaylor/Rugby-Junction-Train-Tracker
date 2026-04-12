@@ -1,1 +1,0 @@
-"use strict";(self.webpackChunkrugby_junction_train_tracker_docs=self.webpackChunkrugby_junction_train_tracker_docs||[]).push([["3747"],{27093(u){u.exports=JSON.parse('{"name":"docusaurus-plugin-content-docs","id":"default"}')}}]);

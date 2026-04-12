@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkrugby_junction_train_tracker_docs=self.webpackChunkrugby_junction_train_tracker_docs||[]).push([[583],{6866:(r,u,t)=>{t.r(u),t.d(u,{default:()=>s});t(6540);var c=t(6347),e=t(6025),n=t(4848);function s(){return(0,n.jsx)(c.rd,{to:(0,e.Ay)("/docs/userguide")})}}}]);
