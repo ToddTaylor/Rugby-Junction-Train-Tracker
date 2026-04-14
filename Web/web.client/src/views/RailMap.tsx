@@ -656,6 +656,10 @@ const RailMap: React.FC = () => {
         }
     };
 
+    const handleOpenUserGuide = () => {
+        window.open('http://docs.rugbyjunction.us/', '_blank', 'noopener,noreferrer');
+    };
+
     // Hamburger menu state
     const [menuOpen, setMenuOpen] = useState(false);
     // Hamburger icon
@@ -689,6 +693,12 @@ const RailMap: React.FC = () => {
             ),
             label: hourFormat === '12' ? '12-hour Format' : '24-hour Format',
             onClick: handleToggleHourFormat,
+            visible: true,
+        },
+        {
+            icon: <img src={`/icons/book.svg${cacheBuster}`} alt="User guide" style={{ width: 26, height: 26 }} />,
+            label: 'User Guide',
+            onClick: handleOpenUserGuide,
             visible: true,
         },
         {
