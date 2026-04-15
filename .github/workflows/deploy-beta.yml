@@ -53,7 +53,17 @@ jobs:
         shell: pwsh
         env:
           VITE_API_URL: https://beta.rugbyjunction.us
+          VITE_API_KEY: ${{ vars['VITE_API_KEY_BETA'] }}
+          VITE_YOUTUBE_API_KEY: ${{ vars['VITE_YOUTUBE_API_KEY_BETA'] }}
         run: |
+          if ([string]::IsNullOrWhiteSpace($env:VITE_API_KEY)) {
+            throw "Missing VITE_API_KEY_BETA in GitHub Environment variables (beta)."
+          }
+
+          if ([string]::IsNullOrWhiteSpace($env:VITE_YOUTUBE_API_KEY)) {
+            throw "Missing VITE_YOUTUBE_API_KEY_BETA in GitHub Environment variables (beta)."
+          }
+
           dotnet publish "${{ env.WEB_PROJECT }}" `
             -c Release `
             "/p:PublishProfile=${{ env.BETA_PUBLISH_PROFILE }}" `
