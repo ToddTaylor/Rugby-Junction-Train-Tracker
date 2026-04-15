@@ -51,6 +51,8 @@ jobs:
 
       - name: Publish and deploy to shared IIS (MSDeploy)
         shell: pwsh
+        env:
+          VITE_API_URL: https://beta.rugbyjunction.us
         run: |
           dotnet publish "${{ env.WEB_PROJECT }}" `
             -c Release `
