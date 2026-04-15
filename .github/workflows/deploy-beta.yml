@@ -1,0 +1,55 @@
+name: Deploy BETA
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - beta
+    paths:
+      - "Web/**"
+      - ".github/workflows/deploy-beta.yml"
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_VERSION: 8.0.x
+  NODE_VERSION: 20.x
+  WEB_PROJECT: Web/Web.Server/Web.Server.csproj
+  BETA_PUBLISH_PROFILE: Web/Web.Server/Properties/PublishProfiles/BETA.pubxml
+
+jobs:
+  build-and-deploy:
+    runs-on: windows-latest
+    environment: beta
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Restore
+        run: dotnet restore ${{ env.WEB_PROJECT }}
+
+      - name: Build
+        run: dotnet build ${{ env.WEB_PROJECT }} -c Release --no-restore
+
+      - name: Publish and deploy to shared IIS (MSDeploy)
+        run: >
+          dotnet publish ${{ env.WEB_PROJECT }}
+          -c Release
+          /p:PublishProfile=${{ env.BETA_PUBLISH_PROFILE }}
+          /p:EnvironmentName=Beta
+          /p:UserName=${{ secrets.WEBDEPLOY_USERNAME_BETA }}
+          /p:Password=${{ secrets.WEBDEPLOY_PASSWORD_BETA }}
+          /p:AllowUntrustedCertificate=True
+          --no-build
