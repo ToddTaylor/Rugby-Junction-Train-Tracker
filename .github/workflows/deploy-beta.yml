@@ -50,12 +50,13 @@ jobs:
         run: dotnet build ${{ env.WEB_PROJECT }} -c Release --no-restore
 
       - name: Publish and deploy to shared IIS (MSDeploy)
-        run: >
-          dotnet publish ${{ env.WEB_PROJECT }}
-          -c Release
-          /p:PublishProfile=${{ env.BETA_PUBLISH_PROFILE }}
-          /p:EnvironmentName=Beta
-          /p:UserName=${{ secrets.WEBDEPLOY_USERNAME_BETA }}
-          /p:Password=${{ secrets.WEBDEPLOY_PASSWORD_BETA }}
-          /p:AllowUntrustedCertificate=True
-          --no-build
+        shell: pwsh
+        run: |
+          dotnet publish "${{ env.WEB_PROJECT }}" `
+            -c Release `
+            "/p:PublishProfile=${{ env.BETA_PUBLISH_PROFILE }}" `
+            /p:EnvironmentName=Beta `
+            "/p:UserName=${{ secrets.WEBDEPLOY_USERNAME_BETA }}" `
+            "/p:Password=${{ secrets.WEBDEPLOY_PASSWORD_BETA }}" `
+            /p:AllowUntrustedCertificate=True `
+            --no-build
