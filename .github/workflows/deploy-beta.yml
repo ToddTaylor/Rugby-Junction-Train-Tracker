@@ -38,12 +38,10 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Add Mailtrap GitHub Packages source
-        run: >
-          dotnet nuget add source https://nuget.pkg.github.com/mailtrap/index.json
-          --name mailtrap-gpr
-          --username ${{ secrets.MAILTRAP_GH_USERNAME }}
-          --password ${{ secrets.MAILTRAP_GH_PAT }}
-          --store-password-in-clear-text
+        shell: pwsh
+        run: |
+          dotnet nuget remove source mailtrap-gpr 2>$null
+          dotnet nuget add source "https://nuget.pkg.github.com/mailtrap/index.json" --name "mailtrap-gpr" --username "${{ secrets.MAILTRAP_GH_USERNAME }}" --password "${{ secrets.MAILTRAP_GH_PAT }}" --store-password-in-clear-text
 
       - name: Restore
         run: dotnet restore ${{ env.WEB_PROJECT }}
