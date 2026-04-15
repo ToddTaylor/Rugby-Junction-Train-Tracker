@@ -4,7 +4,8 @@
 		<TargetFramework>net8.0</TargetFramework>
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
-		<SpaRoot>..\web.client</SpaRoot>
+		<SpaRoot>..\web.client\</SpaRoot>
+		<SpaRootFullPath>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\$(SpaRoot)'))</SpaRootFullPath>
 		<SpaProxyLaunchCommand>npm run dev</SpaProxyLaunchCommand>
 		<SpaProxyServerUrl>https://localhost:53848</SpaProxyServerUrl>
 		<GenerateDocumentationFile>True</GenerateDocumentationFile>
@@ -61,15 +62,15 @@
 
 	<Target Name="PublishReact" AfterTargets="ComputeFilesToPublish">
 
-		<Exec WorkingDirectory="$(SpaRoot)" Command="npm install" />
+		<Exec WorkingDirectory="$(SpaRootFullPath)" Command="npm install" />
 
 		<!-- Use environment-specific build script based on EnvironmentName from publish profile -->
-		<Exec WorkingDirectory="$(SpaRoot)" Command="npm run build:beta" Condition="'$(EnvironmentName)' == 'beta'" />
-		<Exec WorkingDirectory="$(SpaRoot)" Command="npm run build:production" Condition="'$(EnvironmentName)' == 'production'" />
-		<Exec WorkingDirectory="$(SpaRoot)" Command="npm run build" Condition="'$(EnvironmentName)' != 'beta' and '$(EnvironmentName)' != 'production'" />
+		<Exec WorkingDirectory="$(SpaRootFullPath)" Command="npm run build:beta" Condition="$([System.String]::Copy('$(EnvironmentName)').ToLowerInvariant()) == 'beta'" />
+		<Exec WorkingDirectory="$(SpaRootFullPath)" Command="npm run build:production" Condition="$([System.String]::Copy('$(EnvironmentName)').ToLowerInvariant()) == 'production'" />
+		<Exec WorkingDirectory="$(SpaRootFullPath)" Command="npm run build" Condition="$([System.String]::Copy('$(EnvironmentName)').ToLowerInvariant()) != 'beta' and $([System.String]::Copy('$(EnvironmentName)').ToLowerInvariant()) != 'production'" />
 
 		<ItemGroup>
-			<DistFiles Include="$(SpaRoot)\dist\**" />
+			<DistFiles Include="$(SpaRootFullPath)dist\**" />
 			<ResolvedFileToPublish Include="@(DistFiles->'%(FullPath)')" Exclude="@(ResolvedFileToPublish)">
 				<RelativePath>wwwroot\%(RecursiveDir)%(FileName)%(Extension)</RelativePath>
 				<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
