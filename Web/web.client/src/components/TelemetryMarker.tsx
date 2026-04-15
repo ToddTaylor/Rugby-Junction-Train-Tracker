@@ -17,6 +17,10 @@ import { UnknownIcon } from './UnknownIcon';
 import TrackSymbolModal from './TrackSymbolModal';
 import { MapPin } from '../types/MapPin';
 
+const ICON_CACHE_BUSTER = import.meta.env.VITE_APP_VERSION
+    ? `?v=${import.meta.env.VITE_APP_VERSION}`
+    : '';
+
 function getPinBrightness(lastUpdate: string, maxPinAgeMinutes?: number): number {
     const now = new Date();
     const created = parseISO(lastUpdate);
@@ -364,9 +368,7 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
 
 function getArrowIconSrc(direction?: string | null, moving?: boolean, mapTheme: 'dark' | 'light' = 'dark'): string {
     const suffix = mapTheme === 'dark' ? '-dark' : '-light';
-    const cacheBuster = import.meta.env.VITE_APP_VERSION
-        ? `?v=${import.meta.env.VITE_APP_VERSION}`
-        : `?t=${Date.now()}`; // fallback to timestamp if version not set
+    const cacheBuster = ICON_CACHE_BUSTER;
 
     if (!direction) {
         if (moving === true) return `/icons/unknown-green${suffix}.svg${cacheBuster}`;

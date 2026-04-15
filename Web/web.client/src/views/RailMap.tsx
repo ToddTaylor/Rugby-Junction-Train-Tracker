@@ -24,6 +24,10 @@ import { useStaleRefresh } from '../hooks/useStaleRefresh';
 import { useAuth } from '../hooks/useAuth';
 import { invalidateBeaconHistoryCache } from '../services/mapPinsHistory';
 
+const ICON_CACHE_BUSTER = import.meta.env.VITE_APP_VERSION
+    ? `?v=${import.meta.env.VITE_APP_VERSION}`
+    : '';
+
 const DARK_TILE_URL = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
 const LIGHT_TILE_URL = "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
 const TILE_ATTRIBUTION = '&copy; <a href="https://carto.com/">CARTO</a>';
@@ -630,9 +634,7 @@ const RailMap: React.FC = () => {
         });
     };
 
-    const cacheBuster = import.meta.env.VITE_APP_VERSION
-        ? `?v=${import.meta.env.VITE_APP_VERSION}`
-        : `?t=${Date.now()}`;
+    const cacheBuster = ICON_CACHE_BUSTER;
 
     const handleLogout = async () => {
         const confirmed = window.confirm("Are you sure you want to log out?");
