@@ -41,7 +41,17 @@ jobs:
         shell: pwsh
         run: |
           dotnet nuget remove source mailtrap-gpr 2>$null
-          dotnet nuget add source "https://nuget.pkg.github.com/mailtrap/index.json" --name "mailtrap-gpr" --username "${{ secrets.MAILTRAP_GH_USERNAME }}" --password "${{ secrets.MAILTRAP_GH_PAT }}" --store-password-in-clear-text
+          dotnet nuget add source "https://nuget.pkg.github.com/mailtrap/index.json" --name "mailtrap-gpr" --username "${{ vars.MAILTRAP_GH_USERNAME }}" --password "${{ secrets.MAILTRAP_GH_PAT }}" --store-password-in-clear-text
+
+      - name: Patch appsettings.Beta.json
+        shell: pwsh
+        run: |
+          $path = "Web/Web.Server/appsettings.Beta.json"
+          $json = Get-Content $path | ConvertFrom-Json
+          $json.ApplicationSettings.ApiKey = "${{ vars.API_KEY }}"
+          $json.Mailtrap.ApiToken = "${{ secrets.MAILTRAP_API_TOKEN }}"
+          $json.Mailtrap.FromAddress = "${{ vars.MAILTRAP_FROM_ADDRESS }}"
+          $json | ConvertTo-Json -Depth 10 | Set-Content $path
 
       - name: Restore
         run: dotnet restore ${{ env.WEB_PROJECT }}
@@ -53,22 +63,22 @@ jobs:
         shell: pwsh
         env:
           VITE_API_URL: https://beta.rugbyjunction.us
-          VITE_API_KEY: ${{ vars['VITE_API_KEY_BETA'] }}
-          VITE_YOUTUBE_API_KEY: ${{ vars['VITE_YOUTUBE_API_KEY_BETA'] }}
+          VITE_API_KEY: ${{ vars['API_KEY'] }}
+          VITE_YOUTUBE_API_KEY: ${{ vars['YOUTUBE_API_KEY'] }}
         run: |
           if ([string]::IsNullOrWhiteSpace($env:VITE_API_KEY)) {
-            throw "Missing VITE_API_KEY_BETA in GitHub Environment variables (beta)."
+            throw "Missing API_KEY in GitHub beta environment."
           }
 
           if ([string]::IsNullOrWhiteSpace($env:VITE_YOUTUBE_API_KEY)) {
-            throw "Missing VITE_YOUTUBE_API_KEY_BETA in GitHub Environment variables (beta)."
+            throw "Missing YOUTUBE_API_KEY in GitHub Environment variables (beta)."
           }
 
           dotnet publish "${{ env.WEB_PROJECT }}" `
             -c Release `
             "/p:PublishProfile=${{ env.BETA_PUBLISH_PROFILE }}" `
             /p:EnvironmentName=Beta `
-            "/p:UserName=${{ secrets.WEBDEPLOY_USERNAME_BETA }}" `
-            "/p:Password=${{ secrets.WEBDEPLOY_PASSWORD_BETA }}" `
+            "/p:UserName=${{ vars.WEBDEPLOY_USERNAME }}" `
+            "/p:Password=${{ secrets.WEBDEPLOY_PASSWORD }}" `
             /p:AllowUntrustedCertificate=True `
             --no-build

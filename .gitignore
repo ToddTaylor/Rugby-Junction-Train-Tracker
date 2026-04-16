@@ -366,7 +366,6 @@ FodyWeavers.xsd
 *.geojson
 /Web/web.client/public/data
 /Web/Web.Server/appsettings.Development.json
-/Web/Web.Server/appsettings.Production.json
 /Web/Web.Server/telemetry.db
 /Web/Web.Server/telemetry.db-shm
 /Web/Web.Server/telemetry.db-wal
@@ -376,6 +375,5 @@ FodyWeavers.xsd
 /RailroadTelemetryLogService.ConsoleApp/appsettings.Development.json
 /RailroadTelemetryLogService.ConsoleApp/appsettings.Local.json
 /Web/Web.Server/telemetry - Copy.db
-/Web/Web.Server/appsettings.Beta.json
 /Web/web.client/.env.beta
 /Web/Web.Server/Properties/PublishProfiles/PRODUCTION.pubxml
