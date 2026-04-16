@@ -2,6 +2,12 @@ name: Deploy PRODUCTION
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - master
+    paths:
+      - "Web/**"
+      - ".github/workflows/deploy-production.yml"
 
 permissions:
   contents: read
@@ -20,6 +26,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: master
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
