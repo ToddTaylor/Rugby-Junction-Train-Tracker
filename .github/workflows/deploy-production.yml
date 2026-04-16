@@ -1,0 +1,68 @@
+name: Deploy PRODUCTION
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_VERSION: 8.0.x
+  NODE_VERSION: 20.x
+  WEB_PROJECT: Web/Web.Server/Web.Server.csproj
+  PRODUCTION_PUBLISH_PROFILE: Web/Web.Server/Properties/PublishProfiles/PRODUCTION.pubxml
+
+jobs:
+  build-and-deploy:
+    runs-on: windows-latest
+    environment: ${{ 'production' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Add Mailtrap GitHub Packages source
+        shell: pwsh
+        run: |
+          dotnet nuget remove source mailtrap-gpr 2>$null
+          dotnet nuget add source "https://nuget.pkg.github.com/mailtrap/index.json" --name "mailtrap-gpr" --username "${{ secrets.MAILTRAP_GH_USERNAME }}" --password "${{ secrets.MAILTRAP_GH_PAT }}" --store-password-in-clear-text
+
+      - name: Restore
+        run: dotnet restore ${{ env.WEB_PROJECT }}
+
+      - name: Build
+        run: dotnet build ${{ env.WEB_PROJECT }} -c Release --no-restore
+
+      - name: Publish and deploy to shared IIS (MSDeploy)
+        shell: pwsh
+        env:
+          VITE_API_URL: https://rugbyjunction.us
+          VITE_API_KEY: ${{ vars['VITE_API_KEY_PRODUCTION'] }}
+          VITE_YOUTUBE_API_KEY: ${{ vars['VITE_YOUTUBE_API_KEY_PRODUCTION'] }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:VITE_API_KEY)) {
+            throw "Missing VITE_API_KEY_PRODUCTION in GitHub Environment variables (production)."
+          }
+
+          if ([string]::IsNullOrWhiteSpace($env:VITE_YOUTUBE_API_KEY)) {
+            throw "Missing VITE_YOUTUBE_API_KEY_PRODUCTION in GitHub Environment variables (production)."
+          }
+
+          dotnet publish "${{ env.WEB_PROJECT }}" `
+            -c Release `
+            "/p:PublishProfile=${{ env.PRODUCTION_PUBLISH_PROFILE }}" `
+            /p:EnvironmentName=Production `
+            "/p:UserName=${{ secrets.WEBDEPLOY_USERNAME_PRODUCTION }}" `
+            "/p:Password=${{ secrets.WEBDEPLOY_PASSWORD_PRODUCTION }}" `
+            /p:AllowUntrustedCertificate=True `
+            --no-build
