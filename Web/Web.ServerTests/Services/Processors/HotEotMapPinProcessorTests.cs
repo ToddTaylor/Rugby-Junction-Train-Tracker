@@ -63,6 +63,26 @@ namespace Web.ServerTests.Services.Processors
         }
 
         [TestMethod]
+        public async Task ProcessAsync_RefreshesLastUpdate_WhenSourceAlreadyPresent()
+        {
+            var staleTimestamp = _utcNow.AddMinutes(-5);
+            var existingMapPin = CreateMapPin([
+                CreateAddress(12345, null, SourceEnum.HOT, staleTimestamp)
+            ]);
+            var telemetry = CreateTelemetry(SourceEnum.HOT, addressId: 12345);
+
+            _mapPinRepositoryMock
+                .Setup(r => r.GetByAddressIdAsync(12345))
+                .ReturnsAsync(existingMapPin);
+
+            await _processor.ProcessAsync(telemetry);
+
+            var existingAddress = existingMapPin.Addresses.Single();
+            Assert.AreEqual(staleTimestamp, existingAddress.CreatedAt);
+            Assert.AreEqual(_utcNow, existingAddress.LastUpdate);
+        }
+
+        [TestMethod]
         public async Task ProcessAsync_AddsAddress_WhenExistingMapPinHasDifferentSource()
         {
             var existingMapPin = CreateMapPin([
