@@ -86,22 +86,25 @@ namespace Web.Server.Services.Processors
 
         private void AddDpuAddressIfMissing(MapPin existingMapPinToUpdate, Telemetry telemetry)
         {
-            var dpuAddressAlreadyPresent = existingMapPinToUpdate.Addresses.Any(a =>
+            var existingAddress = existingMapPinToUpdate.Addresses.FirstOrDefault(a =>
                 a.AddressID == telemetry.AddressID &&
                 a.DpuTrainID == telemetry.TrainID &&
                 a.Source == telemetry.Source);
 
-            if (!dpuAddressAlreadyPresent)
+            if (existingAddress != null)
             {
-                existingMapPinToUpdate.Addresses.Add(new Address
-                {
-                    AddressID = telemetry.AddressID,
-                    DpuTrainID = telemetry.TrainID,
-                    Source = telemetry.Source,
-                    CreatedAt = telemetry.LastUpdate,
-                    LastUpdate = telemetry.LastUpdate
-                });
+                existingAddress.LastUpdate = telemetry.LastUpdate;
+                return;
             }
+
+            existingMapPinToUpdate.Addresses.Add(new Address
+            {
+                AddressID = telemetry.AddressID,
+                DpuTrainID = telemetry.TrainID,
+                Source = telemetry.Source,
+                CreatedAt = telemetry.LastUpdate,
+                LastUpdate = telemetry.LastUpdate
+            });
         }
 
         private async Task<MapPin?> GetDpuMapPinByTrainIdAsync(int trainID)

@@ -66,6 +66,25 @@ namespace Web.ServerTests.Services.Processors
         }
 
         [TestMethod]
+        public async Task ProcessAsync_RefreshesLastUpdate_WhenExactAddressAndTrainMatchExists()
+        {
+            var staleTimestamp = _utcNow.AddMinutes(-5);
+            var existingMapPin = CreateMapPin(beaconId: 10, subdivisionId: 101, railroadId: 1, milepost: 10,
+                addresses: [CreateAddress(12345, 777, SourceEnum.DPU, staleTimestamp)]);
+            var telemetry = CreateTelemetry(source: SourceEnum.DPU, trainId: 777, addressId: 12345, beaconId: 10, railroadId: 1, milepost: 10);
+
+            _mapPinRepositoryMock
+                .Setup(r => r.GetByAddressAndTrainIdAsync(12345, 777, DpuMapPinProcessor.TIME_THRESHOLD_DPU_EXACT_MINUTES))
+                .ReturnsAsync(existingMapPin);
+
+            await _processor.ProcessAsync(telemetry);
+
+            var existingAddress = existingMapPin.Addresses.Single();
+            Assert.AreEqual(staleTimestamp, existingAddress.CreatedAt);
+            Assert.AreEqual(_utcNow, existingAddress.LastUpdate);
+        }
+
+        [TestMethod]
         public async Task ProcessAsync_ReturnsNewMapPinSignal_WhenTrainOnlyMatchIsStaleAtSameBeacon()
         {
             var existingMapPin = CreateMapPin(beaconId: 10, subdivisionId: 101, railroadId: 1, milepost: 10,

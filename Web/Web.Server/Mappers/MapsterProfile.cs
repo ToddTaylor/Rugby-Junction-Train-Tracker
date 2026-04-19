@@ -47,10 +47,12 @@ namespace Web.Server.Mappers
                 .Map(dest => dest.Subdivision, src => src.BeaconRailroad.Subdivision.Name)
                 .Map(dest => dest.SubdivisionID, src => src.BeaconRailroad.Subdivision.ID)
                 .Map(dest => dest.Addresses, src => src.Addresses != null
+                    && src.Addresses.Count != 0
                     ? src.Addresses.Select(a => new AddressDTO
                     {
                         Source = a.Source,
-                        AddressID = a.AddressID
+                        AddressID = a.AddressID,
+                        IsActive = a.LastUpdate == src.Addresses.Max(x => x.LastUpdate)
                     }).ToList()
                     : new List<AddressDTO>());
 

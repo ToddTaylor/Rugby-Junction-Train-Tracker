@@ -59,22 +59,25 @@ namespace Web.Server.Services.Processors
 
         private void AddHotOrEotAddressIfMissing(MapPin existingMapPinToUpdate, Telemetry telemetry)
         {
-            var sourceAlreadyPresent = existingMapPinToUpdate.Addresses.Any(a =>
+            var matchingAddress = existingMapPinToUpdate.Addresses.FirstOrDefault(a =>
                 a.AddressID == telemetry.AddressID &&
                 a.DpuTrainID == null &&
                 a.Source == telemetry.Source);
 
-            if (!sourceAlreadyPresent)
+            if (matchingAddress != null)
             {
-                existingMapPinToUpdate.Addresses.Add(new Address
-                {
-                    AddressID = telemetry.AddressID,
-                    DpuTrainID = null,  // HOT/EOT sources have no train ID tracking
-                    Source = telemetry.Source,
-                    CreatedAt = telemetry.LastUpdate,
-                    LastUpdate = telemetry.LastUpdate
-                });
+                matchingAddress.LastUpdate = telemetry.LastUpdate;
+                return;
             }
+
+            existingMapPinToUpdate.Addresses.Add(new Address
+            {
+                AddressID = telemetry.AddressID,
+                DpuTrainID = null,  // HOT/EOT sources have no train ID tracking
+                Source = telemetry.Source,
+                CreatedAt = telemetry.LastUpdate,
+                LastUpdate = telemetry.LastUpdate
+            });
         }
     }
 }

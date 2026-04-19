@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using Serilog;
+using System.Diagnostics;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -262,6 +263,17 @@ try
     app.MapControllers();
     app.MapHub<NotificationHub>("/hubs/notificationhub");
     app.MapFallbackToFile("/index.html");
+
+    if (app.Environment.IsDevelopment())
+    {
+        var lifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
+        lifetime.ApplicationStarted.Register(() =>
+        {
+            var url = app.Urls.FirstOrDefault(u => u.StartsWith("https")) ?? app.Urls.FirstOrDefault();
+            if (url != null)
+                Process.Start(new ProcessStartInfo($"{url}/swagger") { UseShellExecute = true });
+        });
+    }
 
     app.Run();
 
