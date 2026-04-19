@@ -300,8 +300,10 @@ const RailMap: React.FC = () => {
         return () => clearInterval(interval);
     }, []);
 
-    // Build a filtered list of pins that are not older than X minutes (.env variable),
-    // but change pins where any address source == "EOT" to half the time (X/2 minutes)
+    // Build a filtered list of pins that are not older than X minutes (.env variable).
+    // Apply half-life only when:
+    // - active address source is EOT, or
+    // - active address source is DPU and all pin addresses are DPU.
     // For filtering (milliseconds)
     const MAX_PIN_AGE_MINUTES = Number(import.meta.env.VITE_MAX_PIN_AGE_MINUTES);
     const MAX_PIN_AGE_MS = MAX_PIN_AGE_MINUTES * 60 * 1000;
@@ -311,8 +313,12 @@ const RailMap: React.FC = () => {
         Object.values(groupedPins).forEach(group => {
             group.forEach(pin => {
                 const lastUpdate = new Date(pin.lastUpdate).getTime();
-                const hasEOTOrDPU = Array.isArray(pin.addresses) && pin.addresses.some(addr => addr.source === 'EOT' || addr.source === 'DPU');
-                const maxAge = hasEOTOrDPU ? MAX_PIN_AGE_MS / 2 : MAX_PIN_AGE_MS;
+                const addresses = Array.isArray(pin.addresses) ? pin.addresses : [];
+                const activeAddress = addresses.find(addr => addr.isActive) ?? addresses[0];
+                const activeSource = activeAddress?.source?.toUpperCase();
+                const allAddressesAreDpu = addresses.length > 0 && addresses.every(addr => addr.source?.toUpperCase() === 'DPU');
+                const shouldUseHalfLife = activeSource === 'EOT' || (activeSource === 'DPU' && allAddressesAreDpu);
+                const maxAge = shouldUseHalfLife ? MAX_PIN_AGE_MS / 2 : MAX_PIN_AGE_MS;
                 if (now - lastUpdate <= maxAge) list.push(pin);
             });
         });
