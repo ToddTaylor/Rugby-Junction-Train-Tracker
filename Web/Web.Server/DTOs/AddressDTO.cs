@@ -5,6 +5,7 @@ namespace Web.Server.DTOs
     {
         public string Source { get; set; }
         public int AddressID { get; set; }
+        public bool IsActive { get; set; }
 
         public override bool Equals(object? obj)
         {

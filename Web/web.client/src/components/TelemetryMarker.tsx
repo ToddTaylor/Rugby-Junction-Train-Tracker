@@ -171,8 +171,13 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
 
         let addressLines = '';
         if (Array.isArray(pin.addresses)) {
+            const activeAddressColor = mapTheme === 'dark' ? '#ffffff' : '#000000';
+            const inactiveAddressColor = '#9ca3af';
             addressLines = pin.addresses
-                .map((a: { source: string; addressID: number }) => `${a.addressID} ${a.source}<br/>`)
+                .map((a: { source: string; addressID: number; isActive?: boolean }) => {
+                    const color = a.isActive ? activeAddressColor : inactiveAddressColor;
+                    return `<span style='color:${color};'>${a.addressID} ${a.source}</span><br/>`;
+                })
                 .join('');
         }
 
