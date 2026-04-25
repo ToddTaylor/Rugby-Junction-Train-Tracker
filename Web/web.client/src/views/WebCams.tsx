@@ -5,6 +5,7 @@ const videoNames = [
     'The Press Box LIVE Railcam - Fond du Lac, WI',
     'Slinger Depot Museum Live Railcam',
     'Bulldog Builders LIVE Railcam - Waukesha, WI',
+    'Burlington, WI Dougs Auto Service Live Railcam',
     'Wauwatosa Historical Society Live Railcam',
     'Thirsty Bird Saloon LIVE Railcam - Oconomowoc, WI',
     'Julies Java House Live Railcam',
