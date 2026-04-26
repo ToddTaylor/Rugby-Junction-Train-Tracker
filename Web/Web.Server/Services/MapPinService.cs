@@ -290,6 +290,11 @@ namespace Web.Server.Services
             }
         }
 
+        private static bool IsHotOrEotSource(string? source)
+        {
+            return source == SourceEnum.HOT || source == SourceEnum.EOT;
+        }
+
         /// <summary>
         /// At single-track beacons, only one map pin should exist. If the just-upserted map pin is at a
         /// single-track beacon and other map pins exist there, their addresses are merged into the current
@@ -317,6 +322,21 @@ namespace Web.Server.Services
 
             foreach (var duplicate in duplicates)
             {
+                 // HOT/EOT: keep distinct HOT/EOT address IDs as separate pins at single-track beacons.
+                // If the duplicate only contains the same HOT/EOT address ID (or only DPU addresses),
+                // it can still be merged.
+                if (IsHotOrEotSource(telemetry.Source))
+                {
+                    var duplicateHasDifferentHotOrEotAddress = duplicate.Addresses.Any(a =>
+                        IsHotOrEotSource(a.Source) &&
+                        a.AddressID != telemetry.AddressID);
+
+                    if (duplicateHasDifferentHotOrEotAddress)
+                    {
+                        continue;
+                    }
+                }
+
                 // DPU: only merge duplicates that are compatible with this DPU train.
                 // If a duplicate already has a DPU with a different train ID, keep it separate.
                 if (telemetry.Source == SourceEnum.DPU)
