@@ -63,7 +63,7 @@ const RailMap: React.FC = () => {
     const isAdmin = session?.roles?.includes('Admin') || session?.roles?.includes('Custodian');
 
     // Use custom hooks for data
-    const { trackData, trackDataLoaded, trackDataLoading } = useRailways();
+    const { trackData, trackDataLoading } = useRailways();
     const { beacons, beaconsLoaded, setBeacons } = useBeacons();
     const { mapPins, setMapPins } = useTelemetryPins();
     const { milepostPoints } = useMileposts();
@@ -778,7 +778,7 @@ const RailMap: React.FC = () => {
                 )}
 
                 {/* Beacon markers */}
-                {trackDataLoaded && <BeaconMarkers 
+                {beaconsLoaded && <BeaconMarkers 
                     pins={beacons} 
                     zoom={mapZoom} 
                     mapTheme={mapTheme as 'dark' | 'light'} 
@@ -797,7 +797,7 @@ const RailMap: React.FC = () => {
                 />}
 
                 {/* Telemetry markers */}
-                {trackDataLoaded && beaconsLoaded && <TelemetryMarkers
+                {beaconsLoaded && <TelemetryMarkers
                     pins={telemetryPins}
                     zoom={mapZoom}
                     maxPinAgeMinutes={MAX_PIN_AGE_MINUTES}
