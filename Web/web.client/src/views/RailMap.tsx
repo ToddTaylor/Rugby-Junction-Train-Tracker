@@ -13,12 +13,14 @@ import { Beacon } from '../types/Beacon';
 import { MapPin } from '../types/MapPin';
 import BeaconMarkers from '../components/BeaconMarkers';
 import TelemetryMarkers from '../components/TelemetryMarkers';
+import MilepostLayer from '../components/MilepostLayer';
 import { BeaconHistoryModal } from '../components/BeaconHistoryModal';
 import { getTrackedMapPins, updateTrackedPinLocation, refreshTrackedPinsFromApi, applyTrackedPinAddedOrUpdatedFromServer, applyTrackedPinRemovedFromServer } from '../services/trackedPins';
 import { metersToLongitudeDegrees, pixelsToMeters } from '../utils/geo';
 import { updateMapPins, updateBeacon } from '../utils/updateHelpers';
 import { useRailways } from '../hooks/useRailways';
 import { useBeacons } from '../hooks/useBeacons';
+import { useMileposts } from '../hooks/useMileposts';
 import { useTelemetryPins } from '../hooks/useTelemetryPins';
 import { useStaleRefresh } from '../hooks/useStaleRefresh';
 import { useAuth } from '../hooks/useAuth';
@@ -33,6 +35,7 @@ const LIGHT_TILE_URL = "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{
 const TILE_ATTRIBUTION = '&copy; <a href="https://carto.com/">CARTO</a>';
 
 const fallbackCenter: LatLngTuple = [44.524570, -89.567290]; // Default if location fails
+const MILEPOST_LABEL_MIN_ZOOM = 12;
 
 const RailMap: React.FC = () => {
         // On mount, trigger a protected API call to ensure inactive users are blocked immediately
@@ -44,6 +47,8 @@ const RailMap: React.FC = () => {
     const savedMapState = JSON.parse(localStorage.getItem('mapState') || 'null');
     const [mapZoom, setMapZoom] = useState<number>(savedMapState?.zoom || 7);
     const [mapCenter, setMapCenter] = useState<LatLngTuple>(savedMapState?.center || fallbackCenter);
+    const [mapTheme, setMapTheme] = useState(() => localStorage.getItem('mapTheme') || 'dark');
+    const [hourFormat, setHourFormat] = useState(() => localStorage.getItem('hourFormat') || '24');
 
     // Modal state for beacon history
     const [historyModalOpen, setHistoryModalOpen] = useState(false);
@@ -61,6 +66,7 @@ const RailMap: React.FC = () => {
     const { trackData, trackDataLoaded, trackDataLoading } = useRailways();
     const { beacons, beaconsLoaded, setBeacons } = useBeacons();
     const { mapPins, setMapPins } = useTelemetryPins();
+    const { milepostPoints } = useMileposts();
 
     // Track the current tracked pins in state to trigger re-renders when they change
     const [trackedPinsState, setTrackedPinsState] = useState(() => getTrackedMapPins());
@@ -612,9 +618,6 @@ const RailMap: React.FC = () => {
         };
     }, []);
 
-    const [mapTheme, setMapTheme] = useState(() => localStorage.getItem('mapTheme') || 'dark');
-    const [hourFormat, setHourFormat] = useState(() => localStorage.getItem('hourFormat') || '24');
-
     // Set or remove the 'dark' class on <body> for global dark mode styling
     useEffect(() => {
         if (mapTheme === 'dark') {
@@ -743,6 +746,15 @@ const RailMap: React.FC = () => {
                 <TileLayer
                     url={mapTheme === 'dark' ? DARK_TILE_URL : LIGHT_TILE_URL}
                     attribution={TILE_ATTRIBUTION}
+                />
+
+                <MilepostLayer
+                    mapRef={mapRef}
+                    points={milepostPoints}
+                    mapZoom={mapZoom}
+                    mapCenter={mapCenter}
+                    mapTheme={mapTheme as 'dark' | 'light'}
+                    minZoom={MILEPOST_LABEL_MIN_ZOOM}
                 />
 
                 {/* Railroad tracks added imperatively via Leaflet GeoJSON layer */}
