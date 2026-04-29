@@ -49,6 +49,10 @@ const RailMap: React.FC = () => {
     const [mapCenter, setMapCenter] = useState<LatLngTuple>(savedMapState?.center || fallbackCenter);
     const [mapTheme, setMapTheme] = useState(() => localStorage.getItem('mapTheme') || 'dark');
     const [hourFormat, setHourFormat] = useState(() => localStorage.getItem('hourFormat') || '24');
+    const [milepostLayerVisible, setMilepostLayerVisible] = useState(() => {
+        const saved = localStorage.getItem('milepostLayerVisible');
+        return saved !== 'false';
+    });
 
     // Modal state for beacon history
     const [historyModalOpen, setHistoryModalOpen] = useState(false);
@@ -643,7 +647,18 @@ const RailMap: React.FC = () => {
         });
     };
 
+    const handleToggleMilepostLayer = () => {
+        setMilepostLayerVisible(prev => {
+            const next = !prev;
+            localStorage.setItem('milepostLayerVisible', String(next));
+            return next;
+        });
+    };
+
     const cacheBuster = ICON_CACHE_BUSTER;
+    const milepostIconSrc = milepostLayerVisible
+        ? (mapTheme === 'dark' ? `/icons/milepost-on-dark.svg${cacheBuster}` : `/icons/milepost-on-light.svg${cacheBuster}`)
+        : (mapTheme === 'dark' ? `/icons/milepost-off-dark.svg${cacheBuster}` : `/icons/milepost-off-light.svg${cacheBuster}`);
 
     const handleLogout = async () => {
         const confirmed = window.confirm("Are you sure you want to log out?");
@@ -707,6 +722,12 @@ const RailMap: React.FC = () => {
             visible: true,
         },
         {
+            icon: <img src={milepostIconSrc} alt={milepostLayerVisible ? 'Mileposts on' : 'Mileposts off'} style={{ width: 28, height: 28 }} />,
+            label: milepostLayerVisible ? 'Mileposts On' : 'Mileposts Off',
+            onClick: handleToggleMilepostLayer,
+            visible: true,
+        },
+        {
             icon: <img src={`/icons/book.svg${cacheBuster}`} alt="User guide" style={{ width: 26, height: 26 }} />,
             label: 'User Guide',
             onClick: handleOpenUserGuide,
@@ -748,14 +769,14 @@ const RailMap: React.FC = () => {
                     attribution={TILE_ATTRIBUTION}
                 />
 
-                <MilepostLayer
+                {milepostLayerVisible && <MilepostLayer
                     mapRef={mapRef}
                     points={milepostPoints}
                     mapZoom={mapZoom}
                     mapCenter={mapCenter}
                     mapTheme={mapTheme as 'dark' | 'light'}
                     minZoom={MILEPOST_LABEL_MIN_ZOOM}
-                />
+                />}
 
                 {/* Railroad tracks added imperatively via Leaflet GeoJSON layer */}
 
