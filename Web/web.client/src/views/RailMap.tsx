@@ -13,12 +13,14 @@ import { Beacon } from '../types/Beacon';
 import { MapPin } from '../types/MapPin';
 import BeaconMarkers from '../components/BeaconMarkers';
 import TelemetryMarkers from '../components/TelemetryMarkers';
+import MilepostLayer from '../components/MilepostLayer';
 import { BeaconHistoryModal } from '../components/BeaconHistoryModal';
 import { getTrackedMapPins, updateTrackedPinLocation, refreshTrackedPinsFromApi, applyTrackedPinAddedOrUpdatedFromServer, applyTrackedPinRemovedFromServer } from '../services/trackedPins';
 import { metersToLongitudeDegrees, pixelsToMeters } from '../utils/geo';
 import { updateMapPins, updateBeacon } from '../utils/updateHelpers';
 import { useRailways } from '../hooks/useRailways';
 import { useBeacons } from '../hooks/useBeacons';
+import { useMileposts } from '../hooks/useMileposts';
 import { useTelemetryPins } from '../hooks/useTelemetryPins';
 import { useStaleRefresh } from '../hooks/useStaleRefresh';
 import { useAuth } from '../hooks/useAuth';
@@ -33,6 +35,7 @@ const LIGHT_TILE_URL = "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{
 const TILE_ATTRIBUTION = '&copy; <a href="https://carto.com/">CARTO</a>';
 
 const fallbackCenter: LatLngTuple = [44.524570, -89.567290]; // Default if location fails
+const MILEPOST_LABEL_MIN_ZOOM = 12;
 
 const RailMap: React.FC = () => {
         // On mount, trigger a protected API call to ensure inactive users are blocked immediately
@@ -44,6 +47,12 @@ const RailMap: React.FC = () => {
     const savedMapState = JSON.parse(localStorage.getItem('mapState') || 'null');
     const [mapZoom, setMapZoom] = useState<number>(savedMapState?.zoom || 7);
     const [mapCenter, setMapCenter] = useState<LatLngTuple>(savedMapState?.center || fallbackCenter);
+    const [mapTheme, setMapTheme] = useState(() => localStorage.getItem('mapTheme') || 'dark');
+    const [hourFormat, setHourFormat] = useState(() => localStorage.getItem('hourFormat') || '24');
+    const [milepostLayerVisible, setMilepostLayerVisible] = useState(() => {
+        const saved = localStorage.getItem('milepostLayerVisible');
+        return saved !== 'false';
+    });
 
     // Modal state for beacon history
     const [historyModalOpen, setHistoryModalOpen] = useState(false);
@@ -58,9 +67,10 @@ const RailMap: React.FC = () => {
     const isAdmin = session?.roles?.includes('Admin') || session?.roles?.includes('Custodian');
 
     // Use custom hooks for data
-    const { trackData, trackDataLoaded, trackDataLoading } = useRailways();
+    const { trackData, trackDataLoading } = useRailways();
     const { beacons, beaconsLoaded, setBeacons } = useBeacons();
     const { mapPins, setMapPins } = useTelemetryPins();
+    const { milepostPoints } = useMileposts();
 
     // Track the current tracked pins in state to trigger re-renders when they change
     const [trackedPinsState, setTrackedPinsState] = useState(() => getTrackedMapPins());
@@ -612,9 +622,6 @@ const RailMap: React.FC = () => {
         };
     }, []);
 
-    const [mapTheme, setMapTheme] = useState(() => localStorage.getItem('mapTheme') || 'dark');
-    const [hourFormat, setHourFormat] = useState(() => localStorage.getItem('hourFormat') || '24');
-
     // Set or remove the 'dark' class on <body> for global dark mode styling
     useEffect(() => {
         if (mapTheme === 'dark') {
@@ -640,7 +647,18 @@ const RailMap: React.FC = () => {
         });
     };
 
+    const handleToggleMilepostLayer = () => {
+        setMilepostLayerVisible(prev => {
+            const next = !prev;
+            localStorage.setItem('milepostLayerVisible', String(next));
+            return next;
+        });
+    };
+
     const cacheBuster = ICON_CACHE_BUSTER;
+    const milepostIconSrc = milepostLayerVisible
+        ? (mapTheme === 'dark' ? `/icons/milepost-on-dark.svg${cacheBuster}` : `/icons/milepost-on-light.svg${cacheBuster}`)
+        : (mapTheme === 'dark' ? `/icons/milepost-off-dark.svg${cacheBuster}` : `/icons/milepost-off-light.svg${cacheBuster}`);
 
     const handleLogout = async () => {
         const confirmed = window.confirm("Are you sure you want to log out?");
@@ -704,6 +722,12 @@ const RailMap: React.FC = () => {
             visible: true,
         },
         {
+            icon: <img src={milepostIconSrc} alt={milepostLayerVisible ? 'Mileposts on' : 'Mileposts off'} style={{ width: 28, height: 28 }} />,
+            label: milepostLayerVisible ? 'Mileposts On' : 'Mileposts Off',
+            onClick: handleToggleMilepostLayer,
+            visible: true,
+        },
+        {
             icon: <img src={`/icons/book.svg${cacheBuster}`} alt="User guide" style={{ width: 26, height: 26 }} />,
             label: 'User Guide',
             onClick: handleOpenUserGuide,
@@ -745,6 +769,15 @@ const RailMap: React.FC = () => {
                     attribution={TILE_ATTRIBUTION}
                 />
 
+                {milepostLayerVisible && <MilepostLayer
+                    mapRef={mapRef}
+                    points={milepostPoints}
+                    mapZoom={mapZoom}
+                    mapCenter={mapCenter}
+                    mapTheme={mapTheme as 'dark' | 'light'}
+                    minZoom={MILEPOST_LABEL_MIN_ZOOM}
+                />}
+
                 {/* Railroad tracks added imperatively via Leaflet GeoJSON layer */}
 
                 {trackDataLoading && (
@@ -766,7 +799,7 @@ const RailMap: React.FC = () => {
                 )}
 
                 {/* Beacon markers */}
-                {trackDataLoaded && <BeaconMarkers 
+                {beaconsLoaded && <BeaconMarkers 
                     pins={beacons} 
                     zoom={mapZoom} 
                     mapTheme={mapTheme as 'dark' | 'light'} 
@@ -785,7 +818,7 @@ const RailMap: React.FC = () => {
                 />}
 
                 {/* Telemetry markers */}
-                {trackDataLoaded && beaconsLoaded && <TelemetryMarkers
+                {beaconsLoaded && <TelemetryMarkers
                     pins={telemetryPins}
                     zoom={mapZoom}
                     maxPinAgeMinutes={MAX_PIN_AGE_MINUTES}

@@ -1,7 +1,11 @@
 // Web Worker: fetch and parse railways GeoJSON off the main thread.
 // Posts back { success: boolean, data?: GeoJSON.GeoJsonObject, error?: string }
 
+const baseUrl = import.meta.env.BASE_URL || '/';
+const normalizedBase = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+
 const candidatePaths = [
+  `${normalizedBase}data/usdot-wisconsin-no-fields.geojson`,
   '/data/usdot-wisconsin-no-fields.geojson'
 ];
 
