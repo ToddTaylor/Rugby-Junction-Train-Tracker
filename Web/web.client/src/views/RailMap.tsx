@@ -14,6 +14,7 @@ import { MapPin } from '../types/MapPin';
 import BeaconMarkers from '../components/BeaconMarkers';
 import TelemetryMarkers from '../components/TelemetryMarkers';
 import MilepostLayer from '../components/MilepostLayer';
+import DefectDetectorLayer from '../components/DefectDetectorLayer';
 import { BeaconHistoryModal } from '../components/BeaconHistoryModal';
 import { getTrackedMapPins, updateTrackedPinLocation, refreshTrackedPinsFromApi, applyTrackedPinAddedOrUpdatedFromServer, applyTrackedPinRemovedFromServer } from '../services/trackedPins';
 import { metersToLongitudeDegrees, pixelsToMeters } from '../utils/geo';
@@ -21,6 +22,7 @@ import { updateMapPins, updateBeacon } from '../utils/updateHelpers';
 import { useRailways } from '../hooks/useRailways';
 import { useBeacons } from '../hooks/useBeacons';
 import { useMileposts } from '../hooks/useMileposts';
+import { useDefectDetectors } from '../hooks/useDefectDetectors';
 import { useTelemetryPins } from '../hooks/useTelemetryPins';
 import { useStaleRefresh } from '../hooks/useStaleRefresh';
 import { useAuth } from '../hooks/useAuth';
@@ -53,6 +55,10 @@ const RailMap: React.FC = () => {
         const saved = localStorage.getItem('milepostLayerVisible');
         return saved !== 'false';
     });
+    const [defectDetectorLayerVisible, setDefectDetectorLayerVisible] = useState(() => {
+        const saved = localStorage.getItem('defectDetectorLayerVisible');
+        return saved !== 'false';
+    });
 
     // Modal state for beacon history
     const [historyModalOpen, setHistoryModalOpen] = useState(false);
@@ -71,6 +77,7 @@ const RailMap: React.FC = () => {
     const { beacons, beaconsLoaded, setBeacons } = useBeacons();
     const { mapPins, setMapPins } = useTelemetryPins();
     const { milepostPoints } = useMileposts();
+    const { defectDetectors } = useDefectDetectors();
 
     // Track the current tracked pins in state to trigger re-renders when they change
     const [trackedPinsState, setTrackedPinsState] = useState(() => getTrackedMapPins());
@@ -655,10 +662,21 @@ const RailMap: React.FC = () => {
         });
     };
 
+    const handleToggleDefectDetectorLayer = () => {
+        setDefectDetectorLayerVisible(prev => {
+            const next = !prev;
+            localStorage.setItem('defectDetectorLayerVisible', String(next));
+            return next;
+        });
+    };
+
     const cacheBuster = ICON_CACHE_BUSTER;
     const milepostIconSrc = milepostLayerVisible
         ? (mapTheme === 'dark' ? `/icons/milepost-on-dark.svg${cacheBuster}` : `/icons/milepost-on-light.svg${cacheBuster}`)
         : (mapTheme === 'dark' ? `/icons/milepost-off-dark.svg${cacheBuster}` : `/icons/milepost-off-light.svg${cacheBuster}`);
+    const defectDetectorIconSrc = defectDetectorLayerVisible
+        ? (mapTheme === 'dark' ? `/icons/defect-detector-on-dark.svg${cacheBuster}` : `/icons/defect-detector-on-light.svg${cacheBuster}`)
+        : (mapTheme === 'dark' ? `/icons/defect-detector-off-dark.svg${cacheBuster}` : `/icons/defect-detector-off-light.svg${cacheBuster}`);
 
     const handleLogout = async () => {
         const confirmed = window.confirm("Are you sure you want to log out?");
@@ -728,6 +746,12 @@ const RailMap: React.FC = () => {
             visible: true,
         },
         {
+            icon: <img src={defectDetectorIconSrc} alt={defectDetectorLayerVisible ? 'Defect detectors on' : 'Defect detectors off'} style={{ width: 28, height: 28 }} />,
+            label: defectDetectorLayerVisible ? 'Defect Detectors On' : 'Defect Detectors Off',
+            onClick: handleToggleDefectDetectorLayer,
+            visible: true,
+        },
+        {
             icon: <img src={`/icons/book.svg${cacheBuster}`} alt="User guide" style={{ width: 26, height: 26 }} />,
             label: 'User Guide',
             onClick: handleOpenUserGuide,
@@ -776,6 +800,14 @@ const RailMap: React.FC = () => {
                     mapCenter={mapCenter}
                     mapTheme={mapTheme as 'dark' | 'light'}
                     minZoom={MILEPOST_LABEL_MIN_ZOOM}
+                />}
+
+                {defectDetectorLayerVisible && <DefectDetectorLayer
+                    mapRef={mapRef}
+                    detectors={defectDetectors}
+                    mapZoom={mapZoom}
+                    mapCenter={mapCenter}
+                    mapTheme={mapTheme as 'dark' | 'light'}
                 />}
 
                 {/* Railroad tracks added imperatively via Leaflet GeoJSON layer */}
