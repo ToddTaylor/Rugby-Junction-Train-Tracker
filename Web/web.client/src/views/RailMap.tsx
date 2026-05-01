@@ -15,6 +15,7 @@ import BeaconMarkers from '../components/BeaconMarkers';
 import TelemetryMarkers from '../components/TelemetryMarkers';
 import MilepostLayer from '../components/MilepostLayer';
 import DefectDetectorLayer from '../components/DefectDetectorLayer';
+import UserLocationPin from '../components/UserLocationPin';
 import { BeaconHistoryModal } from '../components/BeaconHistoryModal';
 import { getTrackedMapPins, updateTrackedPinLocation, refreshTrackedPinsFromApi, applyTrackedPinAddedOrUpdatedFromServer, applyTrackedPinRemovedFromServer } from '../services/trackedPins';
 import { metersToLongitudeDegrees, pixelsToMeters } from '../utils/geo';
@@ -538,6 +539,9 @@ const RailMap: React.FC = () => {
         const telemetryPane = map.getPane('telemetryPane');
         if (telemetryPane && telemetryPane.parentNode) telemetryPane.parentNode.removeChild(telemetryPane);
 
+        const userLocationPane = map.getPane('userLocationPane');
+        if (userLocationPane && userLocationPane.parentNode) userLocationPane.parentNode.removeChild(userLocationPane);
+
         map.createPane('beaconPane');
         const beaconPaneCreated = map.getPane('beaconPane');
         if (beaconPaneCreated) beaconPaneCreated.style.zIndex = '400';
@@ -549,6 +553,10 @@ const RailMap: React.FC = () => {
         map.createPane('telemetryPane');
         const telemetryPaneCreated = map.getPane('telemetryPane');
         if (telemetryPaneCreated) telemetryPaneCreated.style.zIndex = '500';
+
+        map.createPane('userLocationPane');
+        const userLocationPaneCreated = map.getPane('userLocationPane');
+        if (userLocationPaneCreated) userLocationPaneCreated.style.zIndex = '550';
     }, [mapRef.current]);
 
     // Save map center and zoom on move/zoom
@@ -858,6 +866,8 @@ const RailMap: React.FC = () => {
                     mapTheme={mapTheme as 'dark' | 'light'}
                     hourFormat={hourFormat}
                 />}
+
+                <UserLocationPin mapTheme={mapTheme as 'dark' | 'light'} />
 
             </MapContainer>
 
