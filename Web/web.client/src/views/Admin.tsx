@@ -2,13 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import './Admin.css';
 import { useAuth } from '../hooks/useAuth';
+import { parseSessionRoles } from '../utils/roles';
 
 const SIDEBAR_EXPANDED_KEY = 'admin.sidebar.expanded';
 
 const Admin: React.FC = () => {
   const location = useLocation();
   const { session } = useAuth();
-  const isAdmin = session?.roles?.includes('Admin');
+  const { isAdmin } = parseSessionRoles(session?.roles);
   const [isExpanded, setIsExpanded] = useState<boolean>(() => {
     const saved = localStorage.getItem(SIDEBAR_EXPANDED_KEY);
     return saved === null ? true : saved === 'true';

@@ -1,4 +1,5 @@
 import { MapPinHistory } from '../types/MapPinHistory';
+import { getAuthToken } from './auth';
 
 type CacheEntry<T> = {
     at: number;
@@ -59,8 +60,10 @@ export async function fetchBeaconHistory(
     }
 
     const url = buildHistoryUrl(beaconID, subdivisionID, limit);
+    const token = await getAuthToken();
     const response = await fetch(url, {
         headers: {
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
             'X-Api-Key': import.meta.env.VITE_API_KEY,
             'Content-Type': 'application/json'
         }

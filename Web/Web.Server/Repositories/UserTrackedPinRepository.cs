@@ -38,6 +38,21 @@ namespace Web.Server.Repositories
                 .ToListAsync();
         }
 
+        public async Task<IEnumerable<UserTrackedPin>> GetByShareCodeAsync(string shareCode)
+        {
+            if (string.IsNullOrWhiteSpace(shareCode))
+            {
+                return Array.Empty<UserTrackedPin>();
+            }
+
+            var normalizedShareCode = shareCode.Trim().ToUpperInvariant();
+
+            return await _context.UserTrackedPins
+                .Include(utp => utp.MapPin)
+                .Where(utp => utp.MapPin != null && utp.MapPin.ShareCode == normalizedShareCode)
+                .ToListAsync();
+        }
+
         public async Task<UserTrackedPin> AddAsync(UserTrackedPin trackedPin)
         {
             _context.UserTrackedPins.Add(trackedPin);

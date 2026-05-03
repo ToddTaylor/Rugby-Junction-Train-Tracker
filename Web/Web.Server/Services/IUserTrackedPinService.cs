@@ -6,6 +6,7 @@ namespace Web.Server.Services
     {
         Task<IEnumerable<UserTrackedPinDTO>> GetByUserIdAsync(int userId);
         Task<UserTrackedPinDTO> AddAsync(int userId, int mapPinId, int? beaconId, int? subdivisionId, string? beaconName, string? symbol, string color);
+        Task<UserTrackedPinDTO> AddByShareCodeAsync(int userId, string shareCode);
         Task UpdateSymbolAsync(int userId, int mapPinId, string? symbol);
         Task UpdateLocationAsync(int userId, int mapPinId, int? beaconId, int? subdivisionId, string? beaconName);
         Task DeleteAsync(int userId, int mapPinId);

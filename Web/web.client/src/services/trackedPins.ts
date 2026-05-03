@@ -70,6 +70,7 @@ export const TRACK_COLORS = [
 export type TrackedPin = {
     id: string;            // stringified MapPinId
     mapPinId?: number;     // numeric MapPinId (optional for legacy data)
+    shareCode?: string;
     expires: number;       // Unix ms timestamp
     color: string;
     lastBeaconID?: string;
@@ -82,6 +83,24 @@ export type TrackedPin = {
 const API_URL = import.meta.env.VITE_API_URL;
 const API_KEY = import.meta.env.VITE_API_KEY;
 const API_BASE = `${API_URL}/api/v1/UserTrackedPins`;
+
+function normalizeShareCode(shareCode: string): string {
+    return shareCode.trim().toUpperCase();
+}
+
+function hydrateTrackedPinFromMapPin(trackedPin: TrackedPin, mapPin: any): TrackedPin {
+    const nextTrackedPin = { ...trackedPin };
+
+    if (mapPin?.shareCode) {
+        nextTrackedPin.shareCode = String(mapPin.shareCode);
+    }
+
+    if ((!nextTrackedPin.addresses || nextTrackedPin.addresses.length === 0) && Array.isArray(mapPin?.addresses)) {
+        nextTrackedPin.addresses = mapPin.addresses.map((addr: any) => ({ id: String(addr.addressID), source: addr.source }));
+    }
+
+    return nextTrackedPin;
+}
 
 // ---- Local helpers (sync) ----
 function getLocalTrackedPins(): TrackedPin[] {
@@ -153,8 +172,10 @@ export async function refreshTrackedPinsFromApi(): Promise<TrackedPin[]> {
                     try {
                         const minutesOldFilter = 15;
                         const apiUrl = import.meta.env.VITE_API_URL + '/api/v1/MapPins?minutes=' + minutesOldFilter;
+                        const authToken = await getAuthToken();
                         const response = await fetch(apiUrl, {
                             headers: {
+                                ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
                                 'X-Api-Key': import.meta.env.VITE_API_KEY,
                                 'Content-Type': 'application/json'
                             }
@@ -181,12 +202,9 @@ export async function refreshTrackedPinsFromApi(): Promise<TrackedPin[]> {
                     };
                     const existing = cachedPins.find(p => p.id === String(pin.mapPinId));
                     let trackedPin = mapServerDtoToTrackedPin(serverDto, existing);
-                    // If addresses missing/empty, try to restore from mapPins
-                    if (!trackedPin.addresses || trackedPin.addresses.length === 0) {
-                        const mapPin = mapPins.find(mp => String(mp.id) === String(pin.mapPinId));
-                        if (mapPin && Array.isArray(mapPin.addresses)) {
-                            trackedPin.addresses = mapPin.addresses.map((addr: any) => ({ id: String(addr.addressID), source: addr.source }));
-                        }
+                    const mapPin = mapPins.find(mp => String(mp.id) === String(pin.mapPinId));
+                    if (mapPin) {
+                        trackedPin = hydrateTrackedPinFromMapPin(trackedPin, mapPin);
                     }
                     return trackedPin;
                 });
@@ -233,6 +251,44 @@ export async function addTrackedMapPin(id: string, beaconID?: string, subdivisio
     const pins = await refreshTrackedPinsFromApi();
     window.dispatchEvent(new Event('storage'));
     return pins;
+}
+
+export async function addTrackedMapPinByShareCode(shareCode: string) {
+    const normalizedShareCode = normalizeShareCode(shareCode);
+    if (!normalizedShareCode) {
+        throw new Error('Share code is required.');
+    }
+
+    const headers = await getAuthHeader();
+    const response = await fetch(`${API_BASE}/share`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ shareCode: normalizedShareCode })
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text().catch(() => 'Unknown error');
+        throw new Error(`Failed to track shared train (${response.status} ${response.statusText}): ${errorText}`);
+    }
+
+    const pins = await refreshTrackedPinsFromApi();
+    window.dispatchEvent(new Event('storage'));
+    return pins;
+}
+
+export function buildTrackedPinShareUrl(shareCode: string): string {
+    const normalizedShareCode = normalizeShareCode(shareCode);
+    if (!normalizedShareCode) {
+        throw new Error('Share code is required.');
+    }
+
+    return `${window.location.origin}/railmap?share=${encodeURIComponent(normalizedShareCode)}`;
+}
+
+export async function copyTrackedPinShareUrl(shareCode: string): Promise<string> {
+    const shareUrl = buildTrackedPinShareUrl(shareCode);
+    await navigator.clipboard.writeText(shareUrl);
+    return shareUrl;
 }
 
 
@@ -289,6 +345,7 @@ function mapServerDtoToTrackedPin(dto: TrackedPinServerDTO, existing?: TrackedPi
     return {
         id: String(dto.mapPinId),
         mapPinId: dto.mapPinId,
+        shareCode: existing?.shareCode,
         expires,
         color: dto.color || existing?.color || 'orange',
         lastBeaconID: dto.beaconID ? String(dto.beaconID) : existing?.lastBeaconID,

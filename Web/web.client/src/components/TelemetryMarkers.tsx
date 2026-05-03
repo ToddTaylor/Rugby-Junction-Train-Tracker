@@ -14,6 +14,7 @@ interface TelemetryMarkersProps {
     maxPinAgeMinutes: number;
     trackedPins: TrackedPin[];
     hourFormat?: string;
+    canViewSupportAddresses?: boolean;
 }
 
 const TelemetryMarkers: React.FC<TelemetryMarkersProps & { mapTheme: 'dark' | 'light' }> = ({
@@ -23,6 +24,7 @@ const TelemetryMarkers: React.FC<TelemetryMarkersProps & { mapTheme: 'dark' | 'l
     trackedPins,
     mapTheme,
     hourFormat = '24',
+    canViewSupportAddresses = false,
 }) => {
     const size = getMarkerSize(zoom);
 
@@ -43,6 +45,7 @@ const TelemetryMarkers: React.FC<TelemetryMarkersProps & { mapTheme: 'dark' | 'l
                         trackedPins={trackedPins}
                         mapTheme={mapTheme}
                         hourFormat={hourFormat}
+                        canViewSupportAddresses={canViewSupportAddresses}
                     />
                 ) : null
             )}

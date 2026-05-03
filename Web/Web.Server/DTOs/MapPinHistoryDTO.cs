@@ -6,6 +6,7 @@ namespace Web.Server.DTOs
     {
         public int ID { get; set; }
         public int? OriginalMapPinID { get; set; }
+        public string? ShareCode { get; set; }
         public int BeaconID { get; set; }
         public string? BeaconName { get; set; }
         public int SubdivisionID { get; set; }
@@ -22,6 +23,17 @@ namespace Web.Server.DTOs
         
         // Deserialized addresses from JSON
         public List<AddressSnapshotDTO>? Addresses { get; set; }
+
+            /// <summary>
+            /// Indicates whether this train has at least one DPU address.
+            /// Visible to all users, even when address details are hidden from Viewers.
+            /// </summary>
+            public bool HasDpu { get; set; }
+
+            /// <summary>
+            /// Distinct address source types (for example HOT/EOT/DPU), visible to all users.
+            /// </summary>
+            public List<string> AddressSourceTypes { get; set; } = [];
     }
 
     public class AddressSnapshotDTO

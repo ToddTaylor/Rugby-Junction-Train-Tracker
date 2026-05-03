@@ -151,6 +151,36 @@ namespace Web.Server.Controllers.v1
             }
         }
 
+        [HttpPost("share")]
+        public async Task<ActionResult<MessageEnvelope<UserTrackedPinDTO>>> AddTrackedPinByShareCode([FromBody] AddTrackedPinByShareCodeRequestDTO request)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (!userId.HasValue)
+                {
+                    return BadRequest(new MessageEnvelope<UserTrackedPinDTO>(null!, new List<string> { "User not authenticated." }));
+                }
+
+                if (string.IsNullOrWhiteSpace(request.ShareCode))
+                {
+                    return BadRequest(new MessageEnvelope<UserTrackedPinDTO>(null!, new List<string> { "ShareCode is required." }));
+                }
+
+                var trackedPin = await _userTrackedPinService.AddByShareCodeAsync(userId.Value, request.ShareCode);
+                return Ok(new MessageEnvelope<UserTrackedPinDTO>(trackedPin, new List<string>()));
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new MessageEnvelope<UserTrackedPinDTO>(null!, new List<string> { ex.Message }));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error adding tracked pin by share code");
+                return StatusCode(500, new MessageEnvelope<UserTrackedPinDTO>(null!, new List<string> { "An error occurred while sharing the tracked pin." }));
+            }
+        }
+
         /// <summary>
         /// Updates the symbol for a tracked pin.
         /// </summary>

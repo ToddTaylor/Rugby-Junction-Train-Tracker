@@ -15,6 +15,9 @@ namespace Web.Server.Entities
         [Required]
         public int SubdivisionId { get; set; }
 
+        [StringLength(6)]
+        public string? ShareCode { get; set; }
+
         /// <summary>
         /// The RailroadID of the subdivision where this map pin was originally created.
         /// This is set once at creation and never updated.
@@ -43,6 +46,7 @@ namespace Web.Server.Entities
                 ID = this.ID,
                 BeaconID = this.BeaconID,
                 SubdivisionId = this.SubdivisionId,
+                ShareCode = this.ShareCode,
                 CreatedRailroadID = this.CreatedRailroadID,
                 Direction = this.Direction,
                 LastUpdate = this.LastUpdate,
@@ -86,6 +90,7 @@ namespace Web.Server.Entities
                    ID == other.ID &&
                    BeaconID == other.BeaconID &&
                    SubdivisionId == other.SubdivisionId &&
+                   ShareCode == other.ShareCode &&
                    CreatedRailroadID == other.CreatedRailroadID &&
                    EqualityComparer<BeaconRailroad?>.Default.Equals(BeaconRailroad, other.BeaconRailroad) &&
                    Direction == other.Direction &&
@@ -102,6 +107,7 @@ namespace Web.Server.Entities
             hash.Add(ID);
             hash.Add(BeaconID);
             hash.Add(SubdivisionId);
+            hash.Add(ShareCode);
             hash.Add(CreatedRailroadID);
             hash.Add(BeaconRailroad);
             hash.Add(Direction);

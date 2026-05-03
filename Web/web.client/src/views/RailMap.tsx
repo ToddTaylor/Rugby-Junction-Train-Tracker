@@ -17,7 +17,7 @@ import MilepostLayer from '../components/MilepostLayer';
 import DefectDetectorLayer from '../components/DefectDetectorLayer';
 import UserLocationPin from '../components/UserLocationPin';
 import { BeaconHistoryModal } from '../components/BeaconHistoryModal';
-import { getTrackedMapPins, updateTrackedPinLocation, refreshTrackedPinsFromApi, applyTrackedPinAddedOrUpdatedFromServer, applyTrackedPinRemovedFromServer } from '../services/trackedPins';
+import { getTrackedMapPins, updateTrackedPinLocation, refreshTrackedPinsFromApi, applyTrackedPinAddedOrUpdatedFromServer, applyTrackedPinRemovedFromServer, addTrackedMapPinByShareCode } from '../services/trackedPins';
 import { metersToLongitudeDegrees, pixelsToMeters } from '../utils/geo';
 import { updateMapPins, updateBeacon } from '../utils/updateHelpers';
 import { useRailways } from '../hooks/useRailways';
@@ -28,6 +28,7 @@ import { useTelemetryPins } from '../hooks/useTelemetryPins';
 import { useStaleRefresh } from '../hooks/useStaleRefresh';
 import { useAuth } from '../hooks/useAuth';
 import { invalidateBeaconHistoryCache } from '../services/mapPinsHistory';
+import { parseSessionRoles } from '../utils/roles';
 
 const ICON_CACHE_BUSTER = import.meta.env.VITE_APP_VERSION
     ? `?v=${import.meta.env.VITE_APP_VERSION}`
@@ -39,6 +40,36 @@ const TILE_ATTRIBUTION = '&copy; <a href="https://carto.com/">CARTO</a>';
 
 const fallbackCenter: LatLngTuple = [44.524570, -89.567290]; // Default if location fails
 const MILEPOST_LABEL_MIN_ZOOM = 12;
+
+function trackedPinMatchesMapPin(trackedPin: ReturnType<typeof getTrackedMapPins>[number], mapPin: MapPin): boolean {
+    if (String(trackedPin.id) === String(mapPin.id)) {
+        return true;
+    }
+
+    if (trackedPin.shareCode && mapPin.shareCode && trackedPin.shareCode === mapPin.shareCode) {
+        return true;
+    }
+
+    return Array.isArray(trackedPin.addresses) && Array.isArray(mapPin.addresses) && trackedPin.addresses.some(a =>
+        mapPin.addresses!.some(b => a.id === String(b.addressID) && a.source === b.source)
+    );
+}
+
+function trackedPinNeedsRefresh(trackedPin: ReturnType<typeof getTrackedMapPins>[number], mapPin: MapPin): boolean {
+    const mapAddresses = Array.isArray(mapPin.addresses)
+        ? mapPin.addresses.map(addr => ({ id: String(addr.addressID), source: addr.source }))
+        : undefined;
+
+    const locationChanged = trackedPin.lastBeaconID !== mapPin.beaconID || trackedPin.lastSubdivisionID !== mapPin.subdivisionID;
+    const shareCodeChanged = !!mapPin.shareCode && trackedPin.shareCode !== mapPin.shareCode;
+    const addressesChanged = !!mapAddresses && (
+        !trackedPin.addresses ||
+        trackedPin.addresses.length !== mapAddresses.length ||
+        trackedPin.addresses.some((a, idx) => a.id !== mapAddresses[idx].id || a.source !== mapAddresses[idx].source)
+    );
+
+    return locationChanged || shareCodeChanged || addressesChanged;
+}
 
 const RailMap: React.FC = () => {
         // On mount, trigger a protected API call to ensure inactive users are blocked immediately
@@ -71,7 +102,7 @@ const RailMap: React.FC = () => {
 
     // Auth for admin button
     const { session, logout } = useAuth();
-    const isAdmin = session?.roles?.includes('Admin') || session?.roles?.includes('Custodian');
+    const { canViewSupportAddresses } = parseSessionRoles(session?.roles);
 
     // Use custom hooks for data
     const { trackData, trackDataLoading } = useRailways();
@@ -93,6 +124,33 @@ const RailMap: React.FC = () => {
             // fallback silently to cached state
         });
     }, []);
+
+    useEffect(() => {
+        window.mapPins = mapPins;
+    }, [mapPins]);
+
+    useEffect(() => {
+        if (!session?.token) {
+            return;
+        }
+
+        const url = new URL(window.location.href);
+        const shareCode = url.searchParams.get('share');
+        if (!shareCode) {
+            return;
+        }
+
+        addTrackedMapPinByShareCode(shareCode)
+            .then(setTrackedPinsState)
+            .catch((error) => {
+                console.error('Failed to redeem shared train:', error);
+                alert(error instanceof Error ? error.message : 'Failed to open shared train.');
+            })
+            .finally(() => {
+                url.searchParams.delete('share');
+                window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+            });
+    }, [session?.token]);
 
     // Periodically refresh tracked pins state (to handle expiration and updates)
     useEffect(() => {
@@ -138,18 +196,9 @@ const RailMap: React.FC = () => {
         
         let updatePromises: Promise<any>[] = [];
         trackedPins.forEach(tracked => {
-            const mapPin = mapPins.find(p => String(p.id) === String(tracked.id));
+            const mapPin = mapPins.find(p => trackedPinMatchesMapPin(tracked, p));
             if (mapPin && mapPin.beaconID && mapPin.subdivisionID) {
-                const addresses = Array.isArray(mapPin.addresses)
-                    ? mapPin.addresses.map(addr => ({ id: String(addr.addressID), source: addr.source }))
-                    : undefined;
-                const locationChanged = tracked.lastBeaconID !== mapPin.beaconID || tracked.lastSubdivisionID !== mapPin.subdivisionID;
-                const addressesChanged = !!addresses && (
-                    !tracked.addresses ||
-                    tracked.addresses.length !== addresses.length ||
-                    tracked.addresses.some((a, idx) => a.id !== addresses[idx].id || a.source !== addresses[idx].source)
-                );
-                if (locationChanged || addressesChanged) {
+                if (trackedPinNeedsRefresh(tracked, mapPin)) {
                     updatePromises.push(updateTrackedPinLocation(tracked.id, mapPin.beaconID, mapPin.subdivisionID, mapPin.beaconName));
                 }
             }
@@ -170,36 +219,13 @@ const RailMap: React.FC = () => {
             
             // Update tracked pin location if this is a tracked pin
             const trackedPins = getTrackedMapPins();
-            const tracked = trackedPins.find(tp => String(tp.id) === String(mapPin.id));
-            const addresses = Array.isArray(mapPin.addresses)
-                ? mapPin.addresses.map(addr => ({ id: String(addr.addressID), source: addr.source }))
-                : undefined;
+            const tracked = trackedPins.find(tp => trackedPinMatchesMapPin(tp, mapPin));
             if (tracked && mapPin.beaconID && mapPin.subdivisionID) {
-                const locationChanged = tracked.lastBeaconID !== mapPin.beaconID || tracked.lastSubdivisionID !== mapPin.subdivisionID;
-                const addressesChanged = !!addresses && (
-                    !tracked.addresses ||
-                    tracked.addresses.length !== addresses.length ||
-                    tracked.addresses.some((a, idx) => a.id !== addresses[idx].id || a.source !== addresses[idx].source)
-                );
-                if (locationChanged || addressesChanged) {
-                    updateTrackedPinLocation(mapPin.id, mapPin.beaconID, mapPin.subdivisionID, mapPin.beaconName)
+                if (trackedPinNeedsRefresh(tracked, mapPin)) {
+                    updateTrackedPinLocation(tracked.id, mapPin.beaconID, mapPin.subdivisionID, mapPin.beaconName)
                         .then(pins => setTrackedPinsState(pins || getTrackedMapPins()));
                 }
             }
-                // Fallback: when no tracked pin matches by ID, try matching by address content.
-                // This handles the DPU "no-match" case where a new map pin is created with a
-                // different ID, leaving the old tracked entry pointing to the stale prior beacon.
-                else if (!tracked && addresses && mapPin.beaconID && mapPin.subdivisionID) {
-                    const matchedByAddress = trackedPins.find(tp =>
-                        tp.addresses && tp.addresses.some(a =>
-                            addresses.some(b => a.id === b.id && a.source === b.source)
-                        )
-                    );
-                    if (matchedByAddress) {
-                        updateTrackedPinLocation(matchedByAddress.id, mapPin.beaconID, mapPin.subdivisionID, mapPin.beaconName)
-                            .then(pins => setTrackedPinsState(pins || getTrackedMapPins()));
-                    }
-                }
             
             setMapPins((prevPins: MapPin[]) => updateMapPins(prevPins, mapPin));
             
@@ -392,8 +418,10 @@ const RailMap: React.FC = () => {
     async function mergeLatestBeaconUpdates() {
         try {
             const apiUrl = import.meta.env.VITE_API_URL + '/api/v1/MapPins/latest';
+            const token = await import('../services/auth').then(mod => mod.getAuthToken());
             const response = await fetch(apiUrl, {
                 headers: {
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
                     'X-Api-Key': import.meta.env.VITE_API_KEY,
                     'Content-Type': 'application/json'
                 }
@@ -728,7 +756,7 @@ const RailMap: React.FC = () => {
             icon: <img src={`/icons/settings.svg${cacheBuster}`} alt="Admin settings" style={{ width: 26, height: 26 }} />,
             label: 'Admin Settings',
             onClick: () => { window.location.href = '/admin'; },
-            visible: !!isAdmin,
+            visible: !!canViewSupportAddresses,
         },
         {
             icon: <img src={mapTheme === 'dark' ? `/icons/moon.svg${cacheBuster}` : `/icons/sun.svg${cacheBuster}`} alt={mapTheme === 'dark' ? 'Dark mode' : 'Light mode'} style={{ width: 28, height: 28 }} />,
@@ -865,6 +893,7 @@ const RailMap: React.FC = () => {
                     trackedPins={trackedPinsState}
                     mapTheme={mapTheme as 'dark' | 'light'}
                     hourFormat={hourFormat}
+                    canViewSupportAddresses={canViewSupportAddresses}
                 />}
 
                 <UserLocationPin mapTheme={mapTheme as 'dark' | 'light'} />
@@ -885,6 +914,7 @@ const RailMap: React.FC = () => {
                 mapPins={mapPins}
                 trackedPins={trackedPinsState}
                 hourFormat={hourFormat}
+                canViewSupportAddresses={canViewSupportAddresses}
             />
         </>
     );

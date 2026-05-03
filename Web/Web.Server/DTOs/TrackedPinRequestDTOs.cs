@@ -21,4 +21,9 @@ namespace Web.Server.DTOs
         public int? SubdivisionID { get; set; }
         public string? BeaconName { get; set; }
     }
+
+    public class AddTrackedPinByShareCodeRequestDTO
+    {
+        public string ShareCode { get; set; } = string.Empty;
+    }
 }

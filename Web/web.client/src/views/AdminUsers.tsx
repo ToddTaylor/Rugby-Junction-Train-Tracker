@@ -1,6 +1,7 @@
 import { adminDataGridSx } from '../components/DataGridStyles';
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { parseSessionRoles } from '../utils/roles';
 import { DataGrid, GridRenderCellParams } from '@mui/x-data-grid';
 import { User, CreateUser, UpdateUser } from '../types/User';
 import { getUsers, createUser, updateUser, deleteUser } from '../api/users';
@@ -21,8 +22,7 @@ const formatDate = (dateString: string): string => {
 const AdminUsers: React.FC = () => {
     // Role-based access control
     const { session } = useAuth();
-    const isAdmin = session?.roles?.includes('Admin');
-    const isCustodian = session?.roles?.includes('Custodian');
+  const { isAdmin, isCustodian } = parseSessionRoles(session?.roles);
     if (!isAdmin && !isCustodian) {
       return <div style={{ color: '#e0e0e0', background: '#1a1a1a', padding: '2em' }}>You do not have permission to view this page.</div>;
     }
