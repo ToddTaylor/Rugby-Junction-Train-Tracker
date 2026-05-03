@@ -12,9 +12,10 @@ import { MapPinHistory } from '../types/MapPinHistory';
 import { MapPin } from '../types/MapPin';
 import { TrackedPin } from '../services/trackedPins';
 import { format, parseISO } from 'date-fns';
-import { getTrackedMapPins, updateTrackedPinSymbol, removeTrackedMapPin, getTrackedPinSymbol, refreshTrackedPinsFromApi, addTrackedMapPin } from '../services/trackedPins';
+import { getTrackedMapPins, updateTrackedPinSymbol, removeTrackedMapPin, getTrackedPinSymbol, refreshTrackedPinsFromApi, addTrackedMapPin, copyTrackedPinShareUrl } from '../services/trackedPins';
 import { fetchBeaconHistory } from '../services/mapPinsHistory';
 import TrackSymbolModal from './TrackSymbolModal';
+import { CopyIcon } from './CopyIcon';
 
 interface BeaconHistoryModalProps {
     open: boolean;
@@ -29,9 +30,10 @@ interface BeaconHistoryModalProps {
     mapPins?: MapPin[];
     trackedPins?: TrackedPin[];
     hourFormat?: string;
+    canViewSupportAddresses?: boolean;
 }
 
-export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdivisionID, railroad: _railroad, subdivision: _subdivision, theme, lastUpdate, trackedPins: propTrackedPins, hourFormat }: BeaconHistoryModalProps) {
+export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdivisionID, railroad: _railroad, subdivision: _subdivision, theme, lastUpdate, trackedPins: propTrackedPins, hourFormat, canViewSupportAddresses = false }: BeaconHistoryModalProps) {
     const [loading, setLoading] = useState(false);
     const [history, setHistory] = useState<MapPinHistory[]>([]);
     const [error, setError] = useState<string | null>(null);
@@ -46,7 +48,10 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdiv
     // Always use propTrackedPins if provided, else fallback to local state
     const [trackedPins, setTrackedPins] = useState(() => propTrackedPins || getTrackedMapPins());
     const [refreshKey, setRefreshKey] = useState(0);
+    const [copiedShareCode, setCopiedShareCode] = useState<string | null>(null);
     const prevBeaconIDRef = useRef<string | null>(null);
+    const copyFeedbackTimeoutRef = useRef<number | null>(null);
+    const copyIconColor = theme === 'dark' ? '#d5d9df' : '#4b5563';
 
     const fetchHistory = useCallback(async () => {
         setLoading(true);
@@ -70,8 +75,13 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdiv
         }
     }, [propTrackedPins]);
 
-    // If propTrackedPins is provided, always use it for rendering
-
+    useEffect(() => {
+        return () => {
+            if (copyFeedbackTimeoutRef.current) {
+                window.clearTimeout(copyFeedbackTimeoutRef.current);
+            }
+        };
+    }, []);
 
     useEffect(() => {
         if (open && beaconID) {
@@ -97,8 +107,6 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdiv
 
     // Update tracked pins state and listen for changes (only if not using prop)
     useEffect(() => {
-
-
         const updateTrackedPins = () => {
             setTrackedPins(getTrackedMapPins());
         };
@@ -131,13 +139,12 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdiv
         };
     }, [propTrackedPins]);
 
-
     const columns: GridColDef[] = [
         { field: 'id', headerName: 'ID', width: 70 },
         {
             field: 'lastUpdate',
             headerName: 'Time',
-            width: 85,
+            width: 72,
             valueFormatter: (params) => {
                 try {
                     if (hourFormat === '12') {
@@ -153,7 +160,7 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdiv
         { 
             field: 'direction', 
             headerName: 'Direction', 
-            width: 100,
+            width: 78,
             valueFormatter: (params) => {
                 const dir = params as string;
                 if (!dir) return '?';
@@ -172,18 +179,26 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdiv
         },
         {
             field: 'addresses',
-            headerName: 'Addresses',
+            headerName: 'Train',
             flex: 1,
-            minWidth: 150,
+            minWidth: 120,
             maxWidth: 400,
             renderCell: (params: GridRenderCellParams<MapPinHistory>) => {
-                const addresses = params.row?.addresses;
-
-                if (!Array.isArray(addresses) || addresses.length === 0) return '';
+                const addresses = Array.isArray(params.row?.addresses) ? params.row.addresses : [];
+                const shareCode = params.row?.shareCode;
                 
-                const addressText = addresses
-                    .map((a: { source: string; addressID: number }) => `${a.addressID} ${a.source}`)
-                    .join(', ');
+                // Build address text or DPU indicator based on viewing permission
+                let addressText: string;
+                if (canViewSupportAddresses) {
+                    addressText = addresses
+                        .map((a: { source: string; addressID: number }) => `${a.addressID} ${a.source}`)
+                        .join(', ');
+                } else {
+                    // For Viewer role, show available source types (for example HOT/EOT/DPU).
+                    addressText = Array.isArray(params.row.addressSourceTypes)
+                        ? params.row.addressSourceTypes.join(' / ')
+                        : '';
+                }
                 
                 // Check if this train is currently tracked
                 // Resolve to the best tracked pin candidate for this history row.
@@ -191,13 +206,15 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdiv
                 // then any address overlap as a final fallback.
                 let isTracked = false;
                 let trackedColor = undefined;
-                let symbol = undefined;
                 
                 let matchedMapPinId: string | undefined;
                 const rowOriginalMapPinId = params.row?.originalMapPinID ? String(params.row.originalMapPinID) : undefined;
+                const trackedByShareCode = shareCode
+                    ? trackedPins.find(tp => tp.shareCode === shareCode)
+                    : undefined;
 
                 const addressMatchedTrackedPins = trackedPins.filter(tp =>
-                    Array.isArray(tp.addresses) && tp.addresses.some((a: { id: string; source: string }) =>
+                    addresses.length > 0 && Array.isArray(tp.addresses) && tp.addresses.some((a: { id: string; source: string }) =>
                         addresses.some((addr: { source: string; addressID: number }) =>
                             a.id === String(addr.addressID) && a.source === addr.source
                         )
@@ -215,15 +232,18 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdiv
 
                 const bestTrackedPin =
                     trackedByOriginalMapPinId ??
+                    trackedByShareCode ??
                     trackedAtCurrentBeacon ??
                     addressMatchedTrackedPins[0];
 
                 if (bestTrackedPin) {
                     isTracked = true;
                     trackedColor = bestTrackedPin.color;
-                    symbol = bestTrackedPin.symbol;
                     matchedMapPinId = bestTrackedPin.id;
                 }
+
+                const trackedSymbol = bestTrackedPin?.symbol?.trim();
+                const trainLabel = trackedSymbol || (shareCode ? `Train ${shareCode}` : (addressText || 'Train'));
 
                 const handleSymbolClick = (e: React.MouseEvent) => {
                     e.stopPropagation();
@@ -268,6 +288,8 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdiv
                             display: 'flex', 
                             alignItems: 'center', 
                             gap: 0.5,
+                            width: '100%',
+                            height: '100%',
                             cursor: 'pointer',
                             '&:hover': {
                                 backgroundColor: 'rgba(255, 255, 255, 0.05)',
@@ -339,31 +361,161 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdiv
                                 </Box>
                             )
                         )}
-                        {symbol && (
-                            <span 
-                                onClick={handleSymbolClick}
-                                style={{ 
-                                    fontWeight: 'bold', 
-                                    marginRight: '4px',
-                                    color: trackedColor || '#FFD700',
+                        <Box
+                            sx={{
+                                minWidth: 0,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'center',
+                                lineHeight: 1.2,
+                            }}
+                        >
+                            <span
+                                onClick={handleAddressClick}
+                                style={{
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    color: isTracked ? (trackedColor || '#FFD700') : 'inherit',
                                     cursor: 'pointer',
-                                    textDecoration: 'underline'
+                                    textDecoration: isTracked ? 'underline' : 'none',
+                                    fontWeight: isTracked ? 700 : 400,
                                 }}
-                                title="Click to edit symbol"
+                                title={isTracked ? 'Click to edit tracked train' : 'Click to track this train'}
                             >
-                                {symbol}
+                                {trainLabel}
                             </span>
-                        )}
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {addressText}
-                        </span>
+                            {addressText && (canViewSupportAddresses ? !!shareCode : true) && (
+                                <span style={{ display: 'block', fontSize: '11px', opacity: 0.75, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: '2px' }}>
+                                    {addressText}
+                                </span>
+                            )}
+                        </Box>
                     </Box>
                 );
             },
         },
+        {
+            field: 'shareCode',
+            headerName: 'Share',
+            width: 62,
+            sortable: false,
+            filterable: false,
+            renderCell: (params: GridRenderCellParams<MapPinHistory>) => {
+                if (!params.row?.shareCode) {
+                    return '';
+                }
+
+                return (
+                    <Box
+                        onClick={async (e) => {
+                            e.stopPropagation();
+                            try {
+                                await copyTrackedPinShareUrl(params.row.shareCode!);
+                                setCopiedShareCode(params.row.shareCode!);
+                                if (copyFeedbackTimeoutRef.current) {
+                                    window.clearTimeout(copyFeedbackTimeoutRef.current);
+                                }
+                                copyFeedbackTimeoutRef.current = window.setTimeout(() => {
+                                    setCopiedShareCode(null);
+                                }, 3000);
+                            } catch (error) {
+                                console.error('Failed to copy share link:', error);
+                            }
+                        }}
+                        sx={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: '100%',
+                            height: '100%',
+                            cursor: 'pointer',
+                            color: copyIconColor,
+                            position: 'relative',
+                            overflow: 'visible',
+                        }}
+                        title={`Copy share link for ${params.row.shareCode}`}
+                    >
+                        <CopyIcon size={16} color={copyIconColor} />
+                        {copiedShareCode === params.row.shareCode && (
+                            <span
+                                className="copied-feedback-badge"
+                                style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    fontSize: '11px',
+                                    lineHeight: 1,
+                                    color: '#14532d',
+                                    background: 'rgba(220, 252, 231, 0.95)',
+                                    border: '1px solid rgba(34, 197, 94, 0.35)',
+                                    borderRadius: '9999px',
+                                    padding: '3px 6px',
+                                    position: 'absolute',
+                                    left: 'calc(100% + 4px)',
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    whiteSpace: 'nowrap',
+                                    pointerEvents: 'none',
+                                    zIndex: 1,
+                                }}
+                            >
+                                <span
+                                    style={{
+                                        width: '12px',
+                                        height: '12px',
+                                        borderRadius: '9999px',
+                                        background: '#16a34a',
+                                        color: '#ffffff',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontSize: '9px',
+                                        fontWeight: 700,
+                                    }}
+                                >
+                                    ✓
+                                </span>
+                                Copied!
+                            </span>
+                        )}
+                    </Box>
+                );
+            }
+        },
     ];
 
     const isDark = theme === 'dark';
+
+    useEffect(() => {
+        const styleId = 'copied-feedback-touch-style';
+        if (document.getElementById(styleId)) {
+            return;
+        }
+
+        const style = document.createElement('style');
+        style.id = styleId;
+        style.innerHTML = `
+            @media (pointer: coarse) {
+                .copied-feedback-badge {
+                    font-size: 12px !important;
+                    padding: 4px 8px !important;
+                }
+
+                .copied-feedback-badge > span {
+                    width: 14px !important;
+                    height: 14px !important;
+                    font-size: 10px !important;
+                }
+            }
+        `;
+
+        document.head.appendChild(style);
+
+        return () => {
+            style.remove();
+        };
+    }, []);
 
     const handleModalSave = async (newSymbol: string) => {
         if (isTrackingNew && selectedHistoryRecord) {
@@ -545,10 +697,10 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdiv
                             disableColumnMenu
                             disableColumnSelector
                             disableDensitySelector
-                            rowHeight={36}
+                            rowHeight={56}
                             columnHeaderHeight={0}
                             sx={{
-                                height: history.length > 5 ? '260px' : `${(history.length * 36)}px`,
+                                height: history.length > 5 ? '260px' : `${(history.length * 56)}px`,
                                 width: '100%',
                                 backgroundColor: isDark ? '#2a2a2a' : '#ffffff',
                                 color: isDark ? '#ccc' : '#333333',
@@ -566,6 +718,8 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdiv
                                     borderBottom: isDark ? '1px solid #333' : '1px solid #e0e0e0',
                                     color: isDark ? '#ccc' : '#333333',
                                     padding: '0 8px',
+                                    display: 'flex',
+                                    alignItems: 'center',
                                 },
                                 '& .MuiDataGrid-columnHeaders': {
                                     display: 'none',
@@ -587,6 +741,7 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdiv
                                 '& .MuiDataGrid-virtualScroller': {
                                     backgroundColor: isDark ? '#2a2a2a' : '#ffffff',
                                     overflowY: history.length > 5 ? 'scroll !important' : 'auto',
+                                    overflowX: 'hidden !important',
                                     msOverflowStyle: 'scrollbar',
                                     scrollbarWidth: 'thin',
                                 },

@@ -3,7 +3,7 @@ import L from 'leaflet';
 import { useEffect, useRef, useState } from 'react';
 import { parseISO } from 'date-fns/parseISO';
 import { format } from 'date-fns';
-import { addTrackedMapPin, removeTrackedMapPin, getTrackedPinSymbol, updateTrackedPinSymbol, refreshTrackedPinsFromApi } from '../services/trackedPins';
+import { addTrackedMapPin, removeTrackedMapPin, getTrackedPinSymbol, updateTrackedPinSymbol, refreshTrackedPinsFromApi, copyTrackedPinShareUrl } from '../services/trackedPins';
 // Extend window type for setTrackedPinsStateFromApi
 declare global {
     interface Window {
@@ -16,6 +16,7 @@ import { ArrowIcon } from './ArrowIcon'; // adjust import as needed
 import { UnknownIcon } from './UnknownIcon';
 import TrackSymbolModal from './TrackSymbolModal';
 import { MapPin } from '../types/MapPin';
+import { CopyIcon } from './CopyIcon';
 
 const ICON_CACHE_BUSTER = import.meta.env.VITE_APP_VERSION
     ? `?v=${import.meta.env.VITE_APP_VERSION}`
@@ -43,6 +44,7 @@ interface TelemetryMarkerProps {
     trackedPins: TrackedPin[];
     longitudeOffset?: number;
     hourFormat?: string;
+    canViewSupportAddresses?: boolean;
 }
 
 const formatDirection = (dir?: string | null): string => {
@@ -66,7 +68,7 @@ const formatDirection = (dir?: string | null): string => {
     return map[dir.toUpperCase()] || 'Unknown Direction';
 };
 
-const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'light' }> = ({ pin, size, maxPinAgeMinutes, mapTheme, trackedPins, longitudeOffset = 0, hourFormat = '24' }) => {
+const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'light' }> = ({ pin, size, maxPinAgeMinutes, mapTheme, trackedPins, longitudeOffset = 0, hourFormat = '24', canViewSupportAddresses = false }) => {
     // hourFormat is destructured from props with default '24'
     // Inject dark mode popup CSS override once per page load
     useEffect(() => {
@@ -170,7 +172,7 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
         if (!marker) return;
 
         let addressLines = '';
-        if (Array.isArray(pin.addresses)) {
+        if (canViewSupportAddresses && Array.isArray(pin.addresses) && pin.addresses.length > 0) {
             const activeAddressColor = mapTheme === 'dark' ? '#ffffff' : '#000000';
             const inactiveAddressColor = '#9ca3af';
             addressLines = pin.addresses
@@ -179,14 +181,38 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
                     return `<span style='color:${color};'>${a.addressID} ${a.source}</span><br/>`;
                 })
                 .join('');
+        } else if (!canViewSupportAddresses) {
+            // For Viewer role: show available source types (for example HOT/EOT/DPU).
+            const sourceTypesLabel = Array.isArray(pin.addressSourceTypes) && pin.addressSourceTypes.length > 0
+                ? pin.addressSourceTypes.join(' / ')
+                : '';
+            const dpuColor = mapTheme === 'dark' ? '#d5d9df' : '#4b5563';
+            addressLines = sourceTypesLabel
+                ? `<span style='color:${dpuColor};font-size:0.9em;'>${sourceTypesLabel}</span><br/>`
+                : '';
         }
 
         // Add a unique id to the trackText span for event delegation
         const trackTextId = `track-text-${pin.id}`;
-        const iconSuffix = mapTheme === 'dark' ? '-light' : '-dark';
-        const trackingIcon = isTracked
-            ? `<img src='/icons/tracking-on${iconSuffix}.svg' alt='Tracking' style='height:16px;width:16px;vertical-align:middle;margin-right:6px;' />`
-            : `<img src='/icons/tracking-off${iconSuffix}.svg' alt='Not Tracking' style='height:16px;width:16px;vertical-align:middle;margin-right:6px;' />`;
+        const shareTextId = `share-text-${pin.id}`;
+        const shareStatusId = `share-status-${pin.id}`;
+        const trackedPinForLabel =
+            trackedPins.find(tp => String(tp.id) === String(pin.id)) ||
+            (pin.shareCode ? trackedPins.find(tp => tp.shareCode === pin.shareCode) : undefined);
+        const trackedSymbolLabel = trackedPinForLabel?.symbol?.trim();
+        const displayTrainLabel = trackedSymbolLabel || (pin.shareCode ? `Train ${pin.shareCode}` : '');
+        const isCoarsePointer = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
+        const actionRowPadding = isCoarsePointer ? '4px 0' : '1px 0';
+        const actionRowGap = isCoarsePointer ? '10px' : '6px';
+        const trackingBadgeColor = isTracked ? (trackColor || '#FFD700') : '#cccccc';        const trackingBadgeBorder = isTracked ? '1px solid rgba(0, 0, 0, 0.5)' : '1px solid rgba(0, 0, 0, 0.3)';
+        const trackingBadgeTextColor = isTracked ? '#000' : '#666';
+        const trackingBadge = `<span style='width:14px;height:14px;background-color:${trackingBadgeColor};border-radius:50%;border:${trackingBadgeBorder};display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:900;color:${trackingBadgeTextColor};line-height:14px;flex-shrink:0;'>T</span>`;
+        const shareCodeLine = pin.shareCode
+            ? `<span id='${trackTextId}' style='cursor:pointer;display:inline-flex;align-items:center;gap:6px;padding:${actionRowPadding};margin-bottom:${actionRowGap};'><span style='display:inline-flex;align-items:center;'>${trackingBadge}</span><span style='text-decoration:${isTracked ? 'underline' : 'none'};color:${isTracked ? (trackColor || '#FFD700') : 'inherit'};font-weight:${isTracked ? 700 : 400};'>${displayTrainLabel}</span></span><br/>`
+            : '';
+        const copyIcon = ReactDOMServer.renderToStaticMarkup(
+            <CopyIcon size={14} color={mapTheme === 'dark' ? '#d5d9df' : '#4b5563'} />
+        );
         const trackText = isTracked
             ? 'Tracking'
             : 'Not Tracking';
@@ -210,8 +236,10 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
                         return pin.lastUpdate;
                     }
                 })()}<br/>
+                ${shareCodeLine}
                 ${addressLines}
-                <span id='${trackTextId}' style='cursor:pointer;text-decoration:underline;display:inline-flex;align-items:center;'>${trackingIcon}${trackText}</span>
+                ${pin.shareCode ? `<span id='${shareTextId}' title='Copy share link' style='cursor:pointer;display:inline-flex;align-items:center;gap:6px;padding:${actionRowPadding};margin-top:${isCoarsePointer ? '2px' : '0'};margin-bottom:6px;color:${mapTheme === 'dark' ? '#d5d9df' : '#4b5563'};'>${copyIcon}<span style='text-decoration:underline;'>Share</span><span id='${shareStatusId}' style='font-size:12px;opacity:0;transition:opacity 0.2s ease;'></span></span>` : ''}
+                ${pin.shareCode ? '' : `<span id='${trackTextId}' style='cursor:pointer;text-decoration:underline;display:inline-flex;align-items:center;gap:6px;padding:${actionRowPadding};'><span style='display:inline-flex;align-items:center;'>${trackingBadge}</span>${trackText}</span>`}
             </div>
         `;
 
@@ -231,7 +259,39 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
 
         // Attach click handler to trackText in popup DOM on popupopen, and re-attach if popup content changes
         let trackTextEl: HTMLElement | null = null;
+        let shareTextEl: HTMLElement | null = null;
         let observer: MutationObserver | null = null;
+        let shareFeedbackTimeout: ReturnType<typeof setTimeout> | null = null;
+        const updateShareStatus = (isSuccess: boolean) => {
+            const shareStatusEl = document.getElementById(shareStatusId);
+            if (!shareStatusEl) {
+                return;
+            }
+
+            const badgePadding = isCoarsePointer ? '4px 8px' : '3px 6px';
+            if (isSuccess) {
+                const iconSize = isCoarsePointer ? '14px' : '12px';
+                const iconFontSize = isCoarsePointer ? '10px' : '9px';
+                shareStatusEl.innerHTML = `<span style="display:inline-flex;align-items:center;gap:4px;color:#14532d;background:rgba(220,252,231,0.95);border:1px solid rgba(34,197,94,0.35);border-radius:9999px;padding:${badgePadding};line-height:1;white-space:nowrap;font-size:12px;pointer-events:none;"><span style="width:${iconSize};height:${iconSize};border-radius:9999px;background:#16a34a;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:${iconFontSize};font-weight:700;">✓</span>Copied!</span>`;
+            } else {
+                shareStatusEl.innerHTML = `<span style="display:inline-flex;align-items:center;gap:4px;color:#7f1d1d;background:rgba(254,226,226,0.95);border:1px solid rgba(248,113,113,0.45);border-radius:9999px;padding:${badgePadding};line-height:1;white-space:nowrap;font-size:12px;pointer-events:none;">Failed</span>`;
+            }
+            shareStatusEl.style.opacity = '1';
+
+            if (shareFeedbackTimeout) {
+                clearTimeout(shareFeedbackTimeout);
+            }
+
+            shareFeedbackTimeout = setTimeout(() => {
+                const currentShareStatusEl = document.getElementById(shareStatusId);
+                if (!currentShareStatusEl) {
+                    return;
+                }
+
+                currentShareStatusEl.style.opacity = '0';
+                currentShareStatusEl.textContent = '';
+            }, 3000);
+        };
         const handleTrackTextClick = (e: any) => {
             e.preventDefault();
             e.stopPropagation();
@@ -249,16 +309,41 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
                 setModalOpen(true);
             }
         };
+        const handleShareTextClick = async (e: any) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!pin.shareCode) {
+                return;
+            }
+
+            try {
+                await copyTrackedPinShareUrl(pin.shareCode);
+                updateShareStatus(true);
+            } catch (error) {
+                console.error('Failed to copy share link:', error);
+                updateShareStatus(false);
+            }
+        };
         const attachHandler = () => {
             trackTextEl = document.getElementById(trackTextId);
             if (trackTextEl) {
                 trackTextEl.addEventListener('click', handleTrackTextClick);
+            }
+
+            shareTextEl = document.getElementById(shareTextId);
+            if (shareTextEl) {
+                shareTextEl.addEventListener('click', handleShareTextClick);
             }
         };
         const detachHandler = () => {
             if (trackTextEl) {
                 trackTextEl.removeEventListener('click', handleTrackTextClick);
                 trackTextEl = null;
+            }
+
+            if (shareTextEl) {
+                shareTextEl.removeEventListener('click', handleShareTextClick);
+                shareTextEl = null;
             }
         };
         const onPopupOpen = () => {
@@ -305,8 +390,11 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
             if (observer) {
                 observer.disconnect();
             }
+            if (shareFeedbackTimeout) {
+                clearTimeout(shareFeedbackTimeout);
+            }
         };
-    }, [pin.id, pin.beaconID, pin.beaconName, pin.railroad, pin.subdivision, pin.milepost, pin.direction, pin.moving, pin.lastUpdate, pin.addresses, isTracked, trackColor, mapTheme, hourFormat]);
+    }, [pin.id, pin.shareCode, pin.beaconID, pin.beaconName, pin.railroad, pin.subdivision, pin.milepost, pin.direction, pin.moving, pin.lastUpdate, pin.addresses, isTracked, trackColor, mapTheme, hourFormat]);
 
     // Use ArrowMapPin as the icon, with rotation and border color
     const createCustomIcon = () => {

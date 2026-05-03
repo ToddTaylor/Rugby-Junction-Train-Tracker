@@ -38,6 +38,7 @@ namespace Web.Server.Mappers
 
             config.NewConfig<MapPin, MapPinDTO>()
                 .Map(dest => dest.BeaconID, src => src.BeaconID)
+                .Map(dest => dest.ShareCode, src => src.ShareCode)
                 .Map(dest => dest.BeaconName, src => src.BeaconRailroad.Beacon.Name)
                 .Map(dest => dest.Direction, src => src.Direction)
                 .Map(dest => dest.Latitude, src => src.BeaconRailroad.Latitude)

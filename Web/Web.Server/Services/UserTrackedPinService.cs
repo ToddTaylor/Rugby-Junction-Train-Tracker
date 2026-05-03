@@ -10,6 +10,7 @@ namespace Web.Server.Services
 {
     public class UserTrackedPinService : IUserTrackedPinService
     {
+        private static readonly string[] PreferredTrackColors = ["#FF3366", "#00FFFF", "#00FF00", "#FF00FF", "#FFFF00", "#FF6600", "#00FF99", "#FF0099", "#66FF00", "#0099FF"];
         private readonly IUserTrackedPinRepository _repository;
         private readonly IMapPinRepository _mapPinRepository;
         private readonly ITimeProvider _timeProvider;
@@ -73,6 +74,44 @@ namespace Web.Server.Services
             }
         }
 
+        public async Task<UserTrackedPinDTO> AddByShareCodeAsync(int userId, string shareCode)
+        {
+            if (string.IsNullOrWhiteSpace(shareCode))
+            {
+                throw new ArgumentException("Share code is required.", nameof(shareCode));
+            }
+
+            var mapPin = await _mapPinRepository.GetByShareCodeAsync(shareCode);
+            if (mapPin == null)
+            {
+                throw new KeyNotFoundException($"Shared train '{shareCode}' is no longer active.");
+            }
+
+            var normalizedShareCode = mapPin.ShareCode?.Trim().ToUpperInvariant();
+            var preferredSymbol = await ResolvePreferredSymbolAsync(mapPin.ID, normalizedShareCode);
+
+            var trackedPin = await _repository.GetByUserAndMapPinAsync(userId, mapPin.ID);
+            if (trackedPin != null)
+            {
+                trackedPin.BeaconID = mapPin.BeaconID;
+                trackedPin.SubdivisionID = mapPin.SubdivisionId;
+                trackedPin.LastUpdate = _timeProvider.UtcNow;
+                trackedPin.ExpiresUtc = _timeProvider.UtcNow.AddHours(TrackingDurationHours);
+                if (string.IsNullOrWhiteSpace(trackedPin.Symbol) && !string.IsNullOrWhiteSpace(preferredSymbol))
+                {
+                    trackedPin.Symbol = preferredSymbol;
+                }
+                await _repository.UpdateAsync(trackedPin);
+
+                var existingDto = _mapper.Map<UserTrackedPinDTO>(trackedPin);
+                await SafeBroadcastAsync("TrackedPinUpdated", userId, existingDto);
+                return existingDto;
+            }
+
+            var color = await GetNextAvailableColorAsync(userId);
+            return await AddAsync(userId, mapPin.ID, mapPin.BeaconID, mapPin.SubdivisionId, mapPin.BeaconRailroad?.Beacon?.Name, preferredSymbol, color);
+        }
+
         public async Task UpdateSymbolAsync(int userId, int mapPinId, string? symbol)
         {
             try
@@ -88,10 +127,7 @@ namespace Web.Server.Services
                     }
 
                     // Get existing colors for the user
-                    var existingPins = await _repository.GetByUserIdAsync(userId);
-                    var usedColors = existingPins.Select(p => p.Color).ToList();
-                    var availableColors = new[] { "#FF3366", "#00FFFF", "#00FF00", "#FF00FF", "#FFFF00", "#FF6600", "#00FF99", "#FF0099", "#66FF00", "#0099FF" };
-                    var color = availableColors.FirstOrDefault(c => !usedColors.Contains(c)) ?? "orange";
+                    var color = await GetNextAvailableColorAsync(userId);
 
                     trackedPin = new UserTrackedPin
                     {
@@ -176,6 +212,35 @@ namespace Web.Server.Services
             {
                 _logger.LogError(ex, "Failed to broadcast {Method} for user {UserId}", method, userId);
             }
+        }
+
+        private async Task<string> GetNextAvailableColorAsync(int userId)
+        {
+            var existingPins = await _repository.GetByUserIdAsync(userId);
+            var usedColors = existingPins.Select(p => p.Color).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            return PreferredTrackColors.FirstOrDefault(color => !usedColors.Contains(color)) ?? "orange";
+        }
+
+        private async Task<string?> ResolvePreferredSymbolAsync(int mapPinId, string? fallbackShareCode)
+        {
+            var nowUtc = _timeProvider.UtcNow;
+
+            var symbolCandidates = (await _repository.GetByMapPinIdAsync(mapPinId)).ToList();
+
+            if (symbolCandidates.Count == 0 && !string.IsNullOrWhiteSpace(fallbackShareCode))
+            {
+                symbolCandidates = (await _repository.GetByShareCodeAsync(fallbackShareCode)).ToList();
+            }
+
+            var existingSymbol = symbolCandidates
+                .Where(pin => pin.ExpiresUtc > nowUtc && !string.IsNullOrWhiteSpace(pin.Symbol))
+                .OrderByDescending(pin => pin.LastUpdate)
+                .Select(pin => pin.Symbol!.Trim())
+                .FirstOrDefault();
+
+            return string.IsNullOrWhiteSpace(existingSymbol)
+                ? fallbackShareCode
+                : existingSymbol;
         }
 
         private static string GetUserGroup(int userId) => $"user-{userId}";

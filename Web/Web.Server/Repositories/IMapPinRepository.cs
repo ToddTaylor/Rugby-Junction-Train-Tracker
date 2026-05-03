@@ -14,6 +14,8 @@ namespace Web.Server.Repositories
 
         Task<MapPin?> GetByIdAsync(int id);
 
+        Task<MapPin?> GetByShareCodeAsync(string shareCode);
+
         Task<IEnumerable<MapPin>> GetAllAsync(int? minutes);
 
         Task<IEnumerable<MapPin>> GetLatestAsync();

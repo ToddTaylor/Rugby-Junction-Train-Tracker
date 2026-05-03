@@ -19,6 +19,9 @@ namespace Web.Server.Entities
         [Required]
         public int SubdivisionId { get; set; }
 
+        [StringLength(6)]
+        public string? ShareCode { get; set; }
+
         /// <summary>
         /// The RailroadID of the subdivision where this map pin was originally created.
         /// This is set once at creation and never updated.

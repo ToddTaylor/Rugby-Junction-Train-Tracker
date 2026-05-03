@@ -5,7 +5,7 @@
         /// <summary>
         /// The ID of the beacon that sent the telemetry.
         /// </summary>
-        /// <remarks>The beacon ID must be obtained from the API administrator.</remarks>
+        /// <remarks>The beacon ID must be obtained from an API Admin user.</remarks>
         public required int BeaconID { get; set; }
 
         /// <summary>

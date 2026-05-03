@@ -80,6 +80,13 @@ namespace Web.Server.Data
                 .HasForeignKey(mp => new { mp.BeaconID, mp.SubdivisionId })
                 .OnDelete(DeleteBehavior.Restrict);
 
+            modelBuilder.Entity<MapPin>()
+                .HasIndex(mp => mp.ShareCode)
+                .IsUnique();
+
+            modelBuilder.Entity<MapPinHistory>()
+                .HasIndex(mph => mph.ShareCode);
+
             modelBuilder.Entity<Address>()
                 .HasOne(a => a.MapPin)
                 .WithMany(mp => mp.Addresses)

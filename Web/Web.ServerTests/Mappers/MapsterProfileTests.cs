@@ -135,5 +135,44 @@ namespace Web.ServerTests.Mappers
             Assert.IsFalse(dto.Addresses.Single(a => a.Source == "HOT").IsActive);
             Assert.IsFalse(dto.Addresses.Single(a => a.Source == "EOT").IsActive);
         }
+
+        [TestMethod]
+        public void MapPinMapping_MapsShareCode()
+        {
+            var config = new TypeAdapterConfig();
+            config.Scan(typeof(MapsterProfile).Assembly);
+
+            var now = new DateTime(2026, 5, 2, 12, 0, 0, DateTimeKind.Utc);
+
+            var mapPin = new MapPin
+            {
+                ID = 11,
+                BeaconID = 1,
+                ShareCode = "ZX82QP",
+                Direction = "S",
+                CreatedAt = now,
+                LastUpdate = now,
+                Moving = true,
+                Addresses = [],
+                BeaconRailroad = new BeaconRailroad
+                {
+                    BeaconID = 1,
+                    Latitude = 44.0,
+                    Longitude = -88.0,
+                    Milepost = 117.2,
+                    Beacon = new Beacon { Name = "Rugby Jct" },
+                    Subdivision = new Subdivision
+                    {
+                        ID = 99,
+                        Name = "Waukesha",
+                        Railroad = new Railroad { Name = "CN" }
+                    }
+                }
+            };
+
+            var dto = mapPin.Adapt<MapPinDTO>(config);
+
+            Assert.AreEqual("ZX82QP", dto.ShareCode);
+        }
     }
 }

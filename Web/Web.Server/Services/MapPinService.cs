@@ -253,8 +253,20 @@ namespace Web.Server.Services
             await _mapPinHistoryService.CreateOrUpdateHistoryFromMapPin(upsertedMapPin, isNewMapPin);
 
             var mapPinDTO = _mapper.Map<MapPinDTO>(upsertedMapPin);
+            var viewerMapPinDto = CreateViewerMapPinDto(mapPinDTO);
 
-            await _hubContext.Clients.All.SendCoreAsync(NotificationMethods.MapPinUpdate, [mapPinDTO], default);
+            var clients = _hubContext.Clients;
+            var supportGroup = clients?.Group(NotificationHub.SupportUsersGroup);
+            if (supportGroup != null)
+            {
+                await supportGroup.SendCoreAsync(NotificationMethods.MapPinUpdate, [mapPinDTO], default);
+            }
+
+            var viewerGroup = clients?.Group(NotificationHub.ViewerUsersGroup);
+            if (viewerGroup != null)
+            {
+                await viewerGroup.SendCoreAsync(NotificationMethods.MapPinUpdate, [viewerMapPinDto], default);
+            }
         }
 
         private async Task<MapPin?> GetExistingHotOrEotMapPinAsync(Telemetry telemetry)
@@ -305,7 +317,8 @@ namespace Web.Server.Services
                 return upsertedMapPin;
             }
 
-            var allPinsAtBeacon = await _mapPinRepository.GetAllByBeaconAsync(upsertedMapPin.BeaconID, upsertedMapPin.SubdivisionId, TIME_THRESHOLD_MINUTES);
+            var allPinsAtBeacon = await _mapPinRepository.GetAllByBeaconAsync(upsertedMapPin.BeaconID, upsertedMapPin.SubdivisionId, TIME_THRESHOLD_MINUTES)
+                ?? [];
 
             // "Duplicates" are defined as other map pins at the same beacon, excluding the just-upserted map pin.
             var duplicates = allPinsAtBeacon.Where(mp => mp.ID != upsertedMapPin.ID).ToList();
@@ -317,11 +330,13 @@ namespace Web.Server.Services
 
             foreach (var duplicate in duplicates)
             {
+                var duplicateAddresses = duplicate.Addresses ?? [];
+
                 // DPU: only merge duplicates that are compatible with this DPU train.
                 // If a duplicate already has a DPU with a different train ID, keep it separate.
                 if (telemetry.Source == SourceEnum.DPU)
                 {
-                    var duplicateDpuTrainIds = duplicate.Addresses
+                    var duplicateDpuTrainIds = duplicateAddresses
                         .Where(a => a.Source == SourceEnum.DPU && a.DpuTrainID.HasValue)
                         .Select(a => a.DpuTrainID!.Value)
                         .Distinct()
@@ -334,7 +349,9 @@ namespace Web.Server.Services
                     }
                 }
 
-                foreach (var address in duplicate.Addresses)
+                upsertedMapPin.Addresses ??= [];
+
+                foreach (var address in duplicateAddresses)
                 {
                     upsertedMapPin.Addresses.Add(address);
                 }
@@ -343,6 +360,11 @@ namespace Web.Server.Services
                 if (upsertedMapPin.Direction == null && duplicate.Direction != null)
                 {
                     upsertedMapPin.Direction = duplicate.Direction;
+                }
+
+                if (string.IsNullOrWhiteSpace(upsertedMapPin.ShareCode) && !string.IsNullOrWhiteSpace(duplicate.ShareCode))
+                {
+                    upsertedMapPin.ShareCode = duplicate.ShareCode;
                 }
 
                 // Delete the duplicate's history so it doesn't create a stale orphan record.
@@ -355,7 +377,11 @@ namespace Web.Server.Services
                 await _mapPinRepository.DeleteAsync(duplicate.ID);
 
                 // Notify clients to remove any stale tracking labels for the deleted pin.
-                await _hubContext.Clients.All.SendCoreAsync(NotificationMethods.TrackedPinRemoved, [duplicate.ID], default);
+                var allClients = _hubContext.Clients?.All;
+                if (allClients != null)
+                {
+                    await allClients.SendCoreAsync(NotificationMethods.TrackedPinRemoved, [duplicate.ID], default);
+                }
             }
 
             return await _mapPinRepository.UpsertAsync(upsertedMapPin, telemetry.LastUpdate);
@@ -373,6 +399,29 @@ namespace Web.Server.Services
                 Source = telemetry.Source,
                 CreatedAt = telemetry.LastUpdate,
                 LastUpdate = telemetry.LastUpdate
+            };
+        }
+
+        private static MapPinDTO CreateViewerMapPinDto(MapPinDTO source)
+        {
+            return new MapPinDTO
+            {
+                ID = source.ID,
+                BeaconID = source.BeaconID,
+                ShareCode = source.ShareCode,
+                BeaconName = source.BeaconName,
+                CreatedAt = source.CreatedAt,
+                LastUpdate = source.LastUpdate,
+                Direction = source.Direction,
+                Latitude = source.Latitude,
+                Longitude = source.Longitude,
+                Milepost = source.Milepost,
+                Moving = source.Moving,
+                IsLocal = source.IsLocal,
+                Railroad = source.Railroad,
+                Subdivision = source.Subdivision,
+                SubdivisionID = source.SubdivisionID,
+                Addresses = null
             };
         }
 
