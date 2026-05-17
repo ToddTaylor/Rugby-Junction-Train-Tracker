@@ -2,6 +2,7 @@ using MapsterMapper;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
 using Web.Server.DTOs;
+using Web.Server.Entities;
 using Web.Server.Services;
 
 namespace Web.Server.Controllers.v1
@@ -13,6 +14,7 @@ namespace Web.Server.Controllers.v1
         private readonly IMapPinService _mapPinsService;
         private readonly IBeaconRailroadService _beaconRailroadService;
         private readonly IMapPinHistoryService _mapPinHistoryService;
+        private readonly IUserService _userService;
         private readonly ILogger<MapPinsController> _logger;
         private readonly IMapper _mapper;
 
@@ -20,12 +22,14 @@ namespace Web.Server.Controllers.v1
             IBeaconRailroadService beaconRailroadService,
             IMapPinService mapPinsService,
             IMapPinHistoryService mapPinHistoryService,
+            IUserService userService,
             ILogger<MapPinsController> logger,
             IMapper mapper)
         {
             _beaconRailroadService = beaconRailroadService;
             _mapPinsService = mapPinsService;
             _mapPinHistoryService = mapPinHistoryService;
+            _userService = userService;
             _logger = logger;
             _mapper = mapper;
         }
@@ -36,8 +40,9 @@ namespace Web.Server.Controllers.v1
             var response = new MessageEnvelope<IEnumerable<MapPinDTO>>(null, []);
             try
             {
+                var canViewSupportAddresses = await CanViewSupportAddressesAsync();
                 var mapPins = await _mapPinsService.GetMapPinsAsync(minutes);
-                var mapPinDTOs = _mapper.Map<IEnumerable<MapPinDTO>>(mapPins);
+                var mapPinDTOs = _mapper.Map<IEnumerable<MapPinDTO>>(mapPins).ToList();
 
                 foreach (var mapPinDTO in mapPinDTOs)
                 {
@@ -47,6 +52,21 @@ namespace Web.Server.Controllers.v1
                     mapPinDTO.Longitude = beaconRailroad.Longitude;
                     mapPinDTO.Railroad = beaconRailroad.Subdivision.Railroad.Name;
                     mapPinDTO.Subdivision = beaconRailroad.Subdivision.Name;
+
+                        // Compute source metadata before filtering addresses
+                        mapPinDTO.AddressSourceTypes = mapPinDTO.Addresses?
+                            .Select(a => a.Source?.Trim().ToUpperInvariant())
+                            .Where(source => !string.IsNullOrWhiteSpace(source))
+                            .Distinct()
+                            .OrderBy(source => source)
+                            .Cast<string>()
+                            .ToList() ?? [];
+                        mapPinDTO.HasDpu = mapPinDTO.AddressSourceTypes.Contains("DPU");
+
+                    if (!canViewSupportAddresses)
+                    {
+                        mapPinDTO.Addresses = null;
+                    }
                 }
 
                 response.Data = mapPinDTOs;
@@ -86,6 +106,7 @@ namespace Web.Server.Controllers.v1
             var response = new MessageEnvelope<IEnumerable<MapPinHistoryDTO>>(null, []);
             try
             {
+                var canViewSupportAddresses = await CanViewSupportAddressesAsync();
                 var histories = await _mapPinHistoryService.GetHistoryByBeaconIdAsync(beaconId, subdivisionId, limit);
                 var historyDTOs = new List<MapPinHistoryDTO>();
 
@@ -94,7 +115,8 @@ namespace Web.Server.Controllers.v1
                     var dto = new MapPinHistoryDTO
                     {
                         ID = history.ID,
-                            OriginalMapPinID = history.OriginalMapPinID,
+                        OriginalMapPinID = history.OriginalMapPinID,
+                        ShareCode = history.ShareCode,
                         CreatedAt = history.CreatedAt.ToString("O"),
                         LastUpdate = history.LastUpdate.ToString("O")
                     };
@@ -130,6 +152,21 @@ namespace Web.Server.Controllers.v1
                         }
                     }
 
+                        // Compute source metadata before filtering addresses
+                        dto.AddressSourceTypes = dto.Addresses?
+                            .Select(a => a.Source?.Trim().ToUpperInvariant())
+                            .Where(source => !string.IsNullOrWhiteSpace(source))
+                            .Distinct()
+                            .OrderBy(source => source)
+                            .Cast<string>()
+                            .ToList() ?? [];
+                        dto.HasDpu = dto.AddressSourceTypes.Contains("DPU");
+
+                    if (!canViewSupportAddresses)
+                    {
+                        dto.Addresses = null;
+                    }
+
                     historyDTOs.Add(dto);
                 }
 
@@ -163,6 +200,19 @@ namespace Web.Server.Controllers.v1
                 _logger.LogError(ex, "An error occurred while deleting map pin {MapPinId}.", id);
                 return StatusCode(StatusCodes.Status500InternalServerError, new { error = ex.Message });
             }
+        }
+
+        private async Task<bool> CanViewSupportAddressesAsync()
+        {
+            if (!HttpContext.Items.TryGetValue("UserId", out var userIdObj) || userIdObj is not int userId)
+            {
+                return false;
+            }
+
+            var user = await _userService.GetUserByIdAsync(userId);
+            return user?.UserRoles?.Any(ur =>
+                string.Equals(ur.Role?.RoleName, "Admin", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(ur.Role?.RoleName, "Custodian", StringComparison.OrdinalIgnoreCase)) == true;
         }
     }
 }

@@ -8,6 +8,7 @@ namespace Web.Server.Repositories
         Task<IEnumerable<UserTrackedPin>> GetByUserIdAsync(int userId);
         Task<UserTrackedPin?> GetByUserAndMapPinAsync(int userId, int mapPinId);
         Task<IEnumerable<UserTrackedPin>> GetByMapPinIdAsync(int mapPinId);
+        Task<IEnumerable<UserTrackedPin>> GetByShareCodeAsync(string shareCode);
         Task<UserTrackedPin> AddAsync(UserTrackedPin trackedPin);
         Task UpdateAsync(UserTrackedPin trackedPin);
         Task DeleteAsync(int id);

@@ -351,5 +351,151 @@ namespace Web.ServerTests.Repositories
             Assert.AreEqual(toBeacon.ID, persisted.BeaconRailroad.BeaconID);
             Assert.AreEqual("Oshkosh", persisted.BeaconRailroad.Beacon?.Name);
         }
+
+        [TestMethod]
+        public async Task UpsertAsync_NewMapPin_AssignsShareCode()
+        {
+            var now = new DateTime(2026, 5, 2, 12, 0, 0, DateTimeKind.Utc);
+            var options = new DbContextOptionsBuilder<TelemetryDbContext>()
+                .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+                .Options;
+
+            var timeProviderMock = new Mock<ITimeProvider>();
+            timeProviderMock.Setup(tp => tp.UtcNow).Returns(now);
+
+            await using var context = new TelemetryDbContext(options);
+            var repository = new MapPinRepository(context, timeProviderMock.Object);
+
+            var mapPin = new MapPin
+            {
+                BeaconID = 10,
+                SubdivisionId = 20,
+                CreatedRailroadID = 30,
+                CreatedAt = now,
+                LastUpdate = now,
+                Addresses =
+                [
+                    new Address
+                    {
+                        AddressID = 32873,
+                        Source = SourceEnum.HOT,
+                        CreatedAt = now,
+                        LastUpdate = now
+                    }
+                ]
+            };
+
+            var result = await repository.UpsertAsync(mapPin, now);
+
+            Assert.IsFalse(string.IsNullOrWhiteSpace(result.ShareCode));
+            Assert.AreEqual(6, result.ShareCode!.Length);
+        }
+
+        [TestMethod]
+        public async Task GetByShareCodeAsync_NormalizesCasing()
+        {
+            var now = new DateTime(2026, 5, 2, 12, 0, 0, DateTimeKind.Utc);
+            var options = new DbContextOptionsBuilder<TelemetryDbContext>()
+                .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+                .Options;
+
+            var timeProviderMock = new Mock<ITimeProvider>();
+            timeProviderMock.Setup(tp => tp.UtcNow).Returns(now);
+
+            await using var context = new TelemetryDbContext(options);
+
+            var owner = new User
+            {
+                ID = 1,
+                FirstName = "Test",
+                LastName = "Owner",
+                Email = "owner@example.com",
+                IsActive = true,
+                CreatedAt = now,
+                LastUpdate = now
+            };
+
+            var railroad = new Railroad
+            {
+                ID = 1,
+                Name = "CN",
+                CreatedAt = now,
+                LastUpdate = now,
+                Subdivisions = []
+            };
+
+            var subdivision = new Subdivision
+            {
+                ID = 2,
+                RailroadID = railroad.ID,
+                Railroad = railroad,
+                Name = "Waukesha",
+                DpuCapable = true,
+                CreatedAt = now,
+                LastUpdate = now
+            };
+
+            var beacon = new Beacon
+            {
+                ID = 3,
+                OwnerID = owner.ID,
+                Owner = owner,
+                Name = "Lomira",
+                CreatedAt = now,
+                LastUpdate = now
+            };
+
+            var beaconRailroad = new BeaconRailroad
+            {
+                BeaconID = beacon.ID,
+                Beacon = beacon,
+                SubdivisionID = subdivision.ID,
+                Subdivision = subdivision,
+                Direction = Direction.NorthSouth,
+                Latitude = 43.5,
+                Longitude = -88.5,
+                Milepost = 142.7,
+                MultipleTracks = false,
+                CreatedAt = now,
+                LastUpdate = now
+            };
+
+            var mapPin = new MapPin
+            {
+                ID = 99,
+                BeaconID = beacon.ID,
+                SubdivisionId = subdivision.ID,
+                ShareCode = "AB12CD",
+                CreatedRailroadID = railroad.ID,
+                BeaconRailroad = beaconRailroad,
+                CreatedAt = now,
+                LastUpdate = now,
+                Addresses =
+                [
+                    new Address
+                    {
+                        AddressID = 32873,
+                        Source = SourceEnum.HOT,
+                        CreatedAt = now,
+                        LastUpdate = now
+                    }
+                ]
+            };
+
+            context.Users.Add(owner);
+            context.Railroads.Add(railroad);
+            context.Subdivisions.Add(subdivision);
+            context.Beacons.Add(beacon);
+            context.BeaconRailroads.Add(beaconRailroad);
+            context.MapPins.Add(mapPin);
+            await context.SaveChangesAsync();
+
+            var repository = new MapPinRepository(context, timeProviderMock.Object);
+
+            var result = await repository.GetByShareCodeAsync("ab12cd");
+
+            Assert.IsNotNull(result);
+            Assert.AreEqual(mapPin.ID, result.ID);
+        }
     }
 }

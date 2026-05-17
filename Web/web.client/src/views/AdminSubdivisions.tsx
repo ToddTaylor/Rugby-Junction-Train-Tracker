@@ -14,6 +14,7 @@ import Tooltip from '@mui/material/Tooltip';
 import IconButton from '@mui/material/IconButton';
 import ClearIcon from '@mui/icons-material/Clear';
 import { useAuth } from '../hooks/useAuth';
+import { parseSessionRoles } from '../utils/roles';
 
 
 export const AdminSubdivisions: React.FC = () => {
@@ -39,7 +40,7 @@ export const AdminSubdivisions: React.FC = () => {
   const [selectedCustodianId, setSelectedCustodianId] = useState<number | null>(null);
 
   const { session } = useAuth();
-  const isCustodian = session?.roles?.includes('Custodian');
+  const { isCustodian } = parseSessionRoles(session?.roles);
   const userId = session?.userId;
 
   useEffect(() => {
@@ -50,7 +51,7 @@ export const AdminSubdivisions: React.FC = () => {
   async function loadCustodians() {
     const usersResult = await getUsers();
     if (usersResult.errors.length === 0 && usersResult.data) {
-      setCustodianUsers(usersResult.data.filter(u => u.roles.includes('Custodian')));
+      setCustodianUsers(usersResult.data.filter(u => u.roles.some(role => role.toLowerCase() === 'custodian')));
     }
   }
 

@@ -114,6 +114,7 @@ namespace Web.Server.Services
                             // Less than threshold - update the existing history with the latest addresses
                             // This is likely telemetry from the same train
                             existingHistory.AddressesJson = addressesJson;
+                            existingHistory.ShareCode = mapPin.ShareCode;
 
                             // Check if the map pin has been stationary for threshold time at same beacon
                             var timeSinceCreated = _timeProvider.UtcNow - existingHistory.CreatedAt;
@@ -149,6 +150,7 @@ namespace Web.Server.Services
             {
                 BeaconID = mapPin.BeaconID,
                 SubdivisionId = mapPin.SubdivisionId,
+                ShareCode = mapPin.ShareCode,
                 CreatedRailroadID = mapPin.CreatedRailroadID,
                 Direction = mapPin.Direction,
                 Moving = mapPin.Moving,

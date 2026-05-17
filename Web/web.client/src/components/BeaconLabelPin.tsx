@@ -195,21 +195,26 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
             String(pin.beaconID || '') === String(beaconPin.beaconID || '') &&
             String(pin.subdivisionID || '') === String(beaconPin.subdivisionID || '');
 
+        const shareCodeMatches = (trackedPin: TrackedPin, pin: MapPin): boolean =>
+            !!trackedPin.shareCode && !!pin.shareCode && trackedPin.shareCode === pin.shareCode;
+
         const addressOverlaps = (trackedPin: TrackedPin, pin: MapPin): boolean => {
-            if (!Array.isArray(trackedPin.addresses) || trackedPin.addresses.length === 0 || !Array.isArray(pin.addresses)) {
+            const pinAddresses = Array.isArray(pin.addresses) ? pin.addresses : [];
+            if (!Array.isArray(trackedPin.addresses) || trackedPin.addresses.length === 0 || pinAddresses.length === 0) {
                 return false;
             }
 
             return trackedPin.addresses.some(tpAddr =>
-                pin.addresses.some(mpAddr => tpAddr.id === String(mpAddr.addressID) && tpAddr.source === mpAddr.source)
+                pinAddresses.some(mpAddr => tpAddr.id === String(mpAddr.addressID) && tpAddr.source === mpAddr.source)
             );
         };
 
         const resolvedRows = trackedPins
             .map((trackedPin): ResolvedTrackedTrain | null => {
                 const directMapPin = mapPins.find(mp => String(mp.id) === String(trackedPin.id));
+                const matchedByShareCode = mapPins.find(mp => sameBeaconAndSubdivision(mp) && shareCodeMatches(trackedPin, mp));
                 const matchedByAddress = mapPins.find(mp => sameBeaconAndSubdivision(mp) && addressOverlaps(trackedPin, mp));
-                const resolvedMapPin = directMapPin ?? matchedByAddress;
+                const resolvedMapPin = directMapPin ?? matchedByShareCode ?? matchedByAddress;
 
                 const trackedAtBeaconByLocation =
                     String(trackedPin.lastBeaconID || '') === String(beaconPin.beaconID || '') &&

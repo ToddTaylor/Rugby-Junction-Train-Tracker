@@ -1,4 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using System.Security.Cryptography;
+using System.Text;
 using Web.Server.Data;
 using Web.Server.Entities;
 using Web.Server.Providers;
@@ -7,6 +9,7 @@ namespace Web.Server.Repositories
 {
     public class MapPinRepository : IMapPinRepository
     {
+        private const string ShareCodeAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
         private readonly TelemetryDbContext _context;
         private readonly ITimeProvider _timeProvider;
 
@@ -87,6 +90,24 @@ namespace Web.Server.Repositories
                 .FirstOrDefaultAsync(mp => mp.ID == id);
         }
 
+        public async Task<MapPin?> GetByShareCodeAsync(string shareCode)
+        {
+            if (string.IsNullOrWhiteSpace(shareCode))
+            {
+                return null;
+            }
+
+            var normalizedShareCode = shareCode.Trim().ToUpperInvariant();
+
+            return await _context.MapPins
+                .Include(mp => mp.Addresses)
+                .Include(mp => mp.BeaconRailroad)
+                .Include(mp => mp.BeaconRailroad.Beacon)
+                .Include(mp => mp.BeaconRailroad.Subdivision)
+                .Include(mp => mp.BeaconRailroad.Subdivision.Railroad)
+                .FirstOrDefaultAsync(mp => mp.ShareCode == normalizedShareCode);
+        }
+
         public async Task<IEnumerable<MapPin>> GetLatestAsync()
         {
             var mapPins = await _context.MapPins
@@ -158,6 +179,7 @@ namespace Web.Server.Repositories
 
             if (existingMapPin == null)
             {
+                mapPin.ShareCode = await EnsureShareCodeAsync(mapPin.ShareCode);
                 mapPin.CreatedAt = telemetryTimestamp;
                 mapPin.LastUpdate = telemetryTimestamp;
 
@@ -171,6 +193,9 @@ namespace Web.Server.Repositories
                 // Only update LastUpdate and other properties
                 existingMapPin.BeaconID = mapPin.BeaconID;
                 existingMapPin.SubdivisionId = mapPin.SubdivisionId;
+                existingMapPin.ShareCode = string.IsNullOrWhiteSpace(mapPin.ShareCode)
+                    ? await EnsureShareCodeAsync(existingMapPin.ShareCode, existingMapPin.ID)
+                    : await EnsureShareCodeAsync(mapPin.ShareCode, existingMapPin.ID);
                 existingMapPin.CreatedRailroadID = mapPin.CreatedRailroadID;
                 existingMapPin.Direction = mapPin.Direction;
                 existingMapPin.Moving = mapPin.Moving;
@@ -191,6 +216,47 @@ namespace Web.Server.Repositories
             await _context.SaveChangesAsync();
 
             return mapPin;
+        }
+
+        private async Task<string> EnsureShareCodeAsync(string? candidate, int? existingMapPinId = null)
+        {
+            if (!string.IsNullOrWhiteSpace(candidate))
+            {
+                var normalizedCandidate = candidate.Trim().ToUpperInvariant();
+                var inUse = await _context.MapPins
+                    .AnyAsync(mp => mp.ShareCode == normalizedCandidate && (!existingMapPinId.HasValue || mp.ID != existingMapPinId.Value));
+
+                if (!inUse)
+                {
+                    return normalizedCandidate;
+                }
+            }
+
+            while (true)
+            {
+                var generated = GenerateShareCode();
+                var inUse = await _context.MapPins
+                    .AnyAsync(mp => mp.ShareCode == generated && (!existingMapPinId.HasValue || mp.ID != existingMapPinId.Value));
+
+                if (!inUse)
+                {
+                    return generated;
+                }
+            }
+        }
+
+        private static string GenerateShareCode()
+        {
+            var bytes = new byte[6];
+            RandomNumberGenerator.Fill(bytes);
+
+            var builder = new StringBuilder(bytes.Length);
+            foreach (var value in bytes)
+            {
+                builder.Append(ShareCodeAlphabet[value % ShareCodeAlphabet.Length]);
+            }
+
+            return builder.ToString();
         }
 
         public async Task<bool> DeleteAsync(int id)
