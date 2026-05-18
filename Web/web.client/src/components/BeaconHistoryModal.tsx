@@ -1,22 +1,14 @@
+import { format, parseISO } from 'date-fns';
+import { Copy as CopyIcon } from 'lucide-react';
 import { useEffect, useState, useRef, useCallback } from 'react';
-import {
-    IconButton,
-    Box,
-    Typography,
-    CircularProgress,
-    Paper
-} from '@mui/material';
+import { Typography, Box, IconButton, CircularProgress, Paper } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { MapPinHistory } from '../types/MapPinHistory';
 import { MapPin } from '../types/MapPin';
-import { TrackedPin } from '../services/trackedPins';
-import { format, parseISO } from 'date-fns';
-import { getTrackedMapPins, updateTrackedPinSymbol, removeTrackedMapPin, getTrackedPinSymbol, refreshTrackedPinsFromApi, addTrackedMapPin, copyTrackedPinShareUrl } from '../services/trackedPins';
+import { TrackedPin, getTrackedMapPins, refreshTrackedPinsFromApi, addTrackedMapPin, updateTrackedPinSymbol, removeTrackedMapPin, copyTrackedPinShareUrl, getTrackedPinSymbol } from '../services/trackedPins';
 import { fetchBeaconHistory } from '../services/mapPinsHistory';
 import TrackSymbolModal from './TrackSymbolModal';
-import { CopyIcon } from './CopyIcon';
-
 interface BeaconHistoryModalProps {
     open: boolean;
     onClose: () => void;

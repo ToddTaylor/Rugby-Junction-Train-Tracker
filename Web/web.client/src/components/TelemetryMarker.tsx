@@ -3,7 +3,7 @@ import L from 'leaflet';
 import { useEffect, useRef, useState } from 'react';
 import { parseISO } from 'date-fns/parseISO';
 import { format } from 'date-fns';
-import { addTrackedMapPin, removeTrackedMapPin, getTrackedPinSymbol, updateTrackedPinSymbol, refreshTrackedPinsFromApi, copyTrackedPinShareUrl } from '../services/trackedPins';
+import { addTrackedMapPin, removeTrackedMapPin, getTrackedPinSymbol, updateTrackedPinSymbol, refreshTrackedPinsFromApi, copyTrackedPinShareUrl, buildTrackedPinShareUrl } from '../services/trackedPins';
 // Extend window type for setTrackedPinsStateFromApi
 declare global {
     interface Window {
@@ -316,6 +316,24 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
                 return;
             }
 
+            const shareUrl = buildTrackedPinShareUrl(pin.shareCode);
+            const shareTitle = trackedSymbolLabel || (pin.shareCode ? `Train ${pin.shareCode}` : 'Train');
+            // Try Web Share API first
+            if (navigator.share) {
+                try {
+                    await navigator.share({
+                        url: shareUrl,
+                        title: shareTitle,
+                        text: `Check out this train on Rugby Junction: ${shareTitle}`
+                    });
+                    updateShareStatus(true);
+                    return;
+                } catch (err) {
+                    // If user cancels or share fails, fall through to copy
+                    console.warn('Web Share API failed or was cancelled, falling back to copy.', err);
+                }
+            }
+            // Fallback: copy to clipboard
             try {
                 await copyTrackedPinShareUrl(pin.shareCode);
                 updateShareStatus(true);
