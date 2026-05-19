@@ -238,7 +238,7 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
                 })()}<br/>
                 ${shareCodeLine}
                 ${addressLines}
-                ${pin.shareCode ? `<span id='${shareTextId}' title='Copy share link' style='cursor:pointer;display:inline-flex;align-items:center;gap:6px;padding:${actionRowPadding};margin-top:${isCoarsePointer ? '2px' : '0'};margin-bottom:6px;color:${mapTheme === 'dark' ? '#d5d9df' : '#4b5563'};'>${copyIcon}<span style='text-decoration:underline;'>Share</span><span id='${shareStatusId}' style='font-size:12px;opacity:0;transition:opacity 0.2s ease;'></span></span>` : ''}
+                ${pin.shareCode ? `<button id='${shareTextId}' type='button' title='Share link' style='cursor:pointer;display:inline-flex;align-items:center;gap:6px;padding:${actionRowPadding};margin-top:${isCoarsePointer ? '2px' : '0'};margin-bottom:6px;color:${mapTheme === 'dark' ? '#d5d9df' : '#4b5563'};background:none;border:none;font:inherit;text-align:left;line-height:inherit;'>${copyIcon}<span style='text-decoration:underline;'>Share</span><span id='${shareStatusId}' style='font-size:12px;opacity:0;transition:opacity 0.2s ease;'></span></button>` : ''}
                 ${pin.shareCode ? '' : `<span id='${trackTextId}' style='cursor:pointer;text-decoration:underline;display:inline-flex;align-items:center;gap:6px;padding:${actionRowPadding};'><span style='display:inline-flex;align-items:center;'>${trackingBadge}</span>${trackText}</span>`}
             </div>
         `;
@@ -292,7 +292,7 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
                 currentShareStatusEl.textContent = '';
             }, 3000);
         };
-        const handleTrackTextClick = (e: any) => {
+        const handleTrackTextClick = (e: MouseEvent) => {
             e.preventDefault();
             e.stopPropagation();
             shouldReopenPopupRef.current = true;
@@ -309,9 +309,10 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
                 setModalOpen(true);
             }
         };
-        const handleShareTextClick = async (e: any) => {
+        const handleShareTextClick = async (e: MouseEvent) => {
             e.preventDefault();
             e.stopPropagation();
+            e.stopImmediatePropagation();
             if (!pin.shareCode) {
                 return;
             }
@@ -345,11 +346,14 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
         const attachHandler = () => {
             trackTextEl = document.getElementById(trackTextId);
             if (trackTextEl) {
+                L.DomEvent.disableClickPropagation(trackTextEl);
                 trackTextEl.addEventListener('click', handleTrackTextClick);
             }
 
             shareTextEl = document.getElementById(shareTextId);
             if (shareTextEl) {
+                L.DomEvent.disableClickPropagation(shareTextEl);
+                L.DomEvent.disableScrollPropagation(shareTextEl);
                 shareTextEl.addEventListener('click', handleShareTextClick);
             }
         };
