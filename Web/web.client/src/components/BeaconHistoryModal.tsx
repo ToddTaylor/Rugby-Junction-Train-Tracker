@@ -1,12 +1,12 @@
 import { format, parseISO } from 'date-fns';
-import { Copy as CopyIcon } from 'lucide-react';
+import { CopyIcon } from './CopyIcon';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { Typography, Box, IconButton, CircularProgress, Paper } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { MapPinHistory } from '../types/MapPinHistory';
 import { MapPin } from '../types/MapPin';
-import { TrackedPin, getTrackedMapPins, refreshTrackedPinsFromApi, addTrackedMapPin, updateTrackedPinSymbol, removeTrackedMapPin, copyTrackedPinShareUrl, getTrackedPinSymbol } from '../services/trackedPins';
+import { TrackedPin, getTrackedMapPins, refreshTrackedPinsFromApi, addTrackedMapPin, updateTrackedPinSymbol, removeTrackedMapPin, copyTrackedPinShareUrl, buildTrackedPinShareUrl, getTrackedPinSymbol } from '../services/trackedPins';
 import { fetchBeaconHistory } from '../services/mapPinsHistory';
 import TrackSymbolModal from './TrackSymbolModal';
 interface BeaconHistoryModalProps {
@@ -402,6 +402,30 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdiv
                     <Box
                         onClick={async (e) => {
                             e.stopPropagation();
+                            const shareUrl = buildTrackedPinShareUrl(params.row.shareCode!);
+                            const shareTitle = params.row.shareCode ? `Train ${params.row.shareCode}` : (params.row.beaconName || 'Train');
+                            // Try Web Share API first
+                            if (navigator.share) {
+                                try {
+                                    await navigator.share({
+                                        url: shareUrl,
+                                        title: shareTitle,
+                                        text: `Check out this train on Rugby Junction: ${shareTitle}`
+                                    });
+                                    setCopiedShareCode(params.row.shareCode!);
+                                    if (copyFeedbackTimeoutRef.current) {
+                                        window.clearTimeout(copyFeedbackTimeoutRef.current);
+                                    }
+                                    copyFeedbackTimeoutRef.current = window.setTimeout(() => {
+                                        setCopiedShareCode(null);
+                                    }, 3000);
+                                    return;
+                                } catch (err) {
+                                    // If user cancels or share fails, fall through to copy
+                                    console.warn('Web Share API failed or was cancelled, falling back to copy.', err);
+                                }
+                            }
+                            // Fallback: copy to clipboard
                             try {
                                 await copyTrackedPinShareUrl(params.row.shareCode!);
                                 setCopiedShareCode(params.row.shareCode!);
@@ -426,7 +450,7 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdiv
                             position: 'relative',
                             overflow: 'visible',
                         }}
-                        title={`Copy share link for ${params.row.shareCode}`}
+                        title={`Share link for ${params.row.shareCode}`}
                     >
                         <CopyIcon size={16} color={copyIconColor} />
                         {copiedShareCode === params.row.shareCode && (
@@ -468,7 +492,7 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdiv
                                 >
                                     ✓
                                 </span>
-                                Copied!
+                                Shared!
                             </span>
                         )}
                     </Box>
