@@ -27,6 +27,9 @@ namespace Web.Server.Data
         public DbSet<UserTrackedPin> UserTrackedPins { get; set; }
         public DbSet<SubdivisionTrackageRight> SubdivisionTrackageRights { get; set; }
         public DbSet<AuthToken> AuthTokens { get; set; }
+        public DbSet<AmtrakTrackedTrain> AmtrakTrackedTrains { get; set; }
+        public DbSet<AmtrakPollingConfiguration> AmtrakPollingConfigurations { get; set; }
+        public DbSet<PassengerMapPin> PassengerMapPins { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -86,6 +89,18 @@ namespace Web.Server.Data
 
             modelBuilder.Entity<MapPinHistory>()
                 .HasIndex(mph => mph.ShareCode);
+
+            modelBuilder.Entity<AmtrakTrackedTrain>()
+                .HasIndex(t => t.TrainNumber)
+                .IsUnique();
+
+            modelBuilder.Entity<PassengerMapPin>()
+                .HasIndex(p => p.TrainId)
+                .IsUnique();
+
+            modelBuilder.Entity<PassengerMapPin>()
+                .Property(p => p.UpdatedAt)
+                .HasConversion(Converters.UtcDateTimeConverter);
 
             modelBuilder.Entity<Address>()
                 .HasOne(a => a.MapPin)

@@ -13,6 +13,7 @@ import { Beacon } from '../types/Beacon';
 import { MapPin } from '../types/MapPin';
 import BeaconMarkers from '../components/BeaconMarkers';
 import TelemetryMarkers from '../components/TelemetryMarkers';
+import PassengerTelemetryMarkers from '../components/PassengerTelemetryMarkers';
 import MilepostLayer from '../components/MilepostLayer';
 import DefectDetectorLayer from '../components/DefectDetectorLayer';
 import UserLocationPin from '../components/UserLocationPin';
@@ -29,6 +30,8 @@ import { useStaleRefresh } from '../hooks/useStaleRefresh';
 import { useAuth } from '../hooks/useAuth';
 import { invalidateBeaconHistoryCache } from '../services/mapPinsHistory';
 import { parseSessionRoles } from '../utils/roles';
+import { PassengerMapPin } from '../types/PassengerMapPin';
+import { getPassengerMapPins } from '../api/passengerMapPins';
 
 const ICON_CACHE_BUSTER = import.meta.env.VITE_APP_VERSION
     ? `?v=${import.meta.env.VITE_APP_VERSION}`
@@ -108,6 +111,7 @@ const RailMap: React.FC = () => {
     const { trackData, trackDataLoading } = useRailways();
     const { beacons, beaconsLoaded, setBeacons } = useBeacons();
     const { mapPins, setMapPins } = useTelemetryPins();
+    const [passengerMapPins, setPassengerMapPins] = useState<PassengerMapPin[]>([]);
     const { milepostPoints } = useMileposts();
     const { defectDetectors } = useDefectDetectors();
 
@@ -123,6 +127,20 @@ const RailMap: React.FC = () => {
         refreshTrackedPinsFromApi().then(setTrackedPinsState).catch(() => {
             // fallback silently to cached state
         });
+    }, []);
+
+    useEffect(() => {
+        async function fetchPassengerPins() {
+            const response = await getPassengerMapPins();
+            if (response.errors.length > 0) {
+                console.error('Error fetching passenger map pins:', response.errors.join(', '));
+                return;
+            }
+
+            setPassengerMapPins((response.data || []).filter(pin => !pin.isStale));
+        }
+
+        fetchPassengerPins();
     }, []);
 
     useEffect(() => {
@@ -282,6 +300,36 @@ const RailMap: React.FC = () => {
         TrackedPinRemoved: (mapPinId: number) => {
             const updated = applyTrackedPinRemovedFromServer(mapPinId);
             setTrackedPinsState(updated);
+        },
+        PassengerPinUpdate: (pin: PassengerMapPin) => {
+            if (pin.isStale) {
+                setPassengerMapPins(prev => prev.filter(existing => existing.trainId !== pin.trainId));
+                return;
+            }
+
+            setPassengerMapPins(prev => {
+                const idx = prev.findIndex(p => p.trainId === pin.trainId);
+                if (idx < 0) {
+                    return [...prev, pin];
+                }
+
+                const next = [...prev];
+                next[idx] = pin;
+                return next;
+            });
+        },
+        PassengerPinRemoved: ({ trainId, trainNum }: { trainId?: string; trainNum?: string }) => {
+            setPassengerMapPins(prev => prev.filter(p => {
+                if (trainId) {
+                    return p.trainId !== trainId;
+                }
+
+                if (trainNum) {
+                    return p.trainNum !== trainNum;
+                }
+
+                return true;
+            }));
         }
     });
 
@@ -895,6 +943,14 @@ const RailMap: React.FC = () => {
                     hourFormat={hourFormat}
                     canViewSupportAddresses={canViewSupportAddresses}
                 />}
+
+                {beaconsLoaded && (
+                    <PassengerTelemetryMarkers
+                        pins={passengerMapPins}
+                        zoom={mapZoom}
+                        mapTheme={mapTheme as 'dark' | 'light'}
+                    />
+                )}
 
                 <UserLocationPin mapTheme={mapTheme as 'dark' | 'light'} />
 

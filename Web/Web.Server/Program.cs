@@ -140,6 +140,9 @@ try
     builder.Services.AddScoped<ITelemetryRepository, TelemetryRepository>();
     builder.Services.AddScoped<IUserTrackedPinRepository, UserTrackedPinRepository>();
     builder.Services.AddScoped<ISubdivisionTrackageRightRepository, SubdivisionTrackageRightRepository>();
+    builder.Services.AddScoped<IAmtrakTrackedTrainRepository, AmtrakTrackedTrainRepository>();
+    builder.Services.AddScoped<IAmtrakPollingConfigurationRepository, AmtrakPollingConfigurationRepository>();
+    builder.Services.AddScoped<IPassengerMapPinRepository, PassengerMapPinRepository>();
 
     // Map pin processors - register each processor
     builder.Services.AddScoped<Web.Server.Services.Processors.DpuMapPinProcessor>();
@@ -188,6 +191,13 @@ try
     builder.Services.AddScoped<IUserTrackedPinService, UserTrackedPinService>();
     builder.Services.AddScoped<ISubdivisionTrackageRightService, SubdivisionTrackageRightService>();
     builder.Services.AddScoped<IEmailService, EmailService>();
+    builder.Services.AddScoped<IAmtrakConfigurationService, AmtrakConfigurationService>();
+    builder.Services.AddScoped<IPassengerMapPinService, PassengerMapPinService>();
+    builder.Services.AddHttpClient<IPassengerRailProviderClient, AmtrakerPassengerProviderClient>(client =>
+    {
+        client.BaseAddress = new Uri(builder.Configuration["PassengerRailProviders:Amtrak:BaseUrl"] ?? "https://api.amtraker.com/");
+        client.Timeout = TimeSpan.FromSeconds(15);
+    });
 
     // Register telemetry rules - Order matters!
     builder.Services.AddScoped<ITelemetryRule, DpuAntiPingPongRule>();
@@ -204,6 +214,7 @@ try
     builder.Services.AddHostedService<BeaconRailroadHealthService>();
     builder.Services.AddHostedService<RecordCleanupService>();
     builder.Services.AddHostedService<TelemetryConsumerService>();
+    builder.Services.AddHostedService<PassengerRailPollingService>();
 
     var app = builder.Build();
 
