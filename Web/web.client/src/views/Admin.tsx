@@ -26,6 +26,7 @@ const Admin: React.FC = () => {
   // Only show menu items allowed for the current role
   const menuItems = [
     ...(isAdmin ? [
+      { path: '/admin/amtrak', label: 'Amtrak', icon: '🚄' },
       { path: '/admin/beacons', label: 'Beacons', icon: '📡' },
       { path: '/admin/beacon-railroads', label: 'Beacon Railroads', icon: '🗺️' },
       { path: '/admin/railroads', label: 'Railroads', icon: '🚂' },

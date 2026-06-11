@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import * as signalR from "@microsoft/signalr";
 import { MapPin } from "../types/MapPin";
 import { Beacon } from "../types/Beacon";
+import { PassengerMapPin } from "../types/PassengerMapPin";
 import { getAuthToken } from "../services/auth";
 
 const beaconUpdateMethodName = "BeaconUpdate";
@@ -9,6 +10,8 @@ const mapPinUpdateMethodName = "MapPinUpdate";
 const trackedPinAddedMethodName = "TrackedPinAdded";
 const trackedPinUpdatedMethodName = "TrackedPinUpdated";
 const trackedPinRemovedMethodName = "TrackedPinRemoved";
+const passengerPinUpdateMethodName = "PassengerPinUpdate";
+const passengerPinRemovedMethodName = "PassengerPinRemoved";
 
 // Accept handlers for multiple events
 export function useSignalR(handlers: {
@@ -17,6 +20,8 @@ export function useSignalR(handlers: {
     TrackedPinAdded?: (payload: any) => void;
     TrackedPinUpdated?: (payload: any) => void;
     TrackedPinRemoved?: (mapPinId: number) => void;
+    PassengerPinUpdate?: (pin: PassengerMapPin) => void;
+    PassengerPinRemoved?: (payload: { trainId?: string; trainNum?: string }) => void;
 }) {
     const handlersRef = useRef(handlers);
     const [connectionState, setConnectionState] = useState<signalR.HubConnectionState | null>(null);
@@ -85,6 +90,26 @@ export function useSignalR(handlers: {
                     }
                 });
             }
+            if (handlersRef.current.PassengerPinUpdate) {
+                connection.on(passengerPinUpdateMethodName, (payload: PassengerMapPin) => {
+                    handlersRef.current.PassengerPinUpdate?.(payload);
+                });
+            }
+            if (handlersRef.current.PassengerPinRemoved) {
+                connection.on(passengerPinRemovedMethodName, (payload: any) => {
+                    const trainId = typeof payload === "object"
+                        ? (payload?.trainId ?? payload?.TrainId)
+                        : undefined;
+                    const trainNum = typeof payload === "string"
+                        ? payload
+                        : (payload?.trainNum ?? payload?.TrainNum);
+                    if (typeof trainId === "string" && trainId.trim().length > 0) {
+                        handlersRef.current.PassengerPinRemoved?.({ trainId: trainId.trim(), trainNum: typeof trainNum === "string" ? trainNum.trim() : undefined });
+                    } else if (typeof trainNum === "string" && trainNum.trim().length > 0) {
+                        handlersRef.current.PassengerPinRemoved?.({ trainNum: trainNum.trim() });
+                    }
+                });
+            }
 
             connection.onclose(error => {
                 if (error) {
@@ -127,6 +152,8 @@ export function useSignalR(handlers: {
                 connection.off(trackedPinAddedMethodName);
                 connection.off(trackedPinUpdatedMethodName);
                 connection.off(trackedPinRemovedMethodName);
+                connection.off(passengerPinUpdateMethodName);
+                connection.off(passengerPinRemovedMethodName);
                 connection.stop();
             }
         };

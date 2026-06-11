@@ -1,0 +1,71 @@
+using System.Net;
+using System.Text;
+using Microsoft.Extensions.Logging;
+using Moq;
+using Web.Server.Services;
+
+namespace Web.ServerTests.Services
+{
+	[TestClass]
+	public class AmtrakerPassengerProviderClientTests
+	{
+		[DataTestMethod]
+		[DataRow("N", "Northbound")]
+		[DataRow("S", "Southbound")]
+		[DataRow("E", "Eastbound")]
+		[DataRow("W", "Westbound")]
+		[DataRow("NE", "Northeastbound")]
+		[DataRow("NW", "Northwestbound")]
+		[DataRow("SE", "Southeastbound")]
+		[DataRow("SW", "Southwestbound")]
+		public async Task GetTrainsAsync_TranslatesRequestedHeadingValues(string rawHeading, string expectedHeading)
+		{
+			const string trainNumber = "8";
+			var content = $$"""
+				{
+				  "{{trainNumber}}": [
+					{
+					  "provider": "Amtrak",
+					  "routeName": "Hiawatha",
+					  "trainNum": "{{trainNumber}}",
+					  "trainID": "{{trainNumber}}-A",
+					  "heading": "{{rawHeading}}",
+					  "lat": 43.1,
+					  "lon": -88.1,
+					  "velocity": 55,
+					  "updatedAt": "2026-06-11T12:34:56Z"
+					}
+				  ]
+				}
+				""";
+
+			using var httpClient = new HttpClient(new StaticJsonHttpMessageHandler(content))
+			{
+				BaseAddress = new Uri("https://example.test/")
+			};
+
+			var logger = new Mock<ILogger<AmtrakerPassengerProviderClient>>();
+			var client = new AmtrakerPassengerProviderClient(httpClient, logger.Object);
+
+			var snapshots = await client.GetTrainsAsync(trainNumber, CancellationToken.None);
+			var snapshot = snapshots.Single();
+
+			Assert.AreEqual(expectedHeading, snapshot.Heading);
+		}
+
+		private sealed class StaticJsonHttpMessageHandler(string json) : HttpMessageHandler
+		{
+			private readonly string _json = json;
+
+			protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+			{
+				var response = new HttpResponseMessage(HttpStatusCode.OK)
+				{
+					Content = new StringContent(_json, Encoding.UTF8, "application/json")
+				};
+
+				return Task.FromResult(response);
+			}
+		}
+	}
+}
