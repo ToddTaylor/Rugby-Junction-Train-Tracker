@@ -8,6 +8,14 @@ const SESSION_KEY = 'rjtt_auth_session';
 const COOKIE_NAME = 'rjtt_auth';
 
 function getAuthToken(): string | null {
+  const localData = localStorage.getItem(SESSION_KEY);
+  if (localData) {
+    try {
+      const session = JSON.parse(localData) as AuthSession;
+      return session.token;
+    } catch { }
+  }
+
   const cookieData = getCookie(COOKIE_NAME);
   if (cookieData) {
     try {
@@ -34,9 +42,13 @@ interface ApiResponse<T> {
 
 async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<ApiResponse<T>> {
   try {
+    if (!API_KEY) {
+      return { data: null, errors: ['Client API key is not configured (VITE_API_KEY).'] };
+    }
+
     const token = getAuthToken();
     const headers: Record<string, string> = {
-      'X-Api-Key': API_KEY,
+      'X-Api-Key': String(API_KEY),
       'Content-Type': 'application/json',
       ...options?.headers as Record<string, string>,
     };

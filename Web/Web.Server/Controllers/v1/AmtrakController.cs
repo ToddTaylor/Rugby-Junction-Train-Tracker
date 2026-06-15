@@ -27,7 +27,7 @@ namespace Web.Server.Controllers.v1
         {
             if (!await IsAdminAsync())
             {
-                return Forbid();
+                return StatusCode(StatusCodes.Status403Forbidden);
             }
 
             var response = new MessageEnvelope<IEnumerable<AmtrakTrackedTrainDTO>>(null!, []);
@@ -49,7 +49,7 @@ namespace Web.Server.Controllers.v1
         {
             if (!await IsAdminAsync())
             {
-                return Forbid();
+                return StatusCode(StatusCodes.Status403Forbidden);
             }
 
             var response = new MessageEnvelope<AmtrakTrackedTrainDTO>(null!, []);
@@ -71,7 +71,7 @@ namespace Web.Server.Controllers.v1
         {
             if (!await IsAdminAsync())
             {
-                return Forbid();
+                return StatusCode(StatusCodes.Status403Forbidden);
             }
 
             try
@@ -96,7 +96,7 @@ namespace Web.Server.Controllers.v1
         {
             if (!await IsAdminAsync())
             {
-                return Forbid();
+                return StatusCode(StatusCodes.Status403Forbidden);
             }
 
             var response = new MessageEnvelope<AmtrakPollingConfigurationDTO>(null!, []);
@@ -118,7 +118,7 @@ namespace Web.Server.Controllers.v1
         {
             if (!await IsAdminAsync())
             {
-                return Forbid();
+                return StatusCode(StatusCodes.Status403Forbidden);
             }
 
             var response = new MessageEnvelope<AmtrakPollingConfigurationDTO>(null!, []);

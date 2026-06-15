@@ -8,6 +8,14 @@ const SESSION_KEY = 'rjtt_auth_session';
 const COOKIE_NAME = 'rjtt_auth';
 
 function getAuthToken(): string | null {
+    const localData = localStorage.getItem(SESSION_KEY);
+    if (localData) {
+        try {
+            const session = JSON.parse(localData) as AuthSession;
+            return session.token;
+        } catch { }
+    }
+
   const cookieData = getCookie(COOKIE_NAME);
   if (cookieData) {
     try {
@@ -32,13 +40,17 @@ export async function getTrackageRights(fromSubdivisionID: number): Promise<{
     errors: string[];
 }> {
     try {
+        if (!API_KEY) {
+            return { data: [], errors: ['Client API key is not configured (VITE_API_KEY).'] };
+        }
+
         const token = getAuthToken();
         const headers: HeadersInit = {
             'Content-Type': 'application/json',
-            'X-Api-Key': API_KEY
+            'X-Api-Key': String(API_KEY)
         };
         if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
+            headers['X-Auth-Token'] = token;
         }
         
         const response = await fetch(
@@ -61,13 +73,17 @@ export async function replaceTrackageRights(
     errors: string[];
 }> {
     try {
+        if (!API_KEY) {
+            return { success: false, errors: ['Client API key is not configured (VITE_API_KEY).'] };
+        }
+
         const token = getAuthToken();
         const headers: HeadersInit = {
             'Content-Type': 'application/json',
-            'X-Api-Key': API_KEY
+            'X-Api-Key': String(API_KEY)
         };
         if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
+            headers['X-Auth-Token'] = token;
         }
 
         const response = await fetch(
@@ -91,13 +107,17 @@ export async function deleteTrackageRight(id: number): Promise<{
     errors: string[];
 }> {
     try {
+        if (!API_KEY) {
+            return { success: false, errors: ['Client API key is not configured (VITE_API_KEY).'] };
+        }
+
         const token = getAuthToken();
         const headers: HeadersInit = {
             'Content-Type': 'application/json',
-            'X-Api-Key': API_KEY
+            'X-Api-Key': String(API_KEY)
         };
         if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
+            headers['X-Auth-Token'] = token;
         }
 
         const response = await fetch(

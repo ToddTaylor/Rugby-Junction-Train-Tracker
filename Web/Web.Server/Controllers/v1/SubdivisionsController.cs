@@ -11,12 +11,18 @@ namespace Web.Server.Controllers.v1
     public class SubdivisionsController : ControllerBase
     {
         private readonly ISubdivisionService _subdivisionService;
+        private readonly IUserService _userService;
         private readonly ILogger<SubdivisionsController> _logger;
         private readonly IMapper _mapper;
 
-        public SubdivisionsController(ISubdivisionService subdivisionService, ILogger<SubdivisionsController> logger, IMapper mapper)
+        public SubdivisionsController(
+            ISubdivisionService subdivisionService,
+            IUserService userService,
+            ILogger<SubdivisionsController> logger,
+            IMapper mapper)
         {
             _subdivisionService = subdivisionService;
+            _userService = userService;
             _logger = logger;
             _mapper = mapper;
         }
@@ -82,8 +88,65 @@ namespace Web.Server.Controllers.v1
                     return BadRequest(response);
                 }
 
-                var subdivision = _mapper.Map<Subdivision>(updateSubdivisionDTO);
-                subdivision.ID = id;  // Ensure ID is set for the database update
+                var currentUser = await GetCurrentUserAsync();
+                if (currentUser == null)
+                {
+                    response.Errors.Add("Forbidden.");
+                    return StatusCode(StatusCodes.Status403Forbidden, response);
+                }
+
+                var isAdmin = HasRole(currentUser, "Admin");
+                Subdivision subdivision;
+
+                if (isAdmin)
+                {
+                    subdivision = _mapper.Map<Subdivision>(updateSubdivisionDTO);
+                    subdivision.ID = id; // Ensure ID is set for the database update
+                }
+                else
+                {
+                    var isCustodian = HasRole(currentUser, "Custodian");
+                    if (!isCustodian)
+                    {
+                        response.Errors.Add("Forbidden.");
+                        return StatusCode(StatusCodes.Status403Forbidden, response);
+                    }
+
+                    var existingSubdivision = await _subdivisionService.GetSubdivisionAsync(id);
+                    if (existingSubdivision == null)
+                    {
+                        response.Errors.Add("Subdivision not found.");
+                        return NotFound(response);
+                    }
+
+                    if (existingSubdivision.CustodianId != currentUser.ID)
+                    {
+                        response.Errors.Add("Forbidden.");
+                        return StatusCode(StatusCodes.Status403Forbidden, response);
+                    }
+
+                    var changedReadOnlyFields =
+                        updateSubdivisionDTO.Name != existingSubdivision.Name ||
+                        updateSubdivisionDTO.RailroadID != existingSubdivision.RailroadID ||
+                        updateSubdivisionDTO.DpuCapable != existingSubdivision.DpuCapable ||
+                        updateSubdivisionDTO.CustodianId != existingSubdivision.CustodianId;
+
+                    if (changedReadOnlyFields)
+                    {
+                        response.Errors.Add("Custodians can only update LocalTrainAddressIDs for their assigned subdivision.");
+                        return StatusCode(StatusCodes.Status403Forbidden, response);
+                    }
+
+                    subdivision = new Subdivision
+                    {
+                        ID = existingSubdivision.ID,
+                        Name = existingSubdivision.Name,
+                        RailroadID = existingSubdivision.RailroadID,
+                        DpuCapable = existingSubdivision.DpuCapable,
+                        CustodianId = existingSubdivision.CustodianId,
+                        LocalTrainAddressIDs = updateSubdivisionDTO.LocalTrainAddressIDs
+                    };
+                }
 
                 try
                 {
@@ -95,6 +158,11 @@ namespace Web.Server.Controllers.v1
                 {
                     response.Errors.Add("Subdivision not found.");
                     return NotFound(response);
+                }
+                catch (ArgumentException ex)
+                {
+                    response.Errors.Add(ex.Message);
+                    return BadRequest(response);
                 }
             }
             catch (Exception ex)
@@ -112,10 +180,21 @@ namespace Web.Server.Controllers.v1
             var response = new MessageEnvelope<SubdivisionDTO>(null, []);
             try
             {
+                if (!await IsAdminAsync())
+                {
+                    response.Errors.Add("Forbidden.");
+                    return StatusCode(StatusCodes.Status403Forbidden, response);
+                }
+
                 var subdivision = _mapper.Map<Subdivision>(createSubdivisionDTO);
                 var createdSubdivision = await _subdivisionService.CreateSubdivisionAsync(subdivision);
                 response.Data = _mapper.Map<SubdivisionDTO>(createdSubdivision);
                 return CreatedAtAction("GetSubdivision", new { id = response.Data.ID }, response);
+            }
+            catch (ArgumentException ex)
+            {
+                response.Errors.Add(ex.Message);
+                return BadRequest(response);
             }
             catch (Exception ex)
             {
@@ -131,6 +210,11 @@ namespace Web.Server.Controllers.v1
         {
             try
             {
+                if (!await IsAdminAsync())
+                {
+                    return StatusCode(StatusCodes.Status403Forbidden);
+                }
+
                 try
                 {
                     await _subdivisionService.DeleteSubdivisionAsync(id);
@@ -147,6 +231,28 @@ namespace Web.Server.Controllers.v1
                 _logger.LogError(ex, "An error occurred while deleting subdivision {SubdivisionId}.", id);
                 return StatusCode(StatusCodes.Status500InternalServerError, new { error = ex.Message });
             }
+        }
+
+        private async Task<bool> IsAdminAsync()
+        {
+            var user = await GetCurrentUserAsync();
+            return user != null && HasRole(user, "Admin");
+        }
+
+        private async Task<User?> GetCurrentUserAsync()
+        {
+            if (!HttpContext.Items.TryGetValue("UserId", out var userIdObj) || userIdObj is not int userId)
+            {
+                return null;
+            }
+
+            return await _userService.GetUserByIdAsync(userId);
+        }
+
+        private static bool HasRole(User user, string roleName)
+        {
+            return user.UserRoles?.Any(ur =>
+                string.Equals(ur.Role?.RoleName, roleName, StringComparison.OrdinalIgnoreCase)) == true;
         }
     }
 }
