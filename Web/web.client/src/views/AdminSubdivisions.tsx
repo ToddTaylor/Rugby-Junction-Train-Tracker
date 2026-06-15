@@ -40,8 +40,14 @@ export const AdminSubdivisions: React.FC = () => {
   const [selectedCustodianId, setSelectedCustodianId] = useState<number | null>(null);
 
   const { session } = useAuth();
-  const { isCustodian } = parseSessionRoles(session?.roles);
-  const userId = session?.userId;
+  const { isAdmin, isCustodian } = parseSessionRoles(session?.roles);
+  const currentUserId = session?.userId ?? null;
+  const isAssignedCustodianEditing =
+    modalMode === 'edit' &&
+    isCustodian &&
+    !!selectedSubdivision &&
+    selectedSubdivision.custodianId === currentUserId;
+  const canSubmitSubdivisionChanges = isAdmin || isAssignedCustodianEditing;
 
   useEffect(() => {
     loadData();
@@ -51,7 +57,10 @@ export const AdminSubdivisions: React.FC = () => {
   async function loadCustodians() {
     const usersResult = await getUsers();
     if (usersResult.errors.length === 0 && usersResult.data) {
-      setCustodianUsers(usersResult.data.filter(u => u.roles.some(role => role.toLowerCase() === 'custodian')));
+      setCustodianUsers(
+        usersResult.data.filter(u =>
+          u.isActive && u.roles.some(role => role.toLowerCase() === 'custodian'))
+      );
     }
   }
 
@@ -93,6 +102,11 @@ export const AdminSubdivisions: React.FC = () => {
   }, [subdivisions, searchTerm]);
 
   const handleCreate = () => {
+    if (!isAdmin) {
+      setError('Only administrators can create subdivisions.');
+      return;
+    }
+
     setModalMode('create');
     setSelectedSubdivision(null);
     setFormData({
@@ -110,6 +124,12 @@ export const AdminSubdivisions: React.FC = () => {
   };
 
   const handleEdit = async (subdivision: Subdivision) => {
+    const canEdit = isAdmin || (isCustodian && subdivision.custodianId === currentUserId);
+    if (!canEdit) {
+      setError('You can only edit your assigned subdivision local train list.');
+      return;
+    }
+
     setModalMode('edit');
     setSelectedSubdivision(subdivision);
     setFormData({
@@ -160,14 +180,21 @@ export const AdminSubdivisions: React.FC = () => {
     e.preventDefault();
     setFormErrors([]);
 
-    if (!formData.name.trim()) {
-      setFormErrors(['Name is required']);
+    if (!canSubmitSubdivisionChanges) {
+      setFormErrors(['Forbidden.']);
       return;
     }
 
-    if (formData.railroadID === 0) {
-      setFormErrors(['Railroad is required']);
-      return;
+    if (isAdmin) {
+      if (!formData.name.trim()) {
+        setFormErrors(['Name is required']);
+        return;
+      }
+
+      if (formData.railroadID === 0) {
+        setFormErrors(['Railroad is required']);
+        return;
+      }
     }
 
     // Validate Local Train Address IDs
@@ -201,24 +228,11 @@ export const AdminSubdivisions: React.FC = () => {
         await loadData();
       }
     } else if (selectedSubdivision) {
-      let updateData: UpdateSubdivision;
-      if (isCustodian) {
-        // Only update localTrainAddressIDs for custodians
-        updateData = {
-          id: selectedSubdivision.id,
-          railroadID: selectedSubdivision.railroadID,
-          dpuCapable: selectedSubdivision.dpuCapable,
-          name: selectedSubdivision.name,
-          localTrainAddressIDs: formData.localTrainAddressIDs,
-          custodianId: selectedSubdivision.custodianId,
-        };
-      } else {
-        updateData = {
-          id: selectedSubdivision.id,
-          ...formData,
-          custodianId: selectedCustodianId,
-        };
-      }
+      const updateData: UpdateSubdivision = {
+        id: selectedSubdivision.id,
+        ...formData,
+        custodianId: selectedCustodianId,
+      };
       const result = await updateSubdivision(selectedSubdivision.id, updateData);
       if (result.errors.length > 0) {
         setFormErrors(result.errors);
@@ -274,7 +288,7 @@ export const AdminSubdivisions: React.FC = () => {
           </Tooltip>
         </div>
         <div className="right-controls">
-          {!isCustodian && (
+          {isAdmin && (
             <button className="btn-primary" onClick={handleCreate}>
               Add Subdivision
             </button>
@@ -300,7 +314,7 @@ export const AdminSubdivisions: React.FC = () => {
               flex: 1,
               sortable: false,
               renderCell: (params: any) => {
-                const canEdit = !isCustodian || (isCustodian && userId && params.row.custodianId === userId);
+                const canEdit = isAdmin || (isCustodian && params.row.custodianId === currentUserId);
                 return (
                   <>
                     {canEdit && (
@@ -311,7 +325,7 @@ export const AdminSubdivisions: React.FC = () => {
                         Edit
                       </button>
                     )}
-                    {!isCustodian && (
+                    {isAdmin && (
                       <button className="btn-delete" onClick={() => handleDelete(params.row.id)}>Delete</button>
                     )}
                   </>
@@ -348,9 +362,7 @@ export const AdminSubdivisions: React.FC = () => {
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   required
-                  readOnly={isCustodian && modalMode === 'edit'}
-                  disabled={isCustodian && modalMode === 'edit'}
-                  style={isCustodian && modalMode === 'edit' ? { backgroundColor: '#222', color: '#888', cursor: 'not-allowed' } : {}}
+                  disabled={!isAdmin}
                 />
               </div>
               <div className="form-group">
@@ -360,7 +372,7 @@ export const AdminSubdivisions: React.FC = () => {
                   value={formData.railroadID}
                   onChange={(e) => setFormData({ ...formData, railroadID: parseInt(e.target.value) })}
                   required
-                  disabled={isCustodian && modalMode === 'edit'}
+                  disabled={!isAdmin}
                 >
                   <option value={0}>-- Select Railroad --</option>
                   {railroads.map((railroad) => (
@@ -370,7 +382,7 @@ export const AdminSubdivisions: React.FC = () => {
                   ))}
                 </select>
               </div>
-              {!isCustodian && (
+              {isAdmin && (
                 <div className="form-group">
                   <label htmlFor="trackageRailroad">Trackage Rights on Railroad:</label>
                   <select
@@ -391,7 +403,7 @@ export const AdminSubdivisions: React.FC = () => {
                   </select>
                 </div>
               )}
-              {!isCustodian && selectedTrackageRailroad > 0 && (
+              {isAdmin && selectedTrackageRailroad > 0 && (
                 <div className="form-group">
                   <label>Select Subdivisions to Grant Trackage Rights:</label>
                   <div className="checkbox-list">
@@ -413,7 +425,7 @@ export const AdminSubdivisions: React.FC = () => {
                   </div>
                 </div>
               )}
-              {!isCustodian && (
+              {isAdmin && (
                 <div className="form-group checkbox-group">
                   <label htmlFor="dpuCapable">
                     <input
@@ -426,6 +438,26 @@ export const AdminSubdivisions: React.FC = () => {
                   </label>
                 </div>
               )}
+              {isAdmin && (
+                <div className="form-group">
+                  <label htmlFor="custodian">Custodian:</label>
+                  <select
+                    id="custodian"
+                    value={selectedCustodianId ?? ''}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setSelectedCustodianId(value ? parseInt(value, 10) : null);
+                    }}
+                  >
+                    <option value="">-- Unassigned --</option>
+                    {custodianUsers.map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.firstName} {user.lastName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div className="form-group">
                 <label htmlFor="localTrainAddressIDs">Local Train Address IDs:</label>
                 <div className="form-help">Enter Address IDs that are considered local trains in this subdivision. Separate with commas or new lines.</div>
@@ -434,6 +466,7 @@ export const AdminSubdivisions: React.FC = () => {
                   value={formData.localTrainAddressIDs || ''}
                   onChange={(e) => setFormData({ ...formData, localTrainAddressIDs: e.target.value })}
                   rows={4}
+                  disabled={!canSubmitSubdivisionChanges}
                 />
               </div>
               <div className="modal-actions">
