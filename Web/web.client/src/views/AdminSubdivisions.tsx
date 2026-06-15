@@ -306,7 +306,12 @@ export const AdminSubdivisions: React.FC = () => {
           columns={[
             { field: 'name', headerName: 'Name', flex: 1 },
             { field: 'railroad', headerName: 'Railroad', flex: 1 },
-            { field: 'dpuCapable', headerName: 'DPU Capable', flex: 1, valueGetter: (params: any) => params.row && params.row.dpuCapable ? 'Yes' : 'No' },
+            {
+              field: 'dpuCapable',
+              headerName: 'DPU Capable',
+              flex: 1,
+              renderCell: (params: any) => (params.value === true || params.value === 'true' ? 'Yes' : 'No'),
+            },
             { field: 'custodianName', headerName: 'Custodian', flex: 1 },
             {
               field: 'actions',
