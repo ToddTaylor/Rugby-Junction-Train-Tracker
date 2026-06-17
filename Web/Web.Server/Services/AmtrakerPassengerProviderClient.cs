@@ -23,7 +23,7 @@ namespace Web.Server.Services
             await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
             using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
 
-            if (!document.RootElement.TryGetProperty(trainNumber, out var trainsElement) || trainsElement.ValueKind != JsonValueKind.Array || trainsElement.GetArrayLength() == 0)
+            if (!TryGetTrainsElement(document.RootElement, trainNumber, out var trainsElement) || trainsElement.GetArrayLength() == 0)
             {
                 _logger.LogDebug("No Amtraker train data returned for train number {TrainNumber}.", trainNumber);
                 return [];
@@ -58,6 +58,40 @@ namespace Web.Server.Services
             }
 
             return snapshots;
+        }
+
+        /// <summary>
+        /// Resolves the train snapshot array from an Amtraker payload.
+        /// Supports both historical object-root responses keyed by train number and array-root responses.
+        /// </summary>
+        private bool TryGetTrainsElement(JsonElement rootElement, string trainNumber, out JsonElement trainsElement)
+        {
+            trainsElement = default;
+
+            // This shape guard exists to prevent JsonElement type exceptions when the provider
+            // returns a payload root that does not match our original object-root assumption.
+            switch (rootElement.ValueKind)
+            {
+                case JsonValueKind.Object:
+                    if (!rootElement.TryGetProperty(trainNumber, out var trainBucket) || trainBucket.ValueKind != JsonValueKind.Array)
+                    {
+                        return false;
+                    }
+
+                    trainsElement = trainBucket;
+                    return true;
+
+                case JsonValueKind.Array:
+                    trainsElement = rootElement;
+                    return true;
+
+                default:
+                    _logger.LogWarning(
+                        "Amtraker response payload had unsupported root type {RootType} for train number {TrainNumber}.",
+                        rootElement.ValueKind,
+                        trainNumber);
+                    return false;
+            }
         }
 
         private static string? ReadString(JsonElement element, string propertyName)
