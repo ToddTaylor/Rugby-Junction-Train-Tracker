@@ -53,6 +53,60 @@ namespace Web.ServerTests.Services
 			Assert.AreEqual(expectedHeading, snapshot.Heading);
 		}
 
+		[TestMethod]
+		public async Task GetTrainsAsync_ReturnsSnapshots_WhenResponseRootIsArray()
+		{
+			const string trainNumber = "8";
+			var content = """
+				[
+				  {
+					"provider": "Amtrak",
+					"routeName": "Hiawatha",
+					"trainNum": "8",
+					"trainID": "8-A",
+					"heading": "N",
+					"lat": 43.1,
+					"lon": -88.1,
+					"velocity": 55,
+					"updatedAt": "2026-06-11T12:34:56Z"
+				  }
+				]
+				""";
+
+			using var httpClient = new HttpClient(new StaticJsonHttpMessageHandler(content))
+			{
+				BaseAddress = new Uri("https://example.test/")
+			};
+
+			var logger = new Mock<ILogger<AmtrakerPassengerProviderClient>>();
+			var client = new AmtrakerPassengerProviderClient(httpClient, logger.Object);
+
+			var snapshots = (await client.GetTrainsAsync(trainNumber, CancellationToken.None)).ToList();
+
+			Assert.AreEqual(1, snapshots.Count);
+			Assert.AreEqual("8-A", snapshots[0].TrainId);
+			Assert.AreEqual("Northbound", snapshots[0].Heading);
+		}
+
+		[TestMethod]
+		public async Task GetTrainsAsync_ReturnsEmpty_WhenResponseRootTypeIsUnexpected()
+		{
+			const string trainNumber = "8";
+			const string content = "\"unexpected\"";
+
+			using var httpClient = new HttpClient(new StaticJsonHttpMessageHandler(content))
+			{
+				BaseAddress = new Uri("https://example.test/")
+			};
+
+			var logger = new Mock<ILogger<AmtrakerPassengerProviderClient>>();
+			var client = new AmtrakerPassengerProviderClient(httpClient, logger.Object);
+
+			var snapshots = await client.GetTrainsAsync(trainNumber, CancellationToken.None);
+
+			Assert.AreEqual(0, snapshots.Count());
+		}
+
 		private sealed class StaticJsonHttpMessageHandler(string json) : HttpMessageHandler
 		{
 			private readonly string _json = json;
