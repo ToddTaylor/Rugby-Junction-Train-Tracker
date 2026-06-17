@@ -1,47 +1,15 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Circle, CircleMarker, Tooltip } from 'react-leaflet';
+import { useUserLocation } from '../hooks/useUserLocation';
 
 type UserLocationPinProps = {
     mapTheme: 'dark' | 'light';
 };
 
-type UserLocation = {
-    latitude: number;
-    longitude: number;
-    accuracy: number;
-};
-
 const USER_LOCATION_PANE = 'userLocationPane';
 
 const UserLocationPin: React.FC<UserLocationPinProps> = ({ mapTheme }) => {
-    const [location, setLocation] = useState<UserLocation | null>(null);
-
-    useEffect(() => {
-        if (!('geolocation' in navigator)) {
-            return;
-        }
-
-        const watchId = navigator.geolocation.watchPosition(
-            (position) => {
-                const { latitude, longitude, accuracy } = position.coords;
-                setLocation({ latitude, longitude, accuracy });
-            },
-            (error) => {
-                if (error.code !== error.PERMISSION_DENIED) {
-                    console.warn('User location update failed:', error.message);
-                }
-            },
-            {
-                enableHighAccuracy: true,
-                maximumAge: 5000,
-                timeout: 20000
-            }
-        );
-
-        return () => {
-            navigator.geolocation.clearWatch(watchId);
-        };
-    }, []);
+    const location = useUserLocation();
 
     const markerColor = useMemo(() => {
         return mapTheme === 'dark' ? '#7dd3fc' : '#0b5cad';

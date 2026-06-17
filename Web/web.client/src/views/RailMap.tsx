@@ -9,6 +9,7 @@ import { LatLngTuple, Map as LeafletMap } from 'leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useSignalR } from '../hooks/useSignalR';
+import { useUserLocation } from '../hooks/useUserLocation';
 import { Beacon } from '../types/Beacon';
 import { MapPin } from '../types/MapPin';
 import BeaconMarkers from '../components/BeaconMarkers';
@@ -17,6 +18,7 @@ import PassengerTelemetryMarkers from '../components/PassengerTelemetryMarkers';
 import MilepostLayer from '../components/MilepostLayer';
 import DefectDetectorLayer from '../components/DefectDetectorLayer';
 import UserLocationPin from '../components/UserLocationPin';
+import FindMeControl from '../components/FindMeControl';
 import { BeaconHistoryModal } from '../components/BeaconHistoryModal';
 import { getTrackedMapPins, updateTrackedPinLocation, refreshTrackedPinsFromApi, applyTrackedPinAddedOrUpdatedFromServer, applyTrackedPinRemovedFromServer, addTrackedMapPinByShareCode } from '../services/trackedPins';
 import { metersToLongitudeDegrees, pixelsToMeters } from '../utils/geo';
@@ -114,6 +116,7 @@ const RailMap: React.FC = () => {
     const [passengerMapPins, setPassengerMapPins] = useState<PassengerMapPin[]>([]);
     const { milepostPoints } = useMileposts();
     const { defectDetectors } = useDefectDetectors();
+    const userLocation = useUserLocation();
 
     // Track the current tracked pins in state to trigger re-renders when they change
     const [trackedPinsState, setTrackedPinsState] = useState(() => getTrackedMapPins());
@@ -953,6 +956,11 @@ const RailMap: React.FC = () => {
                 )}
 
                 <UserLocationPin mapTheme={mapTheme as 'dark' | 'light'} />
+                
+                <FindMeControl 
+                    mapRef={mapRef}
+                    userLocation={userLocation}
+                />
 
             </MapContainer>
 
