@@ -9,6 +9,11 @@ interface FindMeControlProps {
 
 const FindMeControl: React.FC<FindMeControlProps> = ({ mapRef, userLocation }) => {
     const controlRef = useRef<L.Control | null>(null);
+    const userLocationRef = useRef<{ latitude: number; longitude: number } | null>(null);
+
+    useEffect(() => {
+        userLocationRef.current = userLocation;
+    }, [userLocation]);
 
     useEffect(() => {
         if (!mapRef.current) return;
@@ -16,12 +21,13 @@ const FindMeControl: React.FC<FindMeControlProps> = ({ mapRef, userLocation }) =
         const map = mapRef.current;
 
         // Remove existing control if any
-        if (controlRef.current && map.hasLayer(controlRef.current as any)) {
+        if (controlRef.current) {
             map.removeControl(controlRef.current);
+            controlRef.current = null;
         }
 
         // Only create control if user location is available
-        if (!userLocation) {
+        if (!userLocationRef.current) {
             return;
         }
 
@@ -29,7 +35,8 @@ const FindMeControl: React.FC<FindMeControlProps> = ({ mapRef, userLocation }) =
         const FindMeControlClass = L.Control.extend({
             onAdd: (_map: LeafletMap) => {
                 const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control find-me-control');
-                const button = L.DomUtil.create('button', 'find-me-button', container);
+                const button = L.DomUtil.create('button', 'find-me-button', container) as HTMLButtonElement;
+                button.type = 'button';
                 
                 // Add SVG icon
                 button.innerHTML = `
@@ -48,13 +55,13 @@ const FindMeControl: React.FC<FindMeControlProps> = ({ mapRef, userLocation }) =
                 
                 // Handle click
                 button.addEventListener('click', () => {
-                    if (userLocation && mapRef.current) {
+                    if (userLocationRef.current && mapRef.current) {
                         // Get zoom from localStorage or use default
                         const savedMapState = JSON.parse(localStorage.getItem('mapState') || 'null');
                         const zoomLevel = savedMapState?.zoom || 14;
                         
                         mapRef.current.setView(
-                            [userLocation.latitude, userLocation.longitude],
+                            [userLocationRef.current.latitude, userLocationRef.current.longitude],
                             zoomLevel
                         );
                     }
@@ -69,12 +76,12 @@ const FindMeControl: React.FC<FindMeControlProps> = ({ mapRef, userLocation }) =
         controlRef.current = findMeControl;
 
         return () => {
-            if (controlRef.current && map.hasLayer(controlRef.current as any)) {
+            if (controlRef.current) {
                 map.removeControl(controlRef.current);
                 controlRef.current = null;
             }
         };
-    }, [mapRef, userLocation]);
+    }, [mapRef, !!userLocation]);
 
     return null;
 };
