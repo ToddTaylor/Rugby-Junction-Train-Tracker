@@ -60,10 +60,16 @@ namespace Web.Server.Services
             return snapshots;
         }
 
+        /// <summary>
+        /// Resolves the train snapshot array from an Amtraker payload.
+        /// Supports both historical object-root responses keyed by train number and array-root responses.
+        /// </summary>
         private bool TryGetTrainsElement(JsonElement rootElement, string trainNumber, out JsonElement trainsElement)
         {
             trainsElement = default;
 
+            // This shape guard exists to prevent JsonElement type exceptions when the provider
+            // returns a payload root that does not match our original object-root assumption.
             switch (rootElement.ValueKind)
             {
                 case JsonValueKind.Object:
