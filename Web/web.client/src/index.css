@@ -250,11 +250,11 @@ body:has(.admin-layout) .app-footer {
 
 .find-me-button {
   all: unset;
-  width: 36px;
-  height: 36px;
+  width: 30px;
+  height: 30px;
   background: transparent;
   border: none;
-  color: #333;
+  color: #000;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -267,12 +267,12 @@ body:has(.admin-layout) .app-footer {
 
 .find-me-button:hover {
   background-color: #f4f4f4;
-  color: #007bff;
+  color: #000;
 }
 
 .find-me-button:active {
   background-color: #e8e8e8;
-  color: #0056b3;
+  color: #000;
 }
 
 .find-me-icon {
@@ -281,24 +281,9 @@ body:has(.admin-layout) .app-footer {
   stroke: currentColor;
 }
 
-/* Dark theme variant */
-.dark .find-me-control {
-  background-color: #222;
-  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.8);
-}
-
-.dark .find-me-button {
-  color: #ccc;
-}
-
-.dark .find-me-button:hover {
-  background-color: #2a2a2a;
-  color: #66b3ff;
-}
-
-.dark .find-me-button:active {
-  background-color: #1f1f1f;
-  color: #4d94ff;
+.leaflet-touch .find-me-button {
+  width: 30px;
+  height: 30px;
 }
 
 /* ---------- Tracking Dot Pulse Animation ---------- */
