@@ -202,6 +202,45 @@ namespace Web.Server.Controllers.v1
             }
         }
 
+        // DELETE: api/v1/MapPins/5/addresses
+        [HttpDelete("{id}/addresses")]
+        public async Task<IActionResult> ClearAddresses(int id)
+        {
+            if (!await IsAdminAsync())
+            {
+                return StatusCode(StatusCodes.Status403Forbidden);
+            }
+
+            try
+            {
+                var success = await _mapPinsService.DeleteMapPinAsync(id);
+                if (!success)
+                {
+                    return NotFound();
+                }
+
+                _logger.LogInformation("Admin reset map pin {MapPinId} by deleting map pin and address list.", id);
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while resetting map pin {MapPinId}.", id);
+                return StatusCode(StatusCodes.Status500InternalServerError, new { error = ex.Message });
+            }
+        }
+
+        private async Task<bool> IsAdminAsync()
+        {
+            if (!HttpContext.Items.TryGetValue("UserId", out var userIdObj) || userIdObj is not int userId)
+            {
+                return false;
+            }
+
+            var user = await _userService.GetUserByIdAsync(userId);
+            return user?.UserRoles?.Any(ur =>
+                string.Equals(ur.Role?.RoleName, "Admin", StringComparison.OrdinalIgnoreCase)) == true;
+        }
+
         private async Task<bool> CanViewSupportAddressesAsync()
         {
             if (!HttpContext.Items.TryGetValue("UserId", out var userIdObj) || userIdObj is not int userId)

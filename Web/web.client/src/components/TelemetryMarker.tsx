@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { parseISO } from 'date-fns/parseISO';
 import { format } from 'date-fns';
 import { addTrackedMapPin, removeTrackedMapPin, getTrackedPinSymbol, updateTrackedPinSymbol, refreshTrackedPinsFromApi, copyTrackedPinShareUrl, buildTrackedPinShareUrl } from '../services/trackedPins';
+import { deleteMapPinAddresses } from '../api/mapPinsApi';
 // Extend window type for setTrackedPinsStateFromApi
 declare global {
     interface Window {
@@ -45,6 +46,8 @@ interface TelemetryMarkerProps {
     longitudeOffset?: number;
     hourFormat?: string;
     canViewSupportAddresses?: boolean;
+    isAdmin?: boolean;
+    onMapPinDeleted?: (id: number) => void;
 }
 
 const formatDirection = (dir?: string | null): string => {
@@ -68,7 +71,7 @@ const formatDirection = (dir?: string | null): string => {
     return map[dir.toUpperCase()] || 'Unknown Direction';
 };
 
-const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'light' }> = ({ pin, size, maxPinAgeMinutes, mapTheme, trackedPins, longitudeOffset = 0, hourFormat = '24', canViewSupportAddresses = false }) => {
+const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'light' }> = ({ pin, size, maxPinAgeMinutes, mapTheme, trackedPins, longitudeOffset = 0, hourFormat = '24', canViewSupportAddresses = false, isAdmin = false, onMapPinDeleted }) => {
     // hourFormat is destructured from props with default '24'
     // Inject dark mode popup CSS override once per page load
     useEffect(() => {
@@ -196,6 +199,7 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
         const trackTextId = `track-text-${pin.id}`;
         const shareTextId = `share-text-${pin.id}`;
         const shareStatusId = `share-status-${pin.id}`;
+        const resetAddressesId = `reset-addresses-${pin.id}`;
         const trackedPinForLabel =
             trackedPins.find(tp => String(tp.id) === String(pin.id)) ||
             (pin.shareCode ? trackedPins.find(tp => tp.shareCode === pin.shareCode) : undefined);
@@ -240,6 +244,7 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
                 ${addressLines}
                 ${pin.shareCode ? `<button id='${shareTextId}' type='button' title='Share link' style='cursor:pointer;display:inline-flex;align-items:center;gap:6px;padding:${actionRowPadding};margin-top:${isCoarsePointer ? '2px' : '0'};margin-bottom:6px;color:${mapTheme === 'dark' ? '#d5d9df' : '#4b5563'};background:none;border:none;font:inherit;text-align:left;line-height:inherit;'>${copyIcon}<span style='text-decoration:underline;'>Share</span><span id='${shareStatusId}' style='font-size:12px;opacity:0;transition:opacity 0.2s ease;'></span></button>` : ''}
                 ${pin.shareCode ? '' : `<span id='${trackTextId}' style='cursor:pointer;text-decoration:underline;display:inline-flex;align-items:center;gap:6px;padding:${actionRowPadding};'><span style='display:inline-flex;align-items:center;'>${trackingBadge}</span>${trackText}</span>`}
+                ${isAdmin && canViewSupportAddresses ? `<br/><button id='${resetAddressesId}' type='button' title='Admin: clear address ID list' style='cursor:pointer;display:inline-flex;align-items:center;gap:6px;padding:${actionRowPadding};margin-top:4px;color:#ef4444;background:none;border:none;font:inherit;text-align:left;line-height:inherit;font-size:0.85em;'>&#x26A0; Reset Addresses</button>` : ''}
             </div>
         `;
 
@@ -343,6 +348,20 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
                 updateShareStatus(false);
             }
         };
+        const handleResetAddressesClick = async (e: MouseEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!window.confirm(`Reset map pin (ID: ${pin.id})? This deletes the pin and all addresses immediately.`)) {
+                return;
+            }
+            try {
+                await deleteMapPinAddresses(Number(pin.id));
+                onMapPinDeleted?.(Number(pin.id));
+                marker.closePopup();
+            } catch (error) {
+                console.error('Failed to reset map pin:', error);
+            }
+        };
         const attachHandler = () => {
             trackTextEl = document.getElementById(trackTextId);
             if (trackTextEl) {
@@ -356,6 +375,14 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
                 L.DomEvent.disableScrollPropagation(shareTextEl);
                 shareTextEl.addEventListener('click', handleShareTextClick);
             }
+
+            if (isAdmin && canViewSupportAddresses) {
+                const resetEl = document.getElementById(resetAddressesId);
+                if (resetEl) {
+                    L.DomEvent.disableClickPropagation(resetEl);
+                    resetEl.addEventListener('click', handleResetAddressesClick);
+                }
+            }
         };
         const detachHandler = () => {
             if (trackTextEl) {
@@ -366,6 +393,11 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
             if (shareTextEl) {
                 shareTextEl.removeEventListener('click', handleShareTextClick);
                 shareTextEl = null;
+            }
+
+            const resetEl = document.getElementById(resetAddressesId);
+            if (resetEl) {
+                resetEl.removeEventListener('click', handleResetAddressesClick);
             }
         };
         const onPopupOpen = () => {
@@ -416,7 +448,7 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
                 clearTimeout(shareFeedbackTimeout);
             }
         };
-    }, [pin.id, pin.shareCode, pin.beaconID, pin.beaconName, pin.railroad, pin.subdivision, pin.milepost, pin.direction, pin.moving, pin.lastUpdate, pin.addresses, isTracked, trackColor, mapTheme, hourFormat]);
+    }, [pin.id, pin.shareCode, pin.beaconID, pin.beaconName, pin.railroad, pin.subdivision, pin.milepost, pin.direction, pin.moving, pin.lastUpdate, pin.addresses, isTracked, trackColor, mapTheme, hourFormat, isAdmin, canViewSupportAddresses, onMapPinDeleted]);
 
     // Use ArrowMapPin as the icon, with rotation and border color
     const createCustomIcon = () => {
