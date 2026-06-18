@@ -107,7 +107,7 @@ const RailMap: React.FC = () => {
 
     // Auth for admin button
     const { session, logout } = useAuth();
-    const { canViewSupportAddresses } = parseSessionRoles(session?.roles);
+    const { canViewSupportAddresses, isAdmin } = parseSessionRoles(session?.roles);
 
     // Use custom hooks for data
     const { trackData, trackDataLoading } = useRailways();
@@ -945,6 +945,10 @@ const RailMap: React.FC = () => {
                     mapTheme={mapTheme as 'dark' | 'light'}
                     hourFormat={hourFormat}
                     canViewSupportAddresses={canViewSupportAddresses}
+                    isAdmin={isAdmin}
+                    onMapPinDeleted={(deletedPinId) => {
+                        setMapPins((prevPins: MapPin[]) => prevPins.filter(p => Number(p.id) !== deletedPinId));
+                    }}
                 />}
 
                 {beaconsLoaded && (

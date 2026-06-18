@@ -261,11 +261,19 @@ namespace Web.Server.Repositories
 
         public async Task<bool> DeleteAsync(int id)
         {
-            var mapPin = await _context.MapPins.FindAsync(id);
+            var mapPin = await _context.MapPins
+                .Include(mp => mp.Addresses)
+                .FirstOrDefaultAsync(mp => mp.ID == id);
             if (mapPin == null)
             {
                 return false;
             }
+
+            if (mapPin.Addresses.Count > 0)
+            {
+                _context.Addresses.RemoveRange(mapPin.Addresses);
+            }
+
             _context.MapPins.Remove(mapPin);
             await _context.SaveChangesAsync();
             return true;
