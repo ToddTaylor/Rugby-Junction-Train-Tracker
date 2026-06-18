@@ -422,6 +422,11 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
         marker.on('popupopen', onPopupOpen);
         marker.on('popupclose', onPopupClose);
 
+        // If dependencies changed while the popup stayed open, rebind handlers immediately.
+        if (marker.isPopupOpen()) {
+            onPopupOpen();
+        }
+
         // Reopen popup after tracking state changes to show updated content
         if (shouldReopenPopupRef.current) {
             shouldReopenPopupRef.current = false;
