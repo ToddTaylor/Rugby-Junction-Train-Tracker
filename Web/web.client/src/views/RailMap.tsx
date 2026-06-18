@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState, useRef, useMemo } from 'react';
+﻿import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import HamburgerMenu from '../components/HamburgerMenu';
 import {
     MapContainer,
@@ -556,6 +556,10 @@ const RailMap: React.FC = () => {
         telemetryPins[pin.id] = pin;
     });
 
+    const handleMapPinDeleted = useCallback((deletedPinId: number) => {
+        setMapPins((prevPins: MapPin[]) => prevPins.filter(p => Number(p.id) !== deletedPinId));
+    }, [setMapPins]);
+
     // Use ref to get the map instance
     const mapRef = useRef<LeafletMap | null>(null);
     const railLayerRef = useRef<L.GeoJSON | null>(null);
@@ -946,9 +950,7 @@ const RailMap: React.FC = () => {
                     hourFormat={hourFormat}
                     canViewSupportAddresses={canViewSupportAddresses}
                     isAdmin={isAdmin}
-                    onMapPinDeleted={(deletedPinId) => {
-                        setMapPins((prevPins: MapPin[]) => prevPins.filter(p => Number(p.id) !== deletedPinId));
-                    }}
+                    onMapPinDeleted={handleMapPinDeleted}
                 />}
 
                 {beaconsLoaded && (
