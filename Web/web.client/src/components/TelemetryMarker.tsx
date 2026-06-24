@@ -5,6 +5,7 @@ import { parseISO } from 'date-fns/parseISO';
 import { format } from 'date-fns';
 import { addTrackedMapPin, removeTrackedMapPin, getTrackedPinSymbol, updateTrackedPinSymbol, refreshTrackedPinsFromApi, copyTrackedPinShareUrl, buildTrackedPinShareUrl } from '../services/trackedPins';
 import { deleteMapPinAddresses } from '../api/mapPinsApi';
+import { toggleSubdivisionLocalTrainAddress } from '../api/subdivisions';
 // Extend window type for setTrackedPinsStateFromApi
 declare global {
     interface Window {
@@ -47,7 +48,10 @@ interface TelemetryMarkerProps {
     hourFormat?: string;
     canViewSupportAddresses?: boolean;
     isAdmin?: boolean;
+    canManageLocalTrains?: boolean;
+    currentUserId?: number | null;
     onMapPinDeleted?: (id: number) => void;
+    onMapPinLocalStatusChanged?: (id: number, isLocal: boolean) => void;
 }
 
 const formatDirection = (dir?: string | null): string => {
@@ -71,7 +75,21 @@ const formatDirection = (dir?: string | null): string => {
     return map[dir.toUpperCase()] || 'Unknown Direction';
 };
 
-const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'light' }> = ({ pin, size, maxPinAgeMinutes, mapTheme, trackedPins, longitudeOffset = 0, hourFormat = '24', canViewSupportAddresses = false, isAdmin = false, onMapPinDeleted }) => {
+const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'light' }> = ({
+    pin,
+    size,
+    maxPinAgeMinutes,
+    mapTheme,
+    trackedPins,
+    longitudeOffset = 0,
+    hourFormat = '24',
+    canViewSupportAddresses = false,
+    isAdmin = false,
+    canManageLocalTrains = false,
+    currentUserId = null,
+    onMapPinDeleted,
+    onMapPinLocalStatusChanged,
+}) => {
     // hourFormat is destructured from props with default '24'
     // Inject dark mode popup CSS override once per page load
     useEffect(() => {
@@ -200,6 +218,8 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
         const shareTextId = `share-text-${pin.id}`;
         const shareStatusId = `share-status-${pin.id}`;
         const resetAddressesId = `reset-addresses-${pin.id}`;
+        const localToggleButtonId = `local-toggle-${pin.id}`;
+        const localToggleStatusId = `local-toggle-status-${pin.id}`;
         const trackedPinForLabel =
             trackedPins.find(tp => String(tp.id) === String(pin.id)) ||
             (pin.shareCode ? trackedPins.find(tp => tp.shareCode === pin.shareCode) : undefined);
@@ -208,9 +228,19 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
         const isCoarsePointer = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
         const actionRowPadding = isCoarsePointer ? '4px 0' : '1px 0';
         const actionRowGap = isCoarsePointer ? '10px' : '6px';
-        const trackingBadgeColor = isTracked ? (trackColor || '#FFD700') : '#cccccc';        const trackingBadgeBorder = isTracked ? '1px solid rgba(0, 0, 0, 0.5)' : '1px solid rgba(0, 0, 0, 0.3)';
+        const trackingBadgeColor = isTracked ? (trackColor || '#FFD700') : '#cccccc';
+        const trackingBadgeBorder = isTracked ? '1px solid rgba(0, 0, 0, 0.5)' : '1px solid rgba(0, 0, 0, 0.3)';
         const trackingBadgeTextColor = isTracked ? '#000' : '#666';
         const trackingBadge = `<span style='width:14px;height:14px;background-color:${trackingBadgeColor};border-radius:50%;border:${trackingBadgeBorder};display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:900;color:${trackingBadgeTextColor};line-height:14px;flex-shrink:0;'>T</span>`;
+        const activeLocalAddress = Array.isArray(pin.addresses)
+            ? (pin.addresses.find(a => a.isActive) ?? pin.addresses[0])
+            : undefined;
+        const localAddressId = activeLocalAddress?.addressID;
+        const canToggleLocal =
+            canManageLocalTrains &&
+            Number.isInteger(localAddressId) &&
+            Number(localAddressId) > 0 &&
+            Number(pin.subdivisionID) > 0;
         const shareCodeLine = pin.shareCode
             ? `<span id='${trackTextId}' style='cursor:pointer;display:inline-flex;align-items:center;gap:6px;padding:${actionRowPadding};margin-bottom:${actionRowGap};'><span style='display:inline-flex;align-items:center;'>${trackingBadge}</span><span style='text-decoration:${isTracked ? 'underline' : 'none'};color:${isTracked ? (trackColor || '#FFD700') : 'inherit'};font-weight:${isTracked ? 700 : 400};'>${displayTrainLabel}</span></span><br/>`
             : '';
@@ -220,6 +250,12 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
         const trackText = isTracked
             ? 'Tracking'
             : 'Not Tracking';
+        const localButtonColor = pin.isLocal ? '#facc15' : '#9ca3af';
+        const localButtonText = pin.isLocal ? 'Local' : 'Mark Local';
+        const localStatusTextColor = mapTheme === 'dark' ? '#d1d5db' : '#6b7280';
+        const localToggleMarkup = canToggleLocal
+            ? `<button id='${localToggleButtonId}' type='button' title='${pin.isLocal ? 'Remove local status' : 'Mark as local'}' style='cursor:pointer;display:inline-flex;align-items:center;gap:6px;padding:${actionRowPadding};margin-top:${isCoarsePointer ? '2px' : '0'};margin-bottom:6px;color:${localStatusTextColor};background:none;border:none;font:inherit;text-align:left;line-height:inherit;'><span style='width:14px;height:14px;background-color:${localButtonColor};border-radius:50%;border:1px solid rgba(0,0,0,0.4);display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:900;color:${pin.isLocal ? '#000' : '#4b5563'};line-height:14px;flex-shrink:0;'>L</span><span style='text-decoration:underline;'>${localButtonText}</span><span id='${localToggleStatusId}' style='font-size:12px;opacity:0;transition:opacity 0.2s ease;'></span></button>`
+            : '';
 
         // Use only inline color for the track link, not for the popup background
         const popupContent = `
@@ -242,7 +278,8 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
                 })()}<br/>
                 ${shareCodeLine}
                 ${addressLines}
-                ${pin.shareCode ? `<button id='${shareTextId}' type='button' title='Share link' style='cursor:pointer;display:inline-flex;align-items:center;gap:6px;padding:${actionRowPadding};margin-top:${isCoarsePointer ? '2px' : '0'};margin-bottom:6px;color:${mapTheme === 'dark' ? '#d5d9df' : '#4b5563'};background:none;border:none;font:inherit;text-align:left;line-height:inherit;'>${copyIcon}<span style='text-decoration:underline;'>Share</span><span id='${shareStatusId}' style='font-size:12px;opacity:0;transition:opacity 0.2s ease;'></span></button>` : ''}
+                ${localToggleMarkup}
+                ${pin.shareCode ? `<button id='${shareTextId}' type='button' title='Share link' style='cursor:pointer;display:flex;align-items:center;gap:6px;padding:${actionRowPadding};margin-top:${isCoarsePointer ? '2px' : '0'};margin-bottom:6px;color:${mapTheme === 'dark' ? '#d5d9df' : '#4b5563'};background:none;border:none;font:inherit;text-align:left;line-height:inherit;'>${copyIcon}<span style='text-decoration:underline;'>Share</span><span id='${shareStatusId}' style='font-size:12px;opacity:0;transition:opacity 0.2s ease;'></span></button>` : ''}
                 ${pin.shareCode ? '' : `<span id='${trackTextId}' style='cursor:pointer;text-decoration:underline;display:inline-flex;align-items:center;gap:6px;padding:${actionRowPadding};'><span style='display:inline-flex;align-items:center;'>${trackingBadge}</span>${trackText}</span>`}
                 ${isAdmin && canViewSupportAddresses ? `<br/><button id='${resetAddressesId}' type='button' title='Admin: clear address ID list' style='cursor:pointer;display:inline-flex;align-items:center;gap:6px;padding:${actionRowPadding};margin-top:4px;color:#ef4444;background:none;border:none;font:inherit;text-align:left;line-height:inherit;font-size:0.85em;'>&#x26A0; Reset Addresses</button>` : ''}
             </div>
@@ -265,8 +302,10 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
         // Attach click handler to trackText in popup DOM on popupopen, and re-attach if popup content changes
         let trackTextEl: HTMLElement | null = null;
         let shareTextEl: HTMLElement | null = null;
+        let localToggleEl: HTMLElement | null = null;
         let observer: MutationObserver | null = null;
         let shareFeedbackTimeout: ReturnType<typeof setTimeout> | null = null;
+        let localToggleFeedbackTimeout: ReturnType<typeof setTimeout> | null = null;
         const updateShareStatus = (isSuccess: boolean) => {
             const shareStatusEl = document.getElementById(shareStatusId);
             if (!shareStatusEl) {
@@ -348,6 +387,75 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
                 updateShareStatus(false);
             }
         };
+        const updateLocalToggleStatus = (isSuccess: boolean, message?: string) => {
+            const localStatusEl = document.getElementById(localToggleStatusId);
+            if (!localStatusEl) {
+                return;
+            }
+
+            const badgePadding = isCoarsePointer ? '4px 8px' : '3px 6px';
+            if (isSuccess) {
+                localStatusEl.innerHTML = `<span style="display:inline-flex;align-items:center;gap:4px;color:#14532d;background:rgba(220,252,231,0.95);border:1px solid rgba(34,197,94,0.35);border-radius:9999px;padding:${badgePadding};line-height:1;white-space:nowrap;font-size:12px;pointer-events:none;">Updated</span>`;
+            } else {
+                const text = message ? message.replace(/</g, '&lt;').replace(/>/g, '&gt;') : 'Failed';
+                localStatusEl.innerHTML = `<span style="display:inline-flex;align-items:center;gap:4px;color:#7f1d1d;background:rgba(254,226,226,0.95);border:1px solid rgba(248,113,113,0.45);border-radius:9999px;padding:${badgePadding};line-height:1;white-space:nowrap;font-size:12px;pointer-events:none;">${text}</span>`;
+            }
+            localStatusEl.style.opacity = '1';
+
+            if (localToggleFeedbackTimeout) {
+                clearTimeout(localToggleFeedbackTimeout);
+            }
+
+            localToggleFeedbackTimeout = setTimeout(() => {
+                const currentLocalStatusEl = document.getElementById(localToggleStatusId);
+                if (!currentLocalStatusEl) {
+                    return;
+                }
+
+                currentLocalStatusEl.style.opacity = '0';
+                currentLocalStatusEl.textContent = '';
+            }, 3000);
+        };
+        const handleLocalToggleClick = async (e: MouseEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+
+            if (!canToggleLocal || !Number.isInteger(localAddressId)) {
+                return;
+            }
+
+            const target = document.getElementById(localToggleButtonId) as HTMLButtonElement | null;
+            if (target) {
+                target.disabled = true;
+                target.style.opacity = '0.7';
+            }
+
+            try {
+                const result = await toggleSubdivisionLocalTrainAddress(
+                    Number(pin.subdivisionID),
+                    Number(localAddressId),
+                    { isAdmin, currentUserId }
+                );
+
+                if (result.errors.length > 0 || !result.data) {
+                    const errorText = result.errors[0] || 'Failed';
+                    updateLocalToggleStatus(false, errorText.toLowerCase().includes('assigned subdivision') ? 'Forbidden' : 'Failed');
+                    return;
+                }
+
+                shouldReopenPopupRef.current = true;
+                onMapPinLocalStatusChanged?.(Number(pin.id), result.data.isLocal);
+                updateLocalToggleStatus(true);
+            } catch {
+                updateLocalToggleStatus(false);
+            } finally {
+                if (target) {
+                    target.disabled = false;
+                    target.style.opacity = '1';
+                }
+            }
+        };
         const handleResetAddressesClick = async (e: MouseEvent) => {
             e.preventDefault();
             e.stopPropagation();
@@ -376,6 +484,13 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
                 shareTextEl.addEventListener('click', handleShareTextClick);
             }
 
+            localToggleEl = document.getElementById(localToggleButtonId);
+            if (localToggleEl) {
+                L.DomEvent.disableClickPropagation(localToggleEl);
+                L.DomEvent.disableScrollPropagation(localToggleEl);
+                localToggleEl.addEventListener('click', handleLocalToggleClick);
+            }
+
             if (isAdmin && canViewSupportAddresses) {
                 const resetEl = document.getElementById(resetAddressesId);
                 if (resetEl) {
@@ -393,6 +508,11 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
             if (shareTextEl) {
                 shareTextEl.removeEventListener('click', handleShareTextClick);
                 shareTextEl = null;
+            }
+
+            if (localToggleEl) {
+                localToggleEl.removeEventListener('click', handleLocalToggleClick);
+                localToggleEl = null;
             }
 
             const resetEl = document.getElementById(resetAddressesId);
@@ -452,8 +572,11 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
             if (shareFeedbackTimeout) {
                 clearTimeout(shareFeedbackTimeout);
             }
+            if (localToggleFeedbackTimeout) {
+                clearTimeout(localToggleFeedbackTimeout);
+            }
         };
-    }, [pin.id, pin.shareCode, pin.beaconID, pin.beaconName, pin.railroad, pin.subdivision, pin.milepost, pin.direction, pin.moving, pin.lastUpdate, pin.addresses, isTracked, trackColor, mapTheme, hourFormat, isAdmin, canViewSupportAddresses, onMapPinDeleted]);
+    }, [pin.id, pin.shareCode, pin.beaconID, pin.beaconName, pin.railroad, pin.subdivision, pin.subdivisionID, pin.milepost, pin.direction, pin.moving, pin.isLocal, pin.lastUpdate, pin.addresses, isTracked, trackColor, mapTheme, hourFormat, isAdmin, canManageLocalTrains, currentUserId, canViewSupportAddresses, onMapPinDeleted, onMapPinLocalStatusChanged]);
 
     // Use ArrowMapPin as the icon, with rotation and border color
     const createCustomIcon = () => {

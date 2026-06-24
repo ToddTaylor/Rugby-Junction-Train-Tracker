@@ -36,6 +36,16 @@
 - Run shared services tests with `dotnet test Services.UnitTests/Services.UnitTests.csproj`.
 - Build the frontend with `cd Web/web.client && npm run build`.
 
+### Validation Policy For Changes
+- For every code change, run and pass the affected automated tests before considering the task complete.
+- If a change touches both frontend and backend, run and pass tests for both layers.
+- Minimum expected validation by area:
+	- Frontend changes: `npm --prefix Web/web.client run test` and `npm --prefix Web/web.client run build`.
+	- Web server changes: `dotnet test Web/Web.ServerTests/Web.Server.Tests.csproj`.
+	- API/auth/integration-contract changes: `dotnet test Web/Web.Server.IntegrationTests/Web.Server.IntegrationTests.csproj`.
+	- Shared `Services` changes: `dotnet test Services.UnitTests/Services.UnitTests.csproj`.
+- If a required suite cannot be run, explicitly state what was skipped and why.
+
 ## Documentation Upkeep
 - When a feature changes a cross-cutting workflow or invariant, update `docs/architecture/system-overview.md` and the relevant implementation brief in the repo.
 - Prefer short, factual docs that explain responsibilities, data flow, and edge cases over long narrative history.
