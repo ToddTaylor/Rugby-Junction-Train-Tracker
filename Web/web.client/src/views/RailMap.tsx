@@ -107,7 +107,7 @@ const RailMap: React.FC = () => {
 
     // Auth for admin button
     const { session, logout } = useAuth();
-    const { canViewSupportAddresses, isAdmin } = parseSessionRoles(session?.roles);
+    const { canViewSupportAddresses, isAdmin, isCustodian } = parseSessionRoles(session?.roles);
 
     // Use custom hooks for data
     const { trackData, trackDataLoading } = useRailways();
@@ -560,6 +560,16 @@ const RailMap: React.FC = () => {
         setMapPins((prevPins: MapPin[]) => prevPins.filter(p => Number(p.id) !== deletedPinId));
     }, [setMapPins]);
 
+    const handleMapPinLocalStatusChanged = useCallback((updatedPinId: number, isLocal: boolean) => {
+        setMapPins((prevPins: MapPin[]) =>
+            prevPins.map(pin =>
+                Number(pin.id) === updatedPinId
+                    ? { ...pin, isLocal }
+                    : pin
+            )
+        );
+    }, [setMapPins]);
+
     // Use ref to get the map instance
     const mapRef = useRef<LeafletMap | null>(null);
     const railLayerRef = useRef<L.GeoJSON | null>(null);
@@ -950,7 +960,10 @@ const RailMap: React.FC = () => {
                     hourFormat={hourFormat}
                     canViewSupportAddresses={canViewSupportAddresses}
                     isAdmin={isAdmin}
+                    canManageLocalTrains={isAdmin || isCustodian}
+                    currentUserId={session?.userId ?? null}
                     onMapPinDeleted={handleMapPinDeleted}
+                    onMapPinLocalStatusChanged={handleMapPinLocalStatusChanged}
                 />}
 
                 {beaconsLoaded && (

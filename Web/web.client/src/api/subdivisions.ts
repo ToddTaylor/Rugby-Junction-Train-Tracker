@@ -40,6 +40,29 @@ interface ApiResponse<T> {
   errors: string[];
 }
 
+function parseLocalTrainAddressIDs(raw: string | undefined): number[] {
+  if (!raw || !raw.trim()) {
+    return [];
+  }
+
+  return raw
+    .split(/[\r\n,]+/)
+    .map(value => value.trim())
+    .filter(value => /^\d+$/.test(value))
+    .map(value => Number.parseInt(value, 10));
+}
+
+function serializeLocalTrainAddressIDs(values: number[]): string {
+  if (values.length === 0) {
+    return '';
+  }
+
+  return values
+    .filter(value => Number.isInteger(value) && value > 0)
+    .sort((a, b) => a - b)
+    .join('\n');
+}
+
 async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<ApiResponse<T>> {
   try {
     if (!API_KEY) {
@@ -106,4 +129,74 @@ export async function deleteSubdivision(id: number): Promise<ApiResponse<void>> 
   return fetchApi<void>(`/api/v1/Subdivisions/${id}`, {
     method: 'DELETE',
   });
+}
+
+export interface ToggleSubdivisionLocalTrainResult {
+  isLocal: boolean;
+  subdivision: Subdivision;
+}
+
+export async function toggleSubdivisionLocalTrainAddress(
+  subdivisionId: number,
+  addressId: number,
+  options: { isAdmin: boolean; currentUserId?: number | null }
+): Promise<ApiResponse<ToggleSubdivisionLocalTrainResult>> {
+  if (!Number.isInteger(subdivisionId) || subdivisionId <= 0) {
+    return { data: null, errors: ['Invalid subdivision ID.'] };
+  }
+
+  if (!Number.isInteger(addressId) || addressId <= 0) {
+    return { data: null, errors: ['Invalid address ID.'] };
+  }
+
+  const subdivisionResult = await getSubdivisionById(subdivisionId);
+  if (subdivisionResult.errors.length > 0 || !subdivisionResult.data) {
+    return {
+      data: null,
+      errors: subdivisionResult.errors.length > 0
+        ? subdivisionResult.errors
+        : ['Subdivision not found.']
+    };
+  }
+
+  const subdivision = subdivisionResult.data;
+  const { isAdmin, currentUserId = null } = options;
+  if (!isAdmin && (currentUserId === null || subdivision.custodianId !== currentUserId)) {
+    return { data: null, errors: ['You can only modify local trains for your assigned subdivision.'] };
+  }
+
+  const ids = new Set(parseLocalTrainAddressIDs(subdivision.localTrainAddressIDs));
+  const wasLocal = ids.has(addressId);
+  if (wasLocal) {
+    ids.delete(addressId);
+  } else {
+    ids.add(addressId);
+  }
+
+  const updateData: UpdateSubdivision = {
+    id: subdivision.id,
+    name: subdivision.name,
+    railroadID: subdivision.railroadID,
+    dpuCapable: subdivision.dpuCapable,
+    localTrainAddressIDs: serializeLocalTrainAddressIDs(Array.from(ids)),
+    custodianId: subdivision.custodianId ?? null,
+  };
+
+  const updateResult = await updateSubdivision(subdivision.id, updateData);
+  if (updateResult.errors.length > 0 || !updateResult.data) {
+    return {
+      data: null,
+      errors: updateResult.errors.length > 0
+        ? updateResult.errors
+        : ['Failed to update subdivision local train list.']
+    };
+  }
+
+  return {
+    data: {
+      isLocal: !wasLocal,
+      subdivision: updateResult.data,
+    },
+    errors: []
+  };
 }

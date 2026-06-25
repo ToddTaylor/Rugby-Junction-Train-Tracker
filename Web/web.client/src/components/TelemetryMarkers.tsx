@@ -16,7 +16,10 @@ interface TelemetryMarkersProps {
     hourFormat?: string;
     canViewSupportAddresses?: boolean;
     isAdmin?: boolean;
+    canManageLocalTrains?: boolean;
+    currentUserId?: number | null;
     onMapPinDeleted?: (id: number) => void;
+    onMapPinLocalStatusChanged?: (id: number, isLocal: boolean) => void;
 }
 
 const TelemetryMarkers: React.FC<TelemetryMarkersProps & { mapTheme: 'dark' | 'light' }> = ({
@@ -28,7 +31,10 @@ const TelemetryMarkers: React.FC<TelemetryMarkersProps & { mapTheme: 'dark' | 'l
     hourFormat = '24',
     canViewSupportAddresses = false,
     isAdmin = false,
+    canManageLocalTrains = false,
+    currentUserId = null,
     onMapPinDeleted,
+    onMapPinLocalStatusChanged,
 }) => {
     const size = getMarkerSize(zoom);
 
@@ -51,7 +57,10 @@ const TelemetryMarkers: React.FC<TelemetryMarkersProps & { mapTheme: 'dark' | 'l
                         hourFormat={hourFormat}
                         canViewSupportAddresses={canViewSupportAddresses}
                         isAdmin={isAdmin}
+                        canManageLocalTrains={canManageLocalTrains}
+                        currentUserId={currentUserId}
                         onMapPinDeleted={onMapPinDeleted}
+                        onMapPinLocalStatusChanged={onMapPinLocalStatusChanged}
                     />
                 ) : null
             )}
