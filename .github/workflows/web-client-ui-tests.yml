@@ -1,0 +1,38 @@
+name: Web client UI tests
+
+on:
+  pull_request:
+    paths:
+      - "Web/web.client/**"
+      - ".github/workflows/web-client-ui-tests.yml"
+  push:
+    branches:
+      - master
+    paths:
+      - "Web/web.client/**"
+      - ".github/workflows/web-client-ui-tests.yml"
+
+jobs:
+  web-client-ui-tests:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: Web/web.client
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: Web/web.client/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run UI unit tests
+        run: npm test
