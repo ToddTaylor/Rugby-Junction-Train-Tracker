@@ -48,6 +48,14 @@ namespace Web.Server.Data
                 }
             }
 
+            modelBuilder.Entity<User>()
+                .Property(u => u.LastActive)
+                .HasConversion(Converters.NullableUtcDateTimeConverter);
+
+            modelBuilder.Entity<User>()
+                .Property(u => u.LastLogin)
+                .HasConversion(Converters.NullableUtcDateTimeConverter);
+
             // Converts the Direction enum to text in the database instead of an int
             modelBuilder.Entity<BeaconRailroad>()
                     .Property(br => br.Direction)
