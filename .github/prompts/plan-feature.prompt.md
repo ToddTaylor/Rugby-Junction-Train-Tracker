@@ -2,7 +2,7 @@
 description: "Plan a new feature or change for RugbyJunctionTrainTracker. Guides end-to-end feature planning by reading architecture, area instructions, implementation briefs, and existing tests before proposing a plan."
 name: "Plan Feature"
 argument-hint: "Feature description and acceptance criteria..."
-agent: "agent"
+mode: "plan"
 ---
 # Plan Feature for RugbyJunctionTrainTracker
 

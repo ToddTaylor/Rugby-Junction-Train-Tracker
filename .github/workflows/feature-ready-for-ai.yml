@@ -1,0 +1,72 @@
+name: Trigger AI Agent on feature-ready-for-ai
+
+on:
+  issues:
+    types: [labeled]
+
+jobs:
+  handoff-to-ai-agent:
+    if: github.event.label.name == 'feature-ready-for-ai'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+
+    steps:
+      - name: Swap labels (ready → in-progress)
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.issue.number,
+              labels: ['ai-in-progress']
+            });
+            await github.rest.issues.removeLabel({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.issue.number,
+              name: 'feature-ready-for-ai'
+            });
+
+      - name: Assign to Copilot and post handoff comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const issueNumber = issue.number;
+
+            // Assign to Copilot coding agent
+            try {
+              await github.rest.issues.addAssignees({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                assignees: ['Copilot']
+              });
+            } catch (e) {
+              console.log('Could not assign to Copilot:', e.message);
+            }
+
+            // Post handoff comment triggering Copilot
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: [
+                '## 🤖 AI Agent Handoff — Checkpoint A Complete',
+                '',
+                '@Copilot Please implement this issue using `.github/prompts/issue-to-pr.prompt.md` as your guide.',
+                '',
+                'The issue body contains the complete plan including:',
+                '- Current behavior',
+                '- Affected layers',
+                '- End-to-end flow',
+                '- Test coverage requirements',
+                '- Assumptions and risks',
+                '',
+                '**Do not ask for clarification unless a requirement is truly ambiguous and blocks progress.**',
+                '',
+                '_Label `ai-in-progress` applied. Developer will review the PR at Checkpoint B._'
+              ].join('\n')
+            });
