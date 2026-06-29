@@ -1,0 +1,137 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if ! command -v semgrep >/dev/null 2>&1; then
+  echo "Semgrep is required for pushes in this repository. Install Semgrep and try again."
+  exit 1
+fi
+
+if command -v python3 >/dev/null 2>&1; then
+  PYTHON_BIN="python3"
+elif command -v python >/dev/null 2>&1; then
+  PYTHON_BIN="python"
+else
+  echo "Python is required to filter Semgrep findings to changed lines."
+  exit 1
+fi
+
+UPSTREAM_REF="$(git rev-parse --abbrev-ref --symbolic-full-name @{upstream} 2>/dev/null || true)"
+if [[ -z "$UPSTREAM_REF" ]]; then
+  DEFAULT_REMOTE_HEAD="$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null || true)"
+  if [[ -n "$DEFAULT_REMOTE_HEAD" ]]; then
+    BASE_REF="$DEFAULT_REMOTE_HEAD"
+  else
+    echo "No upstream branch configured and origin/HEAD is unavailable. Skipping pre-push Semgrep."
+    exit 0
+  fi
+else
+  BASE_REF="$UPSTREAM_REF"
+fi
+
+mapfile -d '' CHANGED_FILES < <(
+  git diff --name-only -z --diff-filter=ACMR "$BASE_REF...HEAD" -- '*.cs' '*.csx' '*.js' '*.jsx' '*.ts' '*.tsx'
+)
+
+if (( ${#CHANGED_FILES[@]} == 0 )); then
+  exit 0
+fi
+
+TMP_JSON="$(mktemp)"
+trap 'rm -f "$TMP_JSON"' EXIT
+
+echo "Running Semgrep on changed files before push (changed-line findings only)..."
+semgrep scan --config auto --json --quiet "${CHANGED_FILES[@]}" >"$TMP_JSON"
+
+if "$PYTHON_BIN" - "$TMP_JSON" "$BASE_REF" <<'PY'
+import json
+import os
+import re
+import subprocess
+import sys
+
+results_path = sys.argv[1]
+base_ref = sys.argv[2]
+
+with open(results_path, encoding="utf-8") as fh:
+    data = json.load(fh)
+
+def normalize(path: str) -> str:
+    return os.path.normpath(path).replace("\\", "/")
+
+def added_ranges(file_path: str):
+    proc = subprocess.run(
+        ["git", "diff", "-U0", f"{base_ref}...HEAD", "--", file_path],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    ranges = []
+    for line in proc.stdout.splitlines():
+        if not line.startswith("@@"):
+            continue
+        m = re.search(r"\+(\d+)(?:,(\d+))?", line)
+        if not m:
+            continue
+        start = int(m.group(1))
+        length = int(m.group(2) or "1")
+        if length > 0:
+            ranges.append((start, start + length - 1))
+    return ranges
+
+changed_lines = {}
+name_proc = subprocess.run(
+    [
+        "git",
+        "diff",
+        "--name-only",
+        "--diff-filter=ACMR",
+        f"{base_ref}...HEAD",
+        "--",
+        "*.cs",
+        "*.csx",
+        "*.js",
+        "*.jsx",
+        "*.ts",
+        "*.tsx",
+    ],
+    capture_output=True,
+    text=True,
+    check=True,
+)
+
+for file_path in [x.strip() for x in name_proc.stdout.splitlines() if x.strip()]:
+    changed_lines[normalize(file_path)] = added_ranges(file_path)
+
+def line_is_changed(path: str, line_no: int) -> bool:
+    for start, end in changed_lines.get(normalize(path), []):
+        if start <= line_no <= end:
+            return True
+    return False
+
+blocking = []
+for finding in data.get("results", []):
+    path = finding.get("path", "")
+    line = int((finding.get("start", {}) or {}).get("line", 0) or 0)
+    if line <= 0:
+        continue
+    if line_is_changed(path, line):
+        blocking.append(finding)
+
+if not blocking:
+    sys.exit(0)
+
+print("Semgrep findings on changed lines in push range:")
+for finding in blocking:
+    path = finding.get("path", "")
+    line = finding.get("start", {}).get("line", "?")
+    rule = finding.get("check_id", "unknown-rule")
+    msg = finding.get("extra", {}).get("message", "Semgrep finding")
+    print(f"- {path}:{line} [{rule}] {msg}")
+
+sys.exit(1)
+PY
+then
+  exit 0
+else
+  exit 1
+fi
