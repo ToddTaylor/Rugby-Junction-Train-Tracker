@@ -1,7 +1,7 @@
 ---
 description: "Use when planning or changing the shared Services library, telemetry deserializers, throttling, subscriber integrations, configuration helpers, resilience policies, or ConsoleApp interactions. Covers files under Services and ConsoleApp."
 name: "Shared Services Instructions"
-applyTo: ["Services/**", "ConsoleApp/**"]
+applyTo: "Services/**,ConsoleApp/**"
 ---
 # Shared Services Instructions
 
