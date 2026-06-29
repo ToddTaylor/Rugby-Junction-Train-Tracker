@@ -1,7 +1,7 @@
 ---
 description: "Use when adding, updating, or reviewing tests, or when planning a feature and you need the best executable description of current behavior. Covers server unit tests, integration tests, and shared services tests."
 name: "Testing Instructions"
-applyTo: ["Web/Web.ServerTests/**", "Web/Web.Server.IntegrationTests/**", "Services.UnitTests/**"]
+applyTo: "Web/Web.ServerTests/**, Web/Web.Server.IntegrationTests/**, Services.UnitTests/**"
 ---
 # Testing Instructions
 

@@ -15,6 +15,16 @@
 - Trace end-to-end impact instead of reasoning from one layer in isolation: API/controller, service/rule engine, repository/data model, SignalR or background services, frontend services/hooks/components, and tests.
 - If you forget about `/plan-feature`, type `/` in chat and it will appear in the prompt list, or consult this section of the project guidelines.
 
+## Consistency Standards
+- Use GitFlow-style branch prefixes so intent is obvious: `feat/`, `fix/`, `docs/`, `refactor/`, `test/`, or `chore/`.
+- Include the issue number in the branch name when one exists, and keep names lowercase with hyphenated slugs.
+- Match pull request tags to the originating issue type when possible, such as `bug`, `enhancement`, `documentation`, or `refactor`.
+- Link the issue number in the PR body and keep the PR scope narrow enough to review in one pass.
+- Requirements should state the user problem, in-scope work, out-of-scope work, expected behavior, acceptance criteria, and test plan.
+- Before coding, identify the affected layers: API, service or rule logic, repository or persistence, frontend, SignalR or background work, and tests.
+- Use the domain vocabulary already defined for beacons, map pins, tracked pins, subdivisions, railroads, and telemetry packets.
+- If a requirement cannot be tested or verified, refine it before implementation starts.
+
 ## Project Conventions
 - Keep controllers thin. Put business rules in services or rule-engine classes, not in controllers.
 - Keep EF Core access in repositories and persistence models in `Web/Web.Server/Entities`.
