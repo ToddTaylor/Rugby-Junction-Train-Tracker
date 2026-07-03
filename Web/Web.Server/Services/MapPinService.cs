@@ -51,6 +51,7 @@ namespace Web.Server.Services
         private readonly int _stationaryDirectionNullThresholdHours;
 
         private readonly IBeaconRailroadService _beaconRailroadService;
+        private readonly IBeaconNeighborResolver _beaconNeighborResolver;
         private readonly IHubContext<NotificationHub> _hubContext;
         private readonly IMapper _mapper;
         private readonly IMapPinRepository _mapPinRepository;
@@ -78,9 +79,11 @@ namespace Web.Server.Services
             IUserTrackedPinRepository userTrackedPinRepository,
             ILogger<MapPinService> logger,
             IConfiguration configuration,
-            Dictionary<string, Web.Server.Services.Processors.IMapPinProcessor> processorMap)
+            Dictionary<string, Web.Server.Services.Processors.IMapPinProcessor> processorMap,
+            IBeaconNeighborResolver beaconNeighborResolver)
         {
             _beaconRailroadService = beaconRailroadService;
+            _beaconNeighborResolver = beaconNeighborResolver;
             _hubContext = hubContext;
             _mapper = mapper;
             _mapPinRepository = mapPinRepository;
@@ -223,17 +226,28 @@ namespace Web.Server.Services
                 // Existing map pin found; validate before update
                 var existingMapPin = processorResult.MapPin!;
 
-                var discardDecision = await ShouldDiscardMapPin(telemetry, existingMapPin);
-                if (discardDecision.Status == MapPinDiscardStatus.Discard)
+                // Non-neighbor address reuse: same Address ID appeared at a beacon that is not reachable
+                // from the prior beacon via the online same-railroad neighbor graph → force a new map pin
+                // instead of updating the existing one, so two distinct physical trains are not conflated.
+                if (await IsNonNeighborTransitionAsync(telemetry, existingMapPin))
                 {
-                    if (!telemetry.Discarded)
-                    {
-                        await DiscardTelemetryAsync(telemetry, discardDecision.Reason ?? "Map pin discarded.");
-                    }
-                    return;
+                    isNewMapPin = true;
+                    mapPin = await this.CreateMapPin(telemetry);
                 }
+                else
+                {
+                    var discardDecision = await ShouldDiscardMapPin(telemetry, existingMapPin);
+                    if (discardDecision.Status == MapPinDiscardStatus.Discard)
+                    {
+                        if (!telemetry.Discarded)
+                        {
+                            await DiscardTelemetryAsync(telemetry, discardDecision.Reason ?? "Map pin discarded.");
+                        }
+                        return;
+                    }
 
-                mapPin = await UpdateMapPin(telemetry, existingMapPin);
+                    mapPin = await UpdateMapPin(telemetry, existingMapPin);
+                }
             }
 
             if (mapPin == null)
@@ -273,6 +287,58 @@ namespace Web.Server.Services
         {
             // Address match is only for HOT/EOT addresses (DpuTrainID == null).
             return await _mapPinRepository.GetByAddressIdAsync(telemetry.AddressID);
+        }
+
+        /// <summary>
+        /// Returns true when the telemetry's beacon is on the same railroad as the existing map pin's beacon,
+        /// but is not reachable within the allowed hop depth on the online neighbor graph — indicating that
+        /// the same Address ID was reused by a physically distinct train at a distant beacon.
+        /// Returns false when beacons are the same, beacons are on different railroads, either beacon is
+        /// absent from the online graph, or the transition is within neighbor reachability.
+        /// </summary>
+        private async Task<bool> IsNonNeighborTransitionAsync(Telemetry telemetry, MapPin existingMapPin)
+        {
+            // Same beacon: transition is trivially valid.
+            if (existingMapPin.BeaconID == telemetry.BeaconID)
+                return false;
+
+            var existingRailroadId = existingMapPin.BeaconRailroad?.Subdivision?.RailroadID;
+            if (!existingRailroadId.HasValue)
+                return false;
+
+            // Only apply check when both beacons share the same railroad.
+            var incomingHasSameRailroad = telemetry.Beacon?.BeaconRailroads?.Any(
+                br => br.Subdivision?.RailroadID == existingRailroadId.Value) ?? false;
+            if (!incomingHasSameRailroad)
+                return false;
+
+            var allBeaconRailroads = (await _beaconRailroadService.GetAllAsync()).ToList();
+            var now = _timeProvider.UtcNow;
+            var onlineThreshold = now.AddMinutes(-15);
+
+            // Skip if either beacon is absent from the online graph — we cannot determine reachability.
+            bool fromOnline = allBeaconRailroads.Any(br =>
+                br.BeaconID == existingMapPin.BeaconID &&
+                br.Subdivision?.RailroadID == existingRailroadId.Value &&
+                br.LastUpdate != default &&
+                br.LastUpdate >= onlineThreshold);
+
+            bool toOnline = allBeaconRailroads.Any(br =>
+                br.BeaconID == telemetry.BeaconID &&
+                br.Subdivision?.RailroadID == existingRailroadId.Value &&
+                br.LastUpdate != default &&
+                br.LastUpdate >= onlineThreshold);
+
+            if (!fromOnline || !toOnline)
+                return false;
+
+            return !_beaconNeighborResolver.IsReachable(
+                existingMapPin.BeaconID,
+                telemetry.BeaconID,
+                existingRailroadId.Value,
+                allBeaconRailroads,
+                now,
+                maxHops: 2);
         }
 
         private void AddHotOrEotAddressIfMissing(MapPin existingMapPinToUpdate, Telemetry telemetry)

@@ -16,6 +16,70 @@ type SortDirection = 'asc' | 'desc' | null;
 
 const DIRECTION_OPTIONS: Direction[] = ['All', 'NorthSouth', 'EastWest', 'NortheastSouthwest', 'NorthwestSoutheast'];
 
+// -----------------------------------------------------------------------
+// Neighbor graph utilities (mirrors server-side BeaconNeighborResolver)
+// -----------------------------------------------------------------------
+
+const EARTH_RADIUS_KM = 6371.0;
+
+function toRad(deg: number): number {
+  return deg * Math.PI / 180;
+}
+
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat / 2) ** 2
+    + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return EARTH_RADIUS_KM * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function calculateBearing(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const dLon = toRad(lon2 - lon1);
+  const y = Math.sin(dLon) * Math.cos(toRad(lat2));
+  const x = Math.cos(toRad(lat1)) * Math.sin(toRad(lat2))
+    - Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(dLon);
+  return ((Math.atan2(y, x) * 180 / Math.PI) + 360) % 360;
+}
+
+function getSector(bearing: number): number {
+  return Math.floor((bearing + 22.5) / 45) % 8;
+}
+
+const SECTOR_LABELS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+
+/** Returns the direct neighbor beacons for a given source beacon (online-only, same-railroad). */
+function getDirectNeighbors(
+  source: AdminBeaconRailroad,
+  all: AdminBeaconRailroad[]
+): AdminBeaconRailroad[] {
+  const candidates = all.filter(br =>
+    br.online && br.railroadID === source.railroadID &&
+    !(br.beaconID === source.beaconID && br.subdivisionID === source.subdivisionID)
+  );
+
+  const sectored = new Map<number, { beacon: AdminBeaconRailroad; distKm: number }>();
+
+  for (const c of candidates) {
+    const bearing = calculateBearing(source.latitude, source.longitude, c.latitude, c.longitude);
+    const sector = getSector(bearing);
+    const dist = haversineKm(source.latitude, source.longitude, c.latitude, c.longitude);
+
+    const existing = sectored.get(sector);
+    if (!existing || dist < existing.distKm) {
+      sectored.set(sector, { beacon: c, distKm: dist });
+    }
+  }
+
+  return Array.from(sectored.entries())
+    .sort((a, b) => a[0] - b[0])
+    .map(([sector, { beacon, distKm }]) => ({ ...beacon, _sector: SECTOR_LABELS[sector], _distKm: distKm }));
+}
+
+type NeighborEntry = AdminBeaconRailroad & { _sector: string; _distKm: number };
+
+// -----------------------------------------------------------------------
+
 const AdminBeaconRailroads = () => {
   const [beaconRailroads, setBeaconRailroads] = useState<AdminBeaconRailroad[]>([]);
   const [beacons, setBeacons] = useState<AdminBeacon[]>([]);
@@ -38,6 +102,7 @@ const AdminBeaconRailroads = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [sortField, setSortField] = useState<SortField>('beaconName');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [selectedRow, setSelectedRow] = useState<AdminBeaconRailroad | null>(null);
   const itemsPerPage = 10;
 
   useEffect(() => {
@@ -121,6 +186,30 @@ const AdminBeaconRailroads = () => {
   }, [sortedBeaconRailroads, currentPage]);
 
   const totalPages = Math.ceil(sortedBeaconRailroads.length / itemsPerPage);
+
+  /** Computed neighbor data for the currently selected row. */
+  const neighborData = useMemo(() => {
+    if (!selectedRow) return null;
+
+    const directNeighbors = getDirectNeighbors(selectedRow, beaconRailroads) as NeighborEntry[];
+
+    const neighborToNeighbor = directNeighbors.map(n => ({
+      neighbor: n,
+      theirNeighbors: getDirectNeighbors(n, beaconRailroads).filter(
+        nn => !(nn.beaconID === selectedRow.beaconID && nn.subdivisionID === selectedRow.subdivisionID)
+      ) as NeighborEntry[]
+    }));
+
+    return { directNeighbors, neighborToNeighbor };
+  }, [selectedRow, beaconRailroads]);
+
+  const handleRowClick = (br: AdminBeaconRailroad) => {
+    if (selectedRow?.beaconID === br.beaconID && selectedRow?.subdivisionID === br.subdivisionID) {
+      setSelectedRow(null);
+    } else {
+      setSelectedRow(br);
+    }
+  };
 
   const handleAdd = () => {
     setEditingBeaconRailroad(null);
@@ -281,44 +370,105 @@ const AdminBeaconRailroads = () => {
 
       {error && <div className="error-message">{error}</div>}
 
-      <div className="admin-table-container">
-        <table className="admin-table">
-          <thead>
-            <tr>
-              <th>Beacon ID</th>
-              <th className="sortable" onClick={() => handleSort('beaconName')}>
-                Beacon {getSortIcon('beaconName')}
-              </th>
-              <th className="sortable" onClick={() => handleSort('railroadName')}>
-                Railroad {getSortIcon('railroadName')}
-              </th>
-              <th className="sortable" onClick={() => handleSort('subdivisionName')}>
-                Subdivision {getSortIcon('subdivisionName')}
-              </th>
-              <th>Milepost</th>
-              <th>Direction</th>
-              <th>Multi-Track</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {paginatedBeaconRailroads.map(br => (
-              <tr key={`${br.beaconID}-${br.subdivisionID}`}>
-                <td>{br.beaconID}</td>
-                <td>{br.beaconName}</td>
-                <td>{br.railroadName}</td>
-                <td>{br.subdivisionName}</td>
-                <td>{br.milepost.toFixed(1)}</td>
-                <td>{formatDirection(br.direction)}</td>
-                <td>{br.multipleTracks ? 'Yes' : 'No'}</td>
-                <td className="actions-cell">
-                  <button className="btn-edit" onClick={() => handleEdit(br)}>Edit</button>
-                  <button className="btn-delete" onClick={() => handleDelete(br.beaconID, br.subdivisionID)}>Delete</button>
-                </td>
+      <div className="admin-content-with-panel">
+        <div className="admin-table-container">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Beacon ID</th>
+                <th className="sortable" onClick={() => handleSort('beaconName')}>
+                  Beacon {getSortIcon('beaconName')}
+                </th>
+                <th className="sortable" onClick={() => handleSort('railroadName')}>
+                  Railroad {getSortIcon('railroadName')}
+                </th>
+                <th className="sortable" onClick={() => handleSort('subdivisionName')}>
+                  Subdivision {getSortIcon('subdivisionName')}
+                </th>
+                <th>Milepost</th>
+                <th>Direction</th>
+                <th>Multi-Track</th>
+                <th>Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {paginatedBeaconRailroads.map(br => (
+                <tr
+                  key={`${br.beaconID}-${br.subdivisionID}`}
+                  className={`${selectedRow?.beaconID === br.beaconID && selectedRow?.subdivisionID === br.subdivisionID ? 'row-selected' : ''}`}
+                  onClick={() => handleRowClick(br)}
+                >
+                  <td>{br.beaconID}</td>
+                  <td>{br.beaconName}</td>
+                  <td>{br.railroadName}</td>
+                  <td>{br.subdivisionName}</td>
+                  <td>{br.milepost.toFixed(1)}</td>
+                  <td>{formatDirection(br.direction)}</td>
+                  <td>{br.multipleTracks ? 'Yes' : 'No'}</td>
+                  <td className="actions-cell" onClick={(e) => e.stopPropagation()}>
+                    <button className="btn-edit" onClick={() => handleEdit(br)}>Edit</button>
+                    <button className="btn-delete" onClick={() => handleDelete(br.beaconID, br.subdivisionID)}>Delete</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {selectedRow && neighborData && (
+          <div className="neighbor-panel">
+            <div className="neighbor-panel-header">
+              <h3>Neighbors</h3>
+              <button className="neighbor-panel-close" onClick={() => setSelectedRow(null)} aria-label="Close neighbor panel">✕</button>
+            </div>
+
+            <div className="neighbor-panel-selected">
+              <span className="neighbor-badge neighbor-badge-selected">{selectedRow.railroadName}</span>
+              <strong>{selectedRow.beaconName}</strong>
+              <span className="neighbor-panel-meta">MP {selectedRow.milepost.toFixed(1)} · {selectedRow.subdivisionName}</span>
+              {!selectedRow.online && <span className="neighbor-offline-tag">OFFLINE</span>}
+            </div>
+
+            <p className="neighbor-panel-hint">
+              Direct neighbors (online-only, same railroad, nearest per sector):
+            </p>
+
+            {neighborData.directNeighbors.length === 0 ? (
+              <p className="neighbor-none">No online neighbors found on {selectedRow.railroadName}.</p>
+            ) : (
+              <ul className="neighbor-list">
+                {neighborData.directNeighbors.map((n) => {
+                  const nnEntry = neighborData.neighborToNeighbor.find(
+                    e => e.neighbor.beaconID === n.beaconID && e.neighbor.subdivisionID === n.subdivisionID
+                  );
+                  return (
+                    <li key={`${n.beaconID}-${n.subdivisionID}`} className="neighbor-item">
+                      <div className="neighbor-item-header">
+                        <span className="neighbor-sector">{n._sector}</span>
+                        <strong>{n.beaconName}</strong>
+                        <span className="neighbor-dist">{n._distKm.toFixed(1)} km</span>
+                      </div>
+                      <div className="neighbor-item-meta">
+                        {n.subdivisionName} · MP {n.milepost.toFixed(1)}
+                      </div>
+                      {nnEntry && nnEntry.theirNeighbors.length > 0 && (
+                        <ul className="neighbor-to-neighbor-list">
+                          {nnEntry.theirNeighbors.map(nn => (
+                            <li key={`${nn.beaconID}-${nn.subdivisionID}`} className="neighbor-to-neighbor-item">
+                              <span className="neighbor-sector neighbor-sector-sm">{nn._sector}</span>
+                              {nn.beaconName}
+                              <span className="neighbor-dist">{nn._distKm.toFixed(1)} km</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        )}
       </div>
 
       {showModal && (
