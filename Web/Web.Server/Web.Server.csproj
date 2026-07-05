@@ -10,6 +10,7 @@
 		<SpaProxyServerUrl>https://localhost:53848</SpaProxyServerUrl>
 		<GenerateDocumentationFile>True</GenerateDocumentationFile>
 		<NoWarn>$(NoWarn);1591</NoWarn>
+		<UserSecretsId>web-server-local-secrets</UserSecretsId>
 	</PropertyGroup>
 
 	<PropertyGroup>
