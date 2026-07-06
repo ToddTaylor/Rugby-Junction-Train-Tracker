@@ -11,6 +11,7 @@ export interface AdminBeaconRailroad {
   multipleTracks: boolean;
   online: boolean;
   direction: Direction;
+  telemetryStaleHoursOverride?: number | null;
 }
 
 export type Direction = 'All' | 'NorthSouth' | 'EastWest' | 'NortheastSouthwest' | 'NorthwestSoutheast';
@@ -24,6 +25,7 @@ export interface CreateBeaconRailroad {
   multipleTracks: boolean;
   online: boolean;
   direction: Direction;
+  telemetryStaleHoursOverride?: number | null;
 }
 
 export interface UpdateBeaconRailroad {
@@ -35,4 +37,5 @@ export interface UpdateBeaconRailroad {
   multipleTracks: boolean;
   online: boolean;
   direction: Direction;
+  telemetryStaleHoursOverride?: number | null;
 }

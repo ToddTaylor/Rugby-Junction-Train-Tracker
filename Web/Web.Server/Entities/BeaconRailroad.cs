@@ -34,6 +34,13 @@ namespace Web.Server.Entities
         [Required]
         public bool MultipleTracks { get; set; } = false;
 
+        /// <summary>
+        /// Optional per-record override for the number of hours before telemetry is considered stale.
+        /// When null, the application-level default is used.
+        /// Must be a whole integer greater than zero when provided.
+        /// </summary>
+        public int? TelemetryStaleHoursOverride { get; set; }
+
         public override bool Equals(object? obj)
         {
             return Equals(obj as BeaconRailroad);
@@ -53,7 +60,8 @@ namespace Web.Server.Entities
                    Longitude == other.Longitude &&
                    EqualityComparer<ICollection<MapPin>>.Default.Equals(MapPins, other.MapPins) &&
                    Milepost == other.Milepost &&
-                   MultipleTracks == other.MultipleTracks;
+                   MultipleTracks == other.MultipleTracks &&
+                   TelemetryStaleHoursOverride == other.TelemetryStaleHoursOverride;
         }
 
         public override int GetHashCode()
@@ -71,6 +79,7 @@ namespace Web.Server.Entities
             hash.Add(MapPins);
             hash.Add(Milepost);
             hash.Add(MultipleTracks);
+            hash.Add(TelemetryStaleHoursOverride);
             return hash.ToHashCode();
         }
 

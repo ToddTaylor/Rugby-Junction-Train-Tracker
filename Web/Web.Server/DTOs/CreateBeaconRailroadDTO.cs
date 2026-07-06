@@ -52,6 +52,13 @@ namespace Web.Server.DTOs
         /// <example>NorthSouth</example>
         public Direction Direction { get; set; }
 
+        /// <summary>
+        /// Optional per-record override for the number of hours before telemetry is considered stale.
+        /// When null, the application-level default is used.
+        /// Must be a whole integer greater than zero when provided.
+        /// </summary>
+        public int? TelemetryStaleHoursOverride { get; set; }
+
         public override bool Equals(object? obj)
         {
             return Equals(obj as CreateBeaconRailroadDTO);
@@ -67,7 +74,8 @@ namespace Web.Server.DTOs
                    Milepost == other.Milepost &&
                    MultipleTracks == other.MultipleTracks &&
                    Online == other.Online &&
-                   Direction == other.Direction;
+                   Direction == other.Direction &&
+                   TelemetryStaleHoursOverride == other.TelemetryStaleHoursOverride;
         }
 
         public override int GetHashCode()
