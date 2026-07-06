@@ -70,6 +70,12 @@ namespace Web.Server.Controllers.v1
             var response = new MessageEnvelope<BeaconRailroadDTO>(null, []);
             try
             {
+                if (dto.TelemetryStaleHoursOverride.HasValue && dto.TelemetryStaleHoursOverride.Value <= 0)
+                {
+                    response.Errors.Add("TelemetryStaleHoursOverride must be a whole integer greater than zero when provided.");
+                    return BadRequest(response);
+                }
+
                 var beaconRailroad = _mapper.Map<Entities.BeaconRailroad>(dto);
 
                 var created = await _service.AddAsync(beaconRailroad);
@@ -99,6 +105,12 @@ namespace Web.Server.Controllers.v1
                 if (beaconId != dto.BeaconID || subdivisionId != dto.SubdivisionID)
                 {
                     response.Errors.Add("BeaconID and SubdivisionID in the URL must match the DTO.");
+                    return BadRequest(response);
+                }
+
+                if (dto.TelemetryStaleHoursOverride.HasValue && dto.TelemetryStaleHoursOverride.Value <= 0)
+                {
+                    response.Errors.Add("TelemetryStaleHoursOverride must be a whole integer greater than zero when provided.");
                     return BadRequest(response);
                 }
 

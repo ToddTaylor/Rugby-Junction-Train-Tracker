@@ -117,6 +117,7 @@ const BeaconMarkers: React.FC<BeaconMarkersProps> = ({
                             pin={beaconPin}
                             zoom={zoom}
                             idx={idx}
+                            mapTheme={mapTheme}
                         />
                         {zoom >= LABEL_ZOOM_THRESHOLD && (
                             <BeaconLabelPin

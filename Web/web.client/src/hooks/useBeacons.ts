@@ -95,7 +95,8 @@ export function useBeacons() {
           latitude: b.latitude,
           longitude: b.longitude,
           milepost: b.milepost,
-          online: b.online
+          online: b.online,
+          telemetryStale: b.telemetryStale
         }));
         
         // Store beacons and cache version together

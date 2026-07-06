@@ -67,6 +67,20 @@ namespace Web.Server.DTOs
         public bool Online { get; set; }
 
         /// <summary>
+        /// Reports whether telemetry is stale for this beacon railroad.
+        /// True when the health endpoint is pinging but no telemetry has been received
+        /// within the effective telemetry-stale threshold.
+        /// </summary>
+        public bool TelemetryStale { get; set; }
+
+        /// <summary>
+        /// Optional per-record override for the number of hours before telemetry is considered stale.
+        /// When null, the application-level default (TelemetryStaleHoursDefault) is used.
+        /// Must be a whole integer greater than zero when provided.
+        /// </summary>
+        public int? TelemetryStaleHoursOverride { get; set; }
+
+        /// <summary>
         /// The direction in which telemetry data is moving.
         /// </summary>
         /// <example>NorthSouth</example>
@@ -97,6 +111,8 @@ namespace Web.Server.DTOs
                    Longitude == other.Longitude &&
                    Milepost == other.Milepost &&
                    Online == other.Online &&
+                   TelemetryStale == other.TelemetryStale &&
+                   TelemetryStaleHoursOverride == other.TelemetryStaleHoursOverride &&
                    Direction == other.Direction &&
                    CreatedAt == other.CreatedAt &&
                    LastUpdate == other.LastUpdate;
@@ -112,6 +128,8 @@ namespace Web.Server.DTOs
             hash.Add(Longitude);
             hash.Add(Milepost);
             hash.Add(Online);
+            hash.Add(TelemetryStale);
+            hash.Add(TelemetryStaleHoursOverride);
             hash.Add(Direction);
             hash.Add(CreatedAt);
             hash.Add(LastUpdate);
