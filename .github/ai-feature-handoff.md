@@ -1,6 +1,6 @@
 # AI Feature Handoff Specification
 
-Use this document when a GitHub issue is ready for AI implementation. The issue should already contain the complete plan created cooperatively by developer + AI Agent using `plan-feature.prompt.md` during the planning phase.
+Use this document when a GitHub issue is ready for AI implementation. The issue should already contain the complete plan created cooperatively by developer + AI Agent using `/plan-feature` during the planning phase.
 
 ## Purpose
 
@@ -8,13 +8,16 @@ Create a consistent, auditable workflow from human planning through AI implement
 
 ## Workflow Summary
 
-1. **Developer + AI Agent create plan** using `plan-feature.prompt.md` in plan mode
-2. **GitHub issue created** with plan as the issue body (includes current behavior, affected layers, E2E flow, test coverage)
-3. **Developer reviews plan** in issue — 🔵 **Checkpoint A** — applies `feature-ready-for-ai` label to approve
-4. **AI Agent reads issue** (with complete plan) and implements using `issue-to-pr.prompt.md`
-5. **PR opened** with code, tests, and documentation
-6. **Developer reviews PR** — 🔵 **Checkpoint B**
-7. **Developer confirms CI + merges** — 🔵 **Checkpoint C**
+| Phase | Owner | Action | Invocation | Tool/Prompt |
+|-------|-------|--------|------------|-------------|
+| **1. Plan** | Developer + AI Agent | Developer types `/plan-feature` + brief description; cooperates with AI Agent to produce plan | `/plan-feature` | Copilot Chat prompt (`plan-feature.prompt.md`) |
+| **2. Issue** | Developer + AI Agent | Developer reviews plan output; confirms AI Agent creates GitHub issue with plan as body | Manual | GitHub issue |
+| **3. Label** | AI Agent (automated) | *(Automated)* AI Agent classifies issue and applies `bug` or `enhancement` label | Automated | GitHub labels (bug/enhancement) |
+| **4. Plan Review** | Developer | 🔵 **Checkpoint A:** Developer reads plan in issue; applies `feature-ready-for-ai` label to approve (or edits issue and re-plans if changes needed) | — | GitHub issue labels |
+| **5. Implement** | AI Agent | *(Automated)* AI Agent reads issue, creates branch, implements feature, opens PR | `/issue-to-pr` | Copilot Chat prompt (`issue-to-pr.prompt.md`) |
+| **6. CI** | Automation | *(Automated)* Tests, lint, and security checks run on the PR | — | GitHub Actions |
+| **7. PR Review** | Developer | 🔵 **Checkpoint B:** Developer reviews PR code and tests; approves or requests changes | — | GitHub PR review |
+| **8. Merge PR** | Developer | 🔵 **Checkpoint C:** Developer confirms CI passes and merges the PR | — | GitHub merge |
 
 ---
 
@@ -23,8 +26,8 @@ Create a consistent, auditable workflow from human planning through AI implement
 ### Cooperative Planning
 
 - **Owner:** Developer
-- **Tool:** AI Agent CLI in plan mode
-- **Prompt:** `plan-feature.prompt.md`
+- **Tool:** Copilot Chat using `/plan-feature`
+- **Prompt file:** `plan-feature.prompt.md`
 - **Input:** Feature request / bug description
 - **Output:** Detailed plan (to be posted as GitHub issue)
 
@@ -64,8 +67,9 @@ The cooperatively created plan should include:
 
 ### AI Execution: Code Implementation
 
-- **Agent/Tool:** AI Agent
-- **Prompt:** `issue-to-pr.prompt.md`
+- **Owner:** AI Agent
+- **Invocation:** `/issue-to-pr`
+- **Tool/Prompt:** Copilot Chat prompt (`issue-to-pr.prompt.md`)
 - **Input:** Issue (with plan) + architecture/area instructions
 - **Output:** PR with code, tests, and documentation
 
@@ -164,7 +168,8 @@ Copy this template and fill in for each feature:
 
 ### AI Execution
 - **Implementation agent:** `AI Agent`
-- **Implementation prompt:** `issue-to-pr.prompt.md`
+- **Slash command:** `/issue-to-pr`
+- **Prompt file:** `issue-to-pr.prompt.md`
 - **PR link:** `<link>`
 
 ### Human Reviews
@@ -186,11 +191,11 @@ Copy this template and fill in for each feature:
 
 This workflow relies on two reusable prompts:
 
-1. **`plan-feature.prompt.md`** — Used by Developer + AI Agent during planning phase
+1. **`/plan-feature`** (file: `plan-feature.prompt.md`) — Used by Developer + AI Agent during planning phase
    - Guides cooperative discussion to create detailed plan
    - Covers current behavior, affected layers, E2E flow, test coverage, risks
    
-2. **`issue-to-pr.prompt.md`** — Used by AI Agent during implementation phase
+2. **`/issue-to-pr`** (file: `issue-to-pr.prompt.md`) — Used by AI Agent during implementation phase
    - Guides AI to implement based on plan posted in issue
    - Includes code generation, testing, PR opening
 

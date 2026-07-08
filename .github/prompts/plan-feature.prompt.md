@@ -1,8 +1,8 @@
 ---
 description: "Plan a new feature or change for RugbyJunctionTrainTracker. Guides end-to-end feature planning by reading architecture, area instructions, implementation briefs, and existing tests before proposing a plan."
-name: "Plan Feature"
+name: "plan-feature"
 argument-hint: "Feature description and acceptance criteria..."
-mode: "plan"
+agent: Plan
 ---
 # Plan Feature for RugbyJunctionTrainTracker
 
@@ -14,14 +14,14 @@ Start by reading the system overview:
 
 ## Step 2: Identify the Affected Area and Read Instructions
 Based on the feature description, determine which areas are affected:
-- **If frontend or UI**: Read [.github/instructions/web-client.instructions.md](.github/instructions/web-client.instructions.md)
-- **If server, API, or persistence**: Read [.github/instructions/web-server.instructions.md](.github/instructions/web-server.instructions.md)
-- **If shared telemetry services**: Read [.github/instructions/services.instructions.md](.github/instructions/services.instructions.md)
-- **If adding/changing tests**: Read [.github/instructions/tests.instructions.md](.github/instructions/tests.instructions.md)
+- **If frontend or UI**: Read [web-client.instructions.md](../instructions/web-client.instructions.md)
+- **If server, API, or persistence**: Read [web-server.instructions.md](../instructions/web-server.instructions.md)
+- **If shared telemetry services**: Read [services.instructions.md](../instructions/services.instructions.md)
+- **If adding/changing tests**: Read [tests.instructions.md](../instructions/tests.instructions.md)
 
 ## Step 3: Read Relevant Implementation Briefs
 If they apply:
-- For map pin or tracked pin behavior: Read [TRACKED_PINS_IMPLEMENTATION.md](../../TRACKED_PINS_IMPLEMENTATION.md)
+- For map pin or tracked pin behavior: Read [TRACKED_PINS_IMPLEMENTATION.md](../../Planning/implementation/TRACKED_PINS_IMPLEMENTATION.md)
 - For map pin merging or duplicate beacon behavior: Read [MAP_PIN_MERGING_IMPLEMENTATION.md](../../Planning/implementation/MAP_PIN_MERGING_IMPLEMENTATION.md)
 - For beacon direction or live label updates: Read [BEACON_LABEL_DIRECTION_IMPLEMENTATION.md](../../Planning/implementation/BEACON_LABEL_DIRECTION_IMPLEMENTATION.md)
 

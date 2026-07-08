@@ -1,7 +1,7 @@
 ---
 name: issue-to-pr
 description: Implement the work described in a GitHub issue, run tests, and open a PR
-mode: "agent"
+agent: agent
 ---
 
 You are implementing the work described in this issue. Read the full issue body — it contains the complete plan including current behavior, affected layers, end-to-end flow, test coverage requirements, assumptions, and risks.
@@ -22,6 +22,9 @@ Rules:
 - Do not ask me for clarification unless a requirement is truly ambiguous and blocks progress.
 - Do not broaden scope beyond the issue.
 - Keep the implementation consistent with existing patterns in the codebase.
+- Create branches using GitFlow naming with issue ID prefix: `<prefix>/<issue-id>-<short-kebab-slug>`.
+- Allowed branch prefixes: `feature/`, `bug/`, `docs/`, `refactor/`, `test/`, `chore/`.
+- Choose `feature/` for enhancement work and `bug/` for bug-fix work unless the issue clearly fits another prefix.
 - Ensure the final PR description includes:
   - what changed
   - tests run

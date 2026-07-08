@@ -11,13 +11,16 @@
 ## Planning Workflow
 - **Use `/plan-feature` in chat** when planning a new feature or significant change. This prompt guides you through reading the system overview, area instructions, implementation briefs, and existing tests before proposing a detailed plan.
 - For feature planning, read `docs/architecture/system-overview.md` first, then inspect the relevant area instruction file under `.github/instructions/`.
-- For map pin or user tracking work, also read `TRACKED_PINS_IMPLEMENTATION.md` and the matching server tests before proposing changes.
+- For map pin or user tracking work, also read `Planning/implementation/TRACKED_PINS_IMPLEMENTATION.md` and the matching server tests before proposing changes.
 - Trace end-to-end impact instead of reasoning from one layer in isolation: API/controller, service/rule engine, repository/data model, SignalR or background services, frontend services/hooks/components, and tests.
 - If you forget about `/plan-feature`, type `/` in chat and it will appear in the prompt list, or consult this section of the project guidelines.
 
 ## Consistency Standards
-- Use GitFlow-style branch prefixes so intent is obvious: `feat/`, `fix/`, `docs/`, `refactor/`, `test/`, or `chore/`.
-- Include the issue number in the branch name when one exists, and keep names lowercase with hyphenated slugs.
+- Use GitFlow-style branch prefixes so intent is obvious: `feature/`, `bug/`, `docs/`, `refactor/`, `test/`, or `chore/`.
+- Branch format: `<prefix>/<issue-id>-<short-kebab-slug>`.
+- Example branch names: `feature/1234-map-pin-filter`, `bug/987-null-reference-in-repository`, `docs/456-update-feature-workflow`.
+- Always include the GitHub issue ID immediately after the `/` when an issue exists.
+- Keep branch names lowercase with hyphenated slugs.
 - Match pull request tags to the originating issue type when possible, such as `bug`, `enhancement`, `documentation`, or `refactor`.
 - Link the issue number in the PR body and keep the PR scope narrow enough to review in one pass.
 - Requirements should state the user problem, in-scope work, out-of-scope work, expected behavior, acceptance criteria, and test plan.

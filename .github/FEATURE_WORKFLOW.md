@@ -4,13 +4,13 @@ Complete AI-assisted feature delivery: Developer + AI Agent create plan → issu
 
 ## Workflow Summary
 
-| Phase | Owner | Action | Agent Mode | Tool/Prompt |
-|-------|-------|--------|-----------|-------------|
-| **1. Plan** | Developer + AI Agent | Developer types `/plan-feature` + brief description; cooperates with AI Agent to produce plan | **Plan** | AI Agent CLI (plan mode) |
-| **2. Issue** | Developer + AI Agent | Developer reviews plan output; confirms AI Agent creates GitHub issue with plan as body | **Plan** | GitHub issue |
-| **3. Label** | AI Agent (automated) | *(Automated)* AI Agent classifies issue and applies `bug` or `enhancement` label | **Plan** | GitHub labels (bug/enhancement) |
+| Phase | Owner | Action | Invocation | Tool/Prompt |
+|-------|-------|--------|------------|-------------|
+| **1. Plan** | Developer + AI Agent | Developer types `/plan-feature` + brief description; cooperates with AI Agent to produce plan | `/plan-feature` | Copilot Chat prompt (`plan-feature.prompt.md`) |
+| **2. Issue** | Developer + AI Agent | Developer reviews plan output; confirms AI Agent creates GitHub issue with plan as body | Manual | GitHub issue |
+| **3. Label** | AI Agent (automated) | *(Automated)* AI Agent classifies issue and applies `bug` or `enhancement` label | Automated | GitHub labels (bug/enhancement) |
 | **4. Plan Review** | Developer | 🔵 **Checkpoint A:** Developer reads plan in issue; applies `feature-ready-for-ai` label to approve (or edits issue and re-plans if changes needed) | — | GitHub issue labels |
-| **5. Implement** | AI Agent | *(Automated)* AI Agent reads issue, creates branch, implements feature, opens PR | **Agent** | `issue-to-pr.prompt.md` |
+| **5. Implement** | AI Agent | *(Automated)* AI Agent reads issue, creates branch, implements feature, opens PR | `/issue-to-pr` | Copilot Chat prompt (`issue-to-pr.prompt.md`) |
 | **6. CI** | Automation | *(Automated)* Tests, lint, and security checks run on the PR | — | GitHub Actions |
 | **7\. PR Review** | Developer | 🔵 **Checkpoint B:** Developer reviews PR code and tests; approves or requests changes | — | GitHub PR review |
 | **8\. Merge PR** | Developer | 🔵 **Checkpoint C:** Developer confirms CI passes and merges the PR | — | GitHub merge |
@@ -23,7 +23,7 @@ Complete AI-assisted feature delivery: Developer + AI Agent create plan → issu
 graph TD
     Z["👤 Developer ready to plan<br/>Types: <b>/plan-feature</b><br/>+ brief feature description"]
     
-    Z -->|AI Agent auto-loads plan-feature.prompt.md| A["👤 + 🤖 Developer & AI Agent<br/><b>Agent Mode: Plan</b>"]
+    Z -->|Copilot loads /plan-feature prompt| A["👤 + 🤖 Developer & AI Agent<br/><b>Prompt: /plan-feature</b>"]
     
     A -->|Cooperative planning| B["📋 Detailed Plan Generated<br/>- Current behavior<br/>- Affected layers<br/>- E2E flow<br/>- Test coverage<br/>- Assumptions"]
     
@@ -36,7 +36,7 @@ graph TD
     
     D -->|Applies 'feature-ready-for-ai' label| F["✅ Plan Ready<br/>Automation triggered"]
     
-    F -->|Ready to code| G["🤖 AI Agent<br/>Reads Issue (with plan)<br/>& Architecture<br/><b>Agent Mode: Agent</b>"]
+    F -->|Ready to code| G["🤖 AI Agent<br/>Reads Issue (with plan)<br/>& Architecture<br/><b>Prompt: /issue-to-pr</b>"]
     
     G -->|Using prompt| H["📋 issue-to-pr.prompt.md<br/>Implements:<br/>- Write code<br/>- Add tests<br/>- Run CI checks<br/>- Open PR"]
     
