@@ -4079,8 +4079,8 @@ namespace Web.ServerTests.Services
                     args[0] is MapPinDTO dto &&
                     dto.ID == newPinAfterInsert.ID &&
                     dto.Addresses != null &&
-                    dto.Addresses.Any(a => a.AddressID == existingAddressID && a.Source == SourceEnum.HOT.ToString()) &&
-                    dto.Addresses.Any(a => a.AddressID == newAddressID && a.Source == SourceEnum.EOT.ToString())),
+                    dto.Addresses.Any(a => a.AddressID == existingAddressID && a.Source == SourceEnum.HOT) &&
+                    dto.Addresses.Any(a => a.AddressID == newAddressID && a.Source == SourceEnum.EOT)),
                 default), Times.Once);
         }
 
