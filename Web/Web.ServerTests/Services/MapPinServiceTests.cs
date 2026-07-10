@@ -4072,6 +4072,16 @@ namespace Web.ServerTests.Services
                     mp.Addresses.Any(a => a.AddressID == existingAddressID && a.Source == SourceEnum.HOT) &&
                     mp.Addresses.Any(a => a.AddressID == newAddressID && a.Source == SourceEnum.EOT)),
                 telemetry.LastUpdate), Times.Once);
+            _clientProxyMock.Verify(proxy => proxy.SendCoreAsync(
+                NotificationMethods.MapPinUpdate,
+                It.Is<object[]>(args =>
+                    args.Length == 1 &&
+                    args[0] is MapPinDTO dto &&
+                    dto.ID == newPinAfterInsert.ID &&
+                    dto.Addresses != null &&
+                    dto.Addresses.Any(a => a.AddressID == existingAddressID && a.Source == SourceEnum.HOT) &&
+                    dto.Addresses.Any(a => a.AddressID == newAddressID && a.Source == SourceEnum.EOT)),
+                default), Times.Once);
         }
 
         /// <summary>
@@ -4566,4 +4576,3 @@ namespace Web.ServerTests.Services
         }
     }
 }
-
