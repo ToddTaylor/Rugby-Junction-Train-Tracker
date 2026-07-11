@@ -29,24 +29,44 @@ jobs:
               name: 'feature-ready-for-ai'
             });
 
+      - name: Check Copilot assignability
+        id: copilot-check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const assignee = 'Copilot';
+            const issueNumber = context.payload.issue.number;
+
+            try {
+              await github.rest.issues.checkUserCanBeAssigned({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                assignee
+              });
+              core.setOutput('assignable', 'true');
+              core.setOutput('assignee', assignee);
+            } catch (e) {
+              core.setOutput('assignable', 'false');
+              core.setOutput('assignee', assignee);
+              core.setOutput('reason', e.message || 'Unknown error while checking assignee.');
+              core.setOutput('issueNumber', String(issueNumber));
+            }
+
       - name: Assign to Copilot and post handoff comment
+        if: steps.copilot-check.outputs.assignable == 'true'
         uses: actions/github-script@v7
         with:
           script: |
             const issue = context.payload.issue;
             const issueNumber = issue.number;
+            const assignee = `${{ steps.copilot-check.outputs.assignee }}`;
 
-            // Assign to Copilot coding agent
-            try {
-              await github.rest.issues.addAssignees({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: issueNumber,
-                assignees: ['Copilot']
-              });
-            } catch (e) {
-              console.log('Could not assign to Copilot:', e.message);
-            }
+            await github.rest.issues.addAssignees({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              assignees: [assignee]
+            });
 
             // Post handoff comment triggering Copilot
             await github.rest.issues.createComment({
@@ -70,3 +90,35 @@ jobs:
                 '_Label `ai-in-progress` applied. Developer will review the PR at Checkpoint B._'
               ].join('\n')
             });
+
+      - name: Comment diagnostics and fail if Copilot is not assignable
+        if: steps.copilot-check.outputs.assignable != 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = context.payload.issue.number;
+            const assignee = `${{ steps.copilot-check.outputs.assignee }}`;
+            const reason = `${{ steps.copilot-check.outputs.reason }}`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: [
+                '## ⚠️ AI Agent Handoff Failed',
+                '',
+                `The workflow could not assign this issue to **${assignee}**.`,
+                '',
+                `GitHub API response: ${reason}`,
+                '',
+                '### How to fix',
+                '1. Verify GitHub Copilot coding agent issue assignment is enabled for this repository/organization.',
+                '2. Confirm the Copilot assignee login configured in this workflow is valid and assignable in this repo.',
+                '3. Run this check locally: `gh api repos/${context.repo.owner}/${context.repo.repo}/assignees/${assignee}`.',
+                '4. Re-apply the `feature-ready-for-ai` label after fixing configuration.',
+                '',
+                '_This workflow intentionally failed to make the handoff problem visible._'
+              ].join('\n')
+            });
+
+            core.setFailed(`Copilot is not assignable in ${context.repo.owner}/${context.repo.repo}.`);
