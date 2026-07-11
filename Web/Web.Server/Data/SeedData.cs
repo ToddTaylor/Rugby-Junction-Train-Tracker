@@ -13,12 +13,9 @@ namespace Web.Server.Data
             if (!dbContext.Users.Any())
             {
                 dbContext.Users.AddRange(
-                    new User { ID = 1, FirstName = "Todd", LastName = "Taylor", Email = "rugbyjunctionwi@outlook.com", IsActive = true, CreatedAt = staticDate, LastUpdate = staticDate },
-                    new User { ID = 2, FirstName = "Chris", LastName = "Stromberg", Email = "c.k.stromberg@gmail.com", IsActive = true, CreatedAt = staticDate, LastUpdate = staticDate },
-                    new User { ID = 3, FirstName = "Thomas", LastName = "Hogan", Email = "TheSteelHighway@gmail.com", IsActive = false, CreatedAt = staticDate, LastUpdate = staticDate },
-                    new User { ID = 4, FirstName = "Jesus", LastName = "Micheel", Email = "Jesusmicheel43@gmail.com", IsActive = true, CreatedAt = staticDate, LastUpdate = staticDate },
-                    new User { ID = 5, FirstName = "Mike", LastName = "Flenz", Email = "mwflenz1@gmail.com", IsActive = true, CreatedAt = staticDate, LastUpdate = staticDate },
-                    new User { ID = 6, FirstName = "Joe", LastName = "Davis", Email = "joe54902@yahoo.com", IsActive = true, CreatedAt = staticDate, LastUpdate = staticDate }
+                    new User { ID = 1, FirstName = "Test", LastName = "Admin", Email = "rugbyjunctionwi+admin@outlook.com", IsActive = true, CreatedAt = staticDate, LastUpdate = staticDate },
+                    new User { ID = 2, FirstName = "Test", LastName = "Custodian", Email = "rugbyjunctionwi+cust@outlook.com", IsActive = true, CreatedAt = staticDate, LastUpdate = staticDate },
+                    new User { ID = 3, FirstName = "Test", LastName = "Viewer", Email = "rugbyjunctionwi+viewer@outlook.com", IsActive = false, CreatedAt = staticDate, LastUpdate = staticDate }
                 );
             }
 
