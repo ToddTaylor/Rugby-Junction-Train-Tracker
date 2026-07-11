@@ -22,7 +22,7 @@ import FindMeControl from '../components/FindMeControl';
 import { BeaconHistoryModal } from '../components/BeaconHistoryModal';
 import { getTrackedMapPins, updateTrackedPinLocation, refreshTrackedPinsFromApi, applyTrackedPinAddedOrUpdatedFromServer, applyTrackedPinRemovedFromServer, addTrackedMapPinByShareCode } from '../services/trackedPins';
 import { metersToLongitudeDegrees, pixelsToMeters } from '../utils/geo';
-import { updateMapPins, updateBeacon } from '../utils/updateHelpers';
+import { updateMapPins, updateBeacon, removeMapPin } from '../utils/updateHelpers';
 import { useRailways } from '../hooks/useRailways';
 import { useBeacons } from '../hooks/useBeacons';
 import { useMileposts } from '../hooks/useMileposts';
@@ -264,6 +264,9 @@ const RailMap: React.FC = () => {
                     return prev;
                 });
             }
+        },
+        MapPinRemoved: (mapPinId: number) => {
+            setMapPins((prevPins: MapPin[]) => removeMapPin(prevPins, mapPinId));
         },
         BeaconUpdate: (beaconBatch: any[]) => {
             setBeacons((prevBeacons: Beacon[]) => {

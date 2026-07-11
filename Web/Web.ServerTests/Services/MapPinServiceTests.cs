@@ -4072,6 +4072,10 @@ namespace Web.ServerTests.Services
                     mp.Addresses.Any(a => a.AddressID == existingAddressID && a.Source == SourceEnum.HOT) &&
                     mp.Addresses.Any(a => a.AddressID == newAddressID && a.Source == SourceEnum.EOT)),
                 telemetry.LastUpdate), Times.Once);
+            _clientProxyMock.Verify(proxy => proxy.SendCoreAsync(
+                NotificationMethods.MapPinRemoved,
+                It.Is<object[]>(args => args.Length == 1 && Convert.ToInt32(args[0]) == existingPin.ID),
+                default), Times.Once);
         }
 
         /// <summary>
