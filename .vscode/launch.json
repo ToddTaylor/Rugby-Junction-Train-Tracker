@@ -1,0 +1,39 @@
+{
+  "version": "0.2.0",
+  "compounds": [
+    {
+      "name": "Full Stack (One Click)",
+      "configurations": [
+        "Backend API (.NET)",
+        "Frontend UI (Vite)"
+      ],
+      "stopAll": true
+    }
+  ],
+  "configurations": [
+    {
+      "name": "Backend API (.NET)",
+      "type": "dotnet",
+      "request": "launch",
+      "projectPath": "${workspaceFolder}/Web/Web.Server/Web.Server.csproj",
+      "launchSettingsProfile": "http",
+      "serverReadyAction": {
+        "action": "openExternally",
+        "pattern": "Now listening on:\\s+(https?://\\S+)"
+      },
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    },
+    {
+      "name": "Frontend UI (Vite)",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "npm --prefix Web/web.client run dev",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "VITE_API_URL": "http://localhost:5081"
+      }
+    }
+  ]
+}

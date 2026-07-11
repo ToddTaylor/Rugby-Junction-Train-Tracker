@@ -1,0 +1,83 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Start Backend API",
+      "type": "shell",
+      "command": "dotnet",
+      "args": [
+        "watch",
+        "run",
+        "--project",
+        "Web/Web.Server/Web.Server.csproj",
+        "--launch-profile",
+        "http"
+      ],
+      "isBackground": true,
+      "problemMatcher": [
+        {
+          "pattern": [
+            {
+              "regexp": ".*"
+            }
+          ],
+          "background": {
+            "activeOnStart": true,
+            "beginsPattern": "watch :",
+            "endsPattern": "Now listening on:"
+          }
+        }
+      ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "Start Frontend UI",
+      "type": "shell",
+      "command": "npm",
+      "args": [
+        "--prefix",
+        "Web/web.client",
+        "run",
+        "dev"
+      ],
+      "options": {
+        "env": {
+          "VITE_API_URL": "http://localhost:5081"
+        }
+      },
+      "isBackground": true,
+      "problemMatcher": [
+        {
+          "pattern": [
+            {
+              "regexp": ".*"
+            }
+          ],
+          "background": {
+            "activeOnStart": true,
+            "beginsPattern": "^\\s*VITE",
+            "endsPattern": "ready in"
+          }
+        }
+      ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "Start Full Stack",
+      "dependsOn": [
+        "Start Backend API",
+        "Start Frontend UI"
+      ],
+      "dependsOrder": "parallel",
+      "runOptions": {
+        "reevaluateOnRerun": true
+      }
+    }
+  ]
+}
