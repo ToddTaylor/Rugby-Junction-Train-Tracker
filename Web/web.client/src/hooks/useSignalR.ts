@@ -7,6 +7,7 @@ import { getAuthToken } from "../services/auth";
 
 const beaconUpdateMethodName = "BeaconUpdate";
 const mapPinUpdateMethodName = "MapPinUpdate";
+const mapPinRemovedMethodName = "MapPinRemoved";
 const trackedPinAddedMethodName = "TrackedPinAdded";
 const trackedPinUpdatedMethodName = "TrackedPinUpdated";
 const trackedPinRemovedMethodName = "TrackedPinRemoved";
@@ -16,6 +17,7 @@ const passengerPinRemovedMethodName = "PassengerPinRemoved";
 // Accept handlers for multiple events
 export function useSignalR(handlers: {
     MapPinUpdate?: (mapPin: MapPin) => void;
+    MapPinRemoved?: (mapPinId: number) => void;
     BeaconUpdate?: (beacons: Beacon[]) => void;
     TrackedPinAdded?: (payload: any) => void;
     TrackedPinUpdated?: (payload: any) => void;
@@ -60,6 +62,19 @@ export function useSignalR(handlers: {
             if (handlersRef.current.MapPinUpdate) {
                 connection.on(mapPinUpdateMethodName, (mapPin: MapPin) => {
                     handlersRef.current.MapPinUpdate?.(mapPin);
+                });
+            }
+            if (handlersRef.current.MapPinRemoved) {
+                connection.on(mapPinRemovedMethodName, (payload: any) => {
+                    const id = typeof payload === "number"
+                        ? payload
+                        : typeof payload === "string"
+                            ? parseInt(payload, 10)
+                            : (payload?.mapPinId ?? payload?.id);
+
+                    if (Number.isFinite(id)) {
+                        handlersRef.current.MapPinRemoved?.(Number(id));
+                    }
                 });
             }
             if (handlersRef.current.BeaconUpdate) {
@@ -148,6 +163,7 @@ export function useSignalR(handlers: {
             disposed = true;
             if (connection) {
                 connection.off(mapPinUpdateMethodName);
+                connection.off(mapPinRemovedMethodName);
                 connection.off(beaconUpdateMethodName);
                 connection.off(trackedPinAddedMethodName);
                 connection.off(trackedPinUpdatedMethodName);

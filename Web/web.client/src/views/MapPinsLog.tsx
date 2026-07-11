@@ -6,7 +6,7 @@ import { MapPin } from '../types/MapPin';
 import { format, parseISO } from "date-fns";
 import { getTrackedMapPins, TrackedPin, updateTrackedPinSymbol, refreshTrackedPinsFromApi, applyTrackedPinAddedOrUpdatedFromServer, applyTrackedPinRemovedFromServer } from '../services/trackedPins';
 import { useSignalR } from '../hooks/useSignalR';
-import { updateMapPins } from '../utils/updateHelpers';
+import { removeMapPin, updateMapPins } from '../utils/updateHelpers';
 
 function MapPinsLog() {
     const [mapPins, setMapPins] = useState<MapPin[]>([]);
@@ -39,6 +39,9 @@ function MapPinsLog() {
     useSignalR({
         MapPinUpdate: (mapPin: MapPin) => {
             setMapPins((prevPins: MapPin[]) => updateMapPins(prevPins, mapPin));
+        },
+        MapPinRemoved: (mapPinId: number) => {
+            setMapPins((prevPins: MapPin[]) => removeMapPin(prevPins, mapPinId));
         },
         TrackedPinAdded: (payload: any) => {
             const updated = applyTrackedPinAddedOrUpdatedFromServer(payload);

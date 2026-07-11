@@ -376,6 +376,13 @@ namespace Web.Server.Services
 
                 await _mapPinRepository.DeleteAsync(duplicate.ID);
 
+                // Notify clients to remove the deleted map pin from live state.
+                var allMapPinClients = _hubContext.Clients?.All;
+                if (allMapPinClients != null)
+                {
+                    await allMapPinClients.SendCoreAsync(NotificationMethods.MapPinRemoved, [duplicate.ID], default);
+                }
+
                 // Notify clients to remove any stale tracking labels for the deleted pin.
                 var allClients = _hubContext.Clients?.All;
                 if (allClients != null)
