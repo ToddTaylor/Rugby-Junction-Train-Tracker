@@ -374,20 +374,26 @@ namespace Web.Server.Services
                 // Migrate all tracked records from the duplicate to the final merged pin.
                 await _userTrackedPinRepository.UpdateMapPinIdAsync(duplicate.ID, upsertedMapPin.ID);
 
-                await _mapPinRepository.DeleteAsync(duplicate.ID);
-
-                // Notify clients to remove the deleted map pin from live state.
-                var allMapPinClients = _hubContext.Clients?.All;
-                if (allMapPinClients != null)
+                var wasDeleted = await _mapPinRepository.DeleteAsync(duplicate.ID);
+                if (wasDeleted)
                 {
-                    await allMapPinClients.SendCoreAsync(NotificationMethods.MapPinRemoved, [duplicate.ID], default);
+                    // Notify clients to remove the deleted map pin from live state.
+                    var allMapPinClients = _hubContext.Clients?.All;
+                    if (allMapPinClients != null)
+                    {
+                        await allMapPinClients.SendCoreAsync(NotificationMethods.MapPinRemoved, [duplicate.ID], default);
+                    }
+
+                    // Notify clients to remove any stale tracking labels for the deleted pin.
+                    var allClients = _hubContext.Clients?.All;
+                    if (allClients != null)
+                    {
+                        await allClients.SendCoreAsync(NotificationMethods.TrackedPinRemoved, [duplicate.ID], default);
+                    }
                 }
-
-                // Notify clients to remove any stale tracking labels for the deleted pin.
-                var allClients = _hubContext.Clients?.All;
-                if (allClients != null)
+                else
                 {
-                    await allClients.SendCoreAsync(NotificationMethods.TrackedPinRemoved, [duplicate.ID], default);
+                    _logger.LogWarning($"Failed to delete duplicate map pin {duplicate.ID}; skipping removal notifications.");
                 }
             }
 
