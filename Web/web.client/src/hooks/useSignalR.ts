@@ -66,14 +66,16 @@ export function useSignalR(handlers: {
             }
             if (handlersRef.current.MapPinRemoved) {
                 connection.on(mapPinRemovedMethodName, (payload: any) => {
-                    const id = typeof payload === "number"
+                    const rawId = typeof payload === "number"
                         ? payload
                         : typeof payload === "string"
-                            ? parseInt(payload, 10)
+                            ? payload
                             : (payload?.mapPinId ?? payload?.id);
 
+                    const id = typeof rawId === "number" ? rawId : Number.parseInt(String(rawId), 10);
+
                     if (Number.isFinite(id)) {
-                        handlersRef.current.MapPinRemoved?.(Number(id));
+                        handlersRef.current.MapPinRemoved?.(id);
                     }
                 });
             }
