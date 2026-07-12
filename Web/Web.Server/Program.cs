@@ -156,6 +156,7 @@ try
     // Custom services
     builder.Services.AddScoped<IBeaconService, BeaconService>();
     builder.Services.AddScoped<IBeaconRailroadService, BeaconRailroadService>();
+    builder.Services.AddSingleton<IBeaconNeighborResolver, BeaconNeighborResolver>();
 
     // Register MapPinService with processor map factory
     builder.Services.AddScoped<IMapPinService>(sp =>
@@ -184,7 +185,8 @@ try
             sp.GetRequiredService<Web.Server.Repositories.IUserTrackedPinRepository>(),
             sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Web.Server.Services.MapPinService>>(),
             sp.GetRequiredService<Microsoft.Extensions.Configuration.IConfiguration>(),
-            processorMap);
+            processorMap,
+            sp.GetRequiredService<Web.Server.Services.IBeaconNeighborResolver>());
     });
 
     builder.Services.AddScoped<IMapPinHistoryService, MapPinHistoryService>();

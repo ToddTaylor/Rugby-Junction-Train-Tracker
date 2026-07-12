@@ -36,6 +36,7 @@ namespace Web.ServerTests.Services
         private readonly Mock<ISubdivisionTrackageRightRepository> _trackageRightRepositoryMock = new();
         private readonly Mock<IUserTrackedPinRepository> _userTrackedPinRepositoryMock = new();
         private readonly Mock<ILogger<MapPinService>> _loggerMock = new();
+        private readonly Mock<IBeaconNeighborResolver> _beaconNeighborResolverMock = new();
 
         private MapPinService _service;
         private IMapper _mapper;
@@ -69,6 +70,11 @@ namespace Web.ServerTests.Services
             // Default: no tracked pins to migrate during merges
             _userTrackedPinRepositoryMock.Setup(r => r.UpdateMapPinIdAsync(It.IsAny<int>(), It.IsAny<int>()))
                 .Returns(Task.CompletedTask);
+
+            // Default: GetAllAsync returns empty — IsNonNeighborTransitionAsync will skip the
+            // neighbor check (neither beacon can be found as online), preserving existing test expectations.
+            _beaconRailroadServiceMock.Setup(s => s.GetAllAsync())
+                .ReturnsAsync(new List<BeaconRailroad>());
 
             var config = new TypeAdapterConfig();
             config.Scan(typeof(MapsterProfile).Assembly);
@@ -113,7 +119,8 @@ namespace Web.ServerTests.Services
                     { SourceEnum.DPU, new Web.Server.Services.Processors.DpuMapPinProcessor(_mapPinRepositoryMock.Object, new Microsoft.Extensions.Logging.Abstractions.NullLogger<Web.Server.Services.Processors.DpuMapPinProcessor>()) },
                     { SourceEnum.HOT, new Web.Server.Services.Processors.HotEotMapPinProcessor(_mapPinRepositoryMock.Object, new Microsoft.Extensions.Logging.Abstractions.NullLogger<Web.Server.Services.Processors.HotEotMapPinProcessor>()) },
                     { SourceEnum.EOT, new Web.Server.Services.Processors.HotEotMapPinProcessor(_mapPinRepositoryMock.Object, new Microsoft.Extensions.Logging.Abstractions.NullLogger<Web.Server.Services.Processors.HotEotMapPinProcessor>()) }
-                });
+                },
+                _beaconNeighborResolverMock.Object);
         }
 
         [TestMethod]
@@ -4259,6 +4266,313 @@ namespace Web.ServerTests.Services
                     mp.Addresses.Any(a => a.AddressID == existingAddressID && a.Source == SourceEnum.HOT) &&
                     mp.Addresses.Any(a => a.AddressID == newAddressID && a.Source == SourceEnum.DPU)),
                 telemetry.LastUpdate), Times.Once);
+        }
+
+        // -----------------------------------------------------------------------
+        // Neighbor-aware split: IsNonNeighborTransitionAsync integration tests
+        // -----------------------------------------------------------------------
+
+        /// <summary>
+        /// When two beacons are online and reachable (IsReachable returns true), an existing map pin
+        /// for the same Address ID should be UPDATED — not replaced with a new pin.
+        /// </summary>
+        [TestMethod]
+        public async Task UpsertMapPin_HOT_NeighborTransition_UpdatesExistingMapPin()
+        {
+            // Arrange
+            var now = _timeProviderMock.Object.UtcNow;
+            var fromBeacon = TestData.CN_RugbyJunction_WI(now);
+            var toBeacon = TestData.CN_Sussex_WI(now);
+
+            // Both beacons are on the same railroad (CN, RailroadID=1) and are online.
+            _beaconRailroadServiceMock.Setup(s => s.GetAllAsync())
+                .ReturnsAsync(new List<BeaconRailroad> { fromBeacon, toBeacon });
+
+            // Neighbor resolver says the transition IS reachable → no split
+            _beaconNeighborResolverMock
+                .Setup(r => r.IsReachable(
+                    fromBeacon.BeaconID, toBeacon.BeaconID,
+                    fromBeacon.Subdivision.RailroadID,
+                    It.IsAny<IEnumerable<BeaconRailroad>>(),
+                    It.IsAny<DateTime>(),
+                    It.IsAny<int>()))
+                .Returns(true);
+
+            var addressId = 11111;
+
+            var existingMapPin = new MapPin
+            {
+                ID = 500,
+                BeaconID = fromBeacon.BeaconID,
+                SubdivisionId = fromBeacon.SubdivisionID,
+                BeaconRailroad = fromBeacon,
+                CreatedRailroadID = fromBeacon.Subdivision.RailroadID,
+                CreatedAt = now,
+                LastUpdate = now,
+                Addresses = [new Address { AddressID = addressId, Source = SourceEnum.HOT, CreatedAt = now, LastUpdate = now }]
+            };
+
+            var telemetry = new Telemetry
+            {
+                BeaconID = toBeacon.BeaconID,
+                Beacon = new Beacon { ID = toBeacon.BeaconID, BeaconRailroads = [toBeacon] },
+                AddressID = addressId,
+                Source = SourceEnum.HOT,
+                Moving = true,
+                CreatedAt = now.AddMinutes(1),
+                LastUpdate = now.AddMinutes(2)
+            };
+
+            _mapPinRepositoryMock
+                .Setup(r => r.GetByTimeThreshold(toBeacon.BeaconID, toBeacon.SubdivisionID, MapPinService.TIME_THRESHOLD_MINUTES))
+                .ReturnsAsync((MapPin?)null);
+            _mapPinRepositoryMock
+                .Setup(r => r.GetByAddressIdAsync(addressId))
+                .ReturnsAsync(existingMapPin);
+            _beaconRailroadServiceMock
+                .Setup(s => s.GetByIdAsync(fromBeacon.BeaconID, fromBeacon.SubdivisionID))
+                .ReturnsAsync(fromBeacon);
+            _beaconRailroadServiceMock
+                .Setup(s => s.GetByIdAsync(toBeacon.BeaconID, toBeacon.SubdivisionID))
+                .ReturnsAsync(toBeacon);
+
+            // Act
+            await _service.UpsertMapPin(telemetry);
+
+            // Assert: UpsertAsync is called with the EXISTING map pin ID → it was updated, not replaced
+            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(
+                It.Is<MapPin>(mp => mp.ID == existingMapPin.ID),
+                telemetry.LastUpdate), Times.Once);
+        }
+
+        /// <summary>
+        /// When two beacons are online but NOT reachable (IsReachable returns false), the same
+        /// Address ID at the new beacon should create a NEW map pin — not update the existing one.
+        /// Telemetry must not be discarded in this case.
+        /// </summary>
+        [TestMethod]
+        public async Task UpsertMapPin_HOT_NonNeighborTransition_CreatesNewMapPin()
+        {
+            // Arrange
+            var now = _timeProviderMock.Object.UtcNow;
+            var fromBeacon = TestData.CN_RugbyJunction_WI(now);
+            var toBeacon = TestData.CN_Oshkosh_WI(now);  // Different beacon, same CN railroad
+
+            // Both beacons online
+            _beaconRailroadServiceMock.Setup(s => s.GetAllAsync())
+                .ReturnsAsync(new List<BeaconRailroad> { fromBeacon, toBeacon });
+
+            // Neighbor resolver says the transition is NOT reachable → split to new pin
+            _beaconNeighborResolverMock
+                .Setup(r => r.IsReachable(
+                    fromBeacon.BeaconID, toBeacon.BeaconID,
+                    fromBeacon.Subdivision.RailroadID,
+                    It.IsAny<IEnumerable<BeaconRailroad>>(),
+                    It.IsAny<DateTime>(),
+                    It.IsAny<int>()))
+                .Returns(false);
+
+            var addressId = 22222;
+
+            var existingMapPin = new MapPin
+            {
+                ID = 600,
+                BeaconID = fromBeacon.BeaconID,
+                SubdivisionId = fromBeacon.SubdivisionID,
+                BeaconRailroad = fromBeacon,
+                CreatedRailroadID = fromBeacon.Subdivision.RailroadID,
+                CreatedAt = now,
+                LastUpdate = now,
+                Addresses = [new Address { AddressID = addressId, Source = SourceEnum.HOT, CreatedAt = now, LastUpdate = now }]
+            };
+
+            var telemetry = new Telemetry
+            {
+                BeaconID = toBeacon.BeaconID,
+                Beacon = new Beacon { ID = toBeacon.BeaconID, BeaconRailroads = [toBeacon] },
+                AddressID = addressId,
+                Source = SourceEnum.HOT,
+                Moving = true,
+                CreatedAt = now.AddMinutes(1),
+                LastUpdate = now.AddMinutes(2)
+            };
+
+            _mapPinRepositoryMock
+                .Setup(r => r.GetByTimeThreshold(toBeacon.BeaconID, toBeacon.SubdivisionID, MapPinService.TIME_THRESHOLD_MINUTES))
+                .ReturnsAsync((MapPin?)null);
+            _mapPinRepositoryMock
+                .Setup(r => r.GetByAddressIdAsync(addressId))
+                .ReturnsAsync(existingMapPin);
+            _beaconRailroadServiceMock
+                .Setup(s => s.GetByIdAsync(toBeacon.BeaconID, toBeacon.SubdivisionID))
+                .ReturnsAsync(toBeacon);
+
+            // Act
+            await _service.UpsertMapPin(telemetry);
+
+            // Assert: a NEW map pin is created (ID != existingMapPin.ID → new pin has ID = 0 before insert)
+            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(
+                It.Is<MapPin>(mp => mp.ID != existingMapPin.ID),
+                telemetry.LastUpdate), Times.Once);
+
+            // Assert: telemetry is NOT discarded — telemetry is saved as the new pin's first record
+            _telemetryRepositoryMock.Verify(r =>
+                r.UpdateAsync(It.Is<Telemetry>(t => t.Discarded)),
+                Times.Never);
+        }
+
+        /// <summary>
+        /// DPU telemetry: non-neighbor address reuse creates a new map pin and does not discard telemetry.
+        /// </summary>
+        [TestMethod]
+        public async Task UpsertMapPin_DPU_NonNeighborTransition_CreatesNewMapPin()
+        {
+            // Arrange
+            var now = _timeProviderMock.Object.UtcNow;
+            var fromBeacon = TestData.CN_RugbyJunction_WI(now);
+            var toBeacon = TestData.CN_Oshkosh_WI(now);
+
+            _beaconRailroadServiceMock.Setup(s => s.GetAllAsync())
+                .ReturnsAsync(new List<BeaconRailroad> { fromBeacon, toBeacon });
+
+            _beaconNeighborResolverMock
+                .Setup(r => r.IsReachable(
+                    fromBeacon.BeaconID, toBeacon.BeaconID,
+                    fromBeacon.Subdivision.RailroadID,
+                    It.IsAny<IEnumerable<BeaconRailroad>>(),
+                    It.IsAny<DateTime>(),
+                    It.IsAny<int>()))
+                .Returns(false);
+
+            var addressId = 33333;
+            var trainId = 1;
+
+            var existingMapPin = new MapPin
+            {
+                ID = 700,
+                BeaconID = fromBeacon.BeaconID,
+                SubdivisionId = fromBeacon.SubdivisionID,
+                BeaconRailroad = fromBeacon,
+                CreatedRailroadID = fromBeacon.Subdivision.RailroadID,
+                CreatedAt = now,
+                LastUpdate = now,
+                Addresses =
+                [
+                    new Address
+                    {
+                        AddressID = addressId,
+                        DpuTrainID = trainId,
+                        Source = SourceEnum.DPU,
+                        CreatedAt = now,
+                        LastUpdate = now
+                    }
+                ]
+            };
+
+            var telemetry = new Telemetry
+            {
+                BeaconID = toBeacon.BeaconID,
+                Beacon = new Beacon { ID = toBeacon.BeaconID, BeaconRailroads = [toBeacon] },
+                AddressID = addressId,
+                TrainID = trainId,
+                Source = SourceEnum.DPU,
+                Moving = true,
+                CreatedAt = now.AddMinutes(1),
+                LastUpdate = now.AddMinutes(2)
+            };
+
+            // DPU processor uses GetByAddressAndTrainIdAsync for exact match
+            _mapPinRepositoryMock
+                .Setup(r => r.GetByAddressAndTrainIdAsync(addressId, trainId, MapPinService.TIME_THRESHOLD_DPU_EXACT_MINUTES))
+                .ReturnsAsync(existingMapPin);
+            _mapPinRepositoryMock
+                .Setup(r => r.GetByTimeThreshold(toBeacon.BeaconID, toBeacon.SubdivisionID, MapPinService.TIME_THRESHOLD_MINUTES))
+                .ReturnsAsync((MapPin?)null);
+            _beaconRailroadServiceMock
+                .Setup(s => s.GetByIdAsync(toBeacon.BeaconID, toBeacon.SubdivisionID))
+                .ReturnsAsync(toBeacon);
+
+            // Act
+            await _service.UpsertMapPin(telemetry);
+
+            // Assert: a NEW map pin is created
+            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(
+                It.Is<MapPin>(mp => mp.ID != existingMapPin.ID),
+                telemetry.LastUpdate), Times.Once);
+
+            // Assert: telemetry is NOT discarded
+            _telemetryRepositoryMock.Verify(r =>
+                r.UpdateAsync(It.Is<Telemetry>(t => t.Discarded)),
+                Times.Never);
+        }
+
+        /// <summary>
+        /// When either beacon is absent from the online graph, the neighbor check is skipped and the
+        /// existing map pin should be updated (existing behavior is preserved).
+        /// </summary>
+        [TestMethod]
+        public async Task UpsertMapPin_HOT_OfflineBeacons_SkipsNeighborCheck_UpdatesExistingPin()
+        {
+            // Arrange
+            var now = _timeProviderMock.Object.UtcNow;
+            var fromBeacon = TestData.CN_RugbyJunction_WI(now);
+            var toBeacon = TestData.CN_Sussex_WI(now);
+
+            // Return empty list → both beacons appear offline → neighbor check is skipped
+            _beaconRailroadServiceMock.Setup(s => s.GetAllAsync())
+                .ReturnsAsync(new List<BeaconRailroad>());
+
+            var addressId = 44444;
+
+            var existingMapPin = new MapPin
+            {
+                ID = 800,
+                BeaconID = fromBeacon.BeaconID,
+                SubdivisionId = fromBeacon.SubdivisionID,
+                BeaconRailroad = fromBeacon,
+                CreatedRailroadID = fromBeacon.Subdivision.RailroadID,
+                CreatedAt = now,
+                LastUpdate = now,
+                Addresses = [new Address { AddressID = addressId, Source = SourceEnum.HOT, CreatedAt = now, LastUpdate = now }]
+            };
+
+            var telemetry = new Telemetry
+            {
+                BeaconID = toBeacon.BeaconID,
+                Beacon = new Beacon { ID = toBeacon.BeaconID, BeaconRailroads = [toBeacon] },
+                AddressID = addressId,
+                Source = SourceEnum.HOT,
+                Moving = true,
+                CreatedAt = now.AddMinutes(1),
+                LastUpdate = now.AddMinutes(2)
+            };
+
+            _mapPinRepositoryMock
+                .Setup(r => r.GetByTimeThreshold(toBeacon.BeaconID, toBeacon.SubdivisionID, MapPinService.TIME_THRESHOLD_MINUTES))
+                .ReturnsAsync((MapPin?)null);
+            _mapPinRepositoryMock
+                .Setup(r => r.GetByAddressIdAsync(addressId))
+                .ReturnsAsync(existingMapPin);
+            _beaconRailroadServiceMock
+                .Setup(s => s.GetByIdAsync(fromBeacon.BeaconID, fromBeacon.SubdivisionID))
+                .ReturnsAsync(fromBeacon);
+            _beaconRailroadServiceMock
+                .Setup(s => s.GetByIdAsync(toBeacon.BeaconID, toBeacon.SubdivisionID))
+                .ReturnsAsync(toBeacon);
+
+            // Act
+            await _service.UpsertMapPin(telemetry);
+
+            // Assert: existing map pin is updated (neighbor check was skipped)
+            _mapPinRepositoryMock.Verify(r => r.UpsertAsync(
+                It.Is<MapPin>(mp => mp.ID == existingMapPin.ID),
+                telemetry.LastUpdate), Times.Once);
+
+            // IsReachable should NOT have been called
+            _beaconNeighborResolverMock.Verify(r =>
+                r.IsReachable(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<int>(),
+                    It.IsAny<IEnumerable<BeaconRailroad>>(), It.IsAny<DateTime>(), It.IsAny<int>()),
+                Times.Never);
         }
 
 
