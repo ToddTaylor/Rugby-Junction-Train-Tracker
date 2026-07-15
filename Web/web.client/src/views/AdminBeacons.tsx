@@ -4,10 +4,13 @@ import { User } from '../types/User';
 import { getBeacons, createBeacon, updateBeacon, deleteBeacon } from '../api/beacons';
 import { getUsers } from '../api/users';
 import './AdminBeacons.css';
+import './AdminSkin.css';
 import TextField from '@mui/material/TextField';
 import Tooltip from '@mui/material/Tooltip';
 import IconButton from '@mui/material/IconButton';
 import ClearIcon from '@mui/icons-material/Clear';
+import AdminPageHeader from '../components/admin/AdminPageHeader';
+import { adminClearButtonSx } from '../components/admin/adminSx';
 
 type SortField = 'name' | 'ownerID' | 'createdAt';
 type SortDirection = 'asc' | 'desc' | null;
@@ -22,9 +25,9 @@ const AdminBeacons = () => {
   const [formData, setFormData] = useState<CreateBeacon>({ name: '', ownerID: 0 });
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
-  const itemsPerPage = 10;
 
   useEffect(() => {
     loadData();
@@ -98,9 +101,19 @@ const AdminBeacons = () => {
   const paginatedBeacons = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     return sortedBeacons.slice(startIndex, startIndex + itemsPerPage);
-  }, [sortedBeacons, currentPage]);
+  }, [sortedBeacons, currentPage, itemsPerPage]);
 
   const totalPages = Math.ceil(sortedBeacons.length / itemsPerPage);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, sortField, sortDirection, itemsPerPage]);
+
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   const handleAdd = () => {
     setEditingBeacon(null);
@@ -186,11 +199,11 @@ const AdminBeacons = () => {
   if (loading) return <div className="admin-loading">Loading...</div>;
 
   return (
-    <div className="admin-beacons">
-      <div className="admin-header">
-        <h1>Beacons</h1>
-        <button className="btn-primary" onClick={handleAdd}>Add Beacon</button>
-      </div>
+    <div className="admin-beacons admin-page">
+      <AdminPageHeader
+        title="Beacons"
+        description="Manage beacon names, ownership, and linked railroads."
+      />
 
       <div className="admin-controls">
         <div className="search-container">
@@ -202,10 +215,11 @@ const AdminBeacons = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="admin-input"
             fullWidth
+            slotProps={{ inputLabel: { shrink: true } }}
           />
           <Tooltip title="Clear filters">
             <IconButton
-              sx={{ color: '#fff', backgroundColor: '#222', '&:hover': { backgroundColor: '#444' }, height: '40px', width: '40px' }}
+              sx={adminClearButtonSx}
               aria-label="clear filters"
               onClick={() => {
                 setSearchTerm('');
@@ -216,24 +230,7 @@ const AdminBeacons = () => {
           </Tooltip>
         </div>
         <div className="right-controls">
-          <div className="pagination-wrapper" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0px' }}>
-            {totalPages > 1 && (
-              <div className="pagination">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                  <button
-                    key={page}
-                    className={`btn-page ${currentPage === page ? 'active' : ''}`}
-                    onClick={() => setCurrentPage(page)}
-                  >
-                    {page}
-                  </button>
-                ))}
-              </div>
-            )}
-            <div className="results-info">
-              Showing {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, sortedBeacons.length)} of {sortedBeacons.length} beacons
-            </div>
-          </div>
+          <button className="btn-primary" onClick={handleAdd}>Add Beacon</button>
         </div>
       </div>
 
@@ -283,6 +280,43 @@ const AdminBeacons = () => {
             ))}
           </tbody>
         </table>
+        <div className="admin-table-footer-pager">
+          <span>Rows per page:</span>
+          <select
+            className="admin-table-footer-select"
+            value={itemsPerPage}
+            onChange={(e) => {
+              setItemsPerPage(Number(e.target.value));
+            }}
+          >
+            <option value={10}>10</option>
+            <option value={25}>25</option>
+            <option value={50}>50</option>
+          </select>
+          <span>
+            {sortedBeacons.length === 0
+              ? '0-0 of 0'
+              : `${((currentPage - 1) * itemsPerPage) + 1}-${Math.min(currentPage * itemsPerPage, sortedBeacons.length)} of ${sortedBeacons.length}`}
+          </span>
+          <button
+            type="button"
+            className="admin-table-footer-btn"
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1 || sortedBeacons.length === 0}
+            aria-label="Go to previous page"
+          >
+            ‹
+          </button>
+          <button
+            type="button"
+            className="admin-table-footer-btn"
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages || sortedBeacons.length === 0}
+            aria-label="Go to next page"
+          >
+            ›
+          </button>
+        </div>
       </div>
 
       {showModal && (

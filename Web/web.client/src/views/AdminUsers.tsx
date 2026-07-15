@@ -1,4 +1,4 @@
-import { adminDataGridSx } from '../components/DataGridStyles';
+import { adminDataGridSlots, adminDataGridSx } from '../components/DataGridStyles';
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { parseSessionRoles } from '../utils/roles';
@@ -6,10 +6,13 @@ import { DataGrid, GridRenderCellParams } from '@mui/x-data-grid';
 import { User, CreateUser, UpdateUser } from '../types/User';
 import { getUsers, createUser, updateUser, deleteUser } from '../api/users';
 import './AdminUsers.css';
+import './AdminSkin.css';
 import TextField from '@mui/material/TextField';
 import Tooltip from '@mui/material/Tooltip';
 import IconButton from '@mui/material/IconButton';
 import ClearIcon from '@mui/icons-material/Clear';
+import AdminPageHeader from '../components/admin/AdminPageHeader';
+import { adminClearButtonSx } from '../components/admin/adminSx';
 
 const formatDate = (dateString: string): string => {
   const date = new Date(dateString);
@@ -222,7 +225,12 @@ const AdminUsers: React.FC = () => {
   }
 
   return (
-    <div className="admin-users">
+    <div className="admin-users admin-page">
+
+      <AdminPageHeader
+        title="Users"
+        description="Manage user identity, active status, and role assignment."
+      />
 
       {error && <div className="error-message">{error}</div>}
 
@@ -236,11 +244,12 @@ const AdminUsers: React.FC = () => {
             onChange={(e) => handleSearchChange(e.target.value)}
             className="admin-input"
             fullWidth={false}
+            slotProps={{ inputLabel: { shrink: true } }}
             style={{ width: '100%', minWidth: 200, maxWidth: 400 }}
           />
           <Tooltip title="Clear filters">
             <IconButton
-              sx={{ color: '#fff', backgroundColor: '#222', '&:hover': { backgroundColor: '#444' }, height: '40px', width: '40px' }}
+              sx={adminClearButtonSx}
               aria-label="clear filters"
               onClick={() => {
                 setSearchQuery('');
@@ -251,15 +260,14 @@ const AdminUsers: React.FC = () => {
           </Tooltip>
         </div>
         {isAdmin && (
-          <button className="btn-primary" onClick={handleCreate} style={{ marginLeft: 16 }}>
-            Add User
-          </button>
+          <button className="btn-primary" onClick={handleCreate}>Add User</button>
         )}
       </div>
 
       <div className="admin-table-container">
-        <div style={{ height: 600, width: '100%' }}>
+        <div style={{ width: '100%' }}>
           <DataGrid
+            autoHeight
             rows={paginatedUsers.map(u => ({ ...u, id: u.id }))}
             columns={[
               {
@@ -328,6 +336,7 @@ const AdminUsers: React.FC = () => {
                   field: 'actions',
                   headerName: 'Actions',
                   width: 180,
+                  sortable: false,
                   renderCell: (params: GridRenderCellParams<User>) => (
                     <div className="actions-cell" style={{ display: 'flex', alignItems: 'center', height: '100%', gap: 8 }}>
                       <button className="btn-edit" style={{ minWidth: 70, padding: '8px 16px', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', height: '36px' }} onClick={() => handleEdit(params.row)}>Edit</button>
@@ -340,7 +349,11 @@ const AdminUsers: React.FC = () => {
             pageSizeOptions={[10, 25, 50]}
             initialState={{
               pagination: { paginationModel: { pageSize: 10, page: 0 } },
+              sorting: { sortModel: [{ field: 'lastName', sort: 'asc' }] },
             }}
+            sortingOrder={['asc', 'desc', null]}
+            disableColumnMenu
+            slots={adminDataGridSlots}
             sx={adminDataGridSx}
           />
         </div>

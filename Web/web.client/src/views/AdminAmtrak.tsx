@@ -3,9 +3,13 @@ import TextField from '@mui/material/TextField';
 import Tooltip from '@mui/material/Tooltip';
 import IconButton from '@mui/material/IconButton';
 import ClearIcon from '@mui/icons-material/Clear';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import './AdminRailroads.css';
+import './AdminSkin.css';
 import { createAmtrakTrackedTrain, deleteAmtrakTrackedTrain, getAmtrakPollingConfiguration, getAmtrakTrackedTrains, updateAmtrakPollingConfiguration } from '../api/amtrak';
 import { AmtrakTrackedTrain } from '../types/Amtrak';
+import AdminPageHeader from '../components/admin/AdminPageHeader';
+import { adminClearButtonSx } from '../components/admin/adminSx';
 
 const AdminAmtrak: React.FC = () => {
   const [trackedTrains, setTrackedTrains] = useState<AmtrakTrackedTrain[]>([]);
@@ -15,6 +19,8 @@ const AdminAmtrak: React.FC = () => {
   const [pollIntervalMinutes, setPollIntervalMinutes] = useState(2);
   const [searchTerm, setSearchTerm] = useState('');
   const [savingInterval, setSavingInterval] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   useEffect(() => {
     loadData();
@@ -43,6 +49,7 @@ const AdminAmtrak: React.FC = () => {
   }
 
   const filteredTrains = useMemo(() => {
+    setCurrentPage(1);
     const term = searchTerm.trim().toLowerCase();
     if (!term) {
       return trackedTrains;
@@ -50,6 +57,13 @@ const AdminAmtrak: React.FC = () => {
 
     return trackedTrains.filter(train => train.trainNumber.toLowerCase().includes(term));
   }, [trackedTrains, searchTerm]);
+
+  const paginatedTrains = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredTrains.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredTrains, currentPage, itemsPerPage]);
+
+  const totalPages = Math.ceil(filteredTrains.length / itemsPerPage);
 
   async function handleAddTrain(e: React.FormEvent) {
     e.preventDefault();
@@ -144,45 +158,47 @@ const AdminAmtrak: React.FC = () => {
   }
 
   return (
-    <div className="admin-railroads">
-      <div className="admin-header">
-        <h1>Amtrak</h1>
-      </div>
+    <div className="admin-railroads admin-page admin-page--narrow">
+      <AdminPageHeader
+        title="Amtrak"
+        description="Manage tracked train numbers and polling cadence for Amtrak feeds."
+      />
 
       {error && <div className="error-message">{error}</div>}
 
-      <div className="admin-controls" style={{ alignItems: 'flex-end', gap: '1rem', flexWrap: 'wrap' }}>
-        <form onSubmit={handleAddTrain} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+      <div className="admin-controls admin-amtrak-toolbar">
+        <form onSubmit={handleAddTrain} className="admin-amtrak-control-form">
           <TextField
             label="Tracked Train Number(s)"
             variant="outlined"
             size="small"
             className="admin-input"
+            sx={{ width: 210 }}
+            slotProps={{ inputLabel: { shrink: true } }}
             value={newTrainNumber}
             onChange={(e) => setNewTrainNumber(e.target.value)}
-            helperText="Enter one or more train numbers separated by commas"
           />
-          <button className="btn-primary" type="submit">Add Train</button>
+          <button className="btn-primary admin-amtrak-button" type="submit">Add Train</button>
         </form>
 
-        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+        <div className="admin-amtrak-control-group">
           <TextField
             label="Poll Interval Minutes"
             variant="outlined"
             size="small"
             type="number"
             className="admin-input"
+            sx={{ width: 150 }}
+            slotProps={{ inputLabel: { shrink: true } }}
             inputProps={{ min: 1, max: 30 }}
             value={pollIntervalMinutes}
             onChange={(e) => setPollIntervalMinutes(Number(e.target.value))}
           />
-          <button className="btn-primary" type="button" onClick={handleSavePollingInterval} disabled={savingInterval}>
+          <button className="btn-primary admin-amtrak-button" type="button" onClick={handleSavePollingInterval} disabled={savingInterval}>
             {savingInterval ? 'Saving...' : 'Save Interval'}
           </button>
         </div>
-      </div>
 
-      <div className="admin-controls">
         <div className="search-container">
           <TextField
             label="Filter by Train Number"
@@ -191,35 +207,44 @@ const AdminAmtrak: React.FC = () => {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="admin-input"
-            fullWidth
+            sx={{ width: 200 }}
+            slotProps={{ inputLabel: { shrink: true } }}
           />
           <Tooltip title="Clear filters">
             <IconButton
-              sx={{ color: '#fff', backgroundColor: '#222', '&:hover': { backgroundColor: '#444' }, height: '40px', width: '40px' }}
+              sx={adminClearButtonSx}
               aria-label="clear filters"
               onClick={() => setSearchTerm('')}
             >
               <ClearIcon />
             </IconButton>
           </Tooltip>
+          <Tooltip title="Refresh data">
+            <IconButton
+              sx={adminClearButtonSx}
+              aria-label="refresh data"
+              onClick={loadData}
+            >
+              <RefreshIcon />
+            </IconButton>
+          </Tooltip>
         </div>
       </div>
+      <p className="admin-amtrak-helper-text">Enter one or more train numbers separated by commas.</p>
 
       <div className="admin-table-container">
         <table className="admin-table">
           <thead>
             <tr>
               <th>Train Number</th>
-              <th>Active</th>
               <th>Created</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {filteredTrains.map(train => (
+            {paginatedTrains.map(train => (
               <tr key={train.id}>
                 <td>{train.trainNumber}</td>
-                <td>{train.isActive ? 'Yes' : 'No'}</td>
                 <td>{new Date(train.createdAt).toLocaleString()}</td>
                 <td className="actions-cell">
                   <button className="btn-delete" onClick={() => handleDeleteTrain(train.id)}>Delete</button>
@@ -228,6 +253,44 @@ const AdminAmtrak: React.FC = () => {
             ))}
           </tbody>
         </table>
+        <div className="admin-table-footer-pager">
+          <span>Rows per page:</span>
+          <select
+            className="admin-table-footer-select"
+            value={itemsPerPage}
+            onChange={(e) => {
+              setItemsPerPage(Number(e.target.value));
+              setCurrentPage(1);
+            }}
+          >
+            <option value={10}>10</option>
+            <option value={25}>25</option>
+            <option value={50}>50</option>
+          </select>
+          <span>
+            {filteredTrains.length === 0
+              ? '0-0 of 0'
+              : `${((currentPage - 1) * itemsPerPage) + 1}-${Math.min(currentPage * itemsPerPage, filteredTrains.length)} of ${filteredTrains.length}`}
+          </span>
+          <button
+            type="button"
+            className="admin-table-footer-btn"
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1 || filteredTrains.length === 0}
+            aria-label="Go to previous page"
+          >
+            ‹
+          </button>
+          <button
+            type="button"
+            className="admin-table-footer-btn"
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages || filteredTrains.length === 0}
+            aria-label="Go to next page"
+          >
+            ›
+          </button>
+        </div>
       </div>
     </div>
   );

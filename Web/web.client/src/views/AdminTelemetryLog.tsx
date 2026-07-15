@@ -1,4 +1,4 @@
-import { adminDataGridSx } from '../components/DataGridStyles';
+import { adminDataGridSlots, adminDataGridSx } from '../components/DataGridStyles';
 import { useEffect, useState } from "react";
 import './Admin.css';
 import '../App.css';
@@ -10,6 +10,9 @@ import ClearIcon from '@mui/icons-material/Clear';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { Telemetry } from '../types/Telemetry';
 import { format, parseISO } from "date-fns";
+import AdminPageHeader from '../components/admin/AdminPageHeader';
+import './AdminSkin.css';
+import { adminClearButtonSx } from '../components/admin/adminSx';
 
 function AdminTelemetryLog() {
     const [telemetries, setTelemetries] = useState<Telemetry[]>([]);
@@ -42,6 +45,34 @@ function AdminTelemetryLog() {
         };
     const [sourceFilter, setSourceFilter] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState(false);
+
+    const filterMenuProps = {
+        PaperProps: {
+            sx: {
+                backgroundColor: 'var(--admin-bg-surface-alt)',
+                color: 'var(--admin-text-primary)',
+                border: '1px solid var(--admin-border)',
+                '& .MuiMenuItem-root': {
+                    color: 'var(--admin-text-primary)',
+                },
+                '& .MuiMenuItem-root:hover': {
+                    backgroundColor: 'var(--admin-row-hover)',
+                },
+                '& .MuiMenuItem-root.Mui-selected': {
+                    backgroundColor: 'rgba(44, 137, 232, 0.22)',
+                },
+                '& .MuiMenuItem-root.Mui-selected:hover': {
+                    backgroundColor: 'rgba(44, 137, 232, 0.3)',
+                },
+                '& .MuiCheckbox-root': {
+                    color: 'var(--admin-text-secondary)',
+                },
+                '& .MuiCheckbox-root.Mui-checked': {
+                    color: 'var(--admin-accent)',
+                },
+            },
+        },
+    };
 
     const fetchTelemetries = async () => {
         setIsLoading(true);
@@ -105,14 +136,14 @@ function AdminTelemetryLog() {
         {
             field: 'beaconName',
             headerName: 'Beacon Name',
-            width: 140,
+            width: 190,
             renderCell: (params: any) => {
                 const beaconName = params.row?.beaconName;
                 if (!beaconName) return <span>-</span>;
                 return (
                     <a
                         href="#"
-                        style={{ color: '#4a9eff', textDecoration: 'underline', cursor: 'pointer' }}
+                        style={{ color: 'var(--admin-accent)', textDecoration: 'underline', cursor: 'pointer' }}
                         onClick={e => {
                             e.preventDefault();
                             handleBeaconNameClick(beaconName);
@@ -126,14 +157,14 @@ function AdminTelemetryLog() {
         {
             field: 'addressID',
             headerName: 'Address ID',
-            width: 100,
+            width: 155,
             renderCell: (params: any) => {
                 const addressID = params.row?.addressID;
                 if (addressID === undefined || addressID === null) return <span>-</span>;
                 return (
                     <a
                         href="#"
-                        style={{ color: '#4a9eff', textDecoration: 'underline', cursor: 'pointer' }}
+                        style={{ color: 'var(--admin-accent)', textDecoration: 'underline', cursor: 'pointer' }}
                         onClick={e => {
                             e.preventDefault();
                             handleAddressIdClick(String(addressID));
@@ -147,14 +178,14 @@ function AdminTelemetryLog() {
         {
             field: 'trainID',
             headerName: 'Train ID',
-            width: 100,
+            width: 120,
             renderCell: (params: any) => {
                 const trainID = params.row?.trainID;
                 if (trainID === undefined || trainID === null) return <span>-</span>;
                 return (
                     <a
                         href="#"
-                        style={{ color: '#4a9eff', textDecoration: 'underline', cursor: 'pointer' }}
+                        style={{ color: 'var(--admin-accent)', textDecoration: 'underline', cursor: 'pointer' }}
                         onClick={e => {
                             e.preventDefault();
                             handleTrainIdClick(String(trainID));
@@ -168,7 +199,7 @@ function AdminTelemetryLog() {
         {
             field: 'moving',
             headerName: 'Moving',
-            width: 100,
+            width: 110,
             type: 'boolean',
                 renderCell: (params: any) => {
                     const moving = params.row?.moving;
@@ -183,13 +214,13 @@ function AdminTelemetryLog() {
         {
             field: 'brakePipePressure',
             headerName: 'BP',
-            width: 100,
+            width: 90,
             renderCell: (params: any) =>
                 params.row?.brakePipePressure !== undefined && params.row?.brakePipePressure !== null
                     ? <span>{params.row.brakePipePressure}</span>
                     : <span>-</span>,
         },
-        { field: 'source', headerName: 'Source', width: 100 },
+        { field: 'source', headerName: 'Source', width: 120 },
         {
             field: 'lastUpdate',
             headerName: 'Last Update',
@@ -202,7 +233,7 @@ function AdminTelemetryLog() {
         {
             field: 'discarded',
             headerName: 'Discarded',
-            width: 550,
+            width: 170,
             renderCell: (params: any) => {
                 const reason = params.row?.discardReason;
                 if (reason && reason.trim()) {
@@ -216,11 +247,10 @@ function AdminTelemetryLog() {
     // Ensure proper wrapping of all JSX elements
     return (
         <Box
+            className="admin-page admin-page--xwide"
             sx={{
                 width: '100%',
                 minHeight: '100vh',
-                backgroundColor: '#1a1a1a',
-                padding: 4,
                 boxSizing: 'border-box',
             }}
         >
@@ -230,13 +260,18 @@ function AdminTelemetryLog() {
                     margin: '0 auto',
                 }}
             >
+                <AdminPageHeader
+                    title="Telemetry Log"
+                    description="Inspect raw telemetry packets and quickly filter by beacon, source, and train identifiers."
+                />
+
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                    <FormControl sx={{ minWidth: 220, backgroundColor: '#2a2a2a', borderRadius: 1, border: '1px solid #444' }} size="small">
+                    <FormControl sx={{ minWidth: 220, backgroundColor: 'var(--admin-bg-surface-alt)', borderRadius: 1, border: '1px solid var(--admin-border)' }} size="small">
                         <InputLabel
                             id="beacon-name-select-label"
                             sx={{
-                                color: '#e0e0e0',
-                                backgroundColor: '#2a2a2a',
+                                color: 'var(--admin-text-primary)',
+                                backgroundColor: 'var(--admin-bg-surface-alt)',
                                 padding: '0 4px',
                                 zIndex: 1,
                             }}
@@ -248,6 +283,7 @@ function AdminTelemetryLog() {
                             multiple
                             value={beaconNameFilter}
                             label="Filter by Beacon Name"
+                            MenuProps={filterMenuProps}
                             onChange={e => {
                                 const value = e.target.value;
                                 setBeaconNameFilter(typeof value === 'string' ? value.split(',') : value);
@@ -256,10 +292,10 @@ function AdminTelemetryLog() {
                                 selected.length === 0 ? <em>All</em> : selected.join(', ')
                             }
                             sx={{
-                                backgroundColor: '#2a2a2a',
-                                color: '#e0e0e0',
+                                backgroundColor: 'var(--admin-bg-surface-alt)',
+                                color: 'var(--admin-text-primary)',
                                 borderRadius: 1,
-                                '.MuiSelect-icon': { color: '#e0e0e0' },
+                                '.MuiSelect-icon': { color: 'var(--admin-text-primary)' },
                             }}
                         >
                             <MenuItem value="" disabled>
@@ -273,12 +309,12 @@ function AdminTelemetryLog() {
                             ))}
                         </Select>
                     </FormControl>
-                    <FormControl sx={{ minWidth: 160, backgroundColor: '#2a2a2a', borderRadius: 1, border: '1px solid #444' }} size="small">
+                    <FormControl sx={{ minWidth: 160, backgroundColor: 'var(--admin-bg-surface-alt)', borderRadius: 1, border: '1px solid var(--admin-border)' }} size="small">
                         <InputLabel
                             id="source-select-label"
                             sx={{
-                                color: '#e0e0e0',
-                                backgroundColor: '#2a2a2a',
+                                color: 'var(--admin-text-primary)',
+                                backgroundColor: 'var(--admin-bg-surface-alt)',
                                 padding: '0 4px',
                                 zIndex: 1,
                             }}
@@ -290,6 +326,7 @@ function AdminTelemetryLog() {
                             multiple
                             value={sourceFilter}
                             label="Filter by Source"
+                            MenuProps={filterMenuProps}
                             onChange={e => {
                                 const value = e.target.value;
                                 setSourceFilter(typeof value === 'string' ? value.split(',') : value);
@@ -298,10 +335,10 @@ function AdminTelemetryLog() {
                                 selected.length === 0 ? <em>All</em> : selected.join(', ')
                             }
                             sx={{
-                                backgroundColor: '#2a2a2a',
-                                color: '#e0e0e0',
+                                backgroundColor: 'var(--admin-bg-surface-alt)',
+                                color: 'var(--admin-text-primary)',
                                 borderRadius: 1,
-                                '.MuiSelect-icon': { color: '#e0e0e0' },
+                                '.MuiSelect-icon': { color: 'var(--admin-text-primary)' },
                             }}
                         >
                             <MenuItem value="" disabled>
@@ -321,18 +358,19 @@ function AdminTelemetryLog() {
                         size="small"
                         value={addressIdFilter}
                         onChange={e => setAddressIdFilter(e.target.value)}
+                        slotProps={{ inputLabel: { shrink: true } }}
                         sx={{
-                            backgroundColor: '#2a2a2a',
+                            backgroundColor: 'var(--admin-bg-surface-alt)',
                             borderRadius: 1,
                             '& .MuiOutlinedInput-root': {
-                                color: '#e0e0e0',
-                                backgroundColor: '#2a2a2a',
-                                '& fieldset': { borderColor: '#444' },
-                                '&:hover fieldset': { borderColor: '#666' },
-                                '&.Mui-focused fieldset': { borderColor: '#4a9eff' },
+                                color: 'var(--admin-text-primary)',
+                                backgroundColor: 'var(--admin-bg-surface-alt)',
+                                '& fieldset': { borderColor: 'var(--admin-border)' },
+                                '&:hover fieldset': { borderColor: 'var(--admin-border)' },
+                                '&.Mui-focused fieldset': { borderColor: 'var(--admin-accent)' },
                             },
-                            '& label': { color: '#888', backgroundColor: '#2a2a2a', padding: '0 4px' },
-                            '& label.Mui-focused': { color: '#4a9eff', backgroundColor: '#2a2a2a' },
+                            '& label': { color: 'var(--admin-text-secondary)', backgroundColor: 'var(--admin-bg-surface-alt)', padding: '0 4px' },
+                            '& label.Mui-focused': { color: 'var(--admin-accent)', backgroundColor: 'var(--admin-bg-surface-alt)' },
                         }}
                     />
                     <TextField
@@ -341,18 +379,19 @@ function AdminTelemetryLog() {
                         size="small"
                         value={trainIdFilter}
                         onChange={e => setTrainIdFilter(e.target.value)}
+                        slotProps={{ inputLabel: { shrink: true } }}
                         sx={{
-                            backgroundColor: '#2a2a2a',
+                            backgroundColor: 'var(--admin-bg-surface-alt)',
                             borderRadius: 1,
                             '& .MuiOutlinedInput-root': {
-                                color: '#e0e0e0',
-                                backgroundColor: '#2a2a2a',
-                                '& fieldset': { borderColor: '#444' },
-                                '&:hover fieldset': { borderColor: '#666' },
-                                '&.Mui-focused fieldset': { borderColor: '#4a9eff' },
+                                color: 'var(--admin-text-primary)',
+                                backgroundColor: 'var(--admin-bg-surface-alt)',
+                                '& fieldset': { borderColor: 'var(--admin-border)' },
+                                '&:hover fieldset': { borderColor: 'var(--admin-border)' },
+                                '&.Mui-focused fieldset': { borderColor: 'var(--admin-accent)' },
                             },
-                            '& label': { color: '#888', backgroundColor: '#2a2a2a', padding: '0 4px' },
-                            '& label.Mui-focused': { color: '#4a9eff', backgroundColor: '#2a2a2a' },
+                            '& label': { color: 'var(--admin-text-secondary)', backgroundColor: 'var(--admin-bg-surface-alt)', padding: '0 4px' },
+                            '& label.Mui-focused': { color: 'var(--admin-accent)', backgroundColor: 'var(--admin-bg-surface-alt)' },
                         }}
                     />
                     <Tooltip title="Clear filters">
@@ -364,7 +403,7 @@ function AdminTelemetryLog() {
                                 setTrainIdFilter('');
                                 setSourceFilter([]);
                             }}
-                            sx={{ ml: 1, color: '#fff', backgroundColor: '#222', '&:hover': { backgroundColor: '#444' } }}
+                            sx={{ ml: 1, ...adminClearButtonSx }}
                         >
                             <ClearIcon />
                         </IconButton>
@@ -375,7 +414,7 @@ function AdminTelemetryLog() {
                                 aria-label="refresh data"
                                 onClick={fetchTelemetries}
                                 disabled={isLoading}
-                                sx={{ ml: 1, color: '#fff', backgroundColor: '#222', '&:hover': { backgroundColor: '#444' }, '&.Mui-disabled': { color: '#666' } }}
+                                sx={{ ...adminClearButtonSx, '&.Mui-disabled': { color: 'var(--admin-text-secondary)' } }}
                             >
                                 <RefreshIcon />
                             </IconButton>
@@ -383,12 +422,16 @@ function AdminTelemetryLog() {
                     </Tooltip>
                 </Box>
                 <DataGrid
+                    autoHeight
                     rows={filteredData}
                     columns={columns}
                     pageSizeOptions={[5, 10, 25]}
                     initialState={{
                         pagination: { paginationModel: { pageSize: 25, page: 0 } },
                     }}
+                    sortingOrder={['asc', 'desc', null]}
+                    disableColumnMenu
+                    slots={adminDataGridSlots}
                     sx={adminDataGridSx}
                     getRowClassName={(params) => params.row.discarded ? 'discarded-row' : ''}
                 />

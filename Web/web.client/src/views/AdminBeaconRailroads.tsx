@@ -6,10 +6,13 @@ import { getBeaconRailroads, createBeaconRailroad, updateBeaconRailroad, deleteB
 import { getBeacons } from '../api/beacons';
 import { getSubdivisions } from '../api/subdivisions';
 import './AdminBeaconRailroads.css';
+import './AdminSkin.css';
 import TextField from '@mui/material/TextField';
 import Tooltip from '@mui/material/Tooltip';
 import IconButton from '@mui/material/IconButton';
 import ClearIcon from '@mui/icons-material/Clear';
+import AdminPageHeader from '../components/admin/AdminPageHeader';
+import { adminClearButtonSx } from '../components/admin/adminSx';
 
 type SortField = 'beaconName' | 'subdivisionName' | 'railroadName' | 'milepost';
 type SortDirection = 'asc' | 'desc' | null;
@@ -36,9 +39,9 @@ const AdminBeaconRailroads = () => {
   });
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortField, setSortField] = useState<SortField>('beaconName');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
-  const itemsPerPage = 10;
 
   useEffect(() => {
     loadData();
@@ -118,9 +121,19 @@ const AdminBeaconRailroads = () => {
   const paginatedBeaconRailroads = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     return sortedBeaconRailroads.slice(startIndex, startIndex + itemsPerPage);
-  }, [sortedBeaconRailroads, currentPage]);
+  }, [sortedBeaconRailroads, currentPage, itemsPerPage]);
 
   const totalPages = Math.ceil(sortedBeaconRailroads.length / itemsPerPage);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, sortField, sortDirection, itemsPerPage]);
+
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   const handleAdd = () => {
     setEditingBeaconRailroad(null);
@@ -228,11 +241,11 @@ const AdminBeaconRailroads = () => {
   if (loading) return <div className="admin-loading">Loading...</div>;
 
   return (
-    <div className="admin-beacon-railroads">
-      <div className="admin-header">
-        <h1>Beacon Railroads</h1>
-        <button className="btn-primary" onClick={handleAdd}>Add Beacon Railroad</button>
-      </div>
+    <div className="admin-beacon-railroads admin-page admin-page--wide">
+      <AdminPageHeader
+        title="Beacon Railroads"
+        description="Configure beacon to subdivision mappings and directional metadata."
+      />
 
       <div className="admin-controls">
         <div className="search-container">
@@ -244,10 +257,11 @@ const AdminBeaconRailroads = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="admin-input"
             fullWidth
+            slotProps={{ inputLabel: { shrink: true } }}
           />
           <Tooltip title="Clear filters">
             <IconButton
-              sx={{ color: '#fff', backgroundColor: '#222', '&:hover': { backgroundColor: '#444' }, height: '40px', width: '40px' }}
+              sx={adminClearButtonSx}
               aria-label="clear filters"
               onClick={() => {
                 setSearchTerm('');
@@ -258,24 +272,7 @@ const AdminBeaconRailroads = () => {
           </Tooltip>
         </div>
         <div className="right-controls">
-          {totalPages > 1 && (
-            <div className="pagination-container">
-              <div className="pagination">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                  <button
-                    key={page}
-                    className={`btn-page ${currentPage === page ? 'active' : ''}`}
-                    onClick={() => setCurrentPage(page)}
-                  >
-                    {page}
-                  </button>
-                ))}
-              </div>
-              <div className="results-info">
-                Showing {paginatedBeaconRailroads.length} of {sortedBeaconRailroads.length} beacon railroads
-              </div>
-            </div>
-          )}
+          <button className="btn-primary" onClick={handleAdd}>Add Beacon Railroad</button>
         </div>
       </div>
 
@@ -319,6 +316,43 @@ const AdminBeaconRailroads = () => {
             ))}
           </tbody>
         </table>
+        <div className="admin-table-footer-pager">
+          <span>Rows per page:</span>
+          <select
+            className="admin-table-footer-select"
+            value={itemsPerPage}
+            onChange={(e) => {
+              setItemsPerPage(Number(e.target.value));
+            }}
+          >
+            <option value={10}>10</option>
+            <option value={25}>25</option>
+            <option value={50}>50</option>
+          </select>
+          <span>
+            {sortedBeaconRailroads.length === 0
+              ? '0-0 of 0'
+              : `${((currentPage - 1) * itemsPerPage) + 1}-${Math.min(currentPage * itemsPerPage, sortedBeaconRailroads.length)} of ${sortedBeaconRailroads.length}`}
+          </span>
+          <button
+            type="button"
+            className="admin-table-footer-btn"
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1 || sortedBeaconRailroads.length === 0}
+            aria-label="Go to previous page"
+          >
+            ‹
+          </button>
+          <button
+            type="button"
+            className="admin-table-footer-btn"
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages || sortedBeaconRailroads.length === 0}
+            aria-label="Go to next page"
+          >
+            ›
+          </button>
+        </div>
       </div>
 
       {showModal && (

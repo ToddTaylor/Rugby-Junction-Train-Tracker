@@ -6,6 +6,9 @@ import Tooltip from '@mui/material/Tooltip';
 import IconButton from '@mui/material/IconButton';
 import ClearIcon from '@mui/icons-material/Clear';
 import './AdminRailroads.css';
+import './AdminSkin.css';
+import AdminPageHeader from '../components/admin/AdminPageHeader';
+import { adminClearButtonSx } from '../components/admin/adminSx';
 
 type SortField = 'name' | 'createdAt';
 type SortDirection = 'asc' | 'desc' | null;
@@ -19,9 +22,9 @@ const AdminRailroads = () => {
   const [formData, setFormData] = useState<CreateRailroad>({ name: '' });
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
-  const itemsPerPage = 10;
 
   useEffect(() => {
     loadRailroads();
@@ -86,9 +89,19 @@ const AdminRailroads = () => {
   const paginatedRailroads = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     return sortedRailroads.slice(startIndex, startIndex + itemsPerPage);
-  }, [sortedRailroads, currentPage]);
+  }, [sortedRailroads, currentPage, itemsPerPage]);
 
   const totalPages = Math.ceil(sortedRailroads.length / itemsPerPage);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, sortField, sortDirection, itemsPerPage]);
+
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   const handleAdd = () => {
     setEditingRailroad(null);
@@ -163,11 +176,11 @@ const AdminRailroads = () => {
   if (loading) return <div className="admin-loading">Loading...</div>;
 
   return (
-    <div className="admin-railroads">
-      <div className="admin-header">
-        <h1>Railroads</h1>
-        <button className="btn-primary" onClick={handleAdd}>Add Railroad</button>
-      </div>
+    <div className="admin-railroads admin-page admin-page--narrow">
+      <AdminPageHeader
+        title="Railroads"
+        description="Create and maintain the railroad entities used throughout the system."
+      />
 
       <div className="admin-controls">
         <div className="search-container">
@@ -179,10 +192,11 @@ const AdminRailroads = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="admin-input"
             fullWidth
+            slotProps={{ inputLabel: { shrink: true } }}
           />
           <Tooltip title="Clear filters">
             <IconButton
-              sx={{ color: '#fff', backgroundColor: '#222', '&:hover': { backgroundColor: '#444' }, height: '40px', width: '40px' }}
+              sx={adminClearButtonSx}
               aria-label="clear filters"
               onClick={() => {
                 setSearchTerm('');
@@ -193,36 +207,7 @@ const AdminRailroads = () => {
           </Tooltip>
         </div>
         <div className="right-controls">
-          <div className="results-info">
-            Showing {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, sortedRailroads.length)} of {sortedRailroads.length} railroads
-          </div>
-          {totalPages > 1 && (
-            <div className="pagination">
-              <button
-                className="btn-page"
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-              >
-                Previous
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                <button
-                  key={page}
-                  className={`btn-page ${currentPage === page ? 'active' : ''}`}
-                  onClick={() => setCurrentPage(page)}
-                >
-                  {page}
-                </button>
-              ))}
-              <button
-                className="btn-page"
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-              >
-                Next
-              </button>
-            </div>
-          )}
+          <button className="btn-primary" onClick={handleAdd}>Add Railroad</button>
         </div>
       </div>
 
@@ -250,6 +235,43 @@ const AdminRailroads = () => {
             ))}
           </tbody>
         </table>
+        <div className="admin-table-footer-pager">
+          <span>Rows per page:</span>
+          <select
+            className="admin-table-footer-select"
+            value={itemsPerPage}
+            onChange={(e) => {
+              setItemsPerPage(Number(e.target.value));
+            }}
+          >
+            <option value={10}>10</option>
+            <option value={25}>25</option>
+            <option value={50}>50</option>
+          </select>
+          <span>
+            {sortedRailroads.length === 0
+              ? '0-0 of 0'
+              : `${((currentPage - 1) * itemsPerPage) + 1}-${Math.min(currentPage * itemsPerPage, sortedRailroads.length)} of ${sortedRailroads.length}`}
+          </span>
+          <button
+            type="button"
+            className="admin-table-footer-btn"
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1 || sortedRailroads.length === 0}
+            aria-label="Go to previous page"
+          >
+            ‹
+          </button>
+          <button
+            type="button"
+            className="admin-table-footer-btn"
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages || sortedRailroads.length === 0}
+            aria-label="Go to next page"
+          >
+            ›
+          </button>
+        </div>
       </div>
 
       {showModal && (

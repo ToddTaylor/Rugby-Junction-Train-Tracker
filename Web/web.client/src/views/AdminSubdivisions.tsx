@@ -1,4 +1,4 @@
-import { adminDataGridSx } from '../components/DataGridStyles';
+import { adminDataGridSlots, adminDataGridSx } from '../components/DataGridStyles';
 import React, { useState, useEffect, useMemo } from 'react';
 import { DataGrid } from '@mui/x-data-grid';
 import { Subdivision, CreateSubdivision, UpdateSubdivision } from '../types/Subdivision';
@@ -9,12 +9,15 @@ import { getRailroads } from '../api/railroads';
 import { getTrackageRights, replaceTrackageRights } from '../api/subdivisionTrackageRights';
 import { getUsers } from '../api/users';
 import './AdminSubdivisions.css';
+import './AdminSkin.css';
 import TextField from '@mui/material/TextField';
 import Tooltip from '@mui/material/Tooltip';
 import IconButton from '@mui/material/IconButton';
 import ClearIcon from '@mui/icons-material/Clear';
 import { useAuth } from '../hooks/useAuth';
 import { parseSessionRoles } from '../utils/roles';
+import AdminPageHeader from '../components/admin/AdminPageHeader';
+import { adminClearButtonSx } from '../components/admin/adminSx';
 
 
 export const AdminSubdivisions: React.FC = () => {
@@ -256,11 +259,16 @@ export const AdminSubdivisions: React.FC = () => {
   };
 
   if (loading) {
-    return <div className="admin-subdivisions-container"><p>Loading subdivisions...</p></div>;
+    return <div className="admin-subdivisions-container admin-page"><p>Loading subdivisions...</p></div>;
   }
 
   return (
-    <div className="admin-subdivisions-container">
+    <div className="admin-subdivisions-container admin-page">
+      <AdminPageHeader
+        title="Subdivisions"
+        description="Maintain subdivisions, trackage rights, and local train configuration."
+      />
+
       {error && <div className="error-message">{error}</div>}
       <div className="admin-controls">
         <div className="search-bar">
@@ -274,10 +282,11 @@ export const AdminSubdivisions: React.FC = () => {
             }}
             className="admin-input"
             fullWidth
+            slotProps={{ inputLabel: { shrink: true } }}
           />
           <Tooltip title="Clear filters">
             <IconButton
-              sx={{ color: '#fff', backgroundColor: '#222', '&:hover': { backgroundColor: '#444' }, height: '40px', width: '40px' }}
+              sx={adminClearButtonSx}
               aria-label="clear filters"
               onClick={() => {
                 setSearchTerm('');
@@ -289,9 +298,7 @@ export const AdminSubdivisions: React.FC = () => {
         </div>
         <div className="right-controls">
           {isAdmin && (
-            <button className="btn-primary" onClick={handleCreate}>
-              Add Subdivision
-            </button>
+            <button className="btn-primary" onClick={handleCreate}>Add Subdivision</button>
           )}
         </div>
       </div>
@@ -342,6 +349,9 @@ export const AdminSubdivisions: React.FC = () => {
           initialState={{
             pagination: { paginationModel: { pageSize: 25, page: 0 } },
           }}
+          sortingOrder={['asc', 'desc', null]}
+          disableColumnMenu
+          slots={adminDataGridSlots}
           disableRowSelectionOnClick
           sx={adminDataGridSx}
         />
