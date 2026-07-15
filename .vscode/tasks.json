@@ -18,7 +18,9 @@
         {
           "pattern": [
             {
-              "regexp": ".*"
+              "regexp": "^(?:(__copilot_no_problem_match__))$",
+              "file": 1,
+              "message": 1
             }
           ],
           "background": {
@@ -53,7 +55,9 @@
         {
           "pattern": [
             {
-              "regexp": ".*"
+              "regexp": "^(?:(__copilot_no_problem_match__))$",
+              "file": 1,
+              "message": 1
             }
           ],
           "background": {
