@@ -233,7 +233,8 @@ function AdminTelemetryLog() {
         {
             field: 'discarded',
             headerName: 'Discarded',
-            width: 170,
+            width: 300,
+            flex: 1,
             renderCell: (params: any) => {
                 const reason = params.row?.discardReason;
                 if (reason && reason.trim()) {
