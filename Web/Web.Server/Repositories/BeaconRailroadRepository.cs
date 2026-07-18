@@ -59,6 +59,7 @@ namespace Web.Server.Repositories
             existing.Longitude = beaconRailroad.Longitude;
             existing.Milepost = beaconRailroad.Milepost;
             existing.MultipleTracks = beaconRailroad.MultipleTracks;
+            existing.TelemetryStaleHoursOverride = beaconRailroad.TelemetryStaleHoursOverride;
             existing.LastUpdate = _timeProvider.UtcNow;
 
             await _context.SaveChangesAsync();
