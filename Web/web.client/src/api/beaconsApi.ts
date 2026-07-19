@@ -20,16 +20,28 @@ export const fetchBeacons = async (setBeacons: any, setBeaconsLoaded: any) => {
     const raw = localStorage.getItem('beaconStatusMap');
     if (raw) statusMap = JSON.parse(raw);
   } catch { /* ignore */ }
+  let telemetryStaleMap: Record<string, boolean> = {};
+  try {
+    const raw = localStorage.getItem('beaconTelemetryStaleMap');
+    if (raw) telemetryStaleMap = JSON.parse(raw);
+  } catch { /* ignore */ }
   const graceUntil = Number(localStorage.getItem('focusGraceUntil') || '0');
   const now = Date.now();
 
   if (cached) {
     const withStatus = (cached as any[]).map(b => {
       const prevOnline = statusMap[b.beaconID];
+      const prevStale = telemetryStaleMap[b.beaconID];
+      let result = b;
       if (prevOnline === true && b.online === false && now < graceUntil) {
-        return { ...b, online: true };
+        result = { ...result, online: true };
+      } else if (prevOnline !== undefined) {
+        result = { ...result, online: prevOnline };
       }
-      return prevOnline === undefined ? b : { ...b, online: prevOnline };
+      if (prevStale !== undefined) {
+        result = { ...result, telemetryStale: prevStale };
+      }
+      return result;
     });
     setBeacons(withStatus);
     setBeaconsLoaded(true);
@@ -49,10 +61,17 @@ export const fetchBeacons = async (setBeacons: any, setBeaconsLoaded: any) => {
     await db.put(STORE_NAME, beacons, 'beacons');
     const withStatus = (beacons as any[]).map(b => {
       const prevOnline = statusMap[b.beaconID];
+      const prevStale = telemetryStaleMap[b.beaconID];
+      let result = b;
       if (prevOnline === true && b.online === false && now < graceUntil) {
-        return { ...b, online: true };
+        result = { ...result, online: true };
+      } else if (prevOnline !== undefined) {
+        result = { ...result, online: prevOnline };
       }
-      return prevOnline === undefined ? b : { ...b, online: prevOnline };
+      if (prevStale !== undefined) {
+        result = { ...result, telemetryStale: prevStale };
+      }
+      return result;
     });
     setBeacons(withStatus);
     setBeaconsLoaded(true);

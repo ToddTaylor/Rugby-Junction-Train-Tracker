@@ -11,6 +11,11 @@ export function useBeacons() {
     const raw = localStorage.getItem('beaconStatusMap');
     if (raw) initialStatusMap = JSON.parse(raw);
   } catch { /* ignore malformed storage */ }
+  let initialStaleMap: Record<string, boolean> = {};
+  try {
+    const raw = localStorage.getItem('beaconTelemetryStaleMap');
+    if (raw) initialStaleMap = JSON.parse(raw);
+  } catch { /* ignore malformed storage */ }
 
   useEffect(() => {
     const fetchBeacons = async () => {
@@ -64,10 +69,17 @@ export function useBeacons() {
       if (cached) {
         const withStatus = (cached as Beacon[]).map(b => {
           const stored = initialStatusMap[b.beaconID];
+          const storedStale = initialStaleMap[b.beaconID];
+          let result = b;
           if (stored === true && b.online === false && now < graceUntil) {
-            return { ...b, online: true };
+            result = { ...result, online: true };
+          } else if (stored !== undefined) {
+            result = { ...result, online: stored };
           }
-          return stored === undefined ? b : { ...b, online: stored };
+          if (storedStale !== undefined) {
+            result = { ...result, telemetryStale: storedStale };
+          }
+          return result;
         });
         setBeacons(withStatus);
         setBeaconsLoaded(true);
@@ -105,10 +117,17 @@ export function useBeacons() {
         
         const withStatus = (beacons as Beacon[]).map(b => {
           const stored = initialStatusMap[b.beaconID];
+          const storedStale = initialStaleMap[b.beaconID];
+          let result = b;
           if (stored === true && b.online === false && now < graceUntil) {
-            return { ...b, online: true };
+            result = { ...result, online: true };
+          } else if (stored !== undefined) {
+            result = { ...result, online: stored };
           }
-          return stored === undefined ? b : { ...b, online: stored };
+          if (storedStale !== undefined) {
+            result = { ...result, telemetryStale: storedStale };
+          }
+          return result;
         });
         setBeacons(withStatus);
         setBeaconsLoaded(true);
@@ -123,8 +142,17 @@ export function useBeacons() {
   useEffect(() => {
     if (!beacons.length) return;
     const statusMap: Record<string, boolean> = {};
-    beacons.forEach(b => { if (b && b.beaconID) statusMap[b.beaconID] = !!b.online; });
-    try { localStorage.setItem('beaconStatusMap', JSON.stringify(statusMap)); } catch { /* ignore quota */ }
+    const staleMap: Record<string, boolean> = {};
+    beacons.forEach(b => {
+      if (b && b.beaconID) {
+        statusMap[b.beaconID] = !!b.online;
+        staleMap[b.beaconID] = !!b.telemetryStale;
+      }
+    });
+    try {
+      localStorage.setItem('beaconStatusMap', JSON.stringify(statusMap));
+      localStorage.setItem('beaconTelemetryStaleMap', JSON.stringify(staleMap));
+    } catch { /* ignore quota */ }
   }, [beacons]);
 
   return { beacons, beaconsLoaded, setBeacons };
