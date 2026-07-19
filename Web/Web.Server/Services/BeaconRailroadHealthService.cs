@@ -58,12 +58,18 @@ namespace Web.Server.Services
                     .ThenInclude(s => s.Railroad)
                 .ToList();
 
-            // Build a map of BeaconID -> most recent non-discarded telemetry timestamp
-            var latestTelemetryByBeacon = dbContext.Telemetries
-                .Where(t => !t.Discarded)
-                .GroupBy(t => t.BeaconID)
-                .Select(g => new { BeaconID = g.Key, LastUpdate = g.Max(t => t.LastUpdate) })
-                .ToDictionary(x => x.BeaconID, x => x.LastUpdate);
+            // Build a map of (BeaconID, SubdivisionID) -> most recent train-passage timestamp.
+            // Sourced from MapPinHistories rather than Telemetries: raw Telemetries rows are
+            // purged after 12 hours by RecordCleanupService, which would make any beacon whose
+            // last real train exceeded that window fall into "no telemetry ever received" and
+            // incorrectly report TelemetryStale = false forever, regardless of the configured
+            // override. MapPinHistories is retained for 48 hours and already carries a
+            // per-subdivision SubdivisionId, so this also correctly scopes freshness per
+            // railroad for beacons that serve more than one (e.g. junction beacons).
+            var latestTelemetryByBeaconSubdivision = dbContext.MapPinHistories
+                .GroupBy(mph => new { mph.BeaconID, mph.SubdivisionId })
+                .Select(g => new { g.Key.BeaconID, g.Key.SubdivisionId, LastUpdate = g.Max(mph => mph.LastUpdate) })
+                .ToDictionary(x => (x.BeaconID, x.SubdivisionId), x => x.LastUpdate);
 
             var beaconRailroadDTOs = _mapper.Map<IEnumerable<BeaconRailroadDTO>>(beaconRailroads);
 
@@ -80,13 +86,14 @@ namespace Web.Server.Services
                     var effectiveThresholdHours = beaconRailroadDTO.TelemetryStaleHoursOverride ?? _telemetryStaleHoursDefault;
                     var telemetryCutoff = DateTime.UtcNow.AddHours(-effectiveThresholdHours);
 
-                    if (latestTelemetryByBeacon.TryGetValue(beaconRailroadDTO.BeaconID, out var lastTelemetryTime))
+                    if (latestTelemetryByBeaconSubdivision.TryGetValue((beaconRailroadDTO.BeaconID, beaconRailroadDTO.SubdivisionID), out var lastTelemetryTime))
                     {
                         beaconRailroadDTO.TelemetryStale = lastTelemetryTime <= telemetryCutoff;
                     }
                     else
                     {
-                        // No telemetry ever received — not considered stale
+                        // No train passage recorded for this beacon/subdivision within the
+                        // MapPinHistories retention window — not considered stale
                         beaconRailroadDTO.TelemetryStale = false;
                     }
                 }

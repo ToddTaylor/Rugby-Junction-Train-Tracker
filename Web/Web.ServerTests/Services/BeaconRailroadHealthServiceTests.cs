@@ -222,6 +222,34 @@ namespace Web.ServerTests.Services
         }
 
         [TestMethod]
+        public void StateClassification_TelemetryOlderThanTelemetriesRetentionWindow_StillReportsStale()
+        {
+            // Reproduces the "Eagle" production bug: RecordCleanupService purges raw Telemetries
+            // rows after 12 hours, but a beacon can easily go 12+ hours without a real train on a
+            // low-traffic subdivision. The last train passage (17h ago, well past that window, and
+            // well past a 1h override) must still be visible via MapPinHistories (48h retention).
+            var dbName = nameof(StateClassification_TelemetryOlderThanTelemetriesRetentionWindow_StillReportsStale);
+            using var dbContext = CreateInMemoryDbContext(dbName);
+
+            SeedHealthyBeacon(dbContext, beaconId: 1, subdivisionId: 1, telemetryStaleHoursOverride: 1,
+                lastHealthUpdate: DateTime.UtcNow, // health-ping still fresh, beacon appears online
+                lastTelemetryUpdate: DateTime.UtcNow.AddHours(-17)); // last real train, well past both the 1h override and the 12h Telemetries retention window
+
+            _serviceProviderMock.Setup(sp => sp.GetService(typeof(TelemetryDbContext))).Returns(dbContext);
+
+            var config = BuildConfig(defaultHours: 6);
+            var sentDTOs = CaptureBeaconUpdate();
+
+            RunOneIteration(config, dbContext);
+
+            var dto = sentDTOs.First(d => d.BeaconID == 1);
+            Assert.IsTrue(dto.Online, "Health-ping is fresh, so beacon should still appear online");
+            Assert.IsTrue(dto.TelemetryStale,
+                "Last train was 17h ago (> 1h override); this must be reported stale even though a " +
+                "Telemetries row that old would already have been purged by RecordCleanupService");
+        }
+
+        [TestMethod]
         public void StateClassification_HealthyBeacon_NoStaleFlags()
         {
             // Beacon: health fresh and telemetry fresh → fully healthy
@@ -393,12 +421,11 @@ namespace Web.ServerTests.Services
                 CreatedAt = lastHealthUpdate,
                 LastUpdate = lastHealthUpdate
             });
-            dbContext.Telemetries.Add(new Telemetry
+            dbContext.MapPinHistories.Add(new MapPinHistory
             {
                 BeaconID = beaconId,
-                AddressID = 1,
-                Source = "HOT",
-                Discarded = false,
+                SubdivisionId = subdivisionId,
+                AddressesJson = "[]",
                 CreatedAt = lastTelemetryUpdate,
                 LastUpdate = lastTelemetryUpdate
             });
