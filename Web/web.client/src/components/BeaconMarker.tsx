@@ -14,12 +14,32 @@ interface BeaconMarkerProps {
     pin: Beacon;
     zoom: number;
     idx: number;
+    mapTheme?: 'dark' | 'light';
 }
 
-const BeaconMarker: React.FC<BeaconMarkerProps> = ({ pin: beaconPin, zoom, idx }) => {
+export interface BeaconVisualState {
+    isOffline: boolean;
+    isTelemetryStale: boolean;
+    color: string;
+    dotCenterColor: string;
+    title: string;
+}
+
+export function getBeaconVisualState(beacon: Beacon, mapTheme: 'dark' | 'light' = 'dark'): BeaconVisualState {
+    const isOffline = beacon.online === false;
+    const isTelemetryStale = beacon.online !== false && beacon.telemetryStale === true;
+    const color = isOffline ? '#888888' : '#005aa9';
+    const dotCenterColor = isTelemetryStale
+        ? (mapTheme === 'dark' ? '#1a1a2e' : '#ffffff')
+        : color;
+    const title = isOffline ? 'offline' : isTelemetryStale ? 'telemetry stale' : 'online';
+    return { isOffline, isTelemetryStale, color, dotCenterColor, title };
+}
+
+const BeaconMarker: React.FC<BeaconMarkerProps> = ({ pin: beaconPin, zoom, idx, mapTheme = 'dark' }) => {
     const beaconName = beaconPin.beaconName;
-    const color = beaconPin.online === false ? '#888888' : '#005aa9';
-    const title = beaconPin.online === true ? 'online' : 'offline';
+    const { isOffline, isTelemetryStale, dotCenterColor, title } = getBeaconVisualState(beaconPin, mapTheme);
+
     const beaconDotSizePx = getBeaconDotSizePx(zoom);
 
     // Use metersToPixels for correct scaling
@@ -32,7 +52,8 @@ const BeaconMarker: React.FC<BeaconMarkerProps> = ({ pin: beaconPin, zoom, idx }
     // Ping base size so that at scale(10) it matches outlineSize
     const pingBaseSizePx = outlineSize / 10;
 
-    const dottedOutline = beaconPin.online === true
+    // Dotted outline: shown for healthy online beacons only
+    const dottedOutline = !isOffline && !isTelemetryStale
         ? `<div style="
             position:absolute;
             top:0;
@@ -48,8 +69,25 @@ const BeaconMarker: React.FC<BeaconMarkerProps> = ({ pin: beaconPin, zoom, idx }
         "></div>`
         : '';
 
-    // Ping is absolutely centered and animates to match outline
-    const pingDiv = beaconPin.online !== false
+    // Blue ring: shown for telemetry-stale beacons (solid ring, no ping)
+    const telemetryStaleRing = isTelemetryStale
+        ? `<div style="
+            position:absolute;
+            top:0;
+            left:0;
+            width:${outlineSize}px;
+            height:${outlineSize}px;
+            border-radius:50%;
+            border:3px solid #005aa9;
+            box-sizing:border-box;
+            pointer-events:none;
+            z-index:1;
+            cursor: default;
+        "></div>`
+        : '';
+
+    // Ping animation: shown for healthy online beacons only
+    const pingDiv = !isOffline && !isTelemetryStale
         ? `<div class=\"beacon-ping\" style=\"
             position:absolute;
             top:50%;
@@ -76,10 +114,11 @@ const BeaconMarker: React.FC<BeaconMarkerProps> = ({ pin: beaconPin, zoom, idx }
                 html: `
                     <div class=\"beacon-container\" style=\"position: relative; width: ${outlineSize}px; height: ${outlineSize}px; pointer-events: none;\">
                         ${dottedOutline}
+                        ${telemetryStaleRing}
                         <div class=\"beacon-dot\" title=\"${beaconName} ${title}\" style=\"
                             width:${beaconDotSizePx}px;
                             height:${beaconDotSizePx}px;
-                            background:${color};
+                            background:${dotCenterColor};
                             border-radius:50%;
                             position:absolute;
                             top:${beaconDotOffsetPx}px;
@@ -87,6 +126,7 @@ const BeaconMarker: React.FC<BeaconMarkerProps> = ({ pin: beaconPin, zoom, idx }
                             z-index:2;
                             pointer-events: auto;
                             cursor: pointer;
+                            ${isTelemetryStale ? `border: 2px solid #005aa9;` : ''}
                         \" ></div>
                         ${pingDiv}
                     </div>

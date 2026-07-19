@@ -19,6 +19,18 @@ type SortDirection = 'asc' | 'desc' | null;
 
 const DIRECTION_OPTIONS: Direction[] = ['All', 'NorthSouth', 'EastWest', 'NortheastSouthwest', 'NorthwestSoutheast'];
 
+/**
+ * Validates the optional telemetryStaleHoursOverride value.
+ * Returns an error string if invalid, or null if valid (including when the value is null/undefined).
+ */
+export function validateTelemetryStaleHoursOverride(value: number | null | undefined): string | null {
+  if (value === null || value === undefined) return null;
+  if (!Number.isInteger(value) || value <= 0) {
+    return 'Telemetry stale hours override must be a whole integer greater than zero';
+  }
+  return null;
+}
+
 const AdminBeaconRailroads = () => {
   const [beaconRailroads, setBeaconRailroads] = useState<AdminBeaconRailroad[]>([]);
   const [beacons, setBeacons] = useState<AdminBeacon[]>([]);
@@ -35,7 +47,8 @@ const AdminBeaconRailroads = () => {
     milepost: 0,
     multipleTracks: false,
     online: true,
-    direction: 'All'
+    direction: 'All',
+    telemetryStaleHoursOverride: null
   });
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -145,7 +158,8 @@ const AdminBeaconRailroads = () => {
       milepost: 0,
       multipleTracks: false,
       online: true,
-      direction: 'All'
+      direction: 'All',
+      telemetryStaleHoursOverride: null
     });
     setError(undefined);
     setShowModal(true);
@@ -161,7 +175,8 @@ const AdminBeaconRailroads = () => {
       milepost: beaconRailroad.milepost,
       multipleTracks: beaconRailroad.multipleTracks,
       online: beaconRailroad.online,
-      direction: beaconRailroad.direction
+      direction: beaconRailroad.direction,
+      telemetryStaleHoursOverride: beaconRailroad.telemetryStaleHoursOverride ?? null
     });
     setError(undefined);
     setShowModal(true);
@@ -201,6 +216,12 @@ const AdminBeaconRailroads = () => {
 
     if (formData.longitude < -180 || formData.longitude > 180) {
       setError('Longitude must be between -180 and 180');
+      return;
+    }
+
+    const overrideError = validateTelemetryStaleHoursOverride(formData.telemetryStaleHoursOverride);
+    if (overrideError) {
+      setError(overrideError);
       return;
     }
 
@@ -460,6 +481,25 @@ const AdminBeaconRailroads = () => {
                   />
                   Multiple Tracks
                 </label>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="telemetryStaleHoursOverride">Telemetry Stale Hours Override (optional)</label>
+                <input
+                  id="telemetryStaleHoursOverride"
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={formData.telemetryStaleHoursOverride ?? ''}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    setFormData({
+                      ...formData,
+                      telemetryStaleHoursOverride: raw === '' ? null : parseInt(raw, 10)
+                    });
+                  }}
+                  placeholder="Leave blank to use default (6 hours)"
+                />
               </div>
 
               <div className="form-actions">

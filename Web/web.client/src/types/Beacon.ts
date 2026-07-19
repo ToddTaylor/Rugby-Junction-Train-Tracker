@@ -9,4 +9,5 @@ export type Beacon = {
     longitude: number;
     milepost: number;
     online: boolean; // primitive boolean for reliable equality checks & persistence
+    telemetryStale?: boolean; // true when health endpoint is pinging but telemetry is stale past threshold
 };
