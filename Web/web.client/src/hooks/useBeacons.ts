@@ -23,7 +23,7 @@ export function useBeacons() {
       const DB_VERSION = 2;
       // Cache schema version - increment when beacon data structure changes
       // This ensures stale cached data without new fields (like railroad/subdivision names) is refreshed
-      const BEACON_CACHE_VERSION = 2; // v2: added railroad/subdivision name fields
+      const BEACON_CACHE_VERSION = 3; // v3: telemetryStale fix — invalidate caches written while the backend always returned false
       const CACHE_VERSION_KEY = 'beacons_version';
       
       const db = await openDB('railways-db', DB_VERSION, {
