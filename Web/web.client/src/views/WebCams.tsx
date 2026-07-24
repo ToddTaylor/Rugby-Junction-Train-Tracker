@@ -6,6 +6,7 @@ const videoNames = [
     'Slinger Depot Museum Live Railcam',
     'Bulldog Builders LIVE Railcam - Waukesha, WI',
     'Burlington, WI Dougs Auto Service Live Railcam',
+    'Hiawatha Bar & Grill LIVE Railcam - Sturtevant, WI',
     'Wauwatosa Historical Society Live Railcam',
     'Thirsty Bird Saloon LIVE Railcam - Oconomowoc, WI',
     'Julies Java House Live Railcam',
