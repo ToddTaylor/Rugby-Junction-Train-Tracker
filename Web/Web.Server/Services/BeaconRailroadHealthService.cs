@@ -92,9 +92,10 @@ namespace Web.Server.Services
                     }
                     else
                     {
-                        // No train passage recorded for this beacon/subdivision within the
-                        // MapPinHistories retention window — not considered stale
-                        beaconRailroadDTO.TelemetryStale = false;
+                        // No train passage ever recorded for this beacon/subdivision — that
+                        // trivially satisfies "no telemetry within the effective threshold",
+                        // so it must be reported stale rather than exempted.
+                        beaconRailroadDTO.TelemetryStale = true;
                     }
                 }
                 else

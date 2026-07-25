@@ -273,10 +273,13 @@ namespace Web.ServerTests.Services
         }
 
         [TestMethod]
-        public void StateClassification_NoTelemetryEver_NotConsideredStale()
+        public void StateClassification_NoTelemetryEver_IsConsideredStale()
         {
-            // Beacon: health fresh, but no telemetry records at all → TelemetryStale = false
-            var dbName = nameof(StateClassification_NoTelemetryEver_NotConsideredStale);
+            // Beacon: health fresh, but no telemetry records at all → TelemetryStale = true.
+            // Zero telemetry ever trivially satisfies "no telemetry within the effective
+            // threshold", so a beacon that has never seen a train (e.g. newly installed,
+            // or on a subdivision with no MapPinHistories rows) must not be exempted.
+            var dbName = nameof(StateClassification_NoTelemetryEver_IsConsideredStale);
             using var dbContext = CreateInMemoryDbContext(dbName);
 
             // Add beacon railroad with no telemetry
@@ -320,7 +323,7 @@ namespace Web.ServerTests.Services
 
             var dto = sentDTOs.First(d => d.BeaconID == 1);
             Assert.IsTrue(dto.Online, "Beacon should be online");
-            Assert.IsFalse(dto.TelemetryStale, "TelemetryStale should be false when no telemetry ever received");
+            Assert.IsTrue(dto.TelemetryStale, "TelemetryStale should be true when no telemetry has ever been received");
         }
 
         // ── TelemetryStaleHoursOverride passthrough in DTO ────────────────────
