@@ -72,6 +72,42 @@ describe('fetchBeacons (soft-refresh / visibility-change path)', () => {
     expect(result[0].telemetryStale).toBe(false);
   });
 
+  it('reproduces the reported bug: preserves a SignalR-confirmed offlineNote instead of losing it to a stale cached snapshot', async () => {
+    // Simulates returning to the tab after several minutes: the IndexedDB cache
+    // snapshot predates the note (or was written before it existed), while
+    // localStorage holds the freshest truth from the last SignalR tick.
+    const cachedBeacons = [
+      { beaconID: '1', beaconName: 'Rugby Jct', online: false, offlineNote: null }
+    ];
+    mockedOpenRailwaysDB.mockResolvedValue(makeFakeDb(cachedBeacons) as any);
+    localStorage.setItem('beaconStatusMap', JSON.stringify({ '1': false }));
+    localStorage.setItem('beaconOfflineNoteMap', JSON.stringify({ '1': 'Storm damage' }));
+
+    const setBeacons = vi.fn();
+    const setBeaconsLoaded = vi.fn();
+
+    await fetchBeacons(setBeacons, setBeaconsLoaded);
+
+    const result = setBeacons.mock.calls[0][0];
+    expect(result[0].offlineNote).toBe('Storm damage');
+  });
+
+  it('leaves offlineNote as-is when nothing has been recorded for that beacon yet', async () => {
+    const cachedBeacons = [
+      { beaconID: '99', beaconName: 'NewBeacon', online: false, offlineNote: 'Existing' }
+    ];
+    mockedOpenRailwaysDB.mockResolvedValue(makeFakeDb(cachedBeacons) as any);
+    // No beaconOfflineNoteMap entry for beacon 99.
+
+    const setBeacons = vi.fn();
+    const setBeaconsLoaded = vi.fn();
+
+    await fetchBeacons(setBeacons, setBeaconsLoaded);
+
+    const result = setBeacons.mock.calls[0][0];
+    expect(result[0].offlineNote).toBe('Existing');
+  });
+
   it('still applies the existing online grace-period overlay alongside the new telemetryStale preservation', async () => {
     const cachedBeacons = [
       { beaconID: '7', beaconName: 'Flicker', online: false, telemetryStale: true }

@@ -16,6 +16,11 @@ export function useBeacons() {
     const raw = localStorage.getItem('beaconTelemetryStaleMap');
     if (raw) initialStaleMap = JSON.parse(raw);
   } catch { /* ignore malformed storage */ }
+  let initialOfflineNoteMap: Record<string, string | null> = {};
+  try {
+    const raw = localStorage.getItem('beaconOfflineNoteMap');
+    if (raw) initialOfflineNoteMap = JSON.parse(raw);
+  } catch { /* ignore malformed storage */ }
 
   useEffect(() => {
     const fetchBeacons = async () => {
@@ -70,6 +75,7 @@ export function useBeacons() {
         const withStatus = (cached as Beacon[]).map(b => {
           const stored = initialStatusMap[b.beaconID];
           const storedStale = initialStaleMap[b.beaconID];
+          const storedOfflineNote = initialOfflineNoteMap[b.beaconID];
           let result = b;
           if (stored === true && b.online === false && now < graceUntil) {
             result = { ...result, online: true };
@@ -78,6 +84,9 @@ export function useBeacons() {
           }
           if (storedStale !== undefined) {
             result = { ...result, telemetryStale: storedStale };
+          }
+          if (storedOfflineNote !== undefined) {
+            result = { ...result, offlineNote: storedOfflineNote };
           }
           return result;
         });
@@ -119,6 +128,7 @@ export function useBeacons() {
         const withStatus = (beacons as Beacon[]).map(b => {
           const stored = initialStatusMap[b.beaconID];
           const storedStale = initialStaleMap[b.beaconID];
+          const storedOfflineNote = initialOfflineNoteMap[b.beaconID];
           let result = b;
           if (stored === true && b.online === false && now < graceUntil) {
             result = { ...result, online: true };
@@ -127,6 +137,9 @@ export function useBeacons() {
           }
           if (storedStale !== undefined) {
             result = { ...result, telemetryStale: storedStale };
+          }
+          if (storedOfflineNote !== undefined) {
+            result = { ...result, offlineNote: storedOfflineNote };
           }
           return result;
         });
@@ -144,15 +157,18 @@ export function useBeacons() {
     if (!beacons.length) return;
     const statusMap: Record<string, boolean> = {};
     const staleMap: Record<string, boolean> = {};
+    const offlineNoteMap: Record<string, string | null> = {};
     beacons.forEach(b => {
       if (b && b.beaconID) {
         statusMap[b.beaconID] = !!b.online;
         staleMap[b.beaconID] = !!b.telemetryStale;
+        offlineNoteMap[b.beaconID] = b.offlineNote ?? null;
       }
     });
     try {
       localStorage.setItem('beaconStatusMap', JSON.stringify(statusMap));
       localStorage.setItem('beaconTelemetryStaleMap', JSON.stringify(staleMap));
+      localStorage.setItem('beaconOfflineNoteMap', JSON.stringify(offlineNoteMap));
     } catch { /* ignore quota */ }
   }, [beacons]);
 

@@ -25,6 +25,11 @@ export const fetchBeacons = async (setBeacons: any, setBeaconsLoaded: any) => {
     const raw = localStorage.getItem('beaconTelemetryStaleMap');
     if (raw) telemetryStaleMap = JSON.parse(raw);
   } catch { /* ignore */ }
+  let offlineNoteMap: Record<string, string | null> = {};
+  try {
+    const raw = localStorage.getItem('beaconOfflineNoteMap');
+    if (raw) offlineNoteMap = JSON.parse(raw);
+  } catch { /* ignore */ }
   const graceUntil = Number(localStorage.getItem('focusGraceUntil') || '0');
   const now = Date.now();
 
@@ -32,6 +37,7 @@ export const fetchBeacons = async (setBeacons: any, setBeaconsLoaded: any) => {
     const withStatus = (cached as any[]).map(b => {
       const prevOnline = statusMap[b.beaconID];
       const prevStale = telemetryStaleMap[b.beaconID];
+      const prevOfflineNote = offlineNoteMap[b.beaconID];
       let result = b;
       if (prevOnline === true && b.online === false && now < graceUntil) {
         result = { ...result, online: true };
@@ -40,6 +46,9 @@ export const fetchBeacons = async (setBeacons: any, setBeaconsLoaded: any) => {
       }
       if (prevStale !== undefined) {
         result = { ...result, telemetryStale: prevStale };
+      }
+      if (prevOfflineNote !== undefined) {
+        result = { ...result, offlineNote: prevOfflineNote };
       }
       return result;
     });
@@ -62,6 +71,7 @@ export const fetchBeacons = async (setBeacons: any, setBeaconsLoaded: any) => {
     const withStatus = (beacons as any[]).map(b => {
       const prevOnline = statusMap[b.beaconID];
       const prevStale = telemetryStaleMap[b.beaconID];
+      const prevOfflineNote = offlineNoteMap[b.beaconID];
       let result = b;
       if (prevOnline === true && b.online === false && now < graceUntil) {
         result = { ...result, online: true };
@@ -70,6 +80,9 @@ export const fetchBeacons = async (setBeacons: any, setBeaconsLoaded: any) => {
       }
       if (prevStale !== undefined) {
         result = { ...result, telemetryStale: prevStale };
+      }
+      if (prevOfflineNote !== undefined) {
+        result = { ...result, offlineNote: prevOfflineNote };
       }
       return result;
     });
