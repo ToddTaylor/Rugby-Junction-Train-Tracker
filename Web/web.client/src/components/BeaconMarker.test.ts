@@ -62,6 +62,28 @@ describe('getBeaconVisualState', () => {
         });
     });
 
+    describe('offline beacon with a note', () => {
+        it('reports hasOfflineNote when offline and a note is present', () => {
+            const state = getBeaconVisualState(makeBeacon({ online: false, offlineNote: 'Storm damage' }));
+            expect(state.hasOfflineNote).toBe(true);
+        });
+
+        it('does not report hasOfflineNote when offline but no note is present', () => {
+            const state = getBeaconVisualState(makeBeacon({ online: false, offlineNote: null }));
+            expect(state.hasOfflineNote).toBe(false);
+        });
+
+        it('does not report hasOfflineNote when online, even if a note is somehow present', () => {
+            const state = getBeaconVisualState(makeBeacon({ online: true, offlineNote: 'Stale note' }));
+            expect(state.hasOfflineNote).toBe(false);
+        });
+
+        it('reports title indicating a note is available when offline with a note', () => {
+            const state = getBeaconVisualState(makeBeacon({ online: false, offlineNote: 'Storm damage' }));
+            expect(state.title).toBe('offline - click for note');
+        });
+    });
+
     describe('telemetry-stale beacon (blue ring)', () => {
         it('is telemetry stale when online and telemetryStale is true', () => {
             const state = getBeaconVisualState(makeBeacon({ online: true, telemetryStale: true }));

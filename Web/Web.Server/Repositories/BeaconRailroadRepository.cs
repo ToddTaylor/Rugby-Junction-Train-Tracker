@@ -60,12 +60,23 @@ namespace Web.Server.Repositories
             existing.Milepost = beaconRailroad.Milepost;
             existing.MultipleTracks = beaconRailroad.MultipleTracks;
             existing.TelemetryStaleHoursOverride = beaconRailroad.TelemetryStaleHoursOverride;
-            existing.LastUpdate = _timeProvider.UtcNow;
+            existing.OfflineNote = beaconRailroad.OfflineNote;
+            // LastUpdate is reserved for actual health-check pings (BeaconService.UpdateBeaconHealthAsync)
+            // and is the sole signal the health service uses to determine online/offline. Bumping it here
+            // on ordinary metadata edits would spuriously revive an offline beacon railroad as "online".
 
             await _context.SaveChangesAsync();
 
             // Re-query with all necessary includes for a fully hydrated object
             return await GetByIdAsync(beaconRailroad.BeaconID, beaconRailroad.SubdivisionID);
+        }
+
+        public async Task<DateTime?> GetLatestTelemetryTimestampAsync(int beaconId, int subdivisionId)
+        {
+            return await _context.MapPinHistories
+                .Where(mph => mph.BeaconID == beaconId && mph.SubdivisionId == subdivisionId)
+                .Select(mph => (DateTime?)mph.LastUpdate)
+                .MaxAsync();
         }
 
         public async Task<bool> DeleteAsync(int beaconId, int railroadId)

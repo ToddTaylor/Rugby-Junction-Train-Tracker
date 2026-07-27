@@ -6,6 +6,13 @@ namespace Web.Server.DTOs
 
         public int SubdivisionID { get; set; }
 
+        /// <summary>
+        /// Free-text note explaining why this beacon railroad is currently offline.
+        /// Only settable while the beacon railroad is offline; automatically cleared
+        /// when it comes back online.
+        /// </summary>
+        public string? OfflineNote { get; set; }
+
         public override bool Equals(object? obj)
         {
             return Equals(obj as UpdateBeaconRailroadDTO);
@@ -23,6 +30,7 @@ namespace Web.Server.DTOs
                    MultipleTracks == other.MultipleTracks &&
                    Online == other.Online &&
                    Direction == other.Direction &&
+                   OfflineNote == other.OfflineNote &&
                    BeaconID == other.BeaconID &&
                    SubdivisionID == other.SubdivisionID;
         }
@@ -39,6 +47,7 @@ namespace Web.Server.DTOs
             hash.Add(MultipleTracks);
             hash.Add(Online);
             hash.Add(Direction);
+            hash.Add(OfflineNote);
             hash.Add(BeaconID);
             hash.Add(SubdivisionID);
             return hash.ToHashCode();

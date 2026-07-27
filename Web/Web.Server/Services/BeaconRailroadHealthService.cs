@@ -9,6 +9,8 @@ namespace Web.Server.Services
 {
     public class BeaconRailroadHealthService : BackgroundService
     {
+        public const int HealthCutoffMinutes = 15;
+
         private readonly TimeSpan _cleanupInterval = TimeSpan.FromMinutes(1);
 
         private readonly IHubContext<NotificationHub> _hubContext;
@@ -50,13 +52,15 @@ namespace Web.Server.Services
         /// </summary>
         protected internal async Task ComputeAndSendBeaconStatusAsync(TelemetryDbContext dbContext, CancellationToken cancellationToken)
         {
-            var healthCutoff = DateTime.UtcNow.AddMinutes(-15);
+            var utcNow = DateTime.UtcNow;
 
             var beaconRailroads = dbContext.BeaconRailroads
                 .Include(br => br.Beacon)
                 .Include(br => br.Subdivision)
                     .ThenInclude(s => s.Railroad)
                 .ToList();
+
+            var beaconRailroadsByKey = beaconRailroads.ToDictionary(br => (br.BeaconID, br.SubdivisionID));
 
             // Build a map of (BeaconID, SubdivisionID) -> most recent train-passage timestamp.
             // Sourced from MapPinHistories rather than Telemetries: raw Telemetries rows are
@@ -74,19 +78,34 @@ namespace Web.Server.Services
             var beaconRailroadDTOs = _mapper.Map<IEnumerable<BeaconRailroadDTO>>(beaconRailroads);
 
             var updatedBeacons = new List<BeaconRailroadDTO>();
+            var notesCleared = false;
 
             foreach (var beaconRailroadDTO in beaconRailroadDTOs)
             {
-                var isOffline = beaconRailroadDTO.LastUpdate != default && beaconRailroadDTO.LastUpdate <= healthCutoff;
+                var isOffline = IsOffline(beaconRailroadDTO.LastUpdate, utcNow);
 
                 beaconRailroadDTO.Online = !isOffline;
+
+                var entity = beaconRailroadsByKey[(beaconRailroadDTO.BeaconID, beaconRailroadDTO.SubdivisionID)];
+
+                var hasTelemetryRecord = latestTelemetryByBeaconSubdivision.TryGetValue(
+                    (beaconRailroadDTO.BeaconID, beaconRailroadDTO.SubdivisionID), out var lastTelemetryTime);
+                var latestTelemetry = hasTelemetryRecord ? lastTelemetryTime : (DateTime?)null;
+
+                var isTrulyOffline = IsTrulyOffline(beaconRailroadDTO.LastUpdate, latestTelemetry, utcNow);
+                if (!isTrulyOffline && entity.OfflineNote != null)
+                {
+                    entity.OfflineNote = null;
+                    notesCleared = true;
+                }
+                beaconRailroadDTO.OfflineNote = entity.OfflineNote;
 
                 if (beaconRailroadDTO.Online)
                 {
                     var effectiveThresholdHours = beaconRailroadDTO.TelemetryStaleHoursOverride ?? _telemetryStaleHoursDefault;
-                    var telemetryCutoff = DateTime.UtcNow.AddHours(-effectiveThresholdHours);
+                    var telemetryCutoff = utcNow.AddHours(-effectiveThresholdHours);
 
-                    if (latestTelemetryByBeaconSubdivision.TryGetValue((beaconRailroadDTO.BeaconID, beaconRailroadDTO.SubdivisionID), out var lastTelemetryTime))
+                    if (hasTelemetryRecord)
                     {
                         beaconRailroadDTO.TelemetryStale = lastTelemetryTime <= telemetryCutoff;
                     }
@@ -106,11 +125,39 @@ namespace Web.Server.Services
                 updatedBeacons.Add(beaconRailroadDTO);
             }
 
+            if (notesCleared)
+            {
+                await dbContext.SaveChangesAsync(cancellationToken);
+            }
+
             // Send all beacons as a single batch to match frontend expectation of Beacon[]
             if (updatedBeacons.Any())
             {
                 await _hubContext.Clients.All.SendAsync(NotificationMethods.BeaconUpdate, updatedBeacons, cancellationToken: cancellationToken);
             }
+        }
+
+        /// <summary>
+        /// Shared "is offline" rule used by both this background service and
+        /// BeaconRailroadsController (to gate when an OfflineNote may be set).
+        /// </summary>
+        public static bool IsOffline(DateTime lastUpdate, DateTime utcNow)
+        {
+            return lastUpdate != default && lastUpdate <= utcNow.AddMinutes(-HealthCutoffMinutes);
+        }
+
+        /// <summary>
+        /// A beacon railroad is "truly" offline — the state an OfflineNote is tied to — only
+        /// when neither a health check nor telemetry has been received recently. This is
+        /// deliberately broader than the Online flag (which is health-check-only, driving the
+        /// gray/blue-ring map visuals): telemetry receipt alone must also be able to clear a
+        /// note, per the offline-note feature's requirements.
+        /// </summary>
+        public static bool IsTrulyOffline(DateTime lastHealthUpdate, DateTime? lastTelemetryUpdate, DateTime utcNow)
+        {
+            var healthOffline = IsOffline(lastHealthUpdate, utcNow);
+            var telemetryOffline = !lastTelemetryUpdate.HasValue || IsOffline(lastTelemetryUpdate.Value, utcNow);
+            return healthOffline && telemetryOffline;
         }
     }
 }

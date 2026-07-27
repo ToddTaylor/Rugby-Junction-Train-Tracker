@@ -16,6 +16,11 @@ export function useBeacons() {
     const raw = localStorage.getItem('beaconTelemetryStaleMap');
     if (raw) initialStaleMap = JSON.parse(raw);
   } catch { /* ignore malformed storage */ }
+  let initialOfflineNoteMap: Record<string, string | null> = {};
+  try {
+    const raw = localStorage.getItem('beaconOfflineNoteMap');
+    if (raw) initialOfflineNoteMap = JSON.parse(raw);
+  } catch { /* ignore malformed storage */ }
 
   useEffect(() => {
     const fetchBeacons = async () => {
@@ -23,7 +28,7 @@ export function useBeacons() {
       const DB_VERSION = 2;
       // Cache schema version - increment when beacon data structure changes
       // This ensures stale cached data without new fields (like railroad/subdivision names) is refreshed
-      const BEACON_CACHE_VERSION = 3; // v3: telemetryStale fix — invalidate caches written while the backend always returned false
+      const BEACON_CACHE_VERSION = 4; // v4: offlineNote added — invalidate caches written before the field existed
       const CACHE_VERSION_KEY = 'beacons_version';
       
       const db = await openDB('railways-db', DB_VERSION, {
@@ -70,6 +75,7 @@ export function useBeacons() {
         const withStatus = (cached as Beacon[]).map(b => {
           const stored = initialStatusMap[b.beaconID];
           const storedStale = initialStaleMap[b.beaconID];
+          const storedOfflineNote = initialOfflineNoteMap[b.beaconID];
           let result = b;
           if (stored === true && b.online === false && now < graceUntil) {
             result = { ...result, online: true };
@@ -78,6 +84,9 @@ export function useBeacons() {
           }
           if (storedStale !== undefined) {
             result = { ...result, telemetryStale: storedStale };
+          }
+          if (storedOfflineNote !== undefined) {
+            result = { ...result, offlineNote: storedOfflineNote };
           }
           return result;
         });
@@ -108,7 +117,8 @@ export function useBeacons() {
           longitude: b.longitude,
           milepost: b.milepost,
           online: b.online,
-          telemetryStale: b.telemetryStale
+          telemetryStale: b.telemetryStale,
+          offlineNote: b.offlineNote
         }));
         
         // Store beacons and cache version together
@@ -118,6 +128,7 @@ export function useBeacons() {
         const withStatus = (beacons as Beacon[]).map(b => {
           const stored = initialStatusMap[b.beaconID];
           const storedStale = initialStaleMap[b.beaconID];
+          const storedOfflineNote = initialOfflineNoteMap[b.beaconID];
           let result = b;
           if (stored === true && b.online === false && now < graceUntil) {
             result = { ...result, online: true };
@@ -126,6 +137,9 @@ export function useBeacons() {
           }
           if (storedStale !== undefined) {
             result = { ...result, telemetryStale: storedStale };
+          }
+          if (storedOfflineNote !== undefined) {
+            result = { ...result, offlineNote: storedOfflineNote };
           }
           return result;
         });
@@ -143,15 +157,18 @@ export function useBeacons() {
     if (!beacons.length) return;
     const statusMap: Record<string, boolean> = {};
     const staleMap: Record<string, boolean> = {};
+    const offlineNoteMap: Record<string, string | null> = {};
     beacons.forEach(b => {
       if (b && b.beaconID) {
         statusMap[b.beaconID] = !!b.online;
         staleMap[b.beaconID] = !!b.telemetryStale;
+        offlineNoteMap[b.beaconID] = b.offlineNote ?? null;
       }
     });
     try {
       localStorage.setItem('beaconStatusMap', JSON.stringify(statusMap));
       localStorage.setItem('beaconTelemetryStaleMap', JSON.stringify(staleMap));
+      localStorage.setItem('beaconOfflineNoteMap', JSON.stringify(offlineNoteMap));
     } catch { /* ignore quota */ }
   }, [beacons]);
 

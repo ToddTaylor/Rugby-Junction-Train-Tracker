@@ -10,4 +10,5 @@ export type Beacon = {
     milepost: number;
     online: boolean; // primitive boolean for reliable equality checks & persistence
     telemetryStale?: boolean; // true when health endpoint is pinging but telemetry is stale past threshold
+    offlineNote?: string | null; // note explaining why this beacon railroad is offline; cleared automatically once back online
 };
