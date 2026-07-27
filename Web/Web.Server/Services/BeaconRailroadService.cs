@@ -53,5 +53,10 @@ namespace Web.Server.Services
         {
             return await _repository.DeleteAsync(beaconId, railroadId);
         }
+
+        public async Task<DateTime?> GetLatestTelemetryTimestampAsync(int beaconId, int subdivisionId)
+        {
+            return await _repository.GetLatestTelemetryTimestampAsync(beaconId, subdivisionId);
+        }
     }
 }

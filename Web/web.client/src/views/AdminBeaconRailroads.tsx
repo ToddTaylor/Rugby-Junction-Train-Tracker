@@ -13,6 +13,9 @@ import IconButton from '@mui/material/IconButton';
 import ClearIcon from '@mui/icons-material/Clear';
 import AdminPageHeader from '../components/admin/AdminPageHeader';
 import { adminClearButtonSx } from '../components/admin/adminSx';
+import { useAuth } from '../hooks/useAuth';
+import { parseSessionRoles } from '../utils/roles';
+import { BEACON_ONLINE_COLOR, BEACON_OFFLINE_COLOR } from '../constants/beaconColors';
 
 type SortField = 'beaconName' | 'subdivisionName' | 'railroadName' | 'milepost';
 type SortDirection = 'asc' | 'desc' | null;
@@ -29,6 +32,20 @@ export function validateTelemetryStaleHoursOverride(value: number | null | undef
     return 'Telemetry stale hours override must be a whole integer greater than zero';
   }
   return null;
+}
+
+/**
+ * Determines whether the current user may edit the Offline Note field for a beacon railroad.
+ * Admins can always edit; Custodians only for beacon railroads on their own assigned subdivision.
+ */
+export function canEditOfflineNote(
+  isAdmin: boolean,
+  isCustodian: boolean,
+  subdivisionCustodianId: number | null | undefined,
+  currentUserId: number | null | undefined
+): boolean {
+  if (isAdmin) return true;
+  return isCustodian && subdivisionCustodianId != null && subdivisionCustodianId === currentUserId;
 }
 
 const AdminBeaconRailroads = () => {
@@ -48,13 +65,23 @@ const AdminBeaconRailroads = () => {
     multipleTracks: false,
     online: true,
     direction: 'All',
-    telemetryStaleHoursOverride: null
+    telemetryStaleHoursOverride: null,
+    offlineNote: null
   });
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortField, setSortField] = useState<SortField>('beaconName');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+
+  const { session } = useAuth();
+  const { isAdmin, isCustodian } = parseSessionRoles(session?.roles);
+  const currentUserId = session?.userId ?? null;
+  const editingSubdivision = editingBeaconRailroad
+    ? subdivisions.find(s => s.id === editingBeaconRailroad.subdivisionID)
+    : undefined;
+  const canEditNote = canEditOfflineNote(isAdmin, isCustodian, editingSubdivision?.custodianId, currentUserId);
+  const canEditStructuralFields = isAdmin || !editingBeaconRailroad;
 
   useEffect(() => {
     loadData();
@@ -159,7 +186,8 @@ const AdminBeaconRailroads = () => {
       multipleTracks: false,
       online: true,
       direction: 'All',
-      telemetryStaleHoursOverride: null
+      telemetryStaleHoursOverride: null,
+      offlineNote: null
     });
     setError(undefined);
     setShowModal(true);
@@ -176,7 +204,8 @@ const AdminBeaconRailroads = () => {
       multipleTracks: beaconRailroad.multipleTracks,
       online: beaconRailroad.online,
       direction: beaconRailroad.direction,
-      telemetryStaleHoursOverride: beaconRailroad.telemetryStaleHoursOverride ?? null
+      telemetryStaleHoursOverride: beaconRailroad.telemetryStaleHoursOverride ?? null,
+      offlineNote: beaconRailroad.offlineNote ?? null
     });
     setError(undefined);
     setShowModal(true);
@@ -293,7 +322,7 @@ const AdminBeaconRailroads = () => {
           </Tooltip>
         </div>
         <div className="right-controls">
-          <button className="btn-primary" onClick={handleAdd}>Add Beacon Railroad</button>
+          {isAdmin && <button className="btn-primary" onClick={handleAdd}>Add Beacon Railroad</button>}
         </div>
       </div>
 
@@ -316,6 +345,7 @@ const AdminBeaconRailroads = () => {
               <th>Milepost</th>
               <th>Direction</th>
               <th>Multi-Track</th>
+              <th>Status</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -329,9 +359,23 @@ const AdminBeaconRailroads = () => {
                 <td>{br.milepost.toFixed(1)}</td>
                 <td>{formatDirection(br.direction)}</td>
                 <td>{br.multipleTracks ? 'Yes' : 'No'}</td>
+                <td>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{
+                      display: 'inline-block',
+                      width: '10px',
+                      height: '10px',
+                      borderRadius: '50%',
+                      background: br.online ? BEACON_ONLINE_COLOR : BEACON_OFFLINE_COLOR
+                    }} />
+                    {br.online ? 'Online' : 'Offline'}
+                  </span>
+                </td>
                 <td className="actions-cell">
                   <button className="btn-edit" onClick={() => handleEdit(br)}>Edit</button>
-                  <button className="btn-delete" onClick={() => handleDelete(br.beaconID, br.subdivisionID)}>Delete</button>
+                  {isAdmin && (
+                    <button className="btn-delete" onClick={() => handleDelete(br.beaconID, br.subdivisionID)}>Delete</button>
+                  )}
                 </td>
               </tr>
             ))}
@@ -427,6 +471,7 @@ const AdminBeaconRailroads = () => {
                     value={formData.latitude}
                     onChange={(e) => setFormData({ ...formData, latitude: parseFloat(e.target.value) })}
                     placeholder="43.294944"
+                    disabled={!canEditStructuralFields}
                   />
                 </div>
 
@@ -439,6 +484,7 @@ const AdminBeaconRailroads = () => {
                     value={formData.longitude}
                     onChange={(e) => setFormData({ ...formData, longitude: parseFloat(e.target.value) })}
                     placeholder="-88.253118"
+                    disabled={!canEditStructuralFields}
                   />
                 </div>
               </div>
@@ -453,6 +499,7 @@ const AdminBeaconRailroads = () => {
                     value={formData.milepost}
                     onChange={(e) => setFormData({ ...formData, milepost: parseFloat(e.target.value) })}
                     placeholder="123.4"
+                    disabled={!canEditStructuralFields}
                   />
                 </div>
 
@@ -462,6 +509,7 @@ const AdminBeaconRailroads = () => {
                     id="direction"
                     value={formData.direction}
                     onChange={(e) => setFormData({ ...formData, direction: e.target.value as Direction })}
+                    disabled={!canEditStructuralFields}
                   >
                     {DIRECTION_OPTIONS.map(dir => (
                       <option key={dir} value={dir}>
@@ -478,6 +526,7 @@ const AdminBeaconRailroads = () => {
                     type="checkbox"
                     checked={formData.multipleTracks}
                     onChange={(e) => setFormData({ ...formData, multipleTracks: e.target.checked })}
+                    disabled={!canEditStructuralFields}
                   />
                   Multiple Tracks
                 </label>
@@ -499,8 +548,43 @@ const AdminBeaconRailroads = () => {
                     });
                   }}
                   placeholder="Leave blank to use default (6 hours)"
+                  disabled={!canEditStructuralFields}
                 />
               </div>
+
+              {editingBeaconRailroad && (
+                <>
+                  <div className="form-group">
+                    <label>Status</label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{
+                        display: 'inline-block',
+                        width: '10px',
+                        height: '10px',
+                        borderRadius: '50%',
+                        background: editingBeaconRailroad.online ? BEACON_ONLINE_COLOR : BEACON_OFFLINE_COLOR
+                      }} />
+                      {editingBeaconRailroad.online ? 'Online' : 'Offline'}
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="offlineNote">Offline Note</label>
+                    <div className="form-help">
+                      {editingBeaconRailroad.online
+                        ? 'Only available while this beacon railroad is offline.'
+                        : 'Explain why this beacon railroad is offline. Cleared automatically once it comes back online.'}
+                    </div>
+                    <textarea
+                      id="offlineNote"
+                      value={formData.offlineNote || ''}
+                      onChange={(e) => setFormData({ ...formData, offlineNote: e.target.value })}
+                      rows={4}
+                      disabled={editingBeaconRailroad.online || !canEditNote}
+                    />
+                  </div>
+                </>
+              )}
 
               <div className="form-actions">
                 <button type="button" className="btn-secondary" onClick={() => setShowModal(false)}>

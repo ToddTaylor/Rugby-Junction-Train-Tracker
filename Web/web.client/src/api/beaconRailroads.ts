@@ -8,6 +8,14 @@ const SESSION_KEY = 'rjtt_auth_session';
 const COOKIE_NAME = 'rjtt_auth';
 
 function getAuthToken(): string | null {
+  const localData = localStorage.getItem(SESSION_KEY);
+  if (localData) {
+    try {
+      const session = JSON.parse(localData) as AuthSession;
+      return session.token;
+    } catch { }
+  }
+
   const cookieData = getCookie(COOKIE_NAME);
   if (cookieData) {
     try {
@@ -15,7 +23,7 @@ function getAuthToken(): string | null {
       return session.token;
     } catch { }
   }
-  
+
   const sessionData = sessionStorage.getItem(SESSION_KEY);
   if (sessionData) {
     try {
@@ -23,7 +31,7 @@ function getAuthToken(): string | null {
       return session.token;
     } catch { }
   }
-  
+
   return null;
 }
 

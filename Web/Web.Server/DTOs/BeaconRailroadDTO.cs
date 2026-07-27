@@ -81,6 +81,12 @@ namespace Web.Server.DTOs
         public int? TelemetryStaleHoursOverride { get; set; }
 
         /// <summary>
+        /// Free-text note explaining why this beacon railroad is currently offline.
+        /// Null when the beacon railroad is online or no note has been set.
+        /// </summary>
+        public string? OfflineNote { get; set; }
+
+        /// <summary>
         /// The direction in which telemetry data is moving.
         /// </summary>
         /// <example>NorthSouth</example>
@@ -113,6 +119,7 @@ namespace Web.Server.DTOs
                    Online == other.Online &&
                    TelemetryStale == other.TelemetryStale &&
                    TelemetryStaleHoursOverride == other.TelemetryStaleHoursOverride &&
+                   OfflineNote == other.OfflineNote &&
                    Direction == other.Direction &&
                    CreatedAt == other.CreatedAt &&
                    LastUpdate == other.LastUpdate;
@@ -130,6 +137,7 @@ namespace Web.Server.DTOs
             hash.Add(Online);
             hash.Add(TelemetryStale);
             hash.Add(TelemetryStaleHoursOverride);
+            hash.Add(OfflineNote);
             hash.Add(Direction);
             hash.Add(CreatedAt);
             hash.Add(LastUpdate);

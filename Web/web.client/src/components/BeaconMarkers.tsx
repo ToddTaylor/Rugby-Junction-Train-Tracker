@@ -21,7 +21,7 @@ const BeaconMarkers: React.FC<BeaconMarkersProps> = ({
     pins: beaconPins, 
     zoom, 
     mapTheme, 
-    beaconLastUpdateMap, 
+    beaconLastUpdateMap,
     onBeaconClick,
     trackedPins = [],
     mapPins = [],

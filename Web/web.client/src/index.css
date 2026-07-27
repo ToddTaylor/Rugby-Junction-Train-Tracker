@@ -193,6 +193,15 @@ body:has(.admin-layout) .app-footer {
 /* ---------- Marker Z-Index ---------- */
 .beacon-marker-z {
   z-index: 400;
+  /* This marker's outer div is oversized (to fit the "ping" animation ring) and
+     mostly empty space. Leaflet's own .leaflet-interactive rule sets
+     pointer-events: auto at equal specificity and loads after this stylesheet,
+     so !important is needed to actually win. Without this, a neighboring
+     beacon's oversized container can overlap and intercept clicks meant for
+     this marker's own dot/badge underneath (e.g. two beacon railroads sharing
+     one junction). The dot/badge elements set pointer-events: auto inline,
+     which beats this via specificity and opts them back in. */
+  pointer-events: none !important;
 }
 .telemetry-marker-z {
   z-index: 500;
@@ -371,4 +380,12 @@ body:has(.admin-layout) .app-footer {
 .beacon-container,
 .beacon-container * {
   cursor: grab !important;
+}
+/* .beacon-dot / .beacon-note-badge are actually clickable (offline-note badge),
+   so they should show the pointer cursor, not the pannable-map grab cursor above.
+   Higher specificity (two classes) than ".beacon-container *" so it wins regardless
+   of source order. */
+.beacon-container .beacon-dot,
+.beacon-container .beacon-note-badge {
+  cursor: pointer !important;
 }

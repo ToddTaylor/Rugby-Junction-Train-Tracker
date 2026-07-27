@@ -41,6 +41,13 @@ namespace Web.Server.Entities
         /// </summary>
         public int? TelemetryStaleHoursOverride { get; set; }
 
+        /// <summary>
+        /// Free-text note explaining why this beacon railroad is currently offline.
+        /// Only settable while the beacon railroad is offline; automatically cleared
+        /// when it comes back online (health check or telemetry received).
+        /// </summary>
+        public string? OfflineNote { get; set; }
+
         public override bool Equals(object? obj)
         {
             return Equals(obj as BeaconRailroad);
@@ -61,7 +68,8 @@ namespace Web.Server.Entities
                    EqualityComparer<ICollection<MapPin>>.Default.Equals(MapPins, other.MapPins) &&
                    Milepost == other.Milepost &&
                    MultipleTracks == other.MultipleTracks &&
-                   TelemetryStaleHoursOverride == other.TelemetryStaleHoursOverride;
+                   TelemetryStaleHoursOverride == other.TelemetryStaleHoursOverride &&
+                   OfflineNote == other.OfflineNote;
         }
 
         public override int GetHashCode()
@@ -80,6 +88,7 @@ namespace Web.Server.Entities
             hash.Add(Milepost);
             hash.Add(MultipleTracks);
             hash.Add(TelemetryStaleHoursOverride);
+            hash.Add(OfflineNote);
             return hash.ToHashCode();
         }
 
