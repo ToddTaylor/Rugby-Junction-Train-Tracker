@@ -1,14 +1,38 @@
 import { format, parseISO } from 'date-fns';
 import { CopyIcon } from './CopyIcon';
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { Typography, Box, IconButton, CircularProgress, Paper } from '@mui/material';
+import { Typography, Box, IconButton, CircularProgress, Paper, Switch } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
-import { MapPinHistory } from '../types/MapPinHistory';
+import { MapPinHistory, AddressSnapshot } from '../types/MapPinHistory';
 import { MapPin } from '../types/MapPin';
 import { TrackedPin, getTrackedMapPins, refreshTrackedPinsFromApi, addTrackedMapPin, updateTrackedPinSymbol, removeTrackedMapPin, copyTrackedPinShareUrl, buildTrackedPinShareUrl, getTrackedPinSymbol } from '../services/trackedPins';
 import { fetchBeaconHistory } from '../services/mapPinsHistory';
+import { toggleSubdivisionLocalTrainAddress } from '../api/subdivisions';
 import TrackSymbolModal from './TrackSymbolModal';
+
+const DIRECTION_ABBREVIATIONS: { [key: string]: string } = {
+    'N': 'N',
+    'S': 'S',
+    'E': 'E',
+    'W': 'W',
+    'NE': 'NE',
+    'NW': 'NW',
+    'SE': 'SE',
+    'SW': 'SW',
+};
+
+export function formatDirectionAbbreviation(dir?: string | null): string {
+    if (!dir) return '?';
+    return DIRECTION_ABBREVIATIONS[dir.toUpperCase()] || dir;
+}
+
+// History rows don't carry an isActive flag per address (unlike live map pins),
+// so the first address is always used, mirroring the pop-up's find(a => a.isActive) ?? addresses[0] fallback.
+export function getPrimaryLocalToggleAddress(addresses?: AddressSnapshot[]): AddressSnapshot | undefined {
+    return Array.isArray(addresses) ? addresses[0] : undefined;
+}
+
 interface BeaconHistoryModalProps {
     open: boolean;
     onClose: () => void;
@@ -23,9 +47,13 @@ interface BeaconHistoryModalProps {
     trackedPins?: TrackedPin[];
     hourFormat?: string;
     canViewSupportAddresses?: boolean;
+    isAdmin?: boolean;
+    isCustodian?: boolean;
+    currentUserId?: number | null;
 }
 
-export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdivisionID, railroad: _railroad, subdivision: _subdivision, theme, lastUpdate, trackedPins: propTrackedPins, hourFormat, canViewSupportAddresses = false }: BeaconHistoryModalProps) {
+export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdivisionID, railroad: _railroad, subdivision: _subdivision, theme, lastUpdate, trackedPins: propTrackedPins, hourFormat, canViewSupportAddresses = false, isAdmin = false, isCustodian = false, currentUserId = null }: BeaconHistoryModalProps) {
+    const canManageLocalTrains = isAdmin || isCustodian;
     const [loading, setLoading] = useState(false);
     const [history, setHistory] = useState<MapPinHistory[]>([]);
     const [error, setError] = useState<string | null>(null);
@@ -41,8 +69,11 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdiv
     const [trackedPins, setTrackedPins] = useState(() => propTrackedPins || getTrackedMapPins());
     const [refreshKey, setRefreshKey] = useState(0);
     const [copiedShareCode, setCopiedShareCode] = useState<string | null>(null);
+    const [togglingLocalRowIds, setTogglingLocalRowIds] = useState<Set<number>>(new Set());
+    const [localToggleErrors, setLocalToggleErrors] = useState<{ [rowId: number]: string }>({});
     const prevBeaconIDRef = useRef<string | null>(null);
     const copyFeedbackTimeoutRef = useRef<number | null>(null);
+    const localToggleFeedbackTimeoutsRef = useRef<{ [rowId: number]: number }>({});
     const copyIconColor = theme === 'dark' ? '#d5d9df' : '#4b5563';
 
     const fetchHistory = useCallback(async () => {
@@ -68,10 +99,12 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdiv
     }, [propTrackedPins]);
 
     useEffect(() => {
+        const localToggleFeedbackTimeouts = localToggleFeedbackTimeoutsRef.current;
         return () => {
             if (copyFeedbackTimeoutRef.current) {
                 window.clearTimeout(copyFeedbackTimeoutRef.current);
             }
+            Object.values(localToggleFeedbackTimeouts).forEach(id => window.clearTimeout(id));
         };
     }, []);
 
@@ -131,6 +164,63 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdiv
         };
     }, [propTrackedPins]);
 
+    const handleLocalToggle = useCallback(async (row: MapPinHistory, nextIsLocal: boolean) => {
+        const primaryAddress = getPrimaryLocalToggleAddress(row.addresses);
+        if (!primaryAddress) {
+            return;
+        }
+
+        setLocalToggleErrors(prev => {
+            if (!(row.id in prev)) return prev;
+            const next = { ...prev };
+            delete next[row.id];
+            return next;
+        });
+        setTogglingLocalRowIds(prev => new Set(prev).add(row.id));
+        // Optimistically flip the badge so the Train column updates immediately.
+        setHistory(prev => prev.map(h => h.id === row.id ? { ...h, isLocal: nextIsLocal } : h));
+
+        try {
+            const result = await toggleSubdivisionLocalTrainAddress(
+                Number(row.subdivisionID),
+                Number(primaryAddress.addressID),
+                { isAdmin, currentUserId }
+            );
+
+            if (result.errors.length > 0 || !result.data) {
+                // Revert on rejection (e.g. a non-owning Custodian, enforced server-side).
+                setHistory(prev => prev.map(h => h.id === row.id ? { ...h, isLocal: !nextIsLocal } : h));
+                const message = result.errors[0] || 'Failed to update local status.';
+                setLocalToggleErrors(prev => ({ ...prev, [row.id]: message }));
+            } else {
+                setHistory(prev => prev.map(h => h.id === row.id ? { ...h, isLocal: result.data!.isLocal } : h));
+            }
+        } catch (err) {
+            console.error('Failed to toggle local status:', err);
+            setHistory(prev => prev.map(h => h.id === row.id ? { ...h, isLocal: !nextIsLocal } : h));
+            setLocalToggleErrors(prev => ({ ...prev, [row.id]: 'Failed to update local status.' }));
+        } finally {
+            setTogglingLocalRowIds(prev => {
+                const next = new Set(prev);
+                next.delete(row.id);
+                return next;
+            });
+
+            if (localToggleFeedbackTimeoutsRef.current[row.id]) {
+                window.clearTimeout(localToggleFeedbackTimeoutsRef.current[row.id]);
+            }
+            localToggleFeedbackTimeoutsRef.current[row.id] = window.setTimeout(() => {
+                setLocalToggleErrors(prev => {
+                    if (!(row.id in prev)) return prev;
+                    const next = { ...prev };
+                    delete next[row.id];
+                    return next;
+                });
+                delete localToggleFeedbackTimeoutsRef.current[row.id];
+            }, 4000);
+        }
+    }, [isAdmin, currentUserId]);
+
     const columns: GridColDef[] = [
         { field: 'id', headerName: 'ID', width: 70 },
         {
@@ -149,25 +239,11 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdiv
                 }
             }
         },
-        { 
-            field: 'direction', 
-            headerName: 'Direction', 
-            width: 78,
-            valueFormatter: (params) => {
-                const dir = params as string;
-                if (!dir) return '?';
-                const directions: { [key: string]: string } = {
-                    'N': 'North',
-                    'S': 'South',
-                    'E': 'East',
-                    'W': 'West',
-                    'NE': 'Northeast',
-                    'NW': 'Northwest',
-                    'SE': 'Southeast',
-                    'SW': 'Southwest'
-                };
-                return directions[dir.toUpperCase()] || dir;
-            }
+        {
+            field: 'direction',
+            headerName: 'Direction',
+            width: 44,
+            valueFormatter: (params) => formatDirectionAbbreviation(params as string),
         },
         {
             field: 'addresses',
@@ -383,6 +459,61 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdiv
                                 </span>
                             )}
                         </Box>
+                    </Box>
+                );
+            },
+        },
+        {
+            field: 'isLocal',
+            headerName: 'Local',
+            width: 52,
+            sortable: false,
+            filterable: false,
+            renderCell: (params: GridRenderCellParams<MapPinHistory>) => {
+                if (!canManageLocalTrains) {
+                    return null;
+                }
+
+                const row = params.row;
+                const primaryAddress = getPrimaryLocalToggleAddress(row.addresses);
+                const canToggle = !!primaryAddress && Number.isInteger(Number(row.subdivisionID)) && Number(row.subdivisionID) > 0;
+                const toggleError = localToggleErrors[row.id];
+
+                return (
+                    <Box
+                        onClick={(e) => e.stopPropagation()}
+                        sx={{ display: 'flex', alignItems: 'center', width: '100%', height: '100%', position: 'relative' }}
+                    >
+                        <Switch
+                            size="small"
+                            checked={!!row.isLocal}
+                            disabled={!canToggle || togglingLocalRowIds.has(row.id)}
+                            onChange={(e) => handleLocalToggle(row, e.target.checked)}
+                            title={row.isLocal ? 'Remove local status' : 'Mark as local'}
+                        />
+                        {toggleError && (
+                            <span
+                                title={toggleError}
+                                style={{
+                                    position: 'absolute',
+                                    left: 'calc(100% + 4px)',
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    fontSize: '11px',
+                                    lineHeight: 1,
+                                    color: '#7f1d1d',
+                                    background: 'rgba(254, 226, 226, 0.95)',
+                                    border: '1px solid rgba(248, 113, 113, 0.45)',
+                                    borderRadius: '9999px',
+                                    padding: '3px 6px',
+                                    whiteSpace: 'nowrap',
+                                    pointerEvents: 'none',
+                                    zIndex: 1,
+                                }}
+                            >
+                                Failed
+                            </span>
+                        )}
                     </Box>
                 );
             },

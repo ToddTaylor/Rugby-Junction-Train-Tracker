@@ -1003,6 +1003,9 @@ const RailMap: React.FC = () => {
                 trackedPins={trackedPinsState}
                 hourFormat={hourFormat}
                 canViewSupportAddresses={canViewSupportAddresses}
+                isAdmin={isAdmin}
+                isCustodian={isCustodian}
+                currentUserId={session?.userId ?? null}
             />
         </>
     );
