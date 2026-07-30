@@ -966,9 +966,7 @@ const RailMap: React.FC = () => {
                     canViewSupportAddresses={canViewSupportAddresses}
                     isAdmin={isAdmin}
                     canManageLocalTrains={isAdmin || isCustodian}
-                    currentUserId={session?.userId ?? null}
                     onMapPinDeleted={handleMapPinDeleted}
-                    onMapPinLocalStatusChanged={handleMapPinLocalStatusChanged}
                 />}
 
                 {beaconsLoaded && (
