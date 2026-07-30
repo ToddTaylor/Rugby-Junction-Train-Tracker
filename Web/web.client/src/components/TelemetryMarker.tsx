@@ -225,7 +225,7 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
         const trackingBadgeBorder = isTracked ? '1px solid rgba(0, 0, 0, 0.5)' : '1px solid rgba(0, 0, 0, 0.3)';
         const trackingBadgeTextColor = isTracked ? '#000' : '#666';
         const trackingBadge = `<span style='width:14px;height:14px;background-color:${trackingBadgeColor};border-radius:50%;border:${trackingBadgeBorder};display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:900;color:${trackingBadgeTextColor};line-height:14px;flex-shrink:0;'>T</span>`;
-        const showLocalStatus = canManageLocalTrains;
+        const showLocalStatus = canManageLocalTrains && pin.isLocal;
         const shareCodeLine = pin.shareCode
             ? `<span id='${trackTextId}' style='cursor:pointer;display:inline-flex;align-items:center;gap:6px;padding:${actionRowPadding};margin-bottom:${actionRowGap};'><span style='display:inline-flex;align-items:center;'>${trackingBadge}</span><span style='text-decoration:${isTracked ? 'underline' : 'none'};color:${isTracked ? (trackColor || '#FFD700') : 'inherit'};font-weight:${isTracked ? 700 : 400};'>${displayTrainLabel}</span></span><br/>`
             : '';
@@ -235,11 +235,9 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
         const trackText = isTracked
             ? 'Tracking'
             : 'Not Tracking';
-        const localStatusColor = pin.isLocal ? '#facc15' : '#9ca3af';
-        const localStatusLabel = pin.isLocal ? 'Local' : 'Not Local';
         const localStatusTextColor = mapTheme === 'dark' ? '#d1d5db' : '#6b7280';
         const localStatusMarkup = showLocalStatus
-            ? `<span style='display:inline-flex;align-items:center;gap:6px;padding:${actionRowPadding};margin-top:${isCoarsePointer ? '2px' : '0'};margin-bottom:6px;color:${localStatusTextColor};'><span style='width:14px;height:14px;background-color:${localStatusColor};border-radius:50%;border:1px solid rgba(0,0,0,0.4);display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:900;color:${pin.isLocal ? '#000' : '#4b5563'};line-height:14px;flex-shrink:0;'>L</span><span>${localStatusLabel}</span></span>`
+            ? `<span style='display:inline-flex;align-items:center;gap:6px;padding:${actionRowPadding};margin-top:${isCoarsePointer ? '2px' : '0'};margin-bottom:6px;color:${localStatusTextColor};'><span style='width:14px;height:14px;background-color:#facc15;border-radius:50%;border:1px solid rgba(0,0,0,0.4);display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:900;color:#000;line-height:14px;flex-shrink:0;'>L</span><span>Local</span></span>`
             : '';
 
         // Use only inline color for the track link, not for the popup background
