@@ -50,9 +50,10 @@ interface BeaconHistoryModalProps {
     isAdmin?: boolean;
     isCustodian?: boolean;
     currentUserId?: number | null;
+    onMapPinLocalStatusChanged?: (mapPinId: number, isLocal: boolean) => void;
 }
 
-export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdivisionID, railroad: _railroad, subdivision: _subdivision, theme, lastUpdate, trackedPins: propTrackedPins, hourFormat, canViewSupportAddresses = false, isAdmin = false, isCustodian = false, currentUserId = null }: BeaconHistoryModalProps) {
+export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdivisionID, railroad: _railroad, subdivision: _subdivision, theme, lastUpdate, trackedPins: propTrackedPins, hourFormat, canViewSupportAddresses = false, isAdmin = false, isCustodian = false, currentUserId = null, onMapPinLocalStatusChanged }: BeaconHistoryModalProps) {
     const canManageLocalTrains = isAdmin || isCustodian;
     const [loading, setLoading] = useState(false);
     const [history, setHistory] = useState<MapPinHistory[]>([]);
@@ -194,6 +195,10 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdiv
                 setLocalToggleErrors(prev => ({ ...prev, [row.id]: message }));
             } else {
                 setHistory(prev => prev.map(h => h.id === row.id ? { ...h, isLocal: result.data!.isLocal } : h));
+                // Patch the live map marker too - it's only otherwise refreshed by a fresh SignalR
+                // telemetry push, which may not arrive for a while for a stationary train.
+                const liveMapPinId = row.originalMapPinID ?? row.id;
+                onMapPinLocalStatusChanged?.(Number(liveMapPinId), result.data.isLocal);
             }
         } catch (err) {
             console.error('Failed to toggle local status:', err);
@@ -219,7 +224,7 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdiv
                 delete localToggleFeedbackTimeoutsRef.current[row.id];
             }, 4000);
         }
-    }, [isAdmin, currentUserId]);
+    }, [isAdmin, currentUserId, onMapPinLocalStatusChanged]);
 
     const columns: GridColDef[] = [
         { field: 'id', headerName: 'ID', width: 70 },

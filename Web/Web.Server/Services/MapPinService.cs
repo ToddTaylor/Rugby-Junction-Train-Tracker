@@ -111,7 +111,7 @@ namespace Web.Server.Services
                 if (mapPin.BeaconRailroad?.Subdivision != null && mapPin.Addresses.Any())
                 {
                     var primaryAddressID = mapPin.Addresses.First().AddressID;
-                    mapPin.IsLocal = IsLocalTrain(primaryAddressID, mapPin.BeaconRailroad.Subdivision);
+                    mapPin.IsLocal = LocalTrainEvaluator.IsLocalTrain(primaryAddressID, mapPin.BeaconRailroad.Subdivision);
                 }
             }
 
@@ -129,7 +129,7 @@ namespace Web.Server.Services
                 if (mapPin.BeaconRailroad?.Subdivision != null && mapPin.Addresses.Any())
                 {
                     var primaryAddressID = mapPin.Addresses.First().AddressID;
-                    mapPin.IsLocal = IsLocalTrain(primaryAddressID, mapPin.BeaconRailroad.Subdivision);
+                    mapPin.IsLocal = LocalTrainEvaluator.IsLocalTrain(primaryAddressID, mapPin.BeaconRailroad.Subdivision);
                 }
             }
 
@@ -162,7 +162,7 @@ namespace Web.Server.Services
                     bool isLocal = false;
                     if (primaryAddressID.HasValue && h.BeaconRailroad?.Subdivision != null)
                     {
-                        isLocal = IsLocalTrain(primaryAddressID.Value, h.BeaconRailroad.Subdivision);
+                        isLocal = LocalTrainEvaluator.IsLocalTrain(primaryAddressID.Value, h.BeaconRailroad.Subdivision);
                     }
                     return new MapPin
                     {
@@ -623,7 +623,7 @@ namespace Web.Server.Services
                 mapPin.BeaconID = beaconRailroad.BeaconID;
                 mapPin.SubdivisionId = beaconRailroad.Subdivision.ID;
                 mapPin.CreatedRailroadID = beaconRailroad.Subdivision.RailroadID;
-                mapPin.IsLocal = IsLocalTrain(telemetry.AddressID, beaconRailroad.Subdivision);
+                mapPin.IsLocal = LocalTrainEvaluator.IsLocalTrain(telemetry.AddressID, beaconRailroad.Subdivision);
             }
             else
             {
@@ -635,7 +635,7 @@ namespace Web.Server.Services
                 mapPin.BeaconID = beaconRailroad.BeaconID;
                 mapPin.SubdivisionId = beaconRailroad.Subdivision.ID;
                 mapPin.CreatedRailroadID = beaconRailroad.Subdivision.RailroadID;
-                mapPin.IsLocal = IsLocalTrain(telemetry.AddressID, beaconRailroad.Subdivision);
+                mapPin.IsLocal = LocalTrainEvaluator.IsLocalTrain(telemetry.AddressID, beaconRailroad.Subdivision);
             }
 
             if (telemetry.Moving.HasValue)
@@ -871,7 +871,7 @@ namespace Web.Server.Services
             newMapPin.BeaconID = telemetry.BeaconID;
 
             // Update IsLocal flag based on new subdivision
-            newMapPin.IsLocal = IsLocalTrain(telemetry.AddressID, toBeaconRailroad.Subdivision);
+            newMapPin.IsLocal = LocalTrainEvaluator.IsLocalTrain(telemetry.AddressID, toBeaconRailroad.Subdivision);
             newMapPin.Moving = CalculateMotion(existingMapPinToUpdate, telemetry);
 
             await this.UpdateBeaconTimestamp(toBeaconRailroad);
@@ -927,29 +927,6 @@ namespace Web.Server.Services
             // Update the timestamp for beacon health calculations.
             beaconRailroad.LastUpdate = _timeProvider.UtcNow;
             await _beaconRailroadService.UpdateAsync(beaconRailroad);
-        }
-
-        /// <summary>
-        /// Checks if the given address ID is in the subdivision's local train list.
-        /// </summary>
-        private static bool IsLocalTrain(int addressID, Subdivision subdivision)
-        {
-            if (string.IsNullOrWhiteSpace(subdivision.LocalTrainAddressIDs))
-            {
-                return false;
-            }
-
-            // Parse comma and line-separated list of address IDs
-            var localAddressIDs = subdivision.LocalTrainAddressIDs
-                .Split(new[] { ',', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
-                .Select(id => id.Trim())
-                .Where(id => !string.IsNullOrWhiteSpace(id))
-                .Select(id => int.TryParse(id, out var parsed) ? parsed : (int?)null)
-                .Where(id => id.HasValue)
-                .Select(id => id!.Value)
-                .ToHashSet();
-
-            return localAddressIDs.Contains(addressID);
         }
     }
 }

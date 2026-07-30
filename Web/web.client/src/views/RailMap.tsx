@@ -1006,6 +1006,7 @@ const RailMap: React.FC = () => {
                 isAdmin={isAdmin}
                 isCustodian={isCustodian}
                 currentUserId={session?.userId ?? null}
+                onMapPinLocalStatusChanged={handleMapPinLocalStatusChanged}
             />
         </>
     );
