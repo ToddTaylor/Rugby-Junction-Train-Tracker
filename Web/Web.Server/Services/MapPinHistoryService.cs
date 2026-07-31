@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Web.Server.DTOs;
 using Web.Server.Entities;
 using Web.Server.Providers;
 using Web.Server.Repositories;
@@ -45,9 +46,37 @@ namespace Web.Server.Services
             foreach (var history in histories)
             {
                 history.BeaconRailroad = await _beaconRailroadService.GetByIdAsync(history.BeaconID, history.SubdivisionId);
+
+                // IsLocal is persisted at the time telemetry last touched this record, so it goes stale
+                // as soon as a subdivision's local-train list changes. Recompute it from the subdivision's
+                // current settings, the same way MapPinService does for live map pins.
+                history.IsLocal = RecalculateIsLocal(history);
             }
 
             return histories;
+        }
+
+        private static bool RecalculateIsLocal(MapPinHistory history)
+        {
+            if (history.BeaconRailroad?.Subdivision == null || string.IsNullOrWhiteSpace(history.AddressesJson))
+            {
+                return history.IsLocal;
+            }
+
+            try
+            {
+                var addresses = JsonSerializer.Deserialize<List<AddressSnapshotDTO>>(history.AddressesJson);
+                if (addresses == null || addresses.Count == 0)
+                {
+                    return history.IsLocal;
+                }
+
+                return LocalTrainEvaluator.IsLocalTrain(addresses[0].AddressID, history.BeaconRailroad.Subdivision);
+            }
+            catch
+            {
+                return history.IsLocal;
+            }
         }
 
         public async Task<IEnumerable<MapPinHistory>> GetLatestPerBeaconAsync()
