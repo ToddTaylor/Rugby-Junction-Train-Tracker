@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 env:
-  DOTNET_VERSION: 8.0.x
+  DOTNET_VERSION: 10.0.x
   NODE_VERSION: 20.x
   WEB_PROJECT: Web/Web.Server/Web.Server.csproj
   PRODUCTION_PUBLISH_PROFILE: Web/Web.Server/Properties/PublishProfiles/PRODUCTION.pubxml
