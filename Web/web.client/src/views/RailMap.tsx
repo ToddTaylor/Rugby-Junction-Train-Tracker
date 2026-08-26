@@ -39,9 +39,8 @@ const ICON_CACHE_BUSTER = import.meta.env.VITE_APP_VERSION
     ? `?v=${import.meta.env.VITE_APP_VERSION}`
     : '';
 
-const DARK_TILE_URL = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
-const LIGHT_TILE_URL = "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
-const TILE_ATTRIBUTION = '&copy; <a href="https://carto.com/">CARTO</a>';
+const TILE_URL = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+const TILE_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
 const fallbackCenter: LatLngTuple = [44.524570, -89.567290]; // Default if location fails
 const MILEPOST_LABEL_MIN_ZOOM = 12;
@@ -744,6 +743,15 @@ const RailMap: React.FC = () => {
         }
     }, [mapTheme]);
 
+    // MapContainer's className prop is only applied at mount (react-leaflet
+    // freezes it in state), so toggle the tile-darkening class directly on the
+    // Leaflet container element whenever the theme changes.
+    useEffect(() => {
+        const container = mapRef.current?.getContainer();
+        if (!container) return;
+        container.classList.toggle('map-theme-dark', mapTheme === 'dark');
+    }, [mapTheme]);
+
     const handleToggleTheme = () => {
         setMapTheme(prev => {
             const next = prev === 'dark' ? 'light' : 'dark';
@@ -895,7 +903,7 @@ const RailMap: React.FC = () => {
             >
                 <MapZoomListener />
                 <TileLayer
-                    url={mapTheme === 'dark' ? DARK_TILE_URL : LIGHT_TILE_URL}
+                    url={TILE_URL}
                     attribution={TILE_ATTRIBUTION}
                 />
 
