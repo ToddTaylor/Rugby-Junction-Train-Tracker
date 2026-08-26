@@ -86,6 +86,7 @@ const RailMap: React.FC = () => {
     const [mapZoom, setMapZoom] = useState<number>(savedMapState?.zoom || 7);
     const [mapCenter, setMapCenter] = useState<LatLngTuple>(savedMapState?.center || fallbackCenter);
     const [mapTheme, setMapTheme] = useState(() => localStorage.getItem('mapTheme') || 'dark');
+    const [mapReady, setMapReady] = useState(false);
     const [hourFormat, setHourFormat] = useState(() => localStorage.getItem('hourFormat') || '24');
     const [milepostLayerVisible, setMilepostLayerVisible] = useState(() => {
         const saved = localStorage.getItem('milepostLayerVisible');
@@ -745,12 +746,17 @@ const RailMap: React.FC = () => {
 
     // MapContainer's className prop is only applied at mount (react-leaflet
     // freezes it in state), so toggle the tile-darkening class directly on the
-    // Leaflet container element whenever the theme changes.
+    // Leaflet container element whenever the theme changes. mapRef.current isn't
+    // populated until Leaflet's map instance is ready (one render after mount),
+    // so also re-run once mapReady flips true (set via MapContainer's whenReady
+    // prop below) rather than only on [mapTheme] — otherwise the very first
+    // mount is missed and the tile filter never applies until the user
+    // manually toggles the theme.
     useEffect(() => {
         const container = mapRef.current?.getContainer();
         if (!container) return;
         container.classList.toggle('map-theme-dark', mapTheme === 'dark');
-    }, [mapTheme]);
+    }, [mapTheme, mapReady]);
 
     const handleToggleTheme = () => {
         setMapTheme(prev => {
@@ -900,6 +906,7 @@ const RailMap: React.FC = () => {
                 style={{ height: historyModalOpen ? '60vh' : '100%', width: '100%', transition: 'height 0.3s' }}
                 scrollWheelZoom={true}
                 ref={mapRef}
+                whenReady={() => setMapReady(true)}
             >
                 <MapZoomListener />
                 <TileLayer
