@@ -190,6 +190,15 @@ body:has(.admin-layout) .app-footer {
   background: #181818; /* match dark theme if needed */
 }
 
+/* OSM tiles have no built-in dark style; fake one with a CSS filter
+   since the free Carto dark_all/light_all tiles now require a paid API key.
+   Grayscale first removes OSM's land-use colors (parks/water/etc.) so the
+   invert produces a clean monochrome basemap instead of tinted colors that
+   compete with the blue track overlay. */
+.map-theme-dark .leaflet-tile-pane {
+  filter: grayscale(1) invert(1) brightness(0.9) contrast(1.1);
+}
+
 /* ---------- Marker Z-Index ---------- */
 .beacon-marker-z {
   z-index: 400;
