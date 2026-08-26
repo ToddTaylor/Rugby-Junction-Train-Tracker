@@ -199,6 +199,12 @@ body:has(.admin-layout) .app-footer {
   filter: grayscale(1) invert(1) brightness(0.9) contrast(1.1);
 }
 
+/* Light mode: grayscale only (no invert) so land-use colors don't compete
+   with the blue track overlay, while tiles stay light. */
+.leaflet-container:not(.map-theme-dark) .leaflet-tile-pane {
+  filter: grayscale(1);
+}
+
 /* ---------- Marker Z-Index ---------- */
 .beacon-marker-z {
   z-index: 400;
