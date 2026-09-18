@@ -1,4 +1,5 @@
 import { openDB } from 'idb';
+import { BEACON_STATUS_MAP_KEY, beaconStatusKey, readBeaconMap } from '../utils/beaconStatusKeys';
 
 const DB_VERSION = 2;
 
@@ -59,17 +60,13 @@ export const fetchBeacons = async (setBeacons: any, setBeaconsLoaded: any) => {
         cached = await db2.get(STORE_NAME, 'beacons');
     }
     // Load previously persisted status map and grace timestamp
-    let statusMap: Record<string, boolean> = {};
-    try {
-        const raw = localStorage.getItem('beaconStatusMap');
-        if (raw) statusMap = JSON.parse(raw);
-    } catch { /* ignore */ }
+    const statusMap = readBeaconMap<boolean>(BEACON_STATUS_MAP_KEY);
     const graceUntil = Number(localStorage.getItem('focusGraceUntil') || '0');
     const now = Date.now();
 
     if (cached) {
         const withStatus = (cached as any[]).map(b => {
-            const prevOnline = statusMap[b.beaconID];
+            const prevOnline = statusMap[beaconStatusKey(b.beaconID, b.subdivisionID)];
             if (prevOnline === true && b.online === false && now < graceUntil) {
                 return { ...b, online: true };
             }

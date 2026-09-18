@@ -38,8 +38,8 @@ describe('fetchBeacons (soft-refresh / visibility-change path)', () => {
       { beaconID: '42', beaconName: 'Owen', online: true, telemetryStale: false }
     ];
     mockedOpenRailwaysDB.mockResolvedValue(makeFakeDb(cachedBeacons) as any);
-    localStorage.setItem('beaconStatusMap', JSON.stringify({ '42': true }));
-    localStorage.setItem('beaconTelemetryStaleMap', JSON.stringify({ '42': true }));
+    localStorage.setItem('beaconStatusMapV2', JSON.stringify({ '42': true }));
+    localStorage.setItem('beaconTelemetryStaleMapV2', JSON.stringify({ '42': true }));
 
     const setBeacons = vi.fn();
     const setBeaconsLoaded = vi.fn();
@@ -80,8 +80,8 @@ describe('fetchBeacons (soft-refresh / visibility-change path)', () => {
       { beaconID: '1', beaconName: 'Rugby Jct', online: false, offlineNote: null }
     ];
     mockedOpenRailwaysDB.mockResolvedValue(makeFakeDb(cachedBeacons) as any);
-    localStorage.setItem('beaconStatusMap', JSON.stringify({ '1': false }));
-    localStorage.setItem('beaconOfflineNoteMap', JSON.stringify({ '1': 'Storm damage' }));
+    localStorage.setItem('beaconStatusMapV2', JSON.stringify({ '1': false }));
+    localStorage.setItem('beaconOfflineNoteMapV2', JSON.stringify({ '1': 'Storm damage' }));
 
     const setBeacons = vi.fn();
     const setBeaconsLoaded = vi.fn();
@@ -113,7 +113,7 @@ describe('fetchBeacons (soft-refresh / visibility-change path)', () => {
       { beaconID: '7', beaconName: 'Flicker', online: false, telemetryStale: true }
     ];
     mockedOpenRailwaysDB.mockResolvedValue(makeFakeDb(cachedBeacons) as any);
-    localStorage.setItem('beaconStatusMap', JSON.stringify({ '7': true }));
+    localStorage.setItem('beaconStatusMapV2', JSON.stringify({ '7': true }));
     localStorage.setItem('focusGraceUntil', String(Date.now() + 5000));
 
     const setBeacons = vi.fn();

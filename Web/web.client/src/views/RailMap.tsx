@@ -10,7 +10,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useSignalR } from '../hooks/useSignalR';
 import { useUserLocation } from '../hooks/useUserLocation';
-import { Beacon } from '../types/Beacon';
+import { Beacon, BeaconSubdivision } from '../types/Beacon';
 import { MapPin } from '../types/MapPin';
 import BeaconMarkers from '../components/BeaconMarkers';
 import TelemetryMarkers from '../components/TelemetryMarkers';
@@ -104,6 +104,9 @@ const RailMap: React.FC = () => {
     const [selectedSubdivisionID, setSelectedSubdivisionID] = useState<string | undefined>(undefined);
     const [selectedRailroad, setSelectedRailroad] = useState<string | undefined>(undefined);
     const [selectedSubdivision, setSelectedSubdivision] = useState<string | undefined>(undefined);
+    // Every subdivision through the clicked beacon, when the location carries more than one
+    // (a junction such as Junction City). Undefined for ordinary single-subdivision beacons.
+    const [selectedSubdivisions, setSelectedSubdivisions] = useState<BeaconSubdivision[] | undefined>(undefined);
 
     // Auth for admin button
     const { session, logout } = useAuth();
@@ -236,7 +239,7 @@ const RailMap: React.FC = () => {
     useSignalR({
         MapPinUpdate: (mapPin: MapPin) => {
             // Invalidate history cache for this beacon to ensure fresh data on next fetch
-            invalidateBeaconHistoryCache(mapPin.beaconID, mapPin.subdivisionID);
+            invalidateBeaconHistoryCache(mapPin.beaconID);
             
             // Update tracked pin location if this is a tracked pin
             const trackedPins = getTrackedMapPins();
@@ -957,12 +960,13 @@ const RailMap: React.FC = () => {
                     zoom={mapZoom} 
                     mapTheme={mapTheme as 'dark' | 'light'} 
                     beaconLastUpdateMap={beaconLastUpdateMap}
-                    onBeaconClick={(beaconID, beaconName, subdivisionID, railroad, subdivision) => {
+                    onBeaconClick={(beaconID, beaconName, subdivisionID, railroad, subdivision, subdivisions) => {
                         setSelectedBeaconID(beaconID);
                         setSelectedBeaconName(beaconName);
                         setSelectedSubdivisionID(subdivisionID);
                         setSelectedRailroad(railroad);
                         setSelectedSubdivision(subdivision);
+                        setSelectedSubdivisions(subdivisions);
                         setHistoryModalOpen(true);
                     }}
                     trackedPins={trackedPinsState}
@@ -1010,6 +1014,7 @@ const RailMap: React.FC = () => {
                 subdivisionID={selectedSubdivisionID}
                 railroad={selectedRailroad}
                 subdivision={selectedSubdivision}
+                subdivisions={selectedSubdivisions}
                 theme={mapTheme as 'dark' | 'light'}
                 lastUpdate={beaconLastUpdateMap?.[makeBeaconKey(selectedBeaconID, selectedSubdivisionID)]?.lastUpdate}
                 mapPins={mapPins}

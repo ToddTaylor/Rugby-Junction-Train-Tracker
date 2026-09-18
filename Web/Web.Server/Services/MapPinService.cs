@@ -1,4 +1,4 @@
-using MapsterMapper;
+﻿using MapsterMapper;
 using Microsoft.AspNetCore.SignalR;
 using Web.Server.DTOs;
 using Web.Server.Entities;
@@ -561,9 +561,37 @@ namespace Web.Server.Services
                 // Apply speed sanity test to make sure the same train ID isn't being used twice
                 // on the same railroad on the same day (This DOES happen on CN!)
 
-                var milesApart = Math.Abs(existingMapPinByDpuTrainID.BeaconRailroad.Milepost - telemetry.Beacon.BeaconRailroads.First(br => br.Subdivision.RailroadID == existingMapPinByDpuTrainID.BeaconRailroad.Subdivision.RailroadID).Milepost);
+                // Prefer the DPU-capable row on the SAME subdivision as the existing pin, then fall
+                // back to same-railroad. A beacon at a junction has several rows on one railroad, and
+                // matching on railroad alone would take a milepost from the wrong subdivision
+                // (see issue #80).
+                var toBeaconRailroad = telemetry.Beacon.BeaconRailroads
+                    .FirstOrDefault(br => br.SubdivisionID == existingMapPinByDpuTrainID.BeaconRailroad.SubdivisionID && br.Subdivision.DpuCapable)
+                    ?? telemetry.Beacon.BeaconRailroads
+                        .FirstOrDefault(br => br.Subdivision.RailroadID == existingMapPinByDpuTrainID.BeaconRailroad.Subdivision.RailroadID && br.Subdivision.DpuCapable);
 
-                var effectiveMilesApart = TrainSpeedSanityMath.GetAdjustedDistanceMiles(milesApart);
+                if (toBeaconRailroad == null)
+                {
+                    // The guard above uses a different predicate than this lookup, so a row can pass
+                    // there and still not resolve here. Treat as a different train rather than throwing.
+                    return Task.FromResult(new DpuMatchResult
+                    {
+                        Status = DpuMatchStatus.NoMatch
+                    });
+                }
+
+                var distance = TrainSpeedSanityMath.TryGetDistanceMiles(existingMapPinByDpuTrainID.BeaconRailroad, toBeaconRailroad);
+
+                if (distance == null)
+                {
+                    // Different subdivisions with no usable coordinates; positions are not comparable.
+                    return Task.FromResult(new DpuMatchResult
+                    {
+                        Status = DpuMatchStatus.Matched
+                    });
+                }
+
+                var effectiveMilesApart = TrainSpeedSanityMath.GetAdjustedDistanceMiles(distance.Value.Miles);
                 var speedMph = TrainSpeedSanityMath.TryGetSpeedMph(effectiveMilesApart, existingMapPinByDpuTrainID.LastUpdate, telemetry.CreatedAt);
                 if (!speedMph.HasValue)
                 {
@@ -666,46 +694,61 @@ namespace Web.Server.Services
             }
         }
 
-        private async Task<MapPinDiscardDecision> ShouldDiscardMapPin(Telemetry telemetry, MapPin existingMapPinToUpdate)
+        /// <summary>
+        /// Resolves which of the telemetry beacon's beacon railroads the train has arrived on ("to"),
+        /// given the map pin's current position ("from").
+        ///
+        /// Prefers the subdivision the pin is already on, because a train normally stays on its
+        /// subdivision and a beacon at a junction has several rows on the SAME railroad. Matching on
+        /// railroad alone would pick an arbitrary one of those and yield a milepost from the wrong
+        /// subdivision (see issue #80). Falls back to same-railroad, then to trackage rights.
+        /// </summary>
+        private async Task<BeaconRailroad?> ResolveToBeaconRailroad(Telemetry telemetry, MapPin existingMapPinToUpdate)
         {
-            var toBeaconRailroad = (BeaconRailroad?)null;
-
             if (telemetry.Beacon.BeaconRailroads.Count() == 1)
             {
-                toBeaconRailroad = telemetry.Beacon.BeaconRailroads.First();
+                return telemetry.Beacon.BeaconRailroads.First();
             }
-            else
+
+            // The existing map pin has a known beacon railroad ("from" beacon). Use its subdivision
+            // first, then its railroad, to pick the matching "to" beacon railroad.
+            var fromSubdivisionId = existingMapPinToUpdate.SubdivisionId;
+            var fromRailroadId = existingMapPinToUpdate.BeaconRailroad?.Subdivision?.RailroadID;
+
+            var toBeaconRailroad = telemetry.Beacon.BeaconRailroads
+                .FirstOrDefault(br => br.SubdivisionID == fromSubdivisionId);
+
+            if (toBeaconRailroad == null && fromRailroadId != null)
             {
-                // Is this a safe assumption that the "to" beacon railroad will be on the same railroad
-                // as the "from" beacon railroad if the "to" beacon railroad is multi-railroad?
-                //
-                // Yes. The existing map pin has a known beacon railroad ("from" beacon). If the telemetry beacon ("to" beacon)
-                // has multiple beacon railroads, the "from" beacon railroad's subdivision railroad ID can be used to find the
-                // correct "to" beacon railroad among the multiple beacon railroads.
-
                 toBeaconRailroad = telemetry.Beacon.BeaconRailroads
-                    .Where(br => br.Subdivision.RailroadID == existingMapPinToUpdate.BeaconRailroad.Subdivision.RailroadID)
-                    .FirstOrDefault();
+                    .FirstOrDefault(br => br.Subdivision.RailroadID == fromRailroadId);
+            }
 
-                if (toBeaconRailroad == null)
+            if (toBeaconRailroad == null)
+            {
+                // Check trackage rights rules before discarding due to missing beacon railroad.
+
+                var trackageRights = await _trackageRightRepository.GetByFromSubdivisionAsync(fromSubdivisionId);
+
+                if (trackageRights != null)
                 {
-                    // Check trackage rights rules before discarding due to missing beacon railroad.
+                    var hasRights = trackageRights.Where(tr => telemetry.Beacon.BeaconRailroads.Any(br => br.SubdivisionID == tr.ToSubdivisionID)).FirstOrDefault();
 
-                    var trackageRights = await _trackageRightRepository.GetByFromSubdivisionAsync(existingMapPinToUpdate.BeaconRailroad.SubdivisionID);
-
-                    if (trackageRights != null)
+                    if (hasRights != null)
                     {
-                        var hasRights = trackageRights.Where(tr => telemetry.Beacon.BeaconRailroads.Any(br => br.SubdivisionID == tr.ToSubdivisionID)).FirstOrDefault();
-
-                        if (hasRights != null)
-                        {
-                            toBeaconRailroad = telemetry.Beacon.BeaconRailroads
-                                .Where(br => br.Subdivision.ID == hasRights.ToSubdivisionID)
-                                .FirstOrDefault();
-                        }
+                        toBeaconRailroad = telemetry.Beacon.BeaconRailroads
+                            .Where(br => br.Subdivision.ID == hasRights.ToSubdivisionID)
+                            .FirstOrDefault();
                     }
                 }
             }
+
+            return toBeaconRailroad;
+        }
+
+        private async Task<MapPinDiscardDecision> ShouldDiscardMapPin(Telemetry telemetry, MapPin existingMapPinToUpdate)
+        {
+            var toBeaconRailroad = await ResolveToBeaconRailroad(telemetry, existingMapPinToUpdate);
 
             if (toBeaconRailroad == null)
             {
@@ -740,8 +783,8 @@ namespace Web.Server.Services
                 {
                     Telemetry = telemetry,
                     RailroadId = toBeaconRailroad.Subdivision.RailroadID,
-                    ToMilepost = toBeaconRailroad.Milepost,
-                    FromMilepost = fromBeaconRailroad.Milepost
+                    ToBeaconRailroad = toBeaconRailroad,
+                    FromBeaconRailroad = fromBeaconRailroad
                 };
 
                 var telemetryRuleResult = await _telemetryRuleEngine.ShouldDiscardAsync(context);
@@ -796,42 +839,13 @@ namespace Web.Server.Services
 
         private async Task<MapPin?> UpdateMapPin(Telemetry telemetry, MapPin existingMapPinToUpdate)
         {
-            var toBeaconRailroad = (BeaconRailroad?)null;
+            var toBeaconRailroad = await ResolveToBeaconRailroad(telemetry, existingMapPinToUpdate);
 
-            if (telemetry.Beacon.BeaconRailroads.Count() == 1)
+            if (toBeaconRailroad == null)
             {
-                toBeaconRailroad = telemetry.Beacon.BeaconRailroads.First();
-            }
-            else
-            {
-                // Is this a safe assumption that the "to" beacon railroad will be on the same railroad
-                // as the "from" beacon railroad if the "to" beacon railroad is multi-railroad?
-                //
-                // Yes. The existing map pin has a known beacon railroad ("from" beacon). If the telemetry beacon ("to" beacon)
-                // has multiple beacon railroads, the "from" beacon railroad's subdivision railroad ID can be used to find the
-                // correct "to" beacon railroad among the multiple beacon railroads.
+                _logger.LogError($"To beacon railroad not found for map pin ID {existingMapPinToUpdate.ID}. Telemetry BeaconID: {telemetry.BeaconID}, MapPin SubdivisionID: {existingMapPinToUpdate.SubdivisionId}");
 
-                toBeaconRailroad = telemetry.Beacon.BeaconRailroads
-                    .FirstOrDefault(br => br.Subdivision.RailroadID == existingMapPinToUpdate.BeaconRailroad.Subdivision.RailroadID);
-
-                if (toBeaconRailroad == null)
-                {
-                    // Check trackage rights rules before discarding due to missing beacon railroad.
-
-                    var trackageRights = await _trackageRightRepository.GetByFromSubdivisionAsync(existingMapPinToUpdate.BeaconRailroad.SubdivisionID);
-
-                    if (trackageRights != null)
-                    {
-                        var hasRights = trackageRights.Where(tr => telemetry.Beacon.BeaconRailroads.Any(br => br.SubdivisionID == tr.ToSubdivisionID)).FirstOrDefault();
-
-                        if (hasRights != null)
-                        {
-                            toBeaconRailroad = telemetry.Beacon.BeaconRailroads
-                                .Where(br => br.Subdivision.ID == hasRights.ToSubdivisionID)
-                                .FirstOrDefault();
-                        }
-                    }
-                }
+                return null;
             }
 
             var differentBeacon = telemetry.BeaconID != existingMapPinToUpdate.BeaconID;
@@ -922,11 +936,19 @@ namespace Web.Server.Services
             return null;
         }
 
+        /// <summary>
+        /// Records that the physical beacon is transmitting, for beacon health calculations.
+        ///
+        /// Detecting a train proves the radio is alive for every subdivision through the location,
+        /// so all of the beacon's rows are stamped. A junction beacon carries one row per
+        /// subdivision, and stamping only the detected one would let the others report offline
+        /// while the radio is transmitting.
+        /// </summary>
         private async Task UpdateBeaconTimestamp(BeaconRailroad beaconRailroad)
         {
-            // Update the timestamp for beacon health calculations.
-            beaconRailroad.LastUpdate = _timeProvider.UtcNow;
-            await _beaconRailroadService.UpdateAsync(beaconRailroad);
+            var timestampUtc = _timeProvider.UtcNow;
+            beaconRailroad.LastUpdate = timestampUtc;
+            await _beaconRailroadService.TouchBeaconHealthAsync(beaconRailroad.BeaconID, timestampUtc);
         }
     }
 }

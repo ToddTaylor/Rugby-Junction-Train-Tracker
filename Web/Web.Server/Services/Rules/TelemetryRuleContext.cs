@@ -11,13 +11,16 @@ namespace Web.Server.Services.Rules
         public required int RailroadId { get; init; }
 
         /// <summary>
-        /// Milepost value for the current ("to") beacon.
+        /// Resolved beacon railroad (beacon + subdivision) for the current ("to") reading.
+        /// Carries the subdivision identity, not just a milepost, because mileposts are only
+        /// comparable within a single subdivision (see issue #80).
         /// </summary>
-        public double ToMilepost { get; init; }
+        public BeaconRailroad? ToBeaconRailroad { get; init; }
 
         /// <summary>
-        /// Milepost value for the prior ("from") beacon.
+        /// Resolved beacon railroad (beacon + subdivision) for the prior ("from") reading,
+        /// i.e. the subdivision the existing map pin was on.
         /// </summary>
-        public double FromMilepost { get; init; }
+        public BeaconRailroad? FromBeaconRailroad { get; init; }
     }
 }

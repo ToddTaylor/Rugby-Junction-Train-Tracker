@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Web.Server.Entities;
 using Web.Server.Providers;
 
@@ -69,6 +69,31 @@ namespace Web.Server.Repositories
 
             // Re-query with all necessary includes for a fully hydrated object
             return await GetByIdAsync(beaconRailroad.BeaconID, beaconRailroad.SubdivisionID);
+        }
+
+        /// <summary>
+        /// Advances LastUpdate on every beacon railroad row belonging to one physical beacon.
+        ///
+        /// LastUpdate is the sole signal the health service reads to decide online or offline, and it
+        /// describes the radio rather than the track. A beacon that reports a train proves the radio
+        /// is alive for every subdivision through the location, so all of its rows are stamped
+        /// together. Stamping only the detected subdivision would let the other rows of a junction
+        /// beacon age past the health cutoff and report offline while the radio is demonstrably
+        /// transmitting. TelemetryStale stays per subdivision, since that measures train traffic on
+        /// a given subdivision rather than radio health.
+        /// </summary>
+        public async Task TouchBeaconHealthAsync(int beaconId, DateTime timestampUtc)
+        {
+            var rows = await _context.BeaconRailroads
+                .Where(br => br.BeaconID == beaconId)
+                .ToListAsync();
+
+            foreach (var row in rows)
+            {
+                row.LastUpdate = timestampUtc;
+            }
+
+            await _context.SaveChangesAsync();
         }
 
         public async Task<DateTime?> GetLatestTelemetryTimestampAsync(int beaconId, int subdivisionId)

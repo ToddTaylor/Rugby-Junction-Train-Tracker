@@ -1,4 +1,4 @@
-using MapsterMapper;
+﻿using MapsterMapper;
 using Mapster;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
@@ -3684,7 +3684,10 @@ namespace Web.ServerTests.Services
         /// telemetry is discarded and map pin is not updated.
         /// </summary>
         [TestMethod]
-        [Ignore("Temporarily ignore. Train speed rule triggers but does not discard telemetry due to Neenah antenna overreach issue.")]
+        [Ignore("Telemetry never reaches the speed rule in this scenario - the Neenah antenna overreach " +
+                "causes the pipeline to divert before TrainSpeedSanityCheckRule runs, so ITelemetryRepository " +
+                "records no invocations. The rule itself is covered by TrainSpeedSanityCheckRuleTests; " +
+                "re-enable once the Oshkosh/Neenah beacon overreach is addressed.")]
         public async Task UpsertMapPin_TrainSpeedSanityCheckFail()
         {
             // Arrange
@@ -3778,7 +3781,8 @@ namespace Web.ServerTests.Services
             _telemetryRepositoryMock.Verify(
                 r => r.UpdateAsync(It.Is<Telemetry>(t =>
                     t.Discarded == true &&
-                    t.DiscardReason == TrainSpeedSanityCheckRule.DISCARD_REASON)),
+                    t.DiscardReason != null &&
+                    t.DiscardReason.StartsWith(TrainSpeedSanityCheckRule.DISCARD_REASON))),
                 Times.Once);
 
             _mapPinRepositoryMock.Verify(r => r.UpsertAsync(It.IsAny<MapPin>(), It.IsAny<DateTime>()), Times.Never);
@@ -4342,7 +4346,7 @@ namespace Web.ServerTests.Services
                 {
                     BeaconID = 10,
                     Beacon = TestData.JunctionCity_WI(),
-                    SubdivisionID = 3,
+                    SubdivisionID = 4,
                     Subdivision = TestData.CN_Superior(currentDateTime),
                     Direction = Direction.All,
                     Latitude = 44.589494,

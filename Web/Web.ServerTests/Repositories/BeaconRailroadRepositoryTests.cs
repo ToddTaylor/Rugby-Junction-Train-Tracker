@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Moq;
 using Web.Server.Data;
 using Web.Server.Entities;
@@ -203,6 +203,113 @@ namespace Web.ServerTests.Repositories
             var result = await repository.GetLatestTelemetryTimestampAsync(1, 1);
 
             Assert.IsNull(result);
+        }
+
+        [TestMethod]
+        public async Task TouchBeaconHealthAsync_StampsEverySubdivisionOfTheBeacon()
+        {
+            var now = new DateTime(2026, 9, 17, 12, 0, 0, DateTimeKind.Utc);
+            var (context, timeProviderMock) = BuildContext(now);
+
+            var stale = now.AddHours(-2);
+            await SeedJunctionBeaconAsync(context, stale);
+
+            var repository = new BeaconRailroadRepository(context, timeProviderMock.Object);
+
+            await repository.TouchBeaconHealthAsync(beaconId: 17, timestampUtc: now);
+
+            var rows = await context.BeaconRailroads
+                .Where(br => br.BeaconID == 17)
+                .ToListAsync();
+
+            Assert.HasCount(2, rows);
+            Assert.IsTrue(rows.All(br => br.LastUpdate == now),
+                "Both subdivisions of one physical beacon must share a health timestamp.");
+        }
+
+        [TestMethod]
+        public async Task TouchBeaconHealthAsync_LeavesOtherBeaconsAlone()
+        {
+            var now = new DateTime(2026, 9, 17, 12, 0, 0, DateTimeKind.Utc);
+            var (context, timeProviderMock) = BuildContext(now);
+
+            var stale = now.AddHours(-2);
+            await SeedJunctionBeaconAsync(context, stale);
+
+            var repository = new BeaconRailroadRepository(context, timeProviderMock.Object);
+
+            await repository.TouchBeaconHealthAsync(beaconId: 17, timestampUtc: now);
+
+            var otherBeaconRow = await context.BeaconRailroads.FirstAsync(br => br.BeaconID == 18);
+            Assert.AreEqual(stale, otherBeaconRow.LastUpdate);
+        }
+
+        /// <summary>
+        /// Seeds Junction City, where the CN Superior and CN Valley subdivisions cross, plus a
+        /// second beacon elsewhere on the same railroad.
+        /// </summary>
+        private static async Task SeedJunctionBeaconAsync(TelemetryDbContext context, DateTime timestamp)
+        {
+            var railroad = new Railroad { ID = 1, Name = "CN", Subdivisions = [], CreatedAt = timestamp, LastUpdate = timestamp };
+
+            var superior = new Subdivision
+            {
+                ID = 4,
+                RailroadID = 1,
+                Railroad = railroad,
+                Name = "Superior",
+                CreatedAt = timestamp,
+                LastUpdate = timestamp
+            };
+
+            var valley = new Subdivision
+            {
+                ID = 10,
+                RailroadID = 1,
+                Railroad = railroad,
+                Name = "Valley",
+                CreatedAt = timestamp,
+                LastUpdate = timestamp
+            };
+
+            var owner = new User
+            {
+                ID = 1,
+                FirstName = "Test",
+                LastName = "Owner",
+                Email = "owner@example.com",
+                IsActive = true,
+                CreatedAt = timestamp,
+                LastUpdate = timestamp
+            };
+
+            var junctionCity = new Beacon { ID = 17, OwnerID = 1, Owner = owner, Name = "Junction City", CreatedAt = timestamp, LastUpdate = timestamp };
+            var mosinee = new Beacon { ID = 18, OwnerID = 1, Owner = owner, Name = "Mosinee", CreatedAt = timestamp, LastUpdate = timestamp };
+
+            BeaconRailroad Row(Beacon beacon, Subdivision subdivision, double milepost) => new()
+            {
+                BeaconID = beacon.ID,
+                SubdivisionID = subdivision.ID,
+                Beacon = beacon,
+                Subdivision = subdivision,
+                Direction = Direction.All,
+                Latitude = 44.589494,
+                Longitude = -89.761417,
+                Milepost = milepost,
+                CreatedAt = timestamp,
+                LastUpdate = timestamp
+            };
+
+            context.Users.Add(owner);
+            context.Railroads.Add(railroad);
+            context.Subdivisions.AddRange(superior, valley);
+            context.Beacons.AddRange(junctionCity, mosinee);
+            context.BeaconRailroads.AddRange(
+                Row(junctionCity, superior, 260.0),
+                Row(junctionCity, valley, 63.2),
+                Row(mosinee, valley, 78.5));
+
+            await context.SaveChangesAsync();
         }
 
         private static (TelemetryDbContext Context, Mock<ITimeProvider> TimeProviderMock) BuildContext(DateTime now)

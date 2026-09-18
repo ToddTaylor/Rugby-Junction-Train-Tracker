@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 // import { Popup } from 'react-leaflet';
-import { Beacon } from '../types/Beacon';
+import { Beacon, BeaconSubdivision } from '../types/Beacon';
 import { MapPin } from '../types/MapPin';
 import { TrackedPin } from '../services/trackedPins';
 import BeaconMarker from './BeaconMarker';
@@ -11,10 +11,64 @@ interface BeaconMarkersProps {
     zoom: number;
     mapTheme: 'dark' | 'light';
     beaconLastUpdateMap?: { [beaconID: string]: { lastUpdate: string, direction: string | null } };
-    onBeaconClick?: (beaconID: string, beaconName: string, subdivisionID?: string, railroad?: string, subdivision?: string) => void;
+    onBeaconClick?: (beaconID: string, beaconName: string, subdivisionID?: string, railroad?: string, subdivision?: string, subdivisions?: BeaconSubdivision[]) => void;
     trackedPins?: TrackedPin[];
     mapPins?: MapPin[];
     hourFormat?: string;
+}
+
+/**
+ * Collapses beacon railroad rows into the markers the map should draw, gathering each
+ * location's subdivisions (and their mileposts) onto the marker.
+ *
+ * A beacon has one row per subdivision. Two shapes arrive here:
+ *   Rugby Junction - one location, two DIFFERENT railroads running parallel. The rows differ
+ *     by railroadID, so both survive as separate markers and get shifted apart.
+ *   Junction City  - a true junction where one railroad crosses its own tracks. Those rows
+ *     share beaconID AND railroadID, so they collapse to a single marker. Their mileposts are
+ *     gathered rather than discarded, so the history modal can show every subdivision through
+ *     the location (issue #80).
+ *
+ * Rows whose beaconID is missing or zero are dropped as invalid.
+ */
+export function collapseBeaconPins(beaconPins: Beacon[]): Beacon[] {
+    const byComposite = new Map<string | number, Beacon>();
+    const subdivisionsByComposite = new Map<string | number, BeaconSubdivision[]>();
+
+    for (const b of beaconPins) {
+        // Treat 0 as invalid ID (likely unset/default value)
+        const hasValidBeaconID = b.beaconID !== undefined && b.beaconID !== null && Number(b.beaconID) !== 0;
+        const hasValidRailroadID = b.railroadID !== undefined && b.railroadID !== null && Number(b.railroadID) !== 0;
+
+        const key = hasValidBeaconID && hasValidRailroadID
+            ? `${b.beaconID}-${b.railroadID}`
+            : hasValidBeaconID
+                ? b.beaconID
+                : null;
+
+        if (key === null) continue;
+
+        byComposite.set(key, b);
+
+        const gathered = subdivisionsByComposite.get(key) ?? [];
+        if (!gathered.some(s => String(s.subdivisionID) === String(b.subdivisionID))) {
+            gathered.push({
+                subdivisionID: b.subdivisionID,
+                subdivision: b.subdivision,
+                railroadID: b.railroadID,
+                railroad: b.railroad,
+                milepost: b.milepost
+            });
+        }
+        subdivisionsByComposite.set(key, gathered);
+    }
+
+    return Array.from(byComposite.entries()).map(([key, beacon]) => {
+        const subdivisions = subdivisionsByComposite.get(key) ?? [];
+        // Attached even for a single subdivision, so the history modal can show a milepost
+        // for a beacon that has no telemetry yet.
+        return subdivisions.length > 0 ? { ...beacon, subdivisions } : beacon;
+    });
 }
 
 const BeaconMarkers: React.FC<BeaconMarkersProps> = ({ 
@@ -35,25 +89,7 @@ const BeaconMarkers: React.FC<BeaconMarkersProps> = ({
         return lat - (offsetMeters / 111320); // 1 deg lat ~ 111.32km
     };
 
-    // Allow multiple beacon-railroad records for the same physical beacon.
-    // Dedup only when both beaconID and railroadID match; otherwise keep distinct entries.
-    const uniqueBeaconPins = useMemo(() => {
-        const byComposite = new Map<string | number, Beacon>();
-        for (const b of beaconPins) {
-            // Treat 0 as invalid ID (likely unset/default value)
-            const hasValidBeaconID = b.beaconID !== undefined && b.beaconID !== null && Number(b.beaconID) !== 0;
-            const hasValidRailroadID = b.railroadID !== undefined && b.railroadID !== null && Number(b.railroadID) !== 0;
-            
-            if (hasValidBeaconID && hasValidRailroadID) {
-                byComposite.set(`${b.beaconID}-${b.railroadID}`, b);
-            } else if (hasValidBeaconID) {
-                // fallback: dedupe by beaconID only when railroad missing
-                byComposite.set(b.beaconID, b);
-            }
-            // Skip beacons with invalid IDs entirely
-        }
-        return Array.from(byComposite.values());
-    }, [beaconPins]);
+    const uniqueBeaconPins = useMemo(() => collapseBeaconPins(beaconPins), [beaconPins]);
 
     // Detect beacons that are close together horizontally and assign horizontal shifts
     const beaconHorizontalShifts = useMemo(() => {

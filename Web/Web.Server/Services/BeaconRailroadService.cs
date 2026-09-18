@@ -1,4 +1,4 @@
-using Web.Server.Entities;
+﻿using Web.Server.Entities;
 using Web.Server.Providers;
 using Web.Server.Repositories;
 
@@ -52,6 +52,11 @@ namespace Web.Server.Services
         public async Task<bool> DeleteAsync(int beaconId, int railroadId)
         {
             return await _repository.DeleteAsync(beaconId, railroadId);
+        }
+
+        public async Task TouchBeaconHealthAsync(int beaconId, DateTime timestampUtc)
+        {
+            await _repository.TouchBeaconHealthAsync(beaconId, timestampUtc);
         }
 
         public async Task<DateTime?> GetLatestTelemetryTimestampAsync(int beaconId, int subdivisionId)

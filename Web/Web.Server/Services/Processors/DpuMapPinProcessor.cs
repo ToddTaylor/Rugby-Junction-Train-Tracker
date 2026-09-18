@@ -181,10 +181,31 @@ namespace Web.Server.Services.Processors
                     });
                 }
 
-                var milesApart = Math.Abs(existingMapPinByDpuTrainID.BeaconRailroad.Milepost - 
-                    telemetry.Beacon.BeaconRailroads.First(br => br.Subdivision.RailroadID == existingMapPinByDpuTrainID.BeaconRailroad.Subdivision.RailroadID).Milepost);
+                // Prefer the DPU-capable row on the SAME subdivision as the existing pin, then fall
+                // back to same-railroad. A beacon at a junction has several rows on one railroad, and
+                // matching on railroad alone would take a milepost from the wrong subdivision
+                // (see issue #80).
+                var toBeaconRailroad = telemetry.Beacon.BeaconRailroads
+                    .FirstOrDefault(br => br.SubdivisionID == existingMapPinByDpuTrainID.BeaconRailroad.SubdivisionID && br.Subdivision.DpuCapable)
+                    ?? telemetry.Beacon.BeaconRailroads
+                        .FirstOrDefault(br => br.Subdivision.RailroadID == existingMapPinByDpuTrainID.BeaconRailroad.Subdivision.RailroadID && br.Subdivision.DpuCapable);
 
-                var effectiveMilesApart = TrainSpeedSanityMath.GetAdjustedDistanceMiles(milesApart);
+                if (toBeaconRailroad == null)
+                {
+                    // The guard above uses a different predicate than this lookup, so a row can pass
+                    // there and still not resolve here. Treat as a different train rather than throwing.
+                    return Task.FromResult(new DpuMatchResult { Status = DpuMatchStatus.NoMatch });
+                }
+
+                var distance = TrainSpeedSanityMath.TryGetDistanceMiles(existingMapPinByDpuTrainID.BeaconRailroad, toBeaconRailroad);
+
+                if (distance == null)
+                {
+                    // Different subdivisions with no usable coordinates; positions are not comparable.
+                    return Task.FromResult(new DpuMatchResult { Status = DpuMatchStatus.Matched });
+                }
+
+                var effectiveMilesApart = TrainSpeedSanityMath.GetAdjustedDistanceMiles(distance.Value.Miles);
                 var speedMph = TrainSpeedSanityMath.TryGetSpeedMph(effectiveMilesApart, existingMapPinByDpuTrainID.LastUpdate, telemetry.CreatedAt);
                 
                 if (!speedMph.HasValue)

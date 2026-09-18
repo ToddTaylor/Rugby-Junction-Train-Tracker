@@ -76,12 +76,19 @@ export async function fetchBeaconHistory(
     return list;
 }
 
-export function invalidateBeaconHistoryCache(beaconID: string | number, subdivisionID?: string | number) {
-    // Remove all cache entries for this beacon/subdivision combination
+/**
+ * Drops every cached history entry for a beacon, across all subdivisions and limits.
+ *
+ * A junction's modal requests the beacon as a whole and so caches under a key carrying no
+ * subdivision, while telemetry arrives naming the subdivision it landed on. Clearing only the
+ * entry matching that subdivision would leave the beacon-wide list in place and serve stale
+ * rows until it expired.
+ */
+export function invalidateBeaconHistoryCache(beaconID: string | number) {
     const keysToDelete: string[] = [];
     for (const key of historyCache.keys()) {
-        const [b, s] = key.split('|');
-        if (String(b) === String(beaconID) && String(s || '') === String(subdivisionID || '')) {
+        const [b] = key.split('|');
+        if (String(b) === String(beaconID)) {
             keysToDelete.push(key);
         }
     }

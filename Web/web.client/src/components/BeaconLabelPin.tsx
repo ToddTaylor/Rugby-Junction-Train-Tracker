@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import L from 'leaflet';
 import { Marker } from 'react-leaflet';
-import { Beacon } from '../types/Beacon';
+import { Beacon, BeaconSubdivision } from '../types/Beacon';
 import { TrackedPin, updateTrackedPinSymbol, removeTrackedMapPin } from '../services/trackedPins';
 import { MapPin } from '../types/MapPin';
 import TrackSymbolModal from './TrackSymbolModal';
@@ -16,7 +16,7 @@ interface BeaconLabelPinProps {
     getLabelOffsetLat: (lat: number, zoom: number) => number;
     lastUpdateTime?: string | null;
     direction?: string | null;
-    onClick?: (beaconID: string, beaconName: string, subdivisionID?: string, railroad?: string, subdivision?: string) => void;
+    onClick?: (beaconID: string, beaconName: string, subdivisionID?: string, railroad?: string, subdivision?: string, subdivisions?: BeaconSubdivision[]) => void;
     trackedPins?: TrackedPin[];
     mapPins?: MapPin[];
     horizontalShift?: number;
@@ -261,7 +261,7 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
     
     const handleStatusClick = () => {
         if (onClick && beaconPin.beaconID && beaconPin.beaconName) {
-            onClick(beaconPin.beaconID, beaconPin.beaconName, beaconPin.subdivisionID, beaconPin.railroad, beaconPin.subdivision);
+            onClick(beaconPin.beaconID, beaconPin.beaconName, beaconPin.subdivisionID, beaconPin.railroad, beaconPin.subdivision, beaconPin.subdivisions);
         }
     };
 
