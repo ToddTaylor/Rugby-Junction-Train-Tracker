@@ -1,4 +1,4 @@
-using Web.Server.Entities;
+﻿using Web.Server.Entities;
 
 namespace Web.Server.Repositories
 {
@@ -10,5 +10,6 @@ namespace Web.Server.Repositories
         Task<BeaconRailroad> UpdateAsync(BeaconRailroad beaconRailroad);
         Task<bool> DeleteAsync(int beaconId, int railroadId);
         Task<DateTime?> GetLatestTelemetryTimestampAsync(int beaconId, int subdivisionId);
+        Task TouchBeaconHealthAsync(int beaconId, DateTime timestampUtc);
     }
 }

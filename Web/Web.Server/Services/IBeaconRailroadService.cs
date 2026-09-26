@@ -1,4 +1,4 @@
-using Web.Server.Entities;
+﻿using Web.Server.Entities;
 
 namespace Web.Server.Services
 {
@@ -11,5 +11,6 @@ namespace Web.Server.Services
         Task<ICollection<BeaconRailroad>> UpdateAsync(ICollection<BeaconRailroad> beaconRailroads);
         Task<bool> DeleteAsync(int beaconId, int railroadId);
         Task<DateTime?> GetLatestTelemetryTimestampAsync(int beaconId, int subdivisionId);
+        Task TouchBeaconHealthAsync(int beaconId, DateTime timestampUtc);
     }
 }

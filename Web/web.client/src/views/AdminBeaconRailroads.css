@@ -365,3 +365,120 @@
     max-width: 95%;
   }
 }
+
+/* --- Beacon grouping (issue #80) ---------------------------------------
+   A beacon holds one row per subdivision, each with its own milepost. Grouping
+   makes that relationship visible, which matters most at a junction where one
+   railroad crosses its own tracks and the two mileposts differ wildly. */
+
+.admin-table tr.group-head td {
+  background: var(--admin-bg-surface-alt);
+  border-bottom: 1px solid var(--admin-border);
+  padding-top: 11px;
+  padding-bottom: 11px;
+}
+
+.admin-table .group-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.admin-table .group-title .name {
+  color: var(--admin-text-primary);
+  font-weight: 650;
+  font-size: 14.5px;
+}
+
+.admin-table .group-title .count {
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--admin-text-secondary);
+  border: 1px solid var(--admin-border);
+  border-radius: 999px;
+  padding: 1px 8px;
+  white-space: nowrap;
+}
+
+/* Only highlight the count when a beacon actually carries several mileposts. */
+.admin-table .group-title .count.multi {
+  color: var(--admin-accent);
+  border-color: var(--admin-accent);
+}
+
+.btn-addsub {
+  background: transparent;
+  color: var(--admin-accent);
+  border: 1px dashed var(--admin-accent);
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.btn-addsub:hover:not(:disabled) {
+  background: var(--admin-row-hover);
+}
+
+.btn-addsub:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Indent column for subdivision rows; the accent rail ties a junction's rows together. */
+.admin-table td.sub-cell {
+  width: 38px;
+  padding-left: 38px;
+}
+
+.admin-table td.sub-cell.rail {
+  border-left: 2px solid var(--admin-accent);
+}
+
+.modal-callout {
+  background: var(--admin-bg-surface-alt);
+  border: 1px solid var(--admin-border);
+  border-left: 3px solid var(--admin-accent);
+  border-radius: 0 5px 5px 0;
+  color: var(--admin-text-secondary);
+  padding: 9px 12px;
+  font-size: 12.5px;
+  margin-bottom: 14px;
+}
+
+.form-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 11.5px;
+  color: var(--admin-text-secondary);
+}
+
+/*
+ * Readout comparing the coordinates being entered against the beacon's other subdivision rows.
+ * The warning variant marks a separation too small for a separate track, which indicates a
+ * mistyped digit in a value meant to match.
+ */
+.coordinate-notice {
+  border: 1px solid var(--admin-border);
+  border-left: 3px solid var(--admin-accent);
+  border-radius: 0 5px 5px 0;
+  background: var(--admin-bg-surface-alt);
+  color: var(--admin-text-secondary);
+  padding: 8px 12px;
+  font-size: 12px;
+  line-height: 1.45;
+  margin: -6px 0 14px;
+}
+
+.coordinate-notice--warning {
+  border-left-color: #e0913c;
+  color: var(--admin-text-primary);
+}
+
+@media (prefers-color-scheme: light) {
+  .coordinate-notice--warning {
+    border-left-color: #c2701a;
+  }
+}

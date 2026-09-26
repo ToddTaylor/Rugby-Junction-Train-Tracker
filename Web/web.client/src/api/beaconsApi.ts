@@ -1,5 +1,12 @@
 import { openRailwaysDB } from './db';
 import { fetchWithAuth } from '../utils/fetchWithAuth';
+import {
+  BEACON_OFFLINE_NOTE_MAP_KEY,
+  BEACON_STALE_MAP_KEY,
+  BEACON_STATUS_MAP_KEY,
+  beaconStatusKey,
+  readBeaconMap
+} from '../utils/beaconStatusKeys';
 
 // Fetch and cache beacons with status persistence & focus grace period overlay.
 export const fetchBeacons = async (setBeacons: any, setBeaconsLoaded: any) => {
@@ -15,29 +22,18 @@ export const fetchBeacons = async (setBeacons: any, setBeaconsLoaded: any) => {
     cached = await db2.get(STORE_NAME, 'beacons');
   }
 
-  let statusMap: Record<string, boolean> = {};
-  try {
-    const raw = localStorage.getItem('beaconStatusMap');
-    if (raw) statusMap = JSON.parse(raw);
-  } catch { /* ignore */ }
-  let telemetryStaleMap: Record<string, boolean> = {};
-  try {
-    const raw = localStorage.getItem('beaconTelemetryStaleMap');
-    if (raw) telemetryStaleMap = JSON.parse(raw);
-  } catch { /* ignore */ }
-  let offlineNoteMap: Record<string, string | null> = {};
-  try {
-    const raw = localStorage.getItem('beaconOfflineNoteMap');
-    if (raw) offlineNoteMap = JSON.parse(raw);
-  } catch { /* ignore */ }
+  const statusMap = readBeaconMap<boolean>(BEACON_STATUS_MAP_KEY);
+  const telemetryStaleMap = readBeaconMap<boolean>(BEACON_STALE_MAP_KEY);
+  const offlineNoteMap = readBeaconMap<string | null>(BEACON_OFFLINE_NOTE_MAP_KEY);
   const graceUntil = Number(localStorage.getItem('focusGraceUntil') || '0');
   const now = Date.now();
 
   if (cached) {
     const withStatus = (cached as any[]).map(b => {
-      const prevOnline = statusMap[b.beaconID];
-      const prevStale = telemetryStaleMap[b.beaconID];
-      const prevOfflineNote = offlineNoteMap[b.beaconID];
+      const key = beaconStatusKey(b.beaconID, b.subdivisionID);
+      const prevOnline = statusMap[key];
+      const prevStale = telemetryStaleMap[key];
+      const prevOfflineNote = offlineNoteMap[key];
       let result = b;
       if (prevOnline === true && b.online === false && now < graceUntil) {
         result = { ...result, online: true };

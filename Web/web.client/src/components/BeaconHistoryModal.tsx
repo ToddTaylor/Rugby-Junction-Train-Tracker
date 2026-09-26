@@ -6,6 +6,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { MapPinHistory, AddressSnapshot } from '../types/MapPinHistory';
 import { MapPin } from '../types/MapPin';
+import { BeaconSubdivision } from '../types/Beacon';
 import { TrackedPin, getTrackedMapPins, refreshTrackedPinsFromApi, addTrackedMapPin, updateTrackedPinSymbol, removeTrackedMapPin, copyTrackedPinShareUrl, buildTrackedPinShareUrl, getTrackedPinSymbol } from '../services/trackedPins';
 import { fetchBeaconHistory } from '../services/mapPinsHistory';
 import { toggleSubdivisionLocalTrainAddress } from '../api/subdivisions';
@@ -33,6 +34,21 @@ export function getPrimaryLocalToggleAddress(addresses?: AddressSnapshot[]): Add
     return Array.isArray(addresses) ? addresses[0] : undefined;
 }
 
+/**
+ * The subdivision to request history for, or undefined to request the whole beacon.
+ *
+ * A junction is one physical location whose marker collapses a row per subdivision into a single
+ * pin reporting one subdivisionID. Filtering on that ID hides every train recorded on the others,
+ * so the whole beacon is requested instead. Parallel tracks belonging to different railroads stay
+ * filtered: they are separate points, each with its own marker and its own history.
+ */
+export function resolveHistorySubdivisionID(
+    subdivisionID: string | undefined,
+    subdivisions: BeaconSubdivision[] | undefined
+): string | undefined {
+    return (subdivisions?.length ?? 0) > 1 ? undefined : subdivisionID;
+}
+
 interface BeaconHistoryModalProps {
     open: boolean;
     onClose: () => void;
@@ -41,6 +57,9 @@ interface BeaconHistoryModalProps {
     subdivisionID?: string;
     railroad?: string;
     subdivision?: string;
+    /** Every subdivision through this beacon, each with its own milepost. Present when the
+     *  location carries more than one (a junction); undefined for ordinary beacons. */
+    subdivisions?: BeaconSubdivision[];
     theme: 'dark' | 'light';
     lastUpdate?: string | null;
     mapPins?: MapPin[];
@@ -53,7 +72,7 @@ interface BeaconHistoryModalProps {
     onMapPinLocalStatusChanged?: (mapPinId: number, isLocal: boolean) => void;
 }
 
-export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdivisionID, railroad: _railroad, subdivision: _subdivision, theme, lastUpdate, trackedPins: propTrackedPins, hourFormat, canViewSupportAddresses = false, isAdmin = false, isCustodian = false, currentUserId = null, onMapPinLocalStatusChanged }: BeaconHistoryModalProps) {
+export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdivisionID, railroad: _railroad, subdivision: _subdivision, subdivisions, theme, lastUpdate, trackedPins: propTrackedPins, hourFormat, canViewSupportAddresses = false, isAdmin = false, isCustodian = false, currentUserId = null, onMapPinLocalStatusChanged }: BeaconHistoryModalProps) {
     const canManageLocalTrains = isAdmin || isCustodian;
     const [loading, setLoading] = useState(false);
     const [history, setHistory] = useState<MapPinHistory[]>([]);
@@ -77,11 +96,14 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdiv
     const localToggleFeedbackTimeoutsRef = useRef<{ [rowId: number]: number }>({});
     const copyIconColor = theme === 'dark' ? '#d5d9df' : '#4b5563';
 
+    const isJunction = (subdivisions?.length ?? 0) > 1;
+    const historySubdivisionID = resolveHistorySubdivisionID(subdivisionID, subdivisions);
+
     const fetchHistory = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
-            const data = await fetchBeaconHistory(beaconID, subdivisionID, 10);
+            const data = await fetchBeaconHistory(beaconID, historySubdivisionID, 10);
             setHistory(data || []);
         } catch (err) {
             console.error('Error fetching beacon history:', err);
@@ -89,7 +111,7 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdiv
         } finally {
             setLoading(false);
         }
-    }, [beaconID, subdivisionID]);
+    }, [beaconID, historySubdivisionID]);
 
     // Update local state when prop changes
     useEffect(() => {
@@ -120,7 +142,7 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdiv
         } else if (!open) {
             setHistory([]); // Clear history when modal closes
         }
-    }, [open, beaconID, subdivisionID, lastUpdate, fetchHistory]); // Re-fetch when lastUpdate changes
+    }, [open, beaconID, historySubdivisionID, lastUpdate, fetchHistory]); // Re-fetch when lastUpdate changes
 
     // Periodic refresh of history every 30 seconds when modal is open
     useEffect(() => {
@@ -129,7 +151,7 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdiv
             fetchHistory();
         }, 30000);
         return () => clearInterval(interval);
-    }, [open, beaconID, subdivisionID, fetchHistory]);
+    }, [open, beaconID, historySubdivisionID, fetchHistory]);
 
     // Update tracked pins state and listen for changes (only if not using prop)
     useEffect(() => {
@@ -250,6 +272,15 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdiv
             width: 44,
             valueFormatter: (params) => formatDirectionAbbreviation(params as string),
         },
+        // A junction's list mixes rows from every subdivision through the location, so each
+        // row names the one it was recorded on. An ordinary beacon has only one, making the
+        // column redundant there.
+        ...(isJunction ? [{
+            field: 'subdivision',
+            headerName: 'Sub',
+            width: 80,
+            valueGetter: (_value: unknown, row: MapPinHistory) => row.subdivision ?? '',
+        } as GridColDef] : []),
         {
             field: 'addresses',
             headerName: 'Train',
@@ -774,11 +805,26 @@ export function BeaconHistoryModal({ open, onClose, beaconID, beaconName, subdiv
                     <Typography variant="h6" sx={{ color: isDark ? '#e0e0e0' : '#333333' }}>
                         {beaconName}
                     </Typography>
-                    {(history.length > 0 || _railroad || _subdivision) && (
+                    {/* A junction carries several subdivisions through one location, each with its
+                        own milepost. List them all, marking the one whose history is shown below.
+                        Falls back to the single subdivision for ordinary beacons. */}
+                    {subdivisions && subdivisions.length > 1 ? (
+                        // Every subdivision through this location, weighted equally: they describe
+                        // the same physical place, so singling one out would imply a distinction
+                        // between them that does not exist.
                         <Typography variant="body2" sx={{ color: isDark ? '#b0b0b0' : '#666666', mt: 0.25 }}>
-                            {history.length > 0 
+                            {subdivisions
+                                .map(sub => `${[sub.railroad, sub.subdivision].filter(Boolean).join(' ')} - MP ${sub.milepost}`)
+                                .join(' · ')}
+                        </Typography>
+                    ) : (history.length > 0 || _railroad || _subdivision || subdivisions?.length) && (
+                        <Typography variant="body2" sx={{ color: isDark ? '#b0b0b0' : '#666666', mt: 0.25 }}>
+                            {history.length > 0
                                 ? `${history[0].railroad} - ${history[0].subdivision} - MP ${history[0].milepost}`
-                                : [_railroad, _subdivision].filter(Boolean).join(' - ')}
+                                : subdivisions?.length
+                                    // No telemetry yet, but the beacon railroad record still knows its milepost.
+                                    ? `${[subdivisions[0].railroad, subdivisions[0].subdivision].filter(Boolean).join(' - ')} - MP ${subdivisions[0].milepost}`
+                                    : [_railroad, _subdivision].filter(Boolean).join(' - ')}
                         </Typography>
                     )}
                 </Box>

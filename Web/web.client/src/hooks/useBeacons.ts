@@ -1,26 +1,23 @@
 import { useState, useEffect } from 'react';
 import { openDB } from 'idb';
 import { Beacon } from '../types/Beacon';
+import {
+  BEACON_OFFLINE_NOTE_MAP_KEY,
+  BEACON_STALE_MAP_KEY,
+  BEACON_STATUS_MAP_KEY,
+  beaconStatusKey,
+  clearLegacyBeaconMaps,
+  readBeaconMap
+} from '../utils/beaconStatusKeys';
 
 export function useBeacons() {
   const [beacons, setBeacons] = useState<Beacon[]>([]);
   const [beaconsLoaded, setBeaconsLoaded] = useState(false);
   // Load persisted beacon statuses once at module init
-  let initialStatusMap: Record<string, boolean> = {};
-  try {
-    const raw = localStorage.getItem('beaconStatusMap');
-    if (raw) initialStatusMap = JSON.parse(raw);
-  } catch { /* ignore malformed storage */ }
-  let initialStaleMap: Record<string, boolean> = {};
-  try {
-    const raw = localStorage.getItem('beaconTelemetryStaleMap');
-    if (raw) initialStaleMap = JSON.parse(raw);
-  } catch { /* ignore malformed storage */ }
-  let initialOfflineNoteMap: Record<string, string | null> = {};
-  try {
-    const raw = localStorage.getItem('beaconOfflineNoteMap');
-    if (raw) initialOfflineNoteMap = JSON.parse(raw);
-  } catch { /* ignore malformed storage */ }
+  clearLegacyBeaconMaps();
+  const initialStatusMap = readBeaconMap<boolean>(BEACON_STATUS_MAP_KEY);
+  const initialStaleMap = readBeaconMap<boolean>(BEACON_STALE_MAP_KEY);
+  const initialOfflineNoteMap = readBeaconMap<string | null>(BEACON_OFFLINE_NOTE_MAP_KEY);
 
   useEffect(() => {
     const fetchBeacons = async () => {
@@ -28,7 +25,7 @@ export function useBeacons() {
       const DB_VERSION = 2;
       // Cache schema version - increment when beacon data structure changes
       // This ensures stale cached data without new fields (like railroad/subdivision names) is refreshed
-      const BEACON_CACHE_VERSION = 4; // v4: offlineNote added — invalidate caches written before the field existed
+      const BEACON_CACHE_VERSION = 5; // v5: per-subdivision mileposts at junctions — caches written before a beacon's second subdivision row existed would hide it (issue #80)
       const CACHE_VERSION_KEY = 'beacons_version';
       
       const db = await openDB('railways-db', DB_VERSION, {
@@ -73,9 +70,10 @@ export function useBeacons() {
       const now = Date.now();
       if (cached) {
         const withStatus = (cached as Beacon[]).map(b => {
-          const stored = initialStatusMap[b.beaconID];
-          const storedStale = initialStaleMap[b.beaconID];
-          const storedOfflineNote = initialOfflineNoteMap[b.beaconID];
+          const key = beaconStatusKey(b.beaconID, b.subdivisionID);
+          const stored = initialStatusMap[key];
+          const storedStale = initialStaleMap[key];
+          const storedOfflineNote = initialOfflineNoteMap[key];
           let result = b;
           if (stored === true && b.online === false && now < graceUntil) {
             result = { ...result, online: true };
@@ -126,9 +124,10 @@ export function useBeacons() {
         await db.put(STORE_NAME, BEACON_CACHE_VERSION, CACHE_VERSION_KEY);
         
         const withStatus = (beacons as Beacon[]).map(b => {
-          const stored = initialStatusMap[b.beaconID];
-          const storedStale = initialStaleMap[b.beaconID];
-          const storedOfflineNote = initialOfflineNoteMap[b.beaconID];
+          const key = beaconStatusKey(b.beaconID, b.subdivisionID);
+          const stored = initialStatusMap[key];
+          const storedStale = initialStaleMap[key];
+          const storedOfflineNote = initialOfflineNoteMap[key];
           let result = b;
           if (stored === true && b.online === false && now < graceUntil) {
             result = { ...result, online: true };
@@ -160,15 +159,16 @@ export function useBeacons() {
     const offlineNoteMap: Record<string, string | null> = {};
     beacons.forEach(b => {
       if (b && b.beaconID) {
-        statusMap[b.beaconID] = !!b.online;
-        staleMap[b.beaconID] = !!b.telemetryStale;
-        offlineNoteMap[b.beaconID] = b.offlineNote ?? null;
+        const key = beaconStatusKey(b.beaconID, b.subdivisionID);
+        statusMap[key] = !!b.online;
+        staleMap[key] = !!b.telemetryStale;
+        offlineNoteMap[key] = b.offlineNote ?? null;
       }
     });
     try {
-      localStorage.setItem('beaconStatusMap', JSON.stringify(statusMap));
-      localStorage.setItem('beaconTelemetryStaleMap', JSON.stringify(staleMap));
-      localStorage.setItem('beaconOfflineNoteMap', JSON.stringify(offlineNoteMap));
+      localStorage.setItem(BEACON_STATUS_MAP_KEY, JSON.stringify(statusMap));
+      localStorage.setItem(BEACON_STALE_MAP_KEY, JSON.stringify(staleMap));
+      localStorage.setItem(BEACON_OFFLINE_NOTE_MAP_KEY, JSON.stringify(offlineNoteMap));
     } catch { /* ignore quota */ }
   }, [beacons]);
 
