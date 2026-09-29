@@ -144,12 +144,14 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
     const statusTextShadow = mapTheme === 'dark'
         ? '0 1px 4px #000, 0 0 2px #fffbe6'
         : '0 1px 4px #fff, 0 0 2px #005aa9';
+    // Contrasting outline so the direction arrow stands out from tracks and milepost labels on the map
+    const arrowHaloColor = mapTheme === 'dark' ? '#000' : '#fff';
     const statusPadding = `${labelPadding / 2}px 8px`;
     const statusRadius = `${labelRadius / 1.5}px`;
 
-    // Map direction letter to arrow icon
+    // Map direction letter to arrow icon. The notched back keeps the heading unambiguous at small sizes and diagonal rotations.
 
-    function getDirectionArrowSvg(dir: string | null, size = 16, color = statusTextColor): string {
+    function getDirectionArrowSvg(dir: string | null, size = 18, color = statusTextColor, haloColor = arrowHaloColor): string {
         if (!dir) return '';
         let rotate = 0;
         switch (dir) {
@@ -163,17 +165,17 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
             case 'SW': rotate = -135; break;
             default: return '';
         }
-        return `<span style="display:inline-block;align-self:center;transform:rotate(${rotate}deg);"><svg width="${size}" height="${size}" viewBox="0 0 16 16"><polygon points="8,2 14,14 2,14" fill="${color}" /></svg></span>`;
+        return `<span style="display:inline-block;align-self:center;transform:rotate(${rotate}deg);"><svg width="${size}" height="${size}" viewBox="0 0 16 16" overflow="visible"><polygon points="8,1.5 13.5,14.5 8,11 2.5,14.5" fill="${color}" stroke="${haloColor}" stroke-width="1.5" stroke-linejoin="round" paint-order="stroke" /></svg></span>`;
     }
 
     // Memoize status text so it updates when either actualDirection or actualLastUpdateTime changes
     const statusTextForSingleBeacon = React.useMemo(() => {
         if (actualLastUpdateTime) {
-            return `<span style="display:inline-flex;align-items:center;gap:4px;">Last Train: ${actualDirection ? getDirectionArrowSvg(actualDirection, 16, statusTextColor) : ''} ${actualLastUpdateTime}</span>`;
+            return `<span style="display:inline-flex;align-items:center;gap:4px;">Last Train: ${actualDirection ? getDirectionArrowSvg(actualDirection, 18, statusTextColor, arrowHaloColor) : ''} ${actualLastUpdateTime}</span>`;
         } else {
             return '<span style="display:inline-flex;align-items:center;">Last Train: N/A</span>';
         }
-    }, [actualDirection, actualLastUpdateTime, statusTextColor]);
+    }, [actualDirection, actualLastUpdateTime, statusTextColor, arrowHaloColor]);
     
     type ResolvedTrackedTrain = {
         rowKey: string;
