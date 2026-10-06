@@ -13,6 +13,7 @@ import { useUserLocation } from '../hooks/useUserLocation';
 import { Beacon, BeaconSubdivision } from '../types/Beacon';
 import { MapPin } from '../types/MapPin';
 import BeaconMarkers from '../components/BeaconMarkers';
+import { latestBeaconUpdate } from '../utils/beaconSubdivisions';
 import TelemetryMarkers from '../components/TelemetryMarkers';
 import PassengerTelemetryMarkers from '../components/PassengerTelemetryMarkers';
 import MilepostLayer from '../components/MilepostLayer';
@@ -1016,7 +1017,7 @@ const RailMap: React.FC = () => {
                 subdivision={selectedSubdivision}
                 subdivisions={selectedSubdivisions}
                 theme={mapTheme as 'dark' | 'light'}
-                lastUpdate={beaconLastUpdateMap?.[makeBeaconKey(selectedBeaconID, selectedSubdivisionID)]?.lastUpdate}
+                lastUpdate={latestBeaconUpdate(beaconLastUpdateMap, { beaconID: selectedBeaconID, subdivisionID: selectedSubdivisionID, subdivisions: selectedSubdivisions })?.lastUpdate}
                 mapPins={mapPins}
                 trackedPins={trackedPinsState}
                 hourFormat={hourFormat}

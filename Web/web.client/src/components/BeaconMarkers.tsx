@@ -5,6 +5,7 @@ import { MapPin } from '../types/MapPin';
 import { TrackedPin } from '../services/trackedPins';
 import BeaconMarker from './BeaconMarker';
 import BeaconLabelPin from './BeaconLabelPin';
+import { latestBeaconUpdate } from '../utils/beaconSubdivisions';
 
 interface BeaconMarkersProps {
     pins: Beacon[];
@@ -27,12 +28,14 @@ interface BeaconMarkersProps {
  *   Junction City  - a true junction where one railroad crosses its own tracks. Those rows
  *     share beaconID AND railroadID, so they collapse to a single marker. Their mileposts are
  *     gathered rather than discarded, so the history modal can show every subdivision through
- *     the location (issue #80).
+ *     the location (issue #80). Status is merged across the rows too: the marker is online
+ *     when any subdivision is, and telemetry is stale only when every online subdivision is
+ *     stale. A train on either subdivision therefore keeps the one dot solid.
  *
  * Rows whose beaconID is missing or zero are dropped as invalid.
  */
 export function collapseBeaconPins(beaconPins: Beacon[]): Beacon[] {
-    const byComposite = new Map<string | number, Beacon>();
+    const rowsByComposite = new Map<string | number, Beacon[]>();
     const subdivisionsByComposite = new Map<string | number, BeaconSubdivision[]>();
 
     for (const b of beaconPins) {
@@ -48,7 +51,7 @@ export function collapseBeaconPins(beaconPins: Beacon[]): Beacon[] {
 
         if (key === null) continue;
 
-        byComposite.set(key, b);
+        rowsByComposite.set(key, [...(rowsByComposite.get(key) ?? []), b]);
 
         const gathered = subdivisionsByComposite.get(key) ?? [];
         if (!gathered.some(s => String(s.subdivisionID) === String(b.subdivisionID))) {
@@ -63,12 +66,30 @@ export function collapseBeaconPins(beaconPins: Beacon[]): Beacon[] {
         subdivisionsByComposite.set(key, gathered);
     }
 
-    return Array.from(byComposite.entries()).map(([key, beacon]) => {
+    return Array.from(rowsByComposite.entries()).map(([key, rows]) => {
+        // The latest row supplies identity and position; status is merged across every row so
+        // the marker does not depend on which subdivision a live update happened to append last.
+        const beacon = rows.length > 1 ? mergeBeaconStatus(rows) : rows[rows.length - 1];
         const subdivisions = subdivisionsByComposite.get(key) ?? [];
         // Attached even for a single subdivision, so the history modal can show a milepost
         // for a beacon that has no telemetry yet.
         return subdivisions.length > 0 ? { ...beacon, subdivisions } : beacon;
     });
+}
+
+/**
+ * Merges the status of several rows for one location into the last row.
+ *
+ * online and offlineNote describe the beacon's radio, which every row shares, but
+ * telemetryStale measures train traffic per subdivision. A quiet subdivision must not mark a
+ * junction stale while trains are still passing on the other one.
+ */
+function mergeBeaconStatus(rows: Beacon[]): Beacon {
+    const online = rows.some(r => r.online !== false);
+    const onlineRows = rows.filter(r => r.online !== false);
+    const telemetryStale = online && onlineRows.every(r => r.telemetryStale === true);
+    const offlineNote = online ? null : rows.find(r => r.offlineNote)?.offlineNote ?? null;
+    return { ...rows[rows.length - 1], online, telemetryStale, offlineNote };
 }
 
 const BeaconMarkers: React.FC<BeaconMarkersProps> = ({ 
@@ -130,15 +151,12 @@ const BeaconMarkers: React.FC<BeaconMarkersProps> = ({
                 // Always use the last known update time and direction for this beacon
                 let lastUpdateTime: string | null = null;
                 let direction: string | null = null;
-                if (beaconLastUpdateMap && beaconPin.beaconID) {
-                    // Use beaconID and subdivisionID for unique key (matches makeBeaconKey in RailMap.tsx)
-                    const keyComposite = `${beaconPin.beaconID}${beaconPin.subdivisionID ? `|${beaconPin.subdivisionID}` : ''}`;
-                    const entry = beaconLastUpdateMap[keyComposite];
-                    if (entry && entry.lastUpdate) {
-                        const d = new Date(entry.lastUpdate);
-                        lastUpdateTime = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-                        direction = entry.direction;
-                    }
+                // Keys match makeBeaconKey in RailMap.tsx; a junction takes its latest subdivision.
+                const entry = latestBeaconUpdate(beaconLastUpdateMap, beaconPin);
+                if (entry) {
+                    const d = new Date(entry.lastUpdate);
+                    lastUpdateTime = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+                    direction = entry.direction;
                 }
                 // Stable unique key: use beaconID+railroadID for identity, fallback to idx
                 const keyRoot = beaconPin.beaconID != null && beaconPin.railroadID != null 

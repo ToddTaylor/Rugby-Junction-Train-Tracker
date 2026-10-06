@@ -109,4 +109,48 @@ describe('collapseBeaconPins', () => {
     const mos = markers.find(m => m.beaconName === 'Mosinee');
     expect(mos?.subdivisions).toHaveLength(1);
   });
+  describe('junction status', () => {
+    it('stays fresh when only the quieter subdivision is stale, whichever row arrives last', () => {
+      // A live BeaconUpdate re-appends a row, so the stale Valley row can land after Superior.
+      const superiorFresh = { ...junctionCitySuperior, telemetryStale: false };
+      const valleyStale = { ...junctionCityValley, telemetryStale: true };
+
+      expect(collapseBeaconPins([superiorFresh, valleyStale])[0].telemetryStale).toBe(false);
+      expect(collapseBeaconPins([valleyStale, superiorFresh])[0].telemetryStale).toBe(false);
+    });
+
+    it('is stale only when every subdivision is stale', () => {
+      const markers = collapseBeaconPins([
+        { ...junctionCitySuperior, telemetryStale: true },
+        { ...junctionCityValley, telemetryStale: true }
+      ]);
+
+      expect(markers[0].telemetryStale).toBe(true);
+    });
+
+    it('is offline with its note only when every subdivision is offline', () => {
+      const offline = collapseBeaconPins([
+        { ...junctionCitySuperior, online: false, offlineNote: 'Power outage' },
+        { ...junctionCityValley, online: false }
+      ]);
+      expect(offline[0].online).toBe(false);
+      expect(offline[0].offlineNote).toBe('Power outage');
+
+      const mixed = collapseBeaconPins([
+        { ...junctionCitySuperior, online: true },
+        { ...junctionCityValley, online: false, offlineNote: 'Power outage' }
+      ]);
+      expect(mixed[0].online).toBe(true);
+      expect(mixed[0].offlineNote).toBeNull();
+    });
+
+    it('leaves the status of separate railroads at one location independent', () => {
+      const markers = collapseBeaconPins([
+        { ...rugbyCn, telemetryStale: true },
+        { ...rugbyWsor, telemetryStale: false }
+      ]);
+
+      expect(markers.map(m => m.telemetryStale)).toEqual([true, false]);
+    });
+  });
 });

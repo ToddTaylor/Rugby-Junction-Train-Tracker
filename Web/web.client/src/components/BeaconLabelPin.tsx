@@ -7,6 +7,8 @@ import { MapPin } from '../types/MapPin';
 import TrackSymbolModal from './TrackSymbolModal';
 import { getBeaconDotSizePx } from '../utils/markerSizing';
 import { fetchBeaconLatestFromHistory } from '../services/mapPinsHistory';
+import { resolveHistorySubdivisionID } from './BeaconHistoryModal';
+import { markerSubdivisionIDs, pinAtMarker } from '../utils/beaconSubdivisions';
 
 interface BeaconLabelPinProps {
     beaconPin: Beacon;
@@ -42,11 +44,17 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
     const [fetchedDirection, setFetchedDirection] = useState<string | null | undefined>(undefined); // undefined = not yet fetched
     const lastLiveUpdateRef = useRef<string | null>(null);
 
+    // A junction marker stands for every subdivision through the location, so its "Last Train"
+    // covers all of them: history is requested for the whole beacon and live pins on any of its
+    // subdivisions count. A string key keeps the hooks below stable across re-renders.
+    const historySubdivisionID = resolveHistorySubdivisionID(beaconPin.subdivisionID, beaconPin.subdivisions);
+    const subdivisionKey = markerSubdivisionIDs(beaconPin).join(',');
+
     // Always update both timestamp and direction together, even if direction is null
     const updateFromHistory = useCallback(async (bypassCache = false) => {
         if (!beaconPin.beaconID) return;
         try {
-            const latest = await fetchBeaconLatestFromHistory(beaconPin.beaconID, beaconPin.subdivisionID, { bypassCache });
+            const latest = await fetchBeaconLatestFromHistory(beaconPin.beaconID, historySubdivisionID, { bypassCache });
             if (latest?.lastUpdate) {
                 const d = new Date(latest.lastUpdate);
                 let formattedTime;
@@ -65,7 +73,7 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
             console.error('Error fetching latest beacon history:', e);
             setFetchedDirection(null);
         }
-    }, [beaconPin.beaconID, beaconPin.subdivisionID, hourFormat]);
+    }, [beaconPin.beaconID, historySubdivisionID, hourFormat]);
 
     useEffect(() => {
         updateFromHistory(false);
@@ -76,8 +84,7 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
     useEffect(() => {
         if (!beaconPin.beaconID || !mapPins.length) return;
         const latestForBeacon = mapPins
-            .filter(pin => String(pin.beaconID || '') === String(beaconPin.beaconID || '')
-                && String(pin.subdivisionID || '') === String(beaconPin.subdivisionID || ''))
+            .filter(pin => pinAtMarker(pin, beaconPin))
             .reduce<{ lastUpdate: string | null; direction: string | null } | null>((acc, pin) => {
                 if (!pin.lastUpdate) return acc;
                 if (!acc || new Date(pin.lastUpdate) > new Date(acc.lastUpdate || 0)) {
@@ -109,7 +116,7 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
             }
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [mapPins, beaconPin.beaconID, beaconPin.subdivisionID, hourFormat, updateFromHistory]);
+    }, [mapPins, beaconPin.beaconID, subdivisionKey, hourFormat, updateFromHistory]);
 
     // Use fetched data if available, otherwise fall back to props
     // For direction: only use fallback prop if history hasn't been fetched yet
@@ -191,9 +198,7 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
                 ? pin.addresses.map(addr => ({ id: String(addr.addressID), source: addr.source }))
                 : [];
 
-        const sameBeaconAndSubdivision = (pin: MapPin): boolean =>
-            String(pin.beaconID || '') === String(beaconPin.beaconID || '') &&
-            String(pin.subdivisionID || '') === String(beaconPin.subdivisionID || '');
+        const sameBeaconAndSubdivision = (pin: MapPin): boolean => pinAtMarker(pin, beaconPin);
 
         const shareCodeMatches = (trackedPin: TrackedPin, pin: MapPin): boolean =>
             !!trackedPin.shareCode && !!pin.shareCode && trackedPin.shareCode === pin.shareCode;
@@ -216,9 +221,10 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
                 const matchedByAddress = mapPins.find(mp => sameBeaconAndSubdivision(mp) && addressOverlaps(trackedPin, mp));
                 const resolvedMapPin = directMapPin ?? matchedByShareCode ?? matchedByAddress;
 
-                const trackedAtBeaconByLocation =
-                    String(trackedPin.lastBeaconID || '') === String(beaconPin.beaconID || '') &&
-                    String(trackedPin.lastSubdivisionID || '') === String(beaconPin.subdivisionID || '');
+                const trackedAtBeaconByLocation = pinAtMarker(
+                    { beaconID: trackedPin.lastBeaconID, subdivisionID: trackedPin.lastSubdivisionID },
+                    beaconPin
+                );
 
                 const trackedAtBeaconByResolvedPin = !!resolvedMapPin && sameBeaconAndSubdivision(resolvedMapPin);
 
@@ -257,7 +263,8 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
         }
 
         return Array.from(deduped.values());
-    }, [trackedPins, mapPins, beaconPin.beaconID, beaconPin.subdivisionID]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [trackedPins, mapPins, beaconPin.beaconID, subdivisionKey]);
     
     const handleStatusClick = () => {
         if (onClick && beaconPin.beaconID && beaconPin.beaconName) {
