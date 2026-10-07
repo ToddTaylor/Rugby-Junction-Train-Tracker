@@ -43,8 +43,23 @@ const ICON_CACHE_BUSTER = import.meta.env.VITE_APP_VERSION
 const TILE_URL = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
 const TILE_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
+// Dark mode uses Esri's Dark Gray Canvas, which has minimal land-use shading so tracks and beacons stand out.
+// Labels come from a separate reference layer drawn on top of the base.
+const DARK_TILE_URL = "https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}";
+const DARK_LABELS_TILE_URL = "https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}";
+const DARK_TILE_ATTRIBUTION = 'Tiles &copy; <a href="https://www.esri.com/">Esri</a> &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors, and the GIS user community';
+const DARK_TILE_MAX_NATIVE_ZOOM = 16;
+const DARK_TILE_ZOOMED_IN_MIN_ZOOM = 11;
+
 const fallbackCenter: LatLngTuple = [44.524570, -89.567290]; // Default if location fails
 const MILEPOST_LABEL_MIN_ZOOM = 12;
+
+// Track lines use a muted slate blue-gray so the saturated beacon blue (#005aa9) stands out against them.
+function trackStyle(theme: string): L.PathOptions {
+    return theme === 'dark'
+        ? { color: '#7d93ab', weight: 3, opacity: 0.75 }
+        : { color: '#8fa4bb', weight: 3, opacity: 0.9 };
+}
 
 function trackedPinMatchesMapPin(trackedPin: ReturnType<typeof getTrackedMapPins>[number], mapPin: MapPin): boolean {
     if (String(trackedPin.id) === String(mapPin.id)) {
@@ -592,7 +607,7 @@ const RailMap: React.FC = () => {
         const map = mapRef.current;
         if (!railLayerRef.current) {
             railLayerRef.current = L.geoJSON(undefined, {
-                style: () => ({ color: '#005aa9', weight: 4 })
+                style: () => trackStyle(mapTheme)
             }).addTo(map);
         }
         const layer = railLayerRef.current!;
@@ -616,6 +631,11 @@ const RailMap: React.FC = () => {
             layer.addData(trackData as any);
         }
     }, [trackData, trackDataLoading]);
+
+    // Restyle existing track lines when the map theme changes
+    useEffect(() => {
+        railLayerRef.current?.setStyle(trackStyle(mapTheme));
+    }, [mapTheme]);
 
     // Cleanup on unmount
     useEffect(() => {
@@ -761,6 +781,14 @@ const RailMap: React.FC = () => {
         if (!container) return;
         container.classList.toggle('map-theme-dark', mapTheme === 'dark');
     }, [mapTheme, mapReady]);
+
+    // Zoomed in, the dark base tiles are darkened further so roads and urban areas don't
+    // compete with the tracks; zoomed out, land is kept lighter so it stays distinct from water.
+    useEffect(() => {
+        const container = mapRef.current?.getContainer();
+        if (!container) return;
+        container.classList.toggle('map-zoomed-in', mapZoom >= DARK_TILE_ZOOMED_IN_MIN_ZOOM);
+    }, [mapZoom, mapReady]);
 
     const handleToggleTheme = () => {
         setMapTheme(prev => {
@@ -913,10 +941,28 @@ const RailMap: React.FC = () => {
                 whenReady={() => setMapReady(true)}
             >
                 <MapZoomListener />
-                <TileLayer
-                    url={TILE_URL}
-                    attribution={TILE_ATTRIBUTION}
-                />
+                {mapTheme === 'dark' ? (
+                    <>
+                        <TileLayer
+                            key="dark-base"
+                            className="dark-base-tiles"
+                            url={DARK_TILE_URL}
+                            attribution={DARK_TILE_ATTRIBUTION}
+                            maxNativeZoom={DARK_TILE_MAX_NATIVE_ZOOM}
+                        />
+                        <TileLayer
+                            key="dark-labels"
+                            url={DARK_LABELS_TILE_URL}
+                            maxNativeZoom={DARK_TILE_MAX_NATIVE_ZOOM}
+                        />
+                    </>
+                ) : (
+                    <TileLayer
+                        key="light"
+                        url={TILE_URL}
+                        attribution={TILE_ATTRIBUTION}
+                    />
+                )}
 
                 {milepostLayerVisible && <MilepostLayer
                     mapRef={mapRef}
