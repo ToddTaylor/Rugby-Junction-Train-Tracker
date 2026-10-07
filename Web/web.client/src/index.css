@@ -190,13 +190,20 @@ body:has(.admin-layout) .app-footer {
   background: #181818; /* match dark theme if needed */
 }
 
-/* OSM tiles have no built-in dark style; fake one with a CSS filter
-   since the free Carto dark_all/light_all tiles now require a paid API key.
-   Grayscale first removes OSM's land-use colors (parks/water/etc.) so the
-   invert produces a clean monochrome basemap instead of tinted colors that
-   compete with the blue track overlay. */
-.map-theme-dark .leaflet-tile-pane {
-  filter: grayscale(1) invert(1) brightness(0.9) contrast(1.1);
+/* Dark mode uses Esri's Dark Gray Canvas tiles (see RailMap.tsx). The free
+   Carto dark_all tiles now require a paid API key. Esri's land (~72/255) and
+   urban areas (~79) sit just below roads (~85-100), so high contrast pushes
+   land to near black while keeping roads visible.
+   Applied to the base layer only so labels stay crisp.
+   Zoomed out, land stays lighter so it reads against black water; zoomed in
+   (map-zoomed-in, toggled in RailMap.tsx), roads and urban areas are dimmed
+   further so the track overlay stands out. */
+.dark-base-tiles {
+  filter: contrast(1.7) brightness(1.1);
+}
+
+.map-zoomed-in .dark-base-tiles {
+  filter: contrast(2.2) brightness(0.9);
 }
 
 /* Light mode: grayscale only (no invert) so land-use colors don't compete

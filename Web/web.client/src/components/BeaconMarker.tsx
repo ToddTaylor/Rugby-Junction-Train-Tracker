@@ -52,7 +52,7 @@ export function getBeaconVisualState(beacon: Beacon, mapTheme: 'dark' | 'light' 
 
 const BeaconMarker: React.FC<BeaconMarkerProps> = ({ pin: beaconPin, zoom, idx, mapTheme = 'dark' }) => {
     const beaconName = beaconPin.beaconName;
-    const { isOffline, isTelemetryStale, dotCenterColor, title, hasOfflineNote } = getBeaconVisualState(beaconPin, mapTheme);
+    const { isOffline, isTelemetryStale, color, dotCenterColor, title, hasOfflineNote } = getBeaconVisualState(beaconPin, mapTheme);
     const markerRef = useRef<L.Marker>(null);
 
     const beaconDotSizePx = getBeaconDotSizePx(zoom);
@@ -67,8 +67,8 @@ const BeaconMarker: React.FC<BeaconMarkerProps> = ({ pin: beaconPin, zoom, idx, 
     // Ping base size so that at scale(10) it matches outlineSize
     const pingBaseSizePx = outlineSize / 10;
 
-    // Dotted outline: shown for healthy online beacons only
-    const dottedOutline = !isOffline && !isTelemetryStale
+    // Dotted outline: shown for healthy online beacons (blue) and offline beacons (gray)
+    const dottedOutline = !isTelemetryStale
         ? `<div style="
             position:absolute;
             top:0;
@@ -76,7 +76,7 @@ const BeaconMarker: React.FC<BeaconMarkerProps> = ({ pin: beaconPin, zoom, idx, 
             width:${outlineSize}px;
             height:${outlineSize}px;
             border-radius:50%;
-            border:2px dotted #005aa9;
+            border:2px dotted ${color};
             box-sizing:border-box;
             pointer-events:none;
             z-index:1;
