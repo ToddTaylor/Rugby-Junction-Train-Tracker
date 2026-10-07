@@ -1,6 +1,7 @@
 ﻿import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import HamburgerMenu from '../components/HamburgerMenu';
 import {
+    AttributionControl,
     MapContainer,
     TileLayer,
     useMapEvents
@@ -47,7 +48,8 @@ const TILE_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyrigh
 // Labels come from a separate reference layer drawn on top of the base.
 const DARK_TILE_URL = "https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}";
 const DARK_LABELS_TILE_URL = "https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}";
-const DARK_TILE_ATTRIBUTION = 'Tiles &copy; <a href="https://www.esri.com/">Esri</a> &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors, and the GIS user community';
+// Kept short so it fits on one line on phones; the data providers are still credited as Esri requires.
+const DARK_TILE_ATTRIBUTION = '&copy; <a href="https://www.esri.com/">Esri</a>, HERE, Garmin, &copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>';
 const DARK_TILE_MAX_NATIVE_ZOOM = 16;
 const DARK_TILE_ZOOMED_IN_MIN_ZOOM = 11;
 
@@ -939,7 +941,10 @@ const RailMap: React.FC = () => {
                 scrollWheelZoom={true}
                 ref={mapRef}
                 whenReady={() => setMapReady(true)}
+                attributionControl={false}
             >
+                {/* Tile attribution is required by the OSM and Esri terms; the "Leaflet" prefix is dropped to keep it compact. */}
+                <AttributionControl position="bottomright" prefix={false} />
                 <MapZoomListener />
                 {mapTheme === 'dark' ? (
                     <>
