@@ -212,6 +212,23 @@ body:has(.admin-layout) .app-footer {
   filter: grayscale(1);
 }
 
+/* Tile attribution: small and translucent so it doesn't read as a footer bar. */
+.leaflet-container .leaflet-control-attribution {
+  font-size: 10px;
+  line-height: 1.4;
+  padding: 0 4px;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.map-theme-dark .leaflet-control-attribution {
+  background: rgba(0, 0, 0, 0.5);
+  color: #999;
+}
+
+.map-theme-dark .leaflet-control-attribution a {
+  color: #8fb4d9;
+}
+
 /* ---------- Marker Z-Index ---------- */
 .beacon-marker-z {
   z-index: 400;
