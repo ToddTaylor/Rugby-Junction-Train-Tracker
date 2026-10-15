@@ -5,8 +5,8 @@ const baseUrl = import.meta.env.BASE_URL || '/';
 const normalizedBase = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
 
 const candidatePaths = [
-  `${normalizedBase}data/usdot-wisconsin-no-fields.geojson`,
-  '/data/usdot-wisconsin-no-fields.geojson'
+  `${normalizedBase}data/rail-lines-wi.geojson`,
+  '/data/rail-lines-wi.geojson'
 ];
 
 async function fetchRailways(): Promise<GeoJSON.GeoJsonObject | null> {

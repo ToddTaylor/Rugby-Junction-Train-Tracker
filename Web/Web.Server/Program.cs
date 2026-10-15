@@ -1,6 +1,7 @@
 using Mapster;
 using MapsterMapper;
 using Microsoft.AspNetCore.Http.Connections;
+using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
@@ -81,6 +82,16 @@ try
             options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
             options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
         });
+    // Compresses the static map data under /data (see the UseWhen below). The rail-lines GeoJSON shrinks to about a fifth of its size.
+    builder.Services.AddResponseCompression(options =>
+    {
+        options.EnableForHttps = true;
+        options.Providers.Add<BrotliCompressionProvider>();
+        options.Providers.Add<GzipCompressionProvider>();
+        options.MimeTypes = ["application/json"];
+    });
+    builder.Services.Configure<BrotliCompressionProviderOptions>(options => options.Level = System.IO.Compression.CompressionLevel.Optimal);
+    builder.Services.Configure<GzipCompressionProviderOptions>(options => options.Level = System.IO.Compression.CompressionLevel.Optimal);
     builder.Services.AddSignalR(options =>
     {
         // Azure free tier web app does not support WebSockets, so we need to use Server-Sent Events
@@ -249,6 +260,9 @@ try
     app.UseMiddleware<Web.Server.Middleware.AuthTokenMiddleware>();
 
     app.UseDefaultFiles();
+
+    // Only the public map data is compressed, so API responses that carry tokens are never exposed to compression side channels.
+    app.UseWhen(context => context.Request.Path.StartsWithSegments("/data"), data => data.UseResponseCompression());
 
     // Enable .geojson file serving
     var provider = new FileExtensionContentTypeProvider();
