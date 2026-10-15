@@ -9,7 +9,8 @@ lerna-debug.log*
 
 node_modules
 dist
-source-data
+source-data/*
+!source-data/README.md
 dist-ssr
 *.local
 
