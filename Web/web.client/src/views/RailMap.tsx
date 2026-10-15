@@ -1,5 +1,7 @@
 ﻿import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import HamburgerMenu from '../components/HamburgerMenu';
+import RailroadFilterPanel from '../components/RailroadFilterPanel';
+import { TrainTrack } from 'lucide-react';
 import {
     AttributionControl,
     MapContainer,
@@ -35,6 +37,7 @@ import { useAuth } from '../hooks/useAuth';
 import { invalidateBeaconHistoryCache } from '../services/mapPinsHistory';
 import { parseSessionRoles } from '../utils/roles';
 import { PassengerMapPin } from '../types/PassengerMapPin';
+import { DEFAULT_SELECTED_OWNERS, isTrackSelected, summarizeOwners } from '../utils/railroadOwners';
 import { getPassengerMapPins } from '../api/passengerMapPins';
 
 const ICON_CACHE_BUSTER = import.meta.env.VITE_APP_VERSION
@@ -57,10 +60,16 @@ const fallbackCenter: LatLngTuple = [44.524570, -89.567290]; // Default if locat
 const MILEPOST_LABEL_MIN_ZOOM = 12;
 
 // Track lines use a muted slate blue-gray so the saturated beacon blue (#005aa9) stands out against them.
-function trackStyle(theme: string): L.PathOptions {
-    return theme === 'dark'
-        ? { color: '#7d93ab', weight: 3, opacity: 0.75 }
-        : { color: '#8fa4bb', weight: 3, opacity: 0.9 };
+// Tracks of the selected railroads are drawn stronger; the rest stay visible but recede.
+function trackStyle(theme: string, selected: boolean): L.PathOptions {
+    if (theme === 'dark') {
+        return selected
+            ? { color: '#a9bdd3', weight: 3, opacity: 0.9 }
+            : { color: '#5c6d80', weight: 2, opacity: 0.6 };
+    }
+    return selected
+        ? { color: '#6f87a1', weight: 3, opacity: 0.95 }
+        : { color: '#b0bfcf', weight: 2, opacity: 0.7 };
 }
 
 function trackedPinMatchesMapPin(trackedPin: ReturnType<typeof getTrackedMapPins>[number], mapPin: MapPin): boolean {
@@ -114,6 +123,15 @@ const RailMap: React.FC = () => {
         const saved = localStorage.getItem('defectDetectorLayerVisible');
         return saved !== 'false';
     });
+    // Railroad owner codes whose tracks are highlighted; the other tracks are dimmed.
+    const [selectedRailroads, setSelectedRailroads] = useState<Set<string>>(() => {
+        try {
+            const saved = JSON.parse(localStorage.getItem('selectedRailroads') || 'null');
+            if (Array.isArray(saved)) return new Set(saved);
+        } catch { /* fall back to the default */ }
+        return new Set(DEFAULT_SELECTED_OWNERS);
+    });
+    const [railroadPanelOpen, setRailroadPanelOpen] = useState(false);
 
     // Modal state for beacon history
     const [historyModalOpen, setHistoryModalOpen] = useState(false);
@@ -132,6 +150,7 @@ const RailMap: React.FC = () => {
 
     // Use custom hooks for data
     const { trackData, trackDataLoading } = useRailways();
+    const railroadOwners = useMemo(() => summarizeOwners(trackData), [trackData]);
     const { beacons, beaconsLoaded, setBeacons } = useBeacons();
     const { mapPins, setMapPins } = useTelemetryPins();
     const [passengerMapPins, setPassengerMapPins] = useState<PassengerMapPin[]>([]);
@@ -599,6 +618,27 @@ const RailMap: React.FC = () => {
     // Use ref to get the map instance
     const mapRef = useRef<LeafletMap | null>(null);
     const railLayerRef = useRef<L.GeoJSON | null>(null);
+    // Read by the track style callback, which outlives renders because the layer is created once.
+    const mapThemeRef = useRef(mapTheme);
+    mapThemeRef.current = mapTheme;
+    const selectedRailroadsRef = useRef(selectedRailroads);
+    selectedRailroadsRef.current = selectedRailroads;
+
+    const styleTrack = useCallback((feature?: GeoJSON.Feature) =>
+        trackStyle(mapThemeRef.current, isTrackSelected(feature?.properties, selectedRailroadsRef.current)), []);
+
+    // Applies the current theme and selection to every track, then raises the selected ones so dimmed lines never cover them.
+    const restyleTracks = useCallback(() => {
+        const layer = railLayerRef.current;
+        if (!layer) return;
+        layer.setStyle(styleTrack as L.StyleFunction);
+        layer.eachLayer(track => {
+            const feature = (track as L.Polyline).feature;
+            if (isTrackSelected(feature?.properties, selectedRailroadsRef.current)) {
+                (track as L.Polyline).bringToFront();
+            }
+        });
+    }, [styleTrack]);
 
     // Imperative, single-instance GeoJSON layer creation & incremental population to avoid recursive re-render stack overflow
     useEffect(() => {
@@ -608,14 +648,19 @@ const RailMap: React.FC = () => {
 
         const map = mapRef.current;
         if (!railLayerRef.current) {
+            // Thousands of track segments draw far faster on one canvas than as individual SVG paths.
+            // The tracks have no click handlers, so they skip hit testing as well.
             railLayerRef.current = L.geoJSON(undefined, {
-                style: () => trackStyle(mapTheme)
-            }).addTo(map);
+                style: styleTrack,
+                renderer: L.canvas({ padding: 0.5 }),
+                interactive: false
+            } as L.GeoJSONOptions).addTo(map);
         }
         const layer = railLayerRef.current!;
         layer.clearLayers();
 
         const features: any[] | undefined = (trackData as any)?.features;
+        let pendingChunk: ReturnType<typeof setTimeout> | undefined;
         if (Array.isArray(features)) {
             const featuresArr = features as any[];
             let i = 0;
@@ -625,19 +670,23 @@ const RailMap: React.FC = () => {
                 layer.addData(slice as any);
                 i += chunkSize;
                 if (i < featuresArr.length) {
-                    setTimeout(addNext, 0); // yield to event loop to keep UI responsive
+                    pendingChunk = setTimeout(addNext, 0); // yield to event loop to keep UI responsive
+                } else {
+                    restyleTracks();
                 }
             }
             addNext();
         } else {
             layer.addData(trackData as any);
         }
-    }, [trackData, trackDataLoading]);
+        // New track data re-runs this effect; stop adding chunks from the previous run.
+        return () => clearTimeout(pendingChunk);
+    }, [trackData, trackDataLoading, styleTrack, restyleTracks]);
 
-    // Restyle existing track lines when the map theme changes
+    // Restyle existing track lines when the map theme or railroad selection changes
     useEffect(() => {
-        railLayerRef.current?.setStyle(trackStyle(mapTheme));
-    }, [mapTheme]);
+        restyleTracks();
+    }, [mapTheme, selectedRailroads, restyleTracks]);
 
     // Cleanup on unmount
     useEffect(() => {
@@ -824,6 +873,18 @@ const RailMap: React.FC = () => {
         });
     };
 
+    const updateSelectedRailroads = (next: Set<string>) => {
+        setSelectedRailroads(next);
+        try { localStorage.setItem('selectedRailroads', JSON.stringify([...next])); } catch { /* ignore quota */ }
+    };
+
+    const handleToggleRailroad = (code: string) => {
+        const next = new Set(selectedRailroads);
+        if (next.has(code)) next.delete(code);
+        else next.add(code);
+        updateSelectedRailroads(next);
+    };
+
     const cacheBuster = ICON_CACHE_BUSTER;
     const milepostIconSrc = milepostLayerVisible
         ? (mapTheme === 'dark' ? `/icons/milepost-on-dark.svg${cacheBuster}` : `/icons/milepost-on-light.svg${cacheBuster}`)
@@ -906,6 +967,12 @@ const RailMap: React.FC = () => {
             visible: true,
         },
         {
+            icon: <TrainTrack color="#fff" size={28} strokeWidth={1.75} aria-hidden="true" />,
+            label: 'Railroads',
+            onClick: () => setRailroadPanelOpen(true),
+            visible: true,
+        },
+        {
             icon: <img src={`/icons/book.svg${cacheBuster}`} alt="User guide" style={{ width: 26, height: 26 }} />,
             label: 'User Guide',
             onClick: handleOpenUserGuide,
@@ -923,7 +990,10 @@ const RailMap: React.FC = () => {
             <div style={{ position: 'absolute', top: 14, right: 10, zIndex: 1000 }}>
                 <button
                     style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-                    onClick={() => setMenuOpen(v => !v)}
+                    onClick={() => {
+                        setRailroadPanelOpen(false);
+                        setMenuOpen(v => !v);
+                    }}
                     aria-label="Open menu"
                 >
                     {hamburgerIcon}
@@ -932,6 +1002,16 @@ const RailMap: React.FC = () => {
                     items={menuItems}
                     open={menuOpen}
                     onClose={() => setMenuOpen(false)}
+                />
+                <RailroadFilterPanel
+                    open={railroadPanelOpen}
+                    owners={railroadOwners}
+                    selectedOwners={selectedRailroads}
+                    onToggleOwner={handleToggleRailroad}
+                    onSelectAll={() => updateSelectedRailroads(new Set(railroadOwners.map(owner => owner.code)))}
+                    onSelectNone={() => updateSelectedRailroads(new Set())}
+                    onSelectDefault={() => updateSelectedRailroads(new Set(DEFAULT_SELECTED_OWNERS))}
+                    onClose={() => setRailroadPanelOpen(false)}
                 />
             </div>
             <MapContainer

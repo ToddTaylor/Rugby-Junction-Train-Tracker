@@ -367,7 +367,8 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 *.geojson
-/Web/web.client/public/data
+# The map data the web client serves is committed so deploys include it.
+!/Web/web.client/public/data/rail-lines-*.geojson
 /Web/Web.Server/appsettings.Development.json
 /Web/Web.Server/telemetry.db
 /Web/Web.Server/telemetry.db-shm

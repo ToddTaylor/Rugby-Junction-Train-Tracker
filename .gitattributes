@@ -58,3 +58,5 @@
 #*.rtf   diff=astextplain
 #*.RTF   diff=astextplain
 *.geojson filter=lfs diff=lfs merge=lfs -text
+# The web client's map data is small and stored in plain git, because the deploy workflows check out without LFS.
+Web/web.client/public/data/*.geojson !filter !diff !merge -text

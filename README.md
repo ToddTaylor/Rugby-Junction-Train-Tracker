@@ -76,6 +76,10 @@ How to stop:
 5. SignalR broadcasts updates.
 6. Frontend refreshes map/UI in near real time.
 
+## Rail Line Map Data
+
+The map draws Wisconsin track from `Web/web.client/public/data/rail-lines-wi.geojson`, which is generated from the National Transportation Atlas Database (NTAD) North American Rail Network Lines dataset. See [Web/web.client/source-data/README.md](Web/web.client/source-data/README.md) for where to download the dataset and how to regenerate the file.
+
 ## Common Build/Test Commands
 
 From repository root:

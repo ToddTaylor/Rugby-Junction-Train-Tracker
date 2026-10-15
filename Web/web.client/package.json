@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",
+    "build:rail-lines": "node scripts/build-rail-lines.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

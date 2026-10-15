@@ -20,7 +20,7 @@ export function useRailways() {
       setTrackDataLoading(true);
       const STORE_NAME = 'geojson';
       const DB_VERSION = 2;
-      const RAILWAYS_VERSION = '2025-11-15-1';
+      const RAILWAYS_VERSION = '2026-10-15-ntad-wi';
       const db = await openDB('railways-db', DB_VERSION, {
         upgrade(db) {
           if (!db.objectStoreNames.contains('geojson')) {
