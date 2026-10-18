@@ -207,26 +207,17 @@ iframe {
     padding: 5px 5px 0;
 }
 
-.webcam-editor-toggle {
-    background: #222;
-    color: #fff;
-    border: 1px solid #555;
-    border-radius: 6px;
-    padding: 6px 12px;
-    font-size: 14px;
-    cursor: pointer;
-}
-
-.webcam-editor-toggle:hover {
-    border-color: #999;
-}
-
 .webcam-editor-panel {
-    margin-top: 6px;
     padding: 12px;
     background: #151515;
     border: 1px solid #444;
     border-radius: 8px;
+}
+
+.webcam-editor-title {
+    margin: 0 0 6px;
+    font-size: 18px;
+    font-weight: 600;
 }
 
 .webcam-editor-help {

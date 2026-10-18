@@ -1,8 +1,14 @@
 import React, { useEffect, useRef, useState } from "react";
+import { SquarePen } from "lucide-react";
+import HamburgerMenu from "../components/HamburgerMenu";
 import WebCamEditor from "../components/WebCamEditor";
 import { resolveVideoId } from "../services/youtube";
 import { WebCamEntry, loadEntries, saveEntries } from "../utils/webcamConfig";
 import "./WebCams.css"; // <-- Use component-scoped CSS
+
+const ICON_CACHE_BUSTER = import.meta.env.VITE_APP_VERSION
+    ? `?v=${import.meta.env.VITE_APP_VERSION}`
+    : '';
 
 interface PlayerObj {
     player: any;
@@ -152,6 +158,8 @@ const WebCams: React.FC = () => {
     const playersRef = useRef<PlayerObj[]>([]);
     const [entries, setEntries] = useState<WebCamEntry[]>(loadEntries);
     const [message, setMessage] = useState<string | null>(null);
+    const [menuOpen, setMenuOpen] = useState(false);
+    const [editorOpen, setEditorOpen] = useState(false);
 
     // Build a player for every configured web cam, rebuilding whenever the configuration changes.
     useEffect(() => {
@@ -244,9 +252,28 @@ const WebCams: React.FC = () => {
         setEntries(saveEntries(updated));
     };
 
+    const menuItems = [
+        {
+            icon: <SquarePen color="#fff" size={26} strokeWidth={1.75} aria-hidden="true" />,
+            label: 'Edit Web Cams',
+            onClick: () => setEditorOpen(true),
+            visible: true,
+        },
+    ];
+
     return (
         <div>
-            <WebCamEditor entries={entries} onSave={handleSave} />
+            <div style={{ position: 'absolute', top: 14, right: 10, zIndex: 1000 }}>
+                <button
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                    onClick={() => setMenuOpen(v => !v)}
+                    aria-label="Open menu"
+                >
+                    <img src={`/icons/hamburger.svg${ICON_CACHE_BUSTER}`} alt="Menu" style={{ width: 32, height: 32 }} />
+                </button>
+                <HamburgerMenu items={menuItems} open={menuOpen} onClose={() => setMenuOpen(false)} />
+            </div>
+            <WebCamEditor entries={entries} open={editorOpen} onSave={handleSave} onClose={() => setEditorOpen(false)} />
             {message && <div className="webcam-message">{message}</div>}
             <div className="video-container-wrapper" ref={containerRef}></div>
         </div>
