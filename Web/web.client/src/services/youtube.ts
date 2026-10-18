@@ -19,10 +19,27 @@ async function callApi(path: string, params: Record<string, string>) {
     return data;
 }
 
-async function searchLive(params: Record<string, string>): Promise<FoundVideo | null> {
-    const data = await callApi('search', { part: 'snippet', type: 'video', eventType: 'live', maxResults: '1', ...params });
-    const item = data.items?.[0];
-    return item?.id?.videoId ? { videoId: item.id.videoId, title: item.snippet?.title } : null;
+interface SearchItem { id?: { videoId?: string } }
+interface VideoItem { id: string; snippet?: { title?: string; liveBroadcastContent?: string } }
+
+/**
+ * Returns the first search result that is currently live. The search API's eventType=live filter
+ * and its liveBroadcastContent field are stale for streams that have run for months, so this
+ * searches without the filter and confirms live status with videos.list, which is current.
+ */
+async function searchLive(params: Record<string, string>, maxResults: number): Promise<FoundVideo | null> {
+    const data = await callApi('search', { part: 'id', type: 'video', maxResults: String(maxResults), ...params });
+    const ids = ((data.items ?? []) as SearchItem[])
+        .map(item => item.id?.videoId)
+        .filter((id): id is string => !!id);
+    if (!ids.length) return null;
+
+    const details = await callApi('videos', { part: 'snippet', id: ids.join(',') });
+    const live = new Map(((details.items ?? []) as VideoItem[])
+        .filter(video => video.snippet?.liveBroadcastContent === 'live')
+        .map(video => [video.id, video.snippet?.title]));
+    const videoId = ids.find(id => live.has(id));
+    return videoId ? { videoId, title: live.get(videoId) } : null;
 }
 
 /**
@@ -42,10 +59,10 @@ export async function findLiveVideo(source: string): Promise<FoundVideo | null> 
             channelId = data.items?.[0]?.id ?? null;
             if (!channelId) return null;
         }
-        return searchLive({ channelId: channelId! });
+        return searchLive({ channelId: channelId! }, 50);
     }
 
-    return searchLive({ q: source.trim() });
+    return searchLive({ q: source.trim() }, 5);
 }
 
 type LookupCache = Record<string, { videoId: string; time: number }>;

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { findLiveVideo } from "../services/youtube";
 import { MAX_WEBCAMS, WebCamEntry, defaultEntries, padEntries, parseVideoId } from "../utils/webcamConfig";
 
@@ -9,11 +9,12 @@ interface RowStatus {
 
 interface WebCamEditorProps {
     entries: WebCamEntry[];
+    open: boolean;
     onSave: (entries: WebCamEntry[]) => void;
+    onClose: () => void;
 }
 
-const WebCamEditor: React.FC<WebCamEditorProps> = ({ entries, onSave }) => {
-    const [open, setOpen] = useState(false);
+const WebCamEditor: React.FC<WebCamEditorProps> = ({ entries, open, onSave, onClose }) => {
     const [rows, setRows] = useState<WebCamEntry[]>(() => padEntries(entries));
     const [statuses, setStatuses] = useState<Record<number, RowStatus>>({});
 
@@ -28,13 +29,13 @@ const WebCamEditor: React.FC<WebCamEditorProps> = ({ entries, onSave }) => {
     const updateRow = (index: number, patch: Partial<WebCamEntry>) =>
         setRows(prev => prev.map((row, i) => (i === index ? { ...row, ...patch } : row)));
 
-    const toggle = () => {
-        if (!open) {
+    // Start each editing session from the saved configuration.
+    useEffect(() => {
+        if (open) {
             setRows(padEntries(entries));
             setStatuses({});
         }
-        setOpen(!open);
-    };
+    }, [open, entries]);
 
     const findId = async (index: number) => {
         const source = rows[index].source.trim();
@@ -73,90 +74,87 @@ const WebCamEditor: React.FC<WebCamEditorProps> = ({ entries, onSave }) => {
         });
         if (!valid) return;
         onSave(cleaned);
-        setOpen(false);
+        onClose();
     };
 
+    if (!open) return null;
+
     return (
-        <div className={`webcam-editor${open ? " open" : ""}`}>
-            <button type="button" className="webcam-editor-toggle" aria-expanded={open} onClick={toggle}>
-                {open ? "▾" : "▸"} Edit web cams
-            </button>
+        <div className="webcam-editor">
+            <div className="webcam-editor-panel">
+                <h2 className="webcam-editor-title">Edit Web Cams</h2>
+                <p className="webcam-editor-help">
+                    Enter search text or a YouTube URL (a video, or a channel such as
+                    youtube.com/@SteelHighway/live), then press Find ID. Leave the ID blank to search
+                    for a live stream each time the page loads. Up to {MAX_WEBCAMS} web cams.
+                </p>
 
-            {open && (
-                <div className="webcam-editor-panel">
-                    <p className="webcam-editor-help">
-                        Enter search text or a YouTube URL (a video, or a channel such as
-                        youtube.com/@SteelHighway/live), then press Find ID. Leave the ID blank to search
-                        for a live stream each time the page loads. Up to {MAX_WEBCAMS} web cams.
-                    </p>
-
-                    <div className="webcam-editor-rows">
-                        {rows.map((row, index) => {
-                            const status = statuses[index];
-                            return (
-                                <div className="webcam-editor-row" key={index}>
-                                    <span className="webcam-editor-index">{index + 1}</span>
-                                    <input
-                                        type="text"
-                                        className="webcam-editor-source"
-                                        aria-label={`Web cam ${index + 1} search text or URL`}
-                                        placeholder="Search text or YouTube URL"
-                                        value={row.source}
-                                        onChange={e => updateRow(index, { source: e.target.value })}
-                                    />
-                                    <input
-                                        type="text"
-                                        className="webcam-editor-id"
-                                        aria-label={`Web cam ${index + 1} video ID`}
-                                        placeholder="Video ID"
-                                        value={row.videoId}
-                                        onChange={e => updateRow(index, { videoId: e.target.value })}
-                                        onBlur={() => tidyVideoId(index)}
-                                    />
-                                    <button
-                                        type="button"
-                                        className="webcam-editor-find"
-                                        disabled={!row.source.trim() || status?.kind === "busy"}
-                                        onClick={() => findId(index)}
-                                    >
-                                        Find ID
-                                    </button>
-                                    <button
-                                        type="button"
-                                        className="webcam-editor-clear"
-                                        aria-label={`Clear web cam ${index + 1}`}
-                                        title="Clear"
-                                        onClick={() => {
-                                            updateRow(index, { source: "", videoId: "" });
-                                            setStatus(index, null);
-                                        }}
-                                    >
-                                        ×
-                                    </button>
-                                    {status && (
-                                        <div className={`webcam-editor-status ${status.kind}`}>{status.text}</div>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
-
-                    <div className="webcam-editor-actions">
-                        <button type="button" className="primary" onClick={save}>Save</button>
-                        <button type="button" onClick={() => setOpen(false)}>Cancel</button>
-                        <button
-                            type="button"
-                            className="webcam-editor-reset"
-                            onClick={() => {
-                                setRows(padEntries(defaultEntries()));
-                                setStatuses({});
-                            }}
-                        >
-                            Reset to defaults
-                        </button>
-                    </div>
+                <div className="webcam-editor-rows">
+                    {rows.map((row, index) => {
+                        const status = statuses[index];
+                        return (
+                            <div className="webcam-editor-row" key={index}>
+                                <span className="webcam-editor-index">{index + 1}</span>
+                                <input
+                                    type="text"
+                                    className="webcam-editor-source"
+                                    aria-label={`Web cam ${index + 1} search text or URL`}
+                                    placeholder="Search text or YouTube URL"
+                                    value={row.source}
+                                    onChange={e => updateRow(index, { source: e.target.value })}
+                                />
+                                <input
+                                    type="text"
+                                    className="webcam-editor-id"
+                                    aria-label={`Web cam ${index + 1} video ID`}
+                                    placeholder="Video ID"
+                                    value={row.videoId}
+                                    onChange={e => updateRow(index, { videoId: e.target.value })}
+                                    onBlur={() => tidyVideoId(index)}
+                                />
+                                <button
+                                    type="button"
+                                    className="webcam-editor-find"
+                                    disabled={!row.source.trim() || status?.kind === "busy"}
+                                    onClick={() => findId(index)}
+                                >
+                                    Find ID
+                                </button>
+                                <button
+                                    type="button"
+                                    className="webcam-editor-clear"
+                                    aria-label={`Clear web cam ${index + 1}`}
+                                    title="Clear"
+                                    onClick={() => {
+                                        updateRow(index, { source: "", videoId: "" });
+                                        setStatus(index, null);
+                                    }}
+                                >
+                                    ×
+                                </button>
+                                {status && (
+                                    <div className={`webcam-editor-status ${status.kind}`}>{status.text}</div>
+                                )}
+                            </div>
+                        );
+                    })}
                 </div>
-            )}
+
+                <div className="webcam-editor-actions">
+                    <button type="button" className="primary" onClick={save}>Save</button>
+                    <button type="button" onClick={onClose}>Cancel</button>
+                    <button
+                        type="button"
+                        className="webcam-editor-reset"
+                        onClick={() => {
+                            setRows(padEntries(defaultEntries()));
+                            setStatuses({});
+                        }}
+                    >
+                        Reset to defaults
+                    </button>
+                </div>
+            </div>
         </div>
     );
 };
