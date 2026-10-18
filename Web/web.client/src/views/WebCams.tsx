@@ -1,17 +1,13 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import WebCamEditor from "../components/WebCamEditor";
+import { resolveVideoId } from "../services/youtube";
+import { WebCamEntry, loadEntries, saveEntries } from "../utils/webcamConfig";
 import "./WebCams.css"; // <-- Use component-scoped CSS
 
-const videoNames = [
-    'The Press Box LIVE Railcam - Fond du Lac, WI',
-    'Slinger Depot Museum Live Railcam',
-    'Bulldog Builders LIVE Railcam - Waukesha, WI',
-    'Burlington, WI Dougs Auto Service Live Railcam',
-    'Hiawatha Bar & Grill LIVE Railcam - Sturtevant, WI',
-    'Wauwatosa Historical Society Live Railcam',
-    'Thirsty Bird Saloon LIVE Railcam - Oconomowoc, WI',
-    'Julies Java House Live Railcam',
-    'Wash Station LIVE Railcam - Wauwatosa (Butler), WI'
-];
+interface PlayerObj {
+    player: any;
+    disableLiveEdgeUntil: number;
+}
 
 function createSVGButton(direction: "left" | "right") {
     return `
@@ -30,43 +26,157 @@ function createSVGButton(direction: "left" | "right") {
     `;
 }
 
-const players: any[] = [];
+let youTubeApiPromise: Promise<void> | null = null;
+
+function loadYouTubeApi(): Promise<void> {
+    if (!youTubeApiPromise) {
+        youTubeApiPromise = new Promise(resolve => {
+            const w = window as any;
+            if (w.YT?.Player) {
+                resolve();
+                return;
+            }
+            const previous = w.onYouTubeIframeAPIReady;
+            w.onYouTubeIframeAPIReady = () => {
+                previous?.();
+                resolve();
+            };
+            const tag = document.createElement("script");
+            tag.src = "https://www.youtube.com/iframe_api";
+            document.body.appendChild(tag);
+        });
+    }
+    return youTubeApiPromise;
+}
+
+function createVideoBlock() {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'video-player-wrapper';
+    wrapper.innerHTML = `
+        <div class="player-frame"></div>
+        <div class="overlay left">
+            ${createSVGButton('left')}
+            <div class="label">Rewind 15s</div>
+        </div>
+        <div class="overlay right">
+            ${createSVGButton('right')}
+            <div class="label">Forward 15s</div>
+        </div>
+        <button class="live-button">Go to Live</button>
+        <button class="play-button">▶ Play</button>
+    `;
+    return wrapper;
+}
+
+function setupPlayerControls(container: HTMLElement, playerObj: PlayerObj) {
+    const rewind = container.querySelector('.overlay.left');
+    const forward = container.querySelector('.overlay.right');
+    const liveBtn = container.querySelector('.live-button');
+
+    const rewindAction = (e: any) => {
+        e.preventDefault?.();
+        seek(playerObj, -15);
+        resetInactivityTimer(container);
+    };
+    rewind?.addEventListener('click', rewindAction);
+    rewind?.addEventListener('touchstart', rewindAction);
+
+    const forwardAction = (e: any) => {
+        e.preventDefault?.();
+        seek(playerObj, 15);
+        resetInactivityTimer(container);
+    };
+    forward?.addEventListener('click', forwardAction);
+    forward?.addEventListener('touchstart', forwardAction);
+
+    const liveAction = (e: any) => {
+        e.preventDefault?.();
+        checkLiveEdge(playerObj, true);
+        resetInactivityTimer(container);
+    };
+    liveBtn?.addEventListener('click', liveAction);
+    liveBtn?.addEventListener('touchstart', liveAction);
+
+    let inactivityTimer: any;
+    const resetInactivityTimer = (container: HTMLElement) => {
+        clearTimeout(inactivityTimer);
+        container.classList.remove('inactive');
+        inactivityTimer = setTimeout(() => {
+            container.classList.add('inactive');
+        }, 2000);
+    };
+
+    container.addEventListener('touchstart', () => resetInactivityTimer(container), { passive: true });
+    container.addEventListener('mousemove', () => resetInactivityTimer(container));
+    resetInactivityTimer(container);
+
+    container.addEventListener('mousemove', (e: MouseEvent) => {
+        if (window.innerWidth <= 768) return;
+        const rect = container.getBoundingClientRect();
+        const midpoint = rect.left + rect.width / 2;
+        container.classList.toggle('show-left', e.clientX < midpoint);
+        container.classList.toggle('show-right', e.clientX >= midpoint);
+    });
+
+    container.addEventListener('mouseleave', () => {
+        container.classList.remove('show-left', 'show-right');
+    });
+}
+
+function seek(playerObj: PlayerObj, seconds: number) {
+    const { player } = playerObj;
+    const time = player.getCurrentTime?.() || 0;
+    player.seekTo(Math.max(0, time + seconds), true);
+    playerObj.disableLiveEdgeUntil = Date.now() + 10000;
+}
+
+function checkLiveEdge(playerObj: PlayerObj, force = false) {
+    if (!force && Date.now() < playerObj.disableLiveEdgeUntil) return;
+    const player = playerObj.player;
+    try {
+        const current = player.getCurrentTime?.();
+        const duration = player.getDuration?.();
+        if (duration - current > 5) {
+            player.seekTo(duration, true);
+            if (player.getPlayerState() !== (window as any).YT.PlayerState.PLAYING) {
+                player.playVideo();
+            }
+        }
+    } catch (e) {
+        console.warn('Live edge check failed:', e);
+    }
+}
 
 const WebCams: React.FC = () => {
     const containerRef = useRef<HTMLDivElement>(null);
+    const playersRef = useRef<PlayerObj[]>([]);
+    const [entries, setEntries] = useState<WebCamEntry[]>(loadEntries);
+    const [message, setMessage] = useState<string | null>(null);
 
+    // Build a player for every configured web cam, rebuilding whenever the configuration changes.
     useEffect(() => {
-        (window as any).onYouTubeIframeAPIReady = async () => {
-            const container = containerRef.current;
-            let videoData = getCachedVideos();
+        const container = containerRef.current;
+        if (!container) return;
 
-            if (!videoData) {
-                videoData = await Promise.all(videoNames.map(async name => {
-                    const videoId = await fetchVideoIdByName(name);
-                    return { name, videoId };
-                }));
-                cacheVideos(videoData);
-            }
+        let cancelled = false;
+        const players: PlayerObj[] = [];
+        playersRef.current = players;
 
-            interface VideoData {
-                name: string;
-                videoId: string | null;
-            }
+        (async () => {
+            await loadYouTubeApi();
+            const ids = await Promise.all(entries.map(e => e.videoId || resolveVideoId(e.source)));
+            if (cancelled) return;
 
-            if (!videoData.some((v: VideoData) => v.videoId)) {
-                if (container) {
-                    container.innerHTML = "<div style='color:white;padding:2em;'>No live videos found for the configured railcams.</div>";
-                }
-            }
+            const videoIds = ids.filter((id): id is string => !!id);
+            setMessage(videoIds.length
+                ? null
+                : 'No live videos found for the configured web cams. Use "Edit web cams" to set video IDs.');
 
-            videoData.forEach(({ videoId }: { videoId: string | null }, index: number) => {
-                if (!videoId || !container) return;
-
-                const block = createVideoBlock(index);
+            videoIds.forEach(videoId => {
+                const block = createVideoBlock();
                 container.appendChild(block);
 
-                // Setup YouTube Player
-                const player = new (window as any).YT.Player(`player-${index}`, {
+                const player = new (window as any).YT.Player(block.querySelector('.player-frame'), {
                     videoId,
                     playerVars: {
                         autoplay: 1,
@@ -100,154 +210,45 @@ const WebCams: React.FC = () => {
                 players.push(playerObj);
                 setupPlayerControls(block, playerObj);
             });
+        })();
 
-            setInterval(() => players.forEach(p => checkLiveEdge(p)), 60000);
-        };
-
-        if (!(window as any).YT) {
-            const tag = document.createElement("script");
-            tag.src = "https://www.youtube.com/iframe_api";
-            document.body.appendChild(tag);
-        } else if ((window as any).YT && (window as any).YT.Player) {
-            // API already loaded, call callback manually
-            (window as any).onYouTubeIframeAPIReady();
-        }
-
-        document.addEventListener('visibilitychange', () => {
-            if (!document.hidden) players.forEach(p => checkLiveEdge(p));
-        });
-
-        // Helper functions
-        function getCachedVideos() {
-            const cached = localStorage.getItem('youtube-videos');
-            const timestamp = parseInt(localStorage.getItem('youtube-videos-time') || "0", 10);
-            const now = Date.now();
-            return (cached && timestamp && now - timestamp < 7 * 24 * 60 * 60 * 1000)
-                ? JSON.parse(cached)
-                : null;
-        }
-
-        function cacheVideos(videos: any) {
-            localStorage.setItem('youtube-videos', JSON.stringify(videos));
-            localStorage.setItem('youtube-videos-time', Date.now().toString());
-        }
-
-        async function fetchVideoIdByName(query: string) {
-            const apiKey = import.meta.env.VITE_YOUTUBE_API_KEY;
-            const res = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&eventType=live&maxResults=1&key=${apiKey}`);
-            const data = await res.json();
-            const videoId = data.items?.[0]?.id?.videoId ?? null;
-            console.log(`Query: ${query}, VideoId: ${videoId}`, data);
-            return videoId;
-        }
-
-        function createVideoBlock(index: number) {
-            const wrapper = document.createElement('div');
-            wrapper.className = 'video-player-wrapper';
-            wrapper.innerHTML = `
-                <div id="player-${index}" class="player-frame"></div>
-                <div class="overlay left">
-                    ${createSVGButton('left')}
-                    <div class="label">Rewind 15s</div>
-                </div>
-                <div class="overlay right">
-                    ${createSVGButton('right')}
-                    <div class="label">Forward 15s</div>
-                </div>
-                <button class="live-button">Go to Live</button>
-                <button class="play-button">▶ Play</button>
-            `;
-            return wrapper;
-        }
-
-        function setupPlayerControls(container: HTMLElement, playerObj: any) {
-            const rewind = container.querySelector('.overlay.left');
-            const forward = container.querySelector('.overlay.right');
-            const liveBtn = container.querySelector('.live-button');
-
-            const rewindAction = (e: any) => {
-                e.preventDefault?.();
-                seek(playerObj, -15);
-                resetInactivityTimer(container);
-            };
-            rewind?.addEventListener('click', rewindAction);
-            rewind?.addEventListener('touchstart', rewindAction);
-
-            const forwardAction = (e: any) => {
-                e.preventDefault?.();
-                seek(playerObj, 15);
-                resetInactivityTimer(container);
-            };
-            forward?.addEventListener('click', forwardAction);
-            forward?.addEventListener('touchstart', forwardAction);
-
-            const liveAction = (e: any) => {
-                e.preventDefault?.();
-                checkLiveEdge(playerObj, true);
-                resetInactivityTimer(container);
-            };
-            liveBtn?.addEventListener('click', liveAction);
-            liveBtn?.addEventListener('touchstart', liveAction);
-
-            let inactivityTimer: any;
-            const resetInactivityTimer = (container: HTMLElement) => {
-                clearTimeout(inactivityTimer);
-                container.classList.remove('inactive');
-                inactivityTimer = setTimeout(() => {
-                    container.classList.add('inactive');
-                }, 2000);
-            };
-
-            container.addEventListener('touchstart', () => resetInactivityTimer(container), { passive: true });
-            container.addEventListener('mousemove', () => resetInactivityTimer(container));
-            resetInactivityTimer(container);
-
-            container.addEventListener('mousemove', (e: MouseEvent) => {
-                if (window.innerWidth <= 768) return;
-                const rect = container.getBoundingClientRect();
-                const midpoint = rect.left + rect.width / 2;
-                container.classList.toggle('show-left', e.clientX < midpoint);
-                container.classList.toggle('show-right', e.clientX >= midpoint);
-            });
-
-            container.addEventListener('mouseleave', () => {
-                container.classList.remove('show-left', 'show-right');
-            });
-        }
-
-        function seek(playerObj: any, seconds: number) {
-            const { player } = playerObj;
-            const time = player.getCurrentTime?.() || 0;
-            player.seekTo(Math.max(0, time + seconds), true);
-            playerObj.disableLiveEdgeUntil = Date.now() + 10000;
-        }
-
-        function checkLiveEdge(playerObj: any, force = false) {
-            if (!force && Date.now() < playerObj.disableLiveEdgeUntil) return;
-            const player = playerObj.player;
-            try {
-                const current = player.getCurrentTime?.();
-                const duration = player.getDuration?.();
-                if (duration - current > 5) {
-                    player.seekTo(duration, true);
-                    if (player.getPlayerState() !== (window as any).YT.PlayerState.PLAYING) {
-                        player.playVideo();
-                    }
+        return () => {
+            cancelled = true;
+            players.forEach(p => {
+                try {
+                    p.player.destroy?.();
+                } catch {
+                    // The player may not have finished initializing.
                 }
-            } catch (e) {
-                console.warn('Live edge check failed:', e);
-            }
-        }
+            });
+            playersRef.current = [];
+            container.replaceChildren();
+        };
+    }, [entries]);
 
-        // Authenticate and load API
-        //(window as any).authenticateUser();
+    useEffect(() => {
+        const keepLive = () => playersRef.current.forEach(p => checkLiveEdge(p));
+        const onVisibilityChange = () => {
+            if (!document.hidden) keepLive();
+        };
+        const interval = setInterval(keepLive, 60000);
+        document.addEventListener('visibilitychange', onVisibilityChange);
+        return () => {
+            clearInterval(interval);
+            document.removeEventListener('visibilitychange', onVisibilityChange);
+        };
     }, []);
+
+    const handleSave = (updated: WebCamEntry[]) => {
+        setMessage(null);
+        setEntries(saveEntries(updated));
+    };
 
     return (
         <div>
+            <WebCamEditor entries={entries} onSave={handleSave} />
+            {message && <div className="webcam-message">{message}</div>}
             <div className="video-container-wrapper" ref={containerRef}></div>
-            <button id="logout" style={{ display: "none" }}>Logout</button>
-            <div id="content" style={{ marginTop: 20 }}></div>
         </div>
     );
 };
