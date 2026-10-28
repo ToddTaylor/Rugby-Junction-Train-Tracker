@@ -41,12 +41,11 @@ namespace Web.Server.Services.Rules
 
         public async Task<TelemetryRuleResult> ShouldDiscardAsync(TelemetryRuleContext context)
         {
-            // Get recent telemetry for this address within the time window.
+            // Get recent telemetry for this train within the time window.
             var minutesAgo = context.Telemetry.CreatedAt.AddMinutes(-TIME_WINDOW_MINUTES);
-            var recentTelemetry = await _telemetryRepository
-                .GetRecentsWithinTimeOffsetAsync(context.Telemetry.AddressID, context.RailroadId, minutesAgo);
+            var recentTelemetry = await RecentTelemetry.GetAsync(_telemetryRepository, context, minutesAgo);
 
-            if (recentTelemetry == null || recentTelemetry.Count <= 1)
+            if (recentTelemetry.Count <= 1)
             {
                 // Need at least two telemetry entries to compare speeds.
                 return TelemetryRuleResult.NotDiscarded();

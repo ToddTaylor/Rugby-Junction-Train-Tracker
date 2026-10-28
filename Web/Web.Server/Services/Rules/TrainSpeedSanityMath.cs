@@ -44,6 +44,24 @@ namespace Web.Server.Services.Rules
         }
 
         /// <summary>
+        /// Whether a train seen at <paramref name="from"/> could have reached <paramref name="to"/> in
+        /// the time between the two readings without exceeding <paramref name="maxMph"/>, after
+        /// allowing for radio range and train length. Returns true when distance or speed cannot be
+        /// determined, so an unknown position never counts against a train.
+        /// </summary>
+        public static bool IsReachable(BeaconRailroad from, DateTime fromUtc, BeaconRailroad to, DateTime toUtc, int maxMph)
+        {
+            var distance = TryGetDistanceMiles(from, to);
+            if (distance == null)
+            {
+                return true;
+            }
+
+            var speedMph = TryGetSpeedMph(GetAdjustedDistanceMiles(distance.Value.Miles), fromUtc, toUtc);
+            return !speedMph.HasValue || speedMph.Value <= maxMph;
+        }
+
+        /// <summary>
         /// Distance between two beacon railroads. Linear milepost subtraction is valid ONLY when both
         /// are on the SAME subdivision. Mileposts on different subdivisions are independent numbering
         /// schemes even within one railroad: Junction City is MP 260 on the CN Superior Subdivision and

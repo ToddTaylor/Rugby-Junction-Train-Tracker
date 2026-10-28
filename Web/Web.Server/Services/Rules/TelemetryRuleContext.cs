@@ -22,5 +22,12 @@ namespace Web.Server.Services.Rules
         /// i.e. the subdivision the existing map pin was on.
         /// </summary>
         public BeaconRailroad? FromBeaconRailroad { get; init; }
+
+        /// <summary>
+        /// The map pin the telemetry is being applied to. When set, rules compare against that pin's
+        /// own recent telemetry instead of every reading for the address, because two trains on the
+        /// same railroad can report the same address ID.
+        /// </summary>
+        public int? MapPinId { get; init; }
     }
 }

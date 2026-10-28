@@ -62,6 +62,14 @@ namespace Web.ServerTests.Services
             _mapPinRepositoryMock.Setup(r => r.UpsertAsync(It.IsAny<MapPin>(), It.IsAny<DateTime>()))
                 .ReturnsAsync((MapPin mapPin, DateTime _) => mapPin);
 
+            // Default: the HOT/EOT candidate list is whatever single pin the test set up by address.
+            _mapPinRepositoryMock.Setup(r => r.GetAllByAddressIdAsync(It.IsAny<int>()))
+                .Returns(async (int addressId) =>
+                {
+                    var mapPin = await _mapPinRepositoryMock.Object.GetByAddressIdAsync(addressId);
+                    return mapPin == null ? new List<MapPin>() : new List<MapPin> { mapPin };
+                });
+
             // Default: no exact DPU address+train match
             _mapPinRepositoryMock.Setup(r => r.GetByAddressAndTrainIdAsync(It.IsAny<int>(), It.IsAny<int>(), MapPinService.TIME_THRESHOLD_DPU_EXACT_MINUTES))
                 .ReturnsAsync((MapPin?)null);
@@ -111,8 +119,8 @@ namespace Web.ServerTests.Services
                 {
                     // Use real processors with mocked dependencies
                     { SourceEnum.DPU, new Web.Server.Services.Processors.DpuMapPinProcessor(_mapPinRepositoryMock.Object, new Microsoft.Extensions.Logging.Abstractions.NullLogger<Web.Server.Services.Processors.DpuMapPinProcessor>()) },
-                    { SourceEnum.HOT, new Web.Server.Services.Processors.HotEotMapPinProcessor(_mapPinRepositoryMock.Object, new Microsoft.Extensions.Logging.Abstractions.NullLogger<Web.Server.Services.Processors.HotEotMapPinProcessor>()) },
-                    { SourceEnum.EOT, new Web.Server.Services.Processors.HotEotMapPinProcessor(_mapPinRepositoryMock.Object, new Microsoft.Extensions.Logging.Abstractions.NullLogger<Web.Server.Services.Processors.HotEotMapPinProcessor>()) }
+                    { SourceEnum.HOT, new Web.Server.Services.Processors.HotEotMapPinProcessor(_mapPinRepositoryMock.Object, _telemetryRepositoryMock.Object, new Microsoft.Extensions.Logging.Abstractions.NullLogger<Web.Server.Services.Processors.HotEotMapPinProcessor>()) },
+                    { SourceEnum.EOT, new Web.Server.Services.Processors.HotEotMapPinProcessor(_mapPinRepositoryMock.Object, _telemetryRepositoryMock.Object, new Microsoft.Extensions.Logging.Abstractions.NullLogger<Web.Server.Services.Processors.HotEotMapPinProcessor>()) }
                 });
         }
 
@@ -766,7 +774,7 @@ namespace Web.ServerTests.Services
                 SubdivisionId = CNSussexBeacon.Subdivision.ID,
                 Direction = fromDirection,
                 CreatedAt = _timeProviderMock.Object.UtcNow.AddSeconds(-5),
-                LastUpdate = _timeProviderMock.Object.UtcNow.AddSeconds(-5),
+                LastUpdate = _timeProviderMock.Object.UtcNow.AddHours(-2), // Long enough ago to reach the new beacon.
                 BeaconRailroad = CNSussexBeacon,
                 Moving = telemetry.Moving,
                 CreatedRailroadID = CNSussexBeacon.Subdivision.RailroadID,
@@ -934,7 +942,7 @@ namespace Web.ServerTests.Services
                 BeaconID = CNSussexBeacon.BeaconID,
                 SubdivisionId = CNSussexBeacon.Subdivision.ID,
                 CreatedAt = _timeProviderMock.Object.UtcNow,
-                LastUpdate = _timeProviderMock.Object.UtcNow,
+                LastUpdate = _timeProviderMock.Object.UtcNow.AddHours(-2), // Long enough ago to reach the new beacon.
                 BeaconRailroad = CNSussexBeacon,
                 Moving = telemetry.Moving,
                 CreatedRailroadID = CNSussexBeacon.Subdivision.RailroadID,
@@ -957,7 +965,7 @@ namespace Web.ServerTests.Services
                 SubdivisionId = CNRugbyJunctionBeacon.Subdivision.ID,
                 Direction = toDirection,
                 CreatedAt = _timeProviderMock.Object.UtcNow,
-                LastUpdate = _timeProviderMock.Object.UtcNow,
+                LastUpdate = fromMapPin.LastUpdate,
                 BeaconRailroad = CNRugbyJunctionBeacon,
                 Moving = null,
                 CreatedRailroadID = CNSussexBeacon.Subdivision.RailroadID,
@@ -968,12 +976,14 @@ namespace Web.ServerTests.Services
                         AddressID = telemetry.AddressID,
                         Source = telemetry.Source,
                         CreatedAt = _timeProviderMock.Object.UtcNow,
-                        LastUpdate = _timeProviderMock.Object.UtcNow
+                        LastUpdate = telemetry.LastUpdate
                     }
                 ],
             };
 
-            var toMapPinAfterUpdate = toMapPinBeforeUpdate;
+            // The repository stamps LastUpdate when the update is saved.
+            var toMapPinAfterUpdate = toMapPinBeforeUpdate.Clone();
+            toMapPinAfterUpdate.LastUpdate = _timeProviderMock.Object.UtcNow;
 
             var expectedMapPinObjects = new object[]
             {
@@ -1228,7 +1238,7 @@ namespace Web.ServerTests.Services
                 BeaconID = CNOshkoshBeaconRailroad.BeaconID,
                 SubdivisionId = CNOshkoshBeaconRailroad.Subdivision.ID,
                 CreatedAt = _timeProviderMock.Object.UtcNow,
-                LastUpdate = _timeProviderMock.Object.UtcNow,
+                LastUpdate = _timeProviderMock.Object.UtcNow.AddHours(-2), // Long enough ago to reach the new beacon.
                 BeaconRailroad = CNOshkoshBeaconRailroad,
                 Moving = telemetry.Moving,
                 CreatedRailroadID = CNOshkoshBeaconRailroad.Subdivision.RailroadID,
@@ -1251,7 +1261,7 @@ namespace Web.ServerTests.Services
                 SubdivisionId = CNRugbyJunctionBeaconRailroad.Subdivision.ID,
                 Direction = toDirection,
                 CreatedAt = _timeProviderMock.Object.UtcNow,
-                LastUpdate = _timeProviderMock.Object.UtcNow,
+                LastUpdate = fromMapPin.LastUpdate,
                 BeaconRailroad = CNRugbyJunctionBeaconRailroad,
                 Moving = null,
                 CreatedRailroadID = CNOshkoshBeaconRailroad.Subdivision.RailroadID,
@@ -1262,12 +1272,14 @@ namespace Web.ServerTests.Services
                         AddressID = telemetry.AddressID,
                         Source = telemetry.Source,
                         CreatedAt = _timeProviderMock.Object.UtcNow,
-                        LastUpdate = _timeProviderMock.Object.UtcNow
+                        LastUpdate = telemetry.LastUpdate
                     }
                 ],
             };
 
-            var toMapPinAfterUpdate = toMapPinBeforeUpdate;
+            // The repository stamps LastUpdate when the update is saved.
+            var toMapPinAfterUpdate = toMapPinBeforeUpdate.Clone();
+            toMapPinAfterUpdate.LastUpdate = _timeProviderMock.Object.UtcNow;
 
             var expectedMapPinObjects = new object[]
             {
@@ -1899,6 +1911,97 @@ namespace Web.ServerTests.Services
         /// Test ensures that if a train with HOT and EOT is between two beacons that the "from" beacon 
         /// telemetry is discarded before applying the DPU anti-ping pong rule.
         /// </summary>
+        /// <summary>
+        /// Two trains on one railroad share an address. One sits at Oshkosh; a pending reading at Rugby
+        /// Junction is confirmed by a reading at Sussex. A second map pin is created at Rugby Junction
+        /// and moved south to Sussex, and the Oshkosh pin is left alone.
+        /// </summary>
+        [TestMethod]
+        public async Task UpsertMapPin_ConfirmedSecondTrain_CreatesSeparateMapPin()
+        {
+            // Arrange
+            var now = _timeProviderMock.Object.UtcNow;
+            var CNOshkoshBeacon = TestData.CN_Oshkosh_WI(now);
+            var CNRugbyJunctionBeacon = TestData.CN_RugbyJunction_WI(now);
+            var CNSussexBeacon = TestData.CN_Sussex_WI(now);
+            var addressID = 20679;
+
+            var oshkoshMapPin = new MapPin
+            {
+                ID = 1,
+                BeaconID = CNOshkoshBeacon.BeaconID,
+                SubdivisionId = CNOshkoshBeacon.SubdivisionID,
+                BeaconRailroad = CNOshkoshBeacon,
+                CreatedRailroadID = CNOshkoshBeacon.Subdivision.RailroadID,
+                LastUpdate = now.AddMinutes(-1),
+                Addresses =
+                [
+                    new Address { AddressID = addressID, Source = SourceEnum.HOT, CreatedAt = now.AddMinutes(-1), LastUpdate = now.AddMinutes(-1) }
+                ]
+            };
+
+            var pendingTelemetry = new Telemetry
+            {
+                ID = 501,
+                BeaconID = CNRugbyJunctionBeacon.BeaconID,
+                Beacon = new Beacon { ID = CNRugbyJunctionBeacon.BeaconID, Name = "Rugby Junction", BeaconRailroads = [CNRugbyJunctionBeacon] },
+                AddressID = addressID,
+                Source = SourceEnum.EOT,
+                Discarded = true,
+                DiscardReason = Web.Server.Services.Processors.HotEotMapPinProcessor.PENDING_SECOND_TRAIN_REASON,
+                CreatedAt = now.AddMinutes(-5),
+                LastUpdate = now.AddMinutes(-5)
+            };
+
+            var telemetry = new Telemetry
+            {
+                ID = 502,
+                BeaconID = CNSussexBeacon.BeaconID,
+                Beacon = new Beacon { ID = CNSussexBeacon.BeaconID, Name = "Sussex", BeaconRailroads = [CNSussexBeacon] },
+                AddressID = addressID,
+                Source = SourceEnum.HOT,
+                CreatedAt = now,
+                LastUpdate = now
+            };
+
+            _mapPinRepositoryMock.Setup(r => r.GetByAddressIdAsync(addressID))
+                .ReturnsAsync(oshkoshMapPin);
+            _telemetryRepositoryMock.Setup(r => r.GetRecentsDiscardedForAddressAsync(
+                    addressID, Web.Server.Services.Processors.HotEotMapPinProcessor.PENDING_SECOND_TRAIN_REASON, It.IsAny<DateTime>()))
+                .ReturnsAsync([pendingTelemetry]);
+            _beaconRailroadServiceMock.Setup(s => s.GetByIdAsync(CNRugbyJunctionBeacon.BeaconID, CNRugbyJunctionBeacon.SubdivisionID))
+                .ReturnsAsync(CNRugbyJunctionBeacon);
+
+            // A new map pin takes its ID from the telemetry it is created from.
+            var secondTrainMapPinId = pendingTelemetry.ID;
+
+            var upserts = new List<(int BeaconID, string? Direction)>();
+            _mapPinRepositoryMock.Setup(r => r.UpsertAsync(It.IsAny<MapPin>(), It.IsAny<DateTime>()))
+                .ReturnsAsync((MapPin mapPin, DateTime _) =>
+                {
+                    upserts.Add((mapPin.BeaconID, mapPin.Direction));
+                    return mapPin;
+                });
+
+            // Act
+            await _service.UpsertMapPin(telemetry);
+
+            // Assert
+            Assert.IsFalse(telemetry.Discarded, telemetry.DiscardReason);
+            Assert.IsFalse(pendingTelemetry.Discarded);
+            Assert.IsNull(pendingTelemetry.DiscardReason);
+            Assert.AreEqual(secondTrainMapPinId, pendingTelemetry.MapPinID);
+
+            CollectionAssert.AreEqual(
+                new List<(int, string?)> { (CNRugbyJunctionBeacon.BeaconID, null), (CNSussexBeacon.BeaconID, "S") },
+                upserts);
+
+            _telemetryRepositoryMock.Verify(r => r.UpdateAsync(pendingTelemetry), Times.Once);
+            _telemetryRepositoryMock.Verify(r => r.SetMapPinAsync(telemetry.ID, secondTrainMapPinId), Times.Once);
+            Assert.AreEqual(CNOshkoshBeacon.BeaconID, oshkoshMapPin.BeaconID);
+            Assert.AreEqual(1, oshkoshMapPin.Addresses.Count);
+        }
+
         [TestMethod]
         public async Task UpsertMapPin_DiscardMapPin_HOTEOTAntiPingPong()
         {
@@ -1956,28 +2059,12 @@ namespace Web.ServerTests.Services
             _beaconRailroadServiceMock.Setup(s => s.GetByIdAsync(previousMapPin.BeaconID, previousMapPin.SubdivisionId))
                 .ReturnsAsync(CNWaukeshaBeacon);
 
+            // The map pin's own history. The new Sussex telemetry (trying to steal the train back) is
+            // not stamped with the map pin yet, so the rule places it in front of this history.
             var minutesAgo = telemetry.CreatedAt.AddMinutes(-DpuAntiPingPongRule.TIME_WINDOW_MINUTES);
-            _telemetryRepositoryMock.Setup(r => r.GetRecentsWithinTimeOffsetAsync(addressID, CNSussexBeacon.Subdivision.RailroadID, minutesAgo))
+            _telemetryRepositoryMock.Setup(r => r.GetRecentsForMapPinAsync(previousMapPin.ID, minutesAgo))
                 .ReturnsAsync(
                 [
-                    // Sussex tried to steal the train back. This is the new telemetry that should get
-                    // deleted before the DPU anti-ping pong rule is applied. 
-                    new Telemetry
-                    {
-                        AddressID = addressID,
-                        BeaconID = CNSussexBeacon.BeaconID,
-                        Beacon = new Beacon
-                        {
-                            ID = CNSussexBeacon.BeaconID,
-                            Name = CNSussexBeacon.Beacon.Name,
-                            BeaconRailroads = [
-                                CNSussexBeacon
-                            ]
-                        },
-                        Discarded = false,
-                        Source = SourceEnum.EOT,
-                        CreatedAt = telemetry.CreatedAt.AddMinutes(-34)
-                    },
                     new Telemetry
                     {
                         AddressID = addressID,
