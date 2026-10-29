@@ -388,5 +388,42 @@ namespace Web.ServerTests.Services.Rules
             // Assert
             Assert.IsTrue(result.ShouldDiscard);
         }
+
+        [TestMethod]
+        public async Task ShouldDiscardAsync_UsesMapPinHistory_WhenMapPinIdIsSet()
+        {
+            // Arrange: by address, another train sharing 32981 makes this look like a ping-pong back
+            // to beacon 2. This map pin's own history never left beacon 2.
+            var currentTime = DateTime.UtcNow;
+            var context = new TelemetryRuleContext
+            {
+                Telemetry =
+                new Telemetry { BeaconID = 2, AddressID = 32981, Source = SourceEnum.EOT, CreatedAt = currentTime },
+                RailroadId = 1,
+                MapPinId = 42
+            };
+
+            _telemetryRepositoryMock
+                .Setup(s => s.GetRecentsWithinTimeOffsetAsync(32981, 1, It.IsAny<DateTime>()))
+                .ReturnsAsync(
+                [
+                    new Telemetry { BeaconID = 2, AddressID = 32981, Source = SourceEnum.EOT, CreatedAt = currentTime },
+                    new Telemetry { BeaconID = 1, AddressID = 32981, Source = SourceEnum.EOT, CreatedAt = currentTime.AddMinutes(-1) },
+                    new Telemetry { BeaconID = 2, AddressID = 32981, Source = SourceEnum.EOT, CreatedAt = currentTime.AddMinutes(-3) }
+                ]);
+
+            _telemetryRepositoryMock
+                .Setup(s => s.GetRecentsForMapPinAsync(42, It.IsAny<DateTime>()))
+                .ReturnsAsync(
+                [
+                    new Telemetry { BeaconID = 2, AddressID = 32981, Source = SourceEnum.EOT, CreatedAt = currentTime.AddMinutes(-3) }
+                ]);
+
+            // Act
+            var result = await _rule.ShouldDiscardAsync(context);
+
+            // Assert
+            Assert.IsFalse(result.ShouldDiscard);
+        }
     }
 }

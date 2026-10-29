@@ -209,6 +209,22 @@ namespace Web.Server.Services
                 return;
             }
 
+            var isSecondTrain = processorResult.SeedTelemetry != null;
+
+            if (processorResult.SeedTelemetry != null)
+            {
+                // A second train sharing the address is confirmed. Start its map pin at the earlier
+                // reading, then move it here as an ordinary update so it gets a direction.
+                var secondTrainMapPin = await CreateSecondTrainMapPinAsync(processorResult.SeedTelemetry);
+                AddHotOrEotAddressIfMissing(secondTrainMapPin, telemetry);
+
+                processorResult = new Web.Server.Services.Processors.MapPinProcessingResult
+                {
+                    MapPin = secondTrainMapPin,
+                    IsNewMapPin = false
+                };
+            }
+
             MapPin? mapPin = null;
             bool isNewMapPin = processorResult.IsNewMapPin;
 
@@ -246,6 +262,20 @@ namespace Web.Server.Services
 
             // If at a single-track beacon, merge any other map pins at the same beacon into this one.
             upsertedMapPin = await MergeSingleTrackDuplicatesAsync(upsertedMapPin, telemetry);
+
+            // Rules compare a train's readings by map pin, since an address ID can be shared.
+            telemetry.MapPinID = upsertedMapPin.ID;
+
+            if (isSecondTrain)
+            {
+                // A note, not a discard: tells the telemetry log this reading started a second train.
+                telemetry.DiscardReason = Processors.HotEotMapPinProcessor.SECOND_TRAIN_NOTE;
+                await _telemetryRepository.UpdateAsync(telemetry);
+            }
+            else
+            {
+                await _telemetryRepository.SetMapPinAsync(telemetry.ID, upsertedMapPin.ID);
+            }
 
             // Save or update history record
             // - For new map pins: creates a new history record
@@ -366,6 +396,9 @@ namespace Web.Server.Services
                 {
                     upsertedMapPin.ShareCode = duplicate.ShareCode;
                 }
+
+                // Keep the duplicate's readings with the merged pin so its rule history stays continuous.
+                await _telemetryRepository.ReassignMapPinAsync(duplicate.ID, upsertedMapPin.ID);
 
                 // Delete the duplicate's history so it doesn't create a stale orphan record.
                 await _mapPinHistoryService.DeleteHistoryByOriginalMapPinIdAsync(duplicate.ID);
@@ -580,28 +613,14 @@ namespace Web.Server.Services
                     });
                 }
 
-                var distance = TrainSpeedSanityMath.TryGetDistanceMiles(existingMapPinByDpuTrainID.BeaconRailroad, toBeaconRailroad);
+                var reachable = TrainSpeedSanityMath.IsReachable(
+                    existingMapPinByDpuTrainID.BeaconRailroad,
+                    existingMapPinByDpuTrainID.LastUpdate,
+                    toBeaconRailroad,
+                    telemetry.CreatedAt,
+                    SPEED_THRESHOLD_MPH);
 
-                if (distance == null)
-                {
-                    // Different subdivisions with no usable coordinates; positions are not comparable.
-                    return Task.FromResult(new DpuMatchResult
-                    {
-                        Status = DpuMatchStatus.Matched
-                    });
-                }
-
-                var effectiveMilesApart = TrainSpeedSanityMath.GetAdjustedDistanceMiles(distance.Value.Miles);
-                var speedMph = TrainSpeedSanityMath.TryGetSpeedMph(effectiveMilesApart, existingMapPinByDpuTrainID.LastUpdate, telemetry.CreatedAt);
-                if (!speedMph.HasValue)
-                {
-                    return Task.FromResult(new DpuMatchResult
-                    {
-                        Status = DpuMatchStatus.Matched
-                    });
-                }
-
-                if (speedMph.Value > SPEED_THRESHOLD_MPH)
+                if (!reachable)
                 {
                     // The existing map pin and telemetry are too far apart given the time difference, indicating that the
                     // same train ID is being used for different trains on the same railroad.
@@ -619,6 +638,31 @@ namespace Web.Server.Services
             {
                 Status = DpuMatchStatus.Matched
             });
+        }
+
+        /// <summary>
+        /// Creates and saves the map pin for a confirmed second train sharing an address ID, at the
+        /// pending reading that first suggested it. That reading is restored from discarded, noted as
+        /// a second train, and attached to the new pin.
+        /// </summary>
+        private async Task<MapPin> CreateSecondTrainMapPinAsync(Telemetry seedTelemetry)
+        {
+            var mapPin = await CreateMapPin(seedTelemetry);
+            var beaconRailroad = mapPin.BeaconRailroad;
+
+            var upsertedMapPin = await _mapPinRepository.UpsertAsync(mapPin, seedTelemetry.LastUpdate);
+
+            // Inserting clears the navigation property; the following update needs it.
+            upsertedMapPin.BeaconRailroad ??= beaconRailroad;
+
+            await _mapPinHistoryService.CreateOrUpdateHistoryFromMapPin(upsertedMapPin, true);
+
+            seedTelemetry.Discarded = false;
+            seedTelemetry.DiscardReason = Processors.HotEotMapPinProcessor.SECOND_TRAIN_NOTE;
+            seedTelemetry.MapPinID = upsertedMapPin.ID;
+            await _telemetryRepository.UpdateAsync(seedTelemetry);
+
+            return upsertedMapPin;
         }
 
         /// <summary>
@@ -784,7 +828,8 @@ namespace Web.Server.Services
                     Telemetry = telemetry,
                     RailroadId = toBeaconRailroad.Subdivision.RailroadID,
                     ToBeaconRailroad = toBeaconRailroad,
-                    FromBeaconRailroad = fromBeaconRailroad
+                    FromBeaconRailroad = fromBeaconRailroad,
+                    MapPinId = existingMapPinToUpdate.ID
                 };
 
                 var telemetryRuleResult = await _telemetryRuleEngine.ShouldDiscardAsync(context);

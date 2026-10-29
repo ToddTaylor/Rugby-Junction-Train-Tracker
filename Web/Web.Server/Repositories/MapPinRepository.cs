@@ -54,6 +54,22 @@ namespace Web.Server.Repositories
             return mapPin;
         }
 
+        /// <summary>
+        /// Get every MapPin holding a HOT/EOT address (DpuTrainID is null), newest first. More than
+        /// one train on a railroad can report the same address, so each can have its own MapPin.
+        /// </summary>
+        public async Task<List<MapPin>> GetAllByAddressIdAsync(int addressID)
+        {
+            return await _context.MapPins
+                .Where(mp => mp.Addresses.Any(a => a.AddressID == addressID && a.DpuTrainID == null))
+                .OrderByDescending(mp => mp.LastUpdate)
+                .Include(mp => mp.Addresses)
+                .Include(mp => mp.BeaconRailroad)
+                .Include(mp => mp.BeaconRailroad.Subdivision)
+                .Include(mp => mp.BeaconRailroad.Subdivision.Railroad)
+                .ToListAsync();
+        }
+
         public async Task<MapPin?> GetByAddressAndTrainIdAsync(int addressID, int dpuTrainID, int minutesThreshold)
         {
             return await _context.MapPins

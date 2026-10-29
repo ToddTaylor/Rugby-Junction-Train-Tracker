@@ -652,5 +652,91 @@ namespace Web.ServerTests.Services.Rules
         }
 
         #endregion
+
+        #region Shared address IDs - per map pin history
+
+        /// <summary>
+        /// Two trains on one railroad report the same address. The other train's reading, far away
+        /// and moments ago, is in the address history but not in this map pin's history, so it must
+        /// not make this train look impossibly fast.
+        /// </summary>
+        [TestMethod]
+        public async Task ShouldDiscardAsync_UsesMapPinHistory_WhenMapPinIdIsSet()
+        {
+            // Arrange
+            var currentTime = DateTime.UtcNow;
+
+            var mosinee = MosineeValley();
+            var currentTelemetry = TelemetryAt(mosinee, currentTime);
+            var thisTrainPrior = TelemetryAt(JunctionCityValley(), currentTime.AddMinutes(-30));
+            var otherTrainPrior = TelemetryAt(FarAwayValley(), currentTime.AddMinutes(-2));
+
+            var context = new TelemetryRuleContext
+            {
+                Telemetry = currentTelemetry,
+                RailroadId = CN_RAILROAD_ID,
+                ToBeaconRailroad = mosinee,
+                MapPinId = 42
+            };
+
+            SetupRecents(currentTelemetry, otherTrainPrior);
+            _mockTelemetryRepository
+                .Setup(r => r.GetRecentsForMapPinAsync(42, It.IsAny<DateTime>()))
+                .ReturnsAsync([thisTrainPrior]);
+
+            // Act
+            var result = await _rule.ShouldDiscardAsync(context);
+
+            // Assert
+            Assert.IsFalse(result.ShouldDiscard, result.Reason);
+            _mockTelemetryRepository.Verify(
+                r => r.GetRecentsWithinTimeOffsetAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<DateTime>()),
+                Times.Never);
+        }
+
+        [TestMethod]
+        public async Task ShouldDiscardAsync_ReturnsTrue_WhenMapPinHistoryShowsImpossibleSpeed()
+        {
+            // Arrange
+            var currentTime = DateTime.UtcNow;
+
+            var mosinee = MosineeValley();
+            var currentTelemetry = TelemetryAt(mosinee, currentTime);
+            var thisTrainPrior = TelemetryAt(FarAwayValley(), currentTime.AddMinutes(-2));
+
+            var context = new TelemetryRuleContext
+            {
+                Telemetry = currentTelemetry,
+                RailroadId = CN_RAILROAD_ID,
+                ToBeaconRailroad = mosinee,
+                MapPinId = 42
+            };
+
+            _mockTelemetryRepository
+                .Setup(r => r.GetRecentsForMapPinAsync(42, It.IsAny<DateTime>()))
+                .ReturnsAsync([thisTrainPrior]);
+
+            // Act
+            var result = await _rule.ShouldDiscardAsync(context);
+
+            // Assert
+            Assert.IsTrue(result.ShouldDiscard);
+        }
+
+        /// <summary>
+        /// A Valley Subdivision beacon far enough down the milepost scale to be unreachable from
+        /// Mosinee in minutes.
+        /// </summary>
+        private static BeaconRailroad FarAwayValley() => new()
+        {
+            BeaconID = 13,
+            SubdivisionID = VALLEY_SUBDIVISION_ID,
+            Subdivision = CnValley(),
+            Milepost = 10.0,
+            Latitude = 44.0,
+            Longitude = -89.5
+        };
+
+        #endregion
     }
 }

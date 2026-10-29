@@ -39,6 +39,13 @@ namespace Web.Server.Entities
         /// </summary>
         public string? DiscardReason { get; set; }
 
+        /// <summary>
+        /// The map pin this telemetry was applied to, or null if it was discarded or predates
+        /// per-pin tracking. Two trains can share an address ID, so rules that compare a train's
+        /// recent readings group them by map pin rather than by address.
+        /// </summary>
+        public int? MapPinID { get; set; }
+
         public override bool Equals(object? obj)
         {
             return Equals(obj as Telemetry);
@@ -58,7 +65,8 @@ namespace Web.Server.Entities
                 Moving == other.Moving &&
                 Source == other.Source &&
                 Discarded == other.Discarded &&
-                DiscardReason == other.DiscardReason;
+                DiscardReason == other.DiscardReason &&
+                MapPinID == other.MapPinID;
         }
 
         public override int GetHashCode()
@@ -76,6 +84,7 @@ namespace Web.Server.Entities
             hash.Add(Source);
             hash.Add(Discarded);
             hash.Add(DiscardReason);
+            hash.Add(MapPinID);
             return hash.ToHashCode();
         }
 

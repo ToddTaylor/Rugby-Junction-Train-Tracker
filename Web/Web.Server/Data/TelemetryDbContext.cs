@@ -120,6 +120,9 @@ namespace Web.Server.Data
                 .WithMany(b => b.Telemetries)
                 .HasForeignKey(t => t.BeaconID);
 
+            modelBuilder.Entity<Telemetry>()
+                .HasIndex(t => new { t.MapPinID, t.CreatedAt });
+
             modelBuilder.Entity<UserRole>()
                 .HasOne(ur => ur.User)
                 .WithMany(u => u.UserRoles)

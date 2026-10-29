@@ -66,6 +66,7 @@ namespace Web.Server.Repositories
             existingTelemetry.Source = telemetry.Source;
             existingTelemetry.Discarded = telemetry.Discarded;
             existingTelemetry.DiscardReason = telemetry.DiscardReason;
+            existingTelemetry.MapPinID = telemetry.MapPinID;
             existingTelemetry.LastUpdate = telemetry.LastUpdate;
 
             await _context.SaveChangesAsync();
@@ -109,6 +110,59 @@ namespace Web.Server.Repositories
                     .ThenInclude(br => br.Subdivision)
                 .OrderByDescending(t => t.CreatedAt)
                 .ToListAsync();
+        }
+
+        public async Task<List<Telemetry>> GetRecentsForMapPinAsync(int mapPinId, DateTime sinceUtc)
+        {
+            return await _context.Telemetries
+                .Where(t => t.MapPinID == mapPinId
+                    && t.CreatedAt >= sinceUtc
+                    && t.Discarded == false)
+                .Include(t => t.Beacon)
+                    .ThenInclude(b => b.BeaconRailroads)
+                    .ThenInclude(br => br.Subdivision)
+                .OrderByDescending(t => t.CreatedAt)
+                .ToListAsync();
+        }
+
+        public async Task<List<Telemetry>> GetRecentsDiscardedForAddressAsync(int addressId, string discardReason, DateTime sinceUtc)
+        {
+            return await _context.Telemetries
+                .Where(t => t.AddressID == addressId
+                    && t.CreatedAt >= sinceUtc
+                    && t.Discarded == true
+                    && t.DiscardReason == discardReason)
+                .Include(t => t.Beacon)
+                    .ThenInclude(b => b.BeaconRailroads)
+                    .ThenInclude(br => br.Subdivision)
+                .OrderByDescending(t => t.CreatedAt)
+                .ToListAsync();
+        }
+
+        public async Task SetMapPinAsync(int telemetryId, int mapPinId)
+        {
+            var telemetry = await _context.Telemetries.FindAsync(telemetryId);
+            if (telemetry == null)
+            {
+                return;
+            }
+
+            telemetry.MapPinID = mapPinId;
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task ReassignMapPinAsync(int fromMapPinId, int toMapPinId)
+        {
+            var telemetries = await _context.Telemetries
+                .Where(t => t.MapPinID == fromMapPinId)
+                .ToListAsync();
+
+            foreach (var telemetry in telemetries)
+            {
+                telemetry.MapPinID = toMapPinId;
+            }
+
+            await _context.SaveChangesAsync();
         }
 
         public async Task<Telemetry?> GetMostRecentByAddressAsync(int addressId)

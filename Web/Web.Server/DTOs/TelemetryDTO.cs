@@ -35,6 +35,12 @@ namespace Web.Server.DTOs
         /// </summary>
         public string? DiscardReason { get; set; }
 
+        /// <summary>
+        /// The map pin (train) this telemetry was applied to. Telemetry sharing an address ID but
+        /// with different map pins came from different trains.
+        /// </summary>
+        public int? MapPinID { get; set; }
+
         public required DateTime CreatedAt { get; set; }
 
         public required DateTime LastUpdate { get; set; }
@@ -57,6 +63,7 @@ namespace Web.Server.DTOs
                 Source == other.Source &&
                 Discarded == other.Discarded &&
                 DiscardReason == other.DiscardReason &&
+                MapPinID == other.MapPinID &&
                 CreatedAt == other.CreatedAt &&
                 LastUpdate == other.LastUpdate;
         }
@@ -74,6 +81,7 @@ namespace Web.Server.DTOs
             hash.Add(Source);
             hash.Add(Discarded);
             hash.Add(DiscardReason);
+            hash.Add(MapPinID);
             hash.Add(CreatedAt);
             hash.Add(LastUpdate);
             return hash.ToHashCode();

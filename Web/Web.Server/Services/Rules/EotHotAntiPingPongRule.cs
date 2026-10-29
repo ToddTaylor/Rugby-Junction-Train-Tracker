@@ -30,11 +30,10 @@ namespace Web.Server.Services.Rules
 
             var minutesAgo = context.Telemetry.CreatedAt.AddMinutes(-TIME_WINDOW_MINUTES);
 
-            // Get recent telemetry for this address within the time window.
-            var recentTelemetry = await _telemetryRepository
-                .GetRecentsWithinTimeOffsetAsync(context.Telemetry.AddressID, context.RailroadId, minutesAgo);
+            // Get recent telemetry for this train within the time window.
+            var recentTelemetry = await RecentTelemetry.GetAsync(_telemetryRepository, context, minutesAgo);
 
-            if (recentTelemetry == null || recentTelemetry.Count <= 1)
+            if (recentTelemetry.Count <= 1)
             {
                 // Only zero or one previous telemetry exists, so no ping-pong possible.
                 return TelemetryRuleResult.NotDiscarded();

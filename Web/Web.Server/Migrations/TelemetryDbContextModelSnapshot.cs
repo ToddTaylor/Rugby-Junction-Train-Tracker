@@ -489,6 +489,9 @@ namespace Web.Server.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("MapPinID")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool?>("Moving")
                         .HasColumnType("INTEGER");
 
@@ -502,6 +505,8 @@ namespace Web.Server.Migrations
                     b.HasKey("ID");
 
                     b.HasIndex("BeaconID");
+
+                    b.HasIndex("MapPinID", "CreatedAt");
 
                     b.ToTable("Telemetries");
                 });
