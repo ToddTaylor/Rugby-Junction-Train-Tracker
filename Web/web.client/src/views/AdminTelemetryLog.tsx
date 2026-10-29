@@ -173,6 +173,28 @@ function AdminTelemetryLog() {
             },
         },
         {
+            field: 'mapPinID',
+            headerName: 'Pin ID',
+            description: 'The map pin (train) this reading was applied to. Readings with the same Address ID but different Pin IDs came from different trains.',
+            width: 110,
+            renderCell: (params: any) => {
+                const mapPinID = params.row?.mapPinID;
+                if (mapPinID === undefined || mapPinID === null) return <span>-</span>;
+                return (
+                    <a
+                        href="#"
+                        style={{ color: 'var(--admin-accent)', textDecoration: 'underline', cursor: 'pointer' }}
+                        onClick={e => {
+                            e.preventDefault();
+                            handlePinIdClick(String(mapPinID));
+                        }}
+                    >
+                        {mapPinID}
+                    </a>
+                );
+            },
+        },
+        {
             field: 'addressID',
             headerName: 'Address ID',
             width: 155,
@@ -195,8 +217,8 @@ function AdminTelemetryLog() {
         },
         {
             field: 'trainID',
-            headerName: 'Train ID',
-            width: 120,
+            headerName: 'Train ID (DPU)',
+            width: 140,
             renderCell: (params: any) => {
                 const trainID = params.row?.trainID;
                 if (trainID === undefined || trainID === null) return <span>-</span>;
@@ -210,28 +232,6 @@ function AdminTelemetryLog() {
                         }}
                     >
                         {trainID}
-                    </a>
-                );
-            },
-        },
-        {
-            field: 'mapPinID',
-            headerName: 'Pin ID',
-            description: 'The map pin (train) this reading was applied to. Readings with the same Address ID but different Pin IDs came from different trains.',
-            width: 110,
-            renderCell: (params: any) => {
-                const mapPinID = params.row?.mapPinID;
-                if (mapPinID === undefined || mapPinID === null) return <span>-</span>;
-                return (
-                    <a
-                        href="#"
-                        style={{ color: 'var(--admin-accent)', textDecoration: 'underline', cursor: 'pointer' }}
-                        onClick={e => {
-                            e.preventDefault();
-                            handlePinIdClick(String(mapPinID));
-                        }}
-                    >
-                        {mapPinID}
                     </a>
                 );
             },
