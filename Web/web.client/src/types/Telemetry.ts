@@ -10,4 +10,6 @@ export type Telemetry = {
     lastUpdate: string;
     discarded: boolean;
     discardReason?: string;
+    // Map pin (train) the reading was applied to; differs between trains sharing an address ID.
+    mapPinID?: number | null;
 };

@@ -23,6 +23,12 @@ namespace Web.Server.Services.Processors
         /// </summary>
         public const string PENDING_SECOND_TRAIN_REASON = "Possible Second Train (pending)";
 
+        /// <summary>
+        /// Note recorded on the readings that confirmed a second train. They were NOT discarded; the
+        /// note shows in the telemetry log that the address is shared by another train.
+        /// </summary>
+        public const string SECOND_TRAIN_NOTE = "No (Second Train with same Address ID)";
+
         public string[] SupportedSources => new[] { SourceEnum.HOT, SourceEnum.EOT };
 
         private readonly IMapPinRepository _mapPinRepository;

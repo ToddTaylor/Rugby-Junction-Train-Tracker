@@ -1987,9 +1987,13 @@ namespace Web.ServerTests.Services
             await _service.UpsertMapPin(telemetry);
 
             // Assert
-            Assert.IsFalse(telemetry.Discarded, telemetry.DiscardReason);
+            // Both readings that confirmed the second train are kept, with a note for the telemetry log.
+            var secondTrainNote = Web.Server.Services.Processors.HotEotMapPinProcessor.SECOND_TRAIN_NOTE;
+            Assert.IsFalse(telemetry.Discarded);
+            Assert.AreEqual(secondTrainNote, telemetry.DiscardReason);
+            Assert.AreEqual(secondTrainMapPinId, telemetry.MapPinID);
             Assert.IsFalse(pendingTelemetry.Discarded);
-            Assert.IsNull(pendingTelemetry.DiscardReason);
+            Assert.AreEqual(secondTrainNote, pendingTelemetry.DiscardReason);
             Assert.AreEqual(secondTrainMapPinId, pendingTelemetry.MapPinID);
 
             CollectionAssert.AreEqual(
@@ -1997,7 +2001,7 @@ namespace Web.ServerTests.Services
                 upserts);
 
             _telemetryRepositoryMock.Verify(r => r.UpdateAsync(pendingTelemetry), Times.Once);
-            _telemetryRepositoryMock.Verify(r => r.SetMapPinAsync(telemetry.ID, secondTrainMapPinId), Times.Once);
+            _telemetryRepositoryMock.Verify(r => r.UpdateAsync(telemetry), Times.Once);
             Assert.AreEqual(CNOshkoshBeacon.BeaconID, oshkoshMapPin.BeaconID);
             Assert.AreEqual(1, oshkoshMapPin.Addresses.Count);
         }

@@ -22,6 +22,7 @@ function AdminTelemetryLog() {
             setBeaconNameFilter([]);
             setAddressIdFilter('');
             setTrainIdFilter('');
+            setPinIdFilter('');
             setSourceFilter([]);
             setAddressIdFilter(addressID);
         };
@@ -31,8 +32,19 @@ function AdminTelemetryLog() {
             setBeaconNameFilter([]);
             setAddressIdFilter('');
             setTrainIdFilter('');
+            setPinIdFilter('');
             setSourceFilter([]);
             setTrainIdFilter(trainID);
+        };
+    const [pinIdFilter, setPinIdFilter] = useState<string>('');
+        // Handler for clicking mapPinID hyperlink
+        const handlePinIdClick = (mapPinID: string) => {
+            setBeaconNameFilter([]);
+            setAddressIdFilter('');
+            setTrainIdFilter('');
+            setPinIdFilter('');
+            setSourceFilter([]);
+            setPinIdFilter(mapPinID);
         };
     const [beaconNameFilter, setBeaconNameFilter] = useState<string[]>([]);
         // Handler for clicking beaconName hyperlink
@@ -40,6 +52,7 @@ function AdminTelemetryLog() {
             setBeaconNameFilter([]);
             setAddressIdFilter('');
             setTrainIdFilter('');
+            setPinIdFilter('');
             setSourceFilter([]);
             setBeaconNameFilter([beaconName]);
         };
@@ -109,7 +122,7 @@ function AdminTelemetryLog() {
     // Get unique beacon names for dropdown
     const beaconNames = Array.from(new Set(sortedData.map(row => row.beaconName).filter(Boolean))).sort();
 
-    // Filter rows by addressID, trainID, beaconName, and source (multi-select)
+    // Filter rows by addressID, trainID, mapPinID, beaconName, and source (multi-select)
     const filteredData = sortedData.filter(row => {
         // Address ID filter
         if (addressIdFilter.trim()) {
@@ -120,6 +133,11 @@ function AdminTelemetryLog() {
         if (trainIdFilter.trim()) {
             const trainTokens = trainIdFilter.split(',').map(v => v.trim()).filter(Boolean);
             if (!trainTokens.includes(String(row.trainID))) return false;
+        }
+        // Pin ID filter
+        if (pinIdFilter.trim()) {
+            const pinTokens = pinIdFilter.split(',').map(v => v.trim()).filter(Boolean);
+            if (!pinTokens.includes(String(row.mapPinID))) return false;
         }
         // Beacon Name filter (multi-select)
         if (beaconNameFilter.length > 0) {
@@ -192,6 +210,28 @@ function AdminTelemetryLog() {
                         }}
                     >
                         {trainID}
+                    </a>
+                );
+            },
+        },
+        {
+            field: 'mapPinID',
+            headerName: 'Pin ID',
+            description: 'The map pin (train) this reading was applied to. Readings with the same Address ID but different Pin IDs came from different trains.',
+            width: 110,
+            renderCell: (params: any) => {
+                const mapPinID = params.row?.mapPinID;
+                if (mapPinID === undefined || mapPinID === null) return <span>-</span>;
+                return (
+                    <a
+                        href="#"
+                        style={{ color: 'var(--admin-accent)', textDecoration: 'underline', cursor: 'pointer' }}
+                        onClick={e => {
+                            e.preventDefault();
+                            handlePinIdClick(String(mapPinID));
+                        }}
+                    >
+                        {mapPinID}
                     </a>
                 );
             },
@@ -395,6 +435,27 @@ function AdminTelemetryLog() {
                             '& label.Mui-focused': { color: 'var(--admin-accent)', backgroundColor: 'var(--admin-bg-surface-alt)' },
                         }}
                     />
+                    <TextField
+                        label="Filter by Pin ID"
+                        variant="outlined"
+                        size="small"
+                        value={pinIdFilter}
+                        onChange={e => setPinIdFilter(e.target.value)}
+                        slotProps={{ inputLabel: { shrink: true } }}
+                        sx={{
+                            backgroundColor: 'var(--admin-bg-surface-alt)',
+                            borderRadius: 1,
+                            '& .MuiOutlinedInput-root': {
+                                color: 'var(--admin-text-primary)',
+                                backgroundColor: 'var(--admin-bg-surface-alt)',
+                                '& fieldset': { borderColor: 'var(--admin-border)' },
+                                '&:hover fieldset': { borderColor: 'var(--admin-border)' },
+                                '&.Mui-focused fieldset': { borderColor: 'var(--admin-accent)' },
+                            },
+                            '& label': { color: 'var(--admin-text-secondary)', backgroundColor: 'var(--admin-bg-surface-alt)', padding: '0 4px' },
+                            '& label.Mui-focused': { color: 'var(--admin-accent)', backgroundColor: 'var(--admin-bg-surface-alt)' },
+                        }}
+                    />
                     <Tooltip title="Clear filters">
                         <IconButton
                             aria-label="clear filters"
@@ -402,6 +463,7 @@ function AdminTelemetryLog() {
                                 setBeaconNameFilter([]);
                                 setAddressIdFilter('');
                                 setTrainIdFilter('');
+                                setPinIdFilter('');
                                 setSourceFilter([]);
                             }}
                             sx={{ ml: 1, ...adminClearButtonSx }}

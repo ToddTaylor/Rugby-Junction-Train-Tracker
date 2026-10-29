@@ -209,6 +209,8 @@ namespace Web.Server.Services
                 return;
             }
 
+            var isSecondTrain = processorResult.SeedTelemetry != null;
+
             if (processorResult.SeedTelemetry != null)
             {
                 // A second train sharing the address is confirmed. Start its map pin at the earlier
@@ -263,7 +265,17 @@ namespace Web.Server.Services
 
             // Rules compare a train's readings by map pin, since an address ID can be shared.
             telemetry.MapPinID = upsertedMapPin.ID;
-            await _telemetryRepository.SetMapPinAsync(telemetry.ID, upsertedMapPin.ID);
+
+            if (isSecondTrain)
+            {
+                // A note, not a discard: tells the telemetry log this reading started a second train.
+                telemetry.DiscardReason = Processors.HotEotMapPinProcessor.SECOND_TRAIN_NOTE;
+                await _telemetryRepository.UpdateAsync(telemetry);
+            }
+            else
+            {
+                await _telemetryRepository.SetMapPinAsync(telemetry.ID, upsertedMapPin.ID);
+            }
 
             // Save or update history record
             // - For new map pins: creates a new history record
@@ -630,8 +642,8 @@ namespace Web.Server.Services
 
         /// <summary>
         /// Creates and saves the map pin for a confirmed second train sharing an address ID, at the
-        /// pending reading that first suggested it. That reading is restored from discarded and
-        /// attached to the new pin.
+        /// pending reading that first suggested it. That reading is restored from discarded, noted as
+        /// a second train, and attached to the new pin.
         /// </summary>
         private async Task<MapPin> CreateSecondTrainMapPinAsync(Telemetry seedTelemetry)
         {
@@ -646,7 +658,7 @@ namespace Web.Server.Services
             await _mapPinHistoryService.CreateOrUpdateHistoryFromMapPin(upsertedMapPin, true);
 
             seedTelemetry.Discarded = false;
-            seedTelemetry.DiscardReason = null;
+            seedTelemetry.DiscardReason = Processors.HotEotMapPinProcessor.SECOND_TRAIN_NOTE;
             seedTelemetry.MapPinID = upsertedMapPin.ID;
             await _telemetryRepository.UpdateAsync(seedTelemetry);
 
