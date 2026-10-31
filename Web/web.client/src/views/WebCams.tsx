@@ -10,9 +10,17 @@ const ICON_CACHE_BUSTER = import.meta.env.VITE_APP_VERSION
     ? `?v=${import.meta.env.VITE_APP_VERSION}`
     : '';
 
+// Players render at this fixed size and are scaled up with CSS to fill their tile. YouTube picks the
+// stream resolution from the iframe's layout size, so a small player keeps it on a low-resolution stream.
+// YouTube will not play in a player smaller than 200x200, so this is the smallest 16:9 size it allows.
+const PLAYER_WIDTH = 356;
+const PLAYER_HEIGHT = 200;
+
 interface PlayerObj {
     player: any;
     disableLiveEdgeUntil: number;
+    ready: boolean;
+    inView: boolean;
 }
 
 function createSVGButton(direction: "left" | "right") {
@@ -55,7 +63,7 @@ function loadYouTubeApi(): Promise<void> {
     return youTubeApiPromise;
 }
 
-function createVideoBlock() {
+function createVideoBlock(videoId: string) {
     const wrapper = document.createElement('div');
     wrapper.className = 'video-player-wrapper';
     wrapper.innerHTML = `
@@ -68,7 +76,10 @@ function createVideoBlock() {
             ${createSVGButton('right')}
             <div class="label">Forward 15s</div>
         </div>
-        <button class="live-button">Go to Live</button>
+        <div class="video-actions">
+            <button class="live-button">Go to Live</button>
+            <button class="open-button" data-url="https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}">New Window</button>
+        </div>
         <button class="play-button">▶ Play</button>
     `;
     return wrapper;
@@ -103,6 +114,13 @@ function setupPlayerControls(container: HTMLElement, playerObj: PlayerObj) {
     liveBtn?.addEventListener('click', liveAction);
     liveBtn?.addEventListener('touchstart', liveAction);
 
+    // Click only: browsers block windows opened from touchstart because it isn't a user activation.
+    const openBtn = container.querySelector<HTMLElement>('.open-button');
+    openBtn?.addEventListener('click', e => {
+        e.preventDefault();
+        window.open(openBtn.dataset.url, '_blank', 'noopener,popup');
+    });
+
     let inactivityTimer: any;
     const resetInactivityTimer = (container: HTMLElement) => {
         clearTimeout(inactivityTimer);
@@ -134,6 +152,27 @@ function seek(playerObj: PlayerObj, seconds: number) {
     const time = player.getCurrentTime?.() || 0;
     player.seekTo(Math.max(0, time + seconds), true);
     playerObj.disableLiveEdgeUntil = Date.now() + 10000;
+}
+
+// Play a player only while its tile is on screen and the tab is visible; jump back to live on resume.
+function updatePlayback(playerObj: PlayerObj) {
+    if (!playerObj.ready) return;
+    const { player } = playerObj;
+    const PlayerState = (window as any).YT.PlayerState;
+    try {
+        const state = player.getPlayerState();
+        if (playerObj.inView && !document.hidden) {
+            if (state !== PlayerState.PLAYING && state !== PlayerState.BUFFERING) {
+                player.playVideo();
+                // Only a previously paused stream has fallen behind live; seeking before the first play stalls it.
+                if (state === PlayerState.PAUSED) checkLiveEdge(playerObj, true);
+            }
+        } else if (state === PlayerState.PLAYING || state === PlayerState.BUFFERING) {
+            player.pauseVideo();
+        }
+    } catch (e) {
+        console.warn('Playback update failed:', e);
+    }
 }
 
 function checkLiveEdge(playerObj: PlayerObj, force = false) {
@@ -168,7 +207,23 @@ const WebCams: React.FC = () => {
 
         let cancelled = false;
         const players: PlayerObj[] = [];
+        const playerByBlock = new Map<Element, PlayerObj>();
         playersRef.current = players;
+
+        const resizeObserver = new ResizeObserver(observed => {
+            observed.forEach(entry => {
+                (entry.target as HTMLElement).style.setProperty(
+                    '--player-scale', String(entry.contentRect.width / PLAYER_WIDTH));
+            });
+        });
+        const intersectionObserver = new IntersectionObserver(observed => {
+            observed.forEach(entry => {
+                const playerObj = playerByBlock.get(entry.target);
+                if (!playerObj) return;
+                playerObj.inView = entry.isIntersecting;
+                updatePlayback(playerObj);
+            });
+        });
 
         (async () => {
             await loadYouTubeApi();
@@ -181,11 +236,13 @@ const WebCams: React.FC = () => {
                 : 'No live videos found for the configured web cams. Use "Edit web cams" to set video IDs.');
 
             videoIds.forEach(videoId => {
-                const block = createVideoBlock();
+                const block = createVideoBlock(videoId);
                 container.appendChild(block);
 
                 const player = new (window as any).YT.Player(block.querySelector('.player-frame'), {
                     videoId,
+                    width: PLAYER_WIDTH,
+                    height: PLAYER_HEIGHT,
                     playerVars: {
                         autoplay: 1,
                         mute: 1,
@@ -197,31 +254,36 @@ const WebCams: React.FC = () => {
                     },
                     events: {
                         onReady: () => {
-                            player.playVideo();
-                            setTimeout(() => {
-                                const state = player.getPlayerState();
-                                if (state === (window as any).YT.PlayerState.PLAYING) {
-                                    block.classList.add('playing');
-                                }
-                            }, 1000);
+                            playerObj.ready = true;
+                            updatePlayback(playerObj);
 
                             const playBtn = block.querySelector('.play-button');
                             playBtn?.addEventListener('click', () => {
                                 player.playVideo();
                                 block.classList.add('playing');
                             });
+                        },
+                        onStateChange: (e: any) => {
+                            if (e.data === (window as any).YT.PlayerState.PLAYING) {
+                                block.classList.add('playing');
+                            }
                         }
                     }
                 });
 
-                const playerObj = { player, disableLiveEdgeUntil: 0 };
+                const playerObj: PlayerObj = { player, disableLiveEdgeUntil: 0, ready: false, inView: false };
                 players.push(playerObj);
+                playerByBlock.set(block, playerObj);
+                resizeObserver.observe(block);
+                intersectionObserver.observe(block);
                 setupPlayerControls(block, playerObj);
             });
         })();
 
         return () => {
             cancelled = true;
+            resizeObserver.disconnect();
+            intersectionObserver.disconnect();
             players.forEach(p => {
                 try {
                     p.player.destroy?.();
@@ -235,10 +297,10 @@ const WebCams: React.FC = () => {
     }, [entries]);
 
     useEffect(() => {
-        const keepLive = () => playersRef.current.forEach(p => checkLiveEdge(p));
-        const onVisibilityChange = () => {
-            if (!document.hidden) keepLive();
-        };
+        const keepLive = () => playersRef.current.forEach(p => {
+            if (p.ready && p.inView && !document.hidden) checkLiveEdge(p);
+        });
+        const onVisibilityChange = () => playersRef.current.forEach(updatePlayback);
         const interval = setInterval(keepLive, 60000);
         document.addEventListener('visibilitychange', onVisibilityChange);
         return () => {
