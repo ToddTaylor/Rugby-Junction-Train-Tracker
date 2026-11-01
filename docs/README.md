@@ -1,41 +1,24 @@
-# Website
+# User Guide
 
-This website is built using [Docusaurus](https://docusaurus.io/), a modern static website generator.
-
-## Installation
-
-```bash
-yarn
-```
+The Train Tracker user guide, built with [Docusaurus](https://docusaurus.io/). The guide content is in `docs/userguide.mdx` and its images are in `static/img/userguide/`.
 
 ## Local Development
 
 ```bash
-yarn start
+npm install
+npm start
 ```
 
-This command starts a local development server and opens up a browser window. Most changes are reflected live without having to restart the server.
+This starts a local development server at `http://localhost:3000/docs/`. Most changes are reflected live without restarting the server.
 
 ## Build
 
 ```bash
-yarn build
+npm run build
 ```
 
-This command generates static content into the `build` directory and can be served using any static contents hosting service.
+This generates static content into the `build` directory.
 
 ## Deployment
 
-Using SSH:
-
-```bash
-USE_SSH=true yarn deploy
-```
-
-Not using SSH:
-
-```bash
-GIT_USER=<Your GitHub username> yarn deploy
-```
-
-If you are using GitHub pages for hosting, this command is a convenient way to build the website and push to the `gh-pages` branch.
+There is no separate deployment. Publishing `Web/Web.Server` builds this site and copies it into `wwwroot/docs`, so the guide is served by the app at `/docs/` and ships with every beta and production deploy.

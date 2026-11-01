@@ -273,6 +273,9 @@ try
         ContentTypeProvider = provider
     });
 
+    // Route after static files so the /docs fallback below cannot claim user guide files before they are served.
+    app.UseRouting();
+
     // Configure the HTTP request pipeline.
 
     //if (app.Environment.IsDevelopment()) { }
@@ -292,6 +295,8 @@ try
 
     app.MapControllers();
     app.MapHub<NotificationHub>("/hubs/notificationhub");
+    // Unknown user guide URLs get the Docusaurus 404 page instead of the React app.
+    app.MapFallbackToFile("/docs/{**path}", "docs/404.html");
     app.MapFallbackToFile("/index.html");
 
     if (app.Environment.IsDevelopment())

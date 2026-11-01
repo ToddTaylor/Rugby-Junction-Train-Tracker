@@ -78,6 +78,11 @@ export default defineConfig(({ mode }) => {
                 '^/weatherforecast': {
                     target,
                     secure: false
+                },
+                // User guide dev server (`npm start` in /docs).
+                '^/docs': {
+                    target: 'http://localhost:3000',
+                    secure: false
                 }
             },
             port: parseInt(appEnv.DEV_SERVER_PORT || '53848'),

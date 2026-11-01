@@ -6,11 +6,12 @@
 - `Web/Web.Server` is the ASP.NET Core API, SignalR hub host, SQLite/EF Core application, and background-service host.
 - `Services` contains shared telemetry parsing, throttling, subscriber, and resilience code used outside the web app.
 - `ConsoleApp` is a .NET desktop telemetry client.
+- `docs` is the Docusaurus user guide, served by the app at `/docs/`.
 - Test projects live in `Web/Web.ServerTests`, `Web/Web.Server.IntegrationTests`, and `Services.UnitTests`.
 
 ## Planning Workflow
 - **Use `/plan-feature` in chat** when planning a new feature or significant change. This prompt guides you through reading the system overview, area instructions, implementation briefs, and existing tests before proposing a detailed plan.
-- For feature planning, read `docs/architecture/system-overview.md` first, then inspect the relevant area instruction file under `.github/instructions/`.
+- For feature planning, read `Planning/architecture/system-overview.md` first, then inspect the relevant area instruction file under `.github/instructions/`.
 - For map pin or user tracking work, also read `Planning/implementation/TRACKED_PINS_IMPLEMENTATION.md` and the matching server tests before proposing changes.
 - Trace end-to-end impact instead of reasoning from one layer in isolation: API/controller, service/rule engine, repository/data model, SignalR or background services, frontend services/hooks/components, and tests.
 - If you forget about `/plan-feature`, type `/` in chat and it will appear in the prompt list, or consult this section of the project guidelines.
@@ -60,5 +61,7 @@
 - If a required suite cannot be run, explicitly state what was skipped and why.
 
 ## Documentation Upkeep
-- When a feature changes a cross-cutting workflow or invariant, update `docs/architecture/system-overview.md` and the relevant implementation brief in the repo.
+- When a feature changes a cross-cutting workflow or invariant, update `Planning/architecture/system-overview.md` and the relevant implementation brief in the repo.
+- When a change affects what users see or do in the app, update the user guide in the same PR: `docs/docs/userguide.mdx`, plus any screenshots in `docs/static/img/userguide/`.
+- The user guide is a Docusaurus site in `docs/`. Publishing `Web/Web.Server` builds it into `wwwroot/docs`, so it is served at `/docs/` and deploys with the app. Validate guide changes with `npm --prefix docs run build`.
 - Prefer short, factual docs that explain responsibilities, data flow, and edge cases over long narrative history.

@@ -16,6 +16,7 @@ Closes #
 - [ ] Unit tests
 - [ ] Integration tests
 - [ ] Manual verification
+- [ ] User guide updated (`docs/docs/userguide.mdx`), or not needed
 
 ## Notes for reviewer
 
