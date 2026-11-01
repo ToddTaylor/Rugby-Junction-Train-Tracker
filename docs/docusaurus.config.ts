@@ -5,12 +5,10 @@ import type * as Preset from '@docusaurus/preset-classic';
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
 const config: Config = {
-  url: 'https://docs.rugbyjunction.us',
-  baseUrl: '/',
-  organizationName: 'ToddTaylor',
-  projectName: 'Rugby-Junction-Train-Tracker',
-  deploymentBranch: 'gh-pages',
-  trailingSlash: false,
+  // Served by Web.Server from wwwroot/docs, so the site lives under /docs/.
+  url: 'https://rugbyjunction.us',
+  baseUrl: '/docs/',
+  trailingSlash: true,
   title: 'Rugby Junction Train Tracker',
   tagline: 'A Modern ATCS Monitor Alternative',
   favicon: 'img/favicon.ico',
@@ -39,17 +37,7 @@ const config: Config = {
           sidebarPath: './sidebars.ts',
           routeBasePath: '/',
         },
-        blog: {
-          showReadingTime: true,
-          feedOptions: {
-            type: ['rss', 'atom'],
-            xslt: true,
-          },
-          // Useful options to enforce blogging best practices
-          onInlineTags: 'warn',
-          onInlineAuthors: 'warn',
-          onUntruncatedBlogPosts: 'warn',
-        },
+        blog: false,
         theme: {
           customCss: './src/css/custom.css',
         },

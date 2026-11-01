@@ -7,6 +7,7 @@ on:
       - master
     paths:
       - "Web/**"
+      - "docs/**"
       - ".github/workflows/deploy-production.yml"
 
 permissions:

@@ -916,7 +916,7 @@ const RailMap: React.FC = () => {
     };
 
     const handleOpenUserGuide = () => {
-        window.open('http://docs.rugbyjunction.us/', '_blank', 'noopener,noreferrer');
+        window.open('/docs/', '_blank', 'noopener,noreferrer');
     };
 
     // Hamburger menu state

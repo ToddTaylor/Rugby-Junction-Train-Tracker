@@ -6,6 +6,7 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<SpaRoot>..\web.client\</SpaRoot>
 		<SpaRootFullPath>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\$(SpaRoot)'))</SpaRootFullPath>
+		<DocsRootFullPath>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\..\..\docs\'))</DocsRootFullPath>
 		<SpaProxyLaunchCommand>npm run dev</SpaProxyLaunchCommand>
 		<SpaProxyServerUrl>https://localhost:53848</SpaProxyServerUrl>
 		<GenerateDocumentationFile>True</GenerateDocumentationFile>
@@ -70,6 +71,21 @@
 			<DistFiles Include="$(SpaRootFullPath)dist\**" />
 			<ResolvedFileToPublish Include="@(DistFiles->'%(FullPath)')" Exclude="@(ResolvedFileToPublish)">
 				<RelativePath>wwwroot\%(RecursiveDir)%(FileName)%(Extension)</RelativePath>
+				<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+				<ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+			</ResolvedFileToPublish>
+		</ItemGroup>
+	</Target>
+	<!-- Build the Docusaurus user guide and serve it from wwwroot/docs -->
+	<Target Name="PublishDocs" AfterTargets="ComputeFilesToPublish">
+
+		<Exec WorkingDirectory="$(DocsRootFullPath)" Command="npm ci" />
+		<Exec WorkingDirectory="$(DocsRootFullPath)" Command="npm run build" />
+
+		<ItemGroup>
+			<DocsFiles Include="$(DocsRootFullPath)build\**" />
+			<ResolvedFileToPublish Include="@(DocsFiles->'%(FullPath)')" Exclude="@(ResolvedFileToPublish)">
+				<RelativePath>wwwroot\docs\%(RecursiveDir)%(FileName)%(Extension)</RelativePath>
 				<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
 				<ExcludeFromSingleFile>true</ExcludeFromSingleFile>
 			</ResolvedFileToPublish>
