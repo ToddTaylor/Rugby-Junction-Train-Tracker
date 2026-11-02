@@ -3,26 +3,32 @@ sidebar_position: 1
 slug: /
 ---
 
+import useBaseUrl from '@docusaurus/useBaseUrl';
+
 # User Guide
 
-The Rugby Junction Train Tracker is a modern day replacement for the now defunct ATCS Monitor application.  While the Train Tracker doesn't work exactly the same as ATCS Monitor did, we think you'll find it just as useful once you understand how to use it.
+The Rugby Junction Train Tracker is a modern day replacement for the now defunct ATCS Monitor application. While the Train Tracker doesn't work exactly the same as ATCS Monitor did, we think you'll find it just as useful once you understand how to use it.
 
-## Getting Started[​](#getting-started "Direct link to Getting Started")
+## Getting Started
 
-### Logging In[​](#logging-in "Direct link to Logging In")
+### Logging In
 
 :::info Access by Invite Only!
 
-The Rugby Junction Train Tracker is _not_ a public web site. You must first be granted access by an administrator before attempting to login.
+The Rugby Junction Train Tracker is _not_ a public web site. You must first be granted access by an administrator before attempting to log in.
 :::
 
-Upon visiting [https://rugbyjunction.us](https://rugbyjunction.us) for the first time, you'll be asked for the email address you provided to an administrator. Check the "Remember me" checkbox if you'd like to be automatically logged in on future visits. After clicking the "Send Code" button, check your email for the six digit code needed for the next step. If you do not receive the email, check your "junk" folder and make sure your inbox isn't full (a common problem with GMail accounts). The access code email is valid for 10 minutes, after which time you'll have to request a new code.
+Upon visiting [https://rugbyjunction.us](https://rugbyjunction.us), you'll be asked for the email address you provided to an administrator. After clicking the "Send Code" button, check your email for the six digit code and enter it on the next screen, then click "Verify Code".
 
-### Logging Out[​](#logging-out "Direct link to Logging Out")
+*   The code is valid for 10 minutes. If it expires, or the email never arrives, click "Resend code".
+*   If you do not receive the email, check your "junk" folder and make sure your inbox isn't full (a common problem with Gmail accounts).
+*   Check the "Remember me (1 year)" checkbox to stay logged in on that device for a year. Otherwise, you'll be asked to log in again after 12 hours.
 
-Logging out clears your authorization session and redirects back to the login page. To log out, select the hamburger menu on the upper right and click "Log Out".
+### Logging Out
 
-### Supported Web Browsers[​](#supported-web-browsers "Direct link to Supported Web Browsers")
+Logging out ends your session and returns you to the login page. To log out, select the hamburger menu on the upper right, click "Log Out", and confirm.
+
+### Supported Web Browsers
 
 The Train Tracker has been tested using Chromium-based web browsers, such as:
 
@@ -32,118 +38,183 @@ The Train Tracker has been tested using Chromium-based web browsers, such as:
 
 :::warning Apple's Safari browser is not supported
 
-The Rugby Junction Train Tracker does not work with the Apple Safari browser. Please install a version of the above listed browsers instead.
+The Rugby Junction Train Tracker does not work with the Apple Safari browser. Please install one of the browsers listed above instead.
 
 :::
 
-## Antennas[​](#antennas "Direct link to Antennas")
+## The Map
 
-An antenna is a location along a rail line that is "listening" for a train's telemetry signals, much like rail fans have been doing for years with scanner radios. The railroad the antenna is listening to, such as the Canadian National or Wisconsin & Southern, is displayed on the lower-right corner of the antenna location name tag.
+*   The map remembers where you left it, so it opens at the same location and zoom level on your next visit.
+*   If you allow the browser to use your location, your position is shown on the map. Click the target button below the zoom buttons on the upper left to center the map on your location.
+*   While the map is open, the Train Tracker keeps your device's screen from going to sleep, so you can watch it trackside without touching your phone.
 
-The antenna shown below, Rugby Junction, monitors two separate railroads: the Canadian National and the Wisconsin & Southern:
+## Antennas
+
+An antenna is a location along a rail line that is "listening" for a train's telemetry signals, much like rail fans have been doing for years with scanner radios. The railroad the antenna is listening to, such as the Canadian National (CN) or Wisconsin & Southern (WSOR), is displayed on the lower-right corner of the antenna's name tag.
+
+The antenna shown below, Rugby Junction, monitors two separate railroads: the Canadian National and the Wisconsin & Southern. Each railroad gets its own name tag.
 
 <img src={require('@site/static/img/userguide/antenna_multiple_railroads.png').default} alt="Antenna with Multiple Railroads" width="900" />
 
-### Online Status[​](#online-status "Direct link to Online Status")
+Some antennas sit at a junction where one railroad's subdivisions meet, such as Junction City. Those subdivisions share a single name tag, and the antenna's history lists each subdivision and its milepost.
 
-*   Antennas displaying a blue dot above the antenna location are considered online and should be providing nearby train statuses.
-*   The blue dashed circle represents a 2 mile radius around the antenna which is an approximate range that the antenna can detect a train. Depending on many factors such as the weather, the location of the antenna, terrain, and physical obstructions, the range could be greater than or less than 2 miles.
+### Last Train
+
+Below each name tag, "Last Train" shows the time a train was last detected at the antenna and an arrow pointing in the direction it was heading.
+
+### Online Status
+
+*   An online antenna displays a solid blue dot with a pulsing blue glow. It should be providing nearby train statuses.
+*   The blue dotted circle represents a radius of about 2 miles around the antenna, which is the approximate range in which the antenna can detect a train. Depending on many factors, such as the weather, the location of the antenna, terrain, and physical obstructions, the range could be greater or less than 2 miles.
 
 <img src={require('@site/static/img/userguide/antenna_online.png').default} alt="Online Antenna Example" width="450" />
 
-### Offline Status[​](#offline-status "Direct link to Offline Status")
+### No Recent Trains
 
-*   Antennas display a gray dot above he antenna are considered offline and not capable of providing train statuses.
+An antenna with a hollow dot inside a solid blue ring is online but hasn't detected a train in a while (6 hours by default). This can simply mean the line is quiet, or it can mean the antenna isn't hearing trains as it should.
+
+<img src={require('@site/static/img/userguide/antenna_no_recent_trains.png').default} alt="No Recent Trains Antenna Example" width="450" />
+
+### Offline Status
+
+*   An offline antenna displays a gray dot and a gray dotted circle. It is not capable of providing train statuses.
 *   The subdivision custodian responsible for the antenna is likely aware the antenna is offline and working to get it online as soon as possible.
+*   An orange "i" badge on the dot means the custodian left a note about the outage. Click the badge to read it.
 
 <img src={require('@site/static/img/userguide/antenna_offline.png').default} alt="Offline Antenna Example" width="450" />
 
-## Map Pins[​](#map-pins "Direct link to Map Pins")
+## Map Pins
 
-A map pin will appear at an antenna location when the antenna has detected the presence of a train. Clicking on the map pin will reveal details regarding the location of the map pin and details of the train. You may also opt to track the train by clicking the "Not Tracking" link at the bottom of map pin fly-out.
+A map pin appears at an antenna location when the antenna has detected the presence of a train. Clicking the map pin opens a fly-out with:
 
-Each new map pin appears at full brightness and gradually fades until it disappears unless another signal from the train is received to keep the pin at full brightness.
+*   The antenna name, railroad, subdivision, and milepost.
+*   The train's direction and whether it is moving, when known.
+*   The time the train was last detected.
+*   A train label, such as "Train 7KQ2ZD", or the name you gave the train if you are tracking it. Click the label to track the train (see [Track a Train](#track-a-train)).
+*   The types of devices detected on the train: head-of-train (HOT), end-of-train (EOT), and distributed power (DPU).
+*   A "Share" link (see [Share a Train](#share-a-train)).
+
+Each new map pin appears at full brightness and gradually fades. The pin disappears 5 minutes after the last signal from the train unless another signal is received to bring it back to full brightness. A pin whose latest signal came from the end-of-train device, or whose only devices are distributed power units, disappears after about 2½ minutes.
 
 <img src={require('@site/static/img/userguide/antenna_flyout.png').default} alt="Antenna Details Fly-Out" width="450" />
 
 :::info Map Pin Location vs Train Location
 
-The location of the map pin, which is usually centered above the antenna location, is not usually the exact location of the train. In most cases, the train is within a 2 mile radius of the antenna. This could mean the locomotive is 2 miles away and approaching the antenna or the train has already past the antenna and the end-of-train is already 2 miles past the antenna.
+The location of the map pin, which is usually centered above the antenna location, is not usually the exact location of the train. In most cases, the train is within a 2 mile radius of the antenna. This could mean the locomotive is 2 miles away and approaching the antenna, or the train has already passed the antenna and the end-of-train is already 2 miles past it.
 
 :::
 
-### Map Pin History[​](#map-pin-history "Direct link to Map Pin History")
+### Map Pin History
 
-To see an approximate time when the last 10 trains passed an antenna location, click the antenna's name badge to open the map pin history. The history shows the last timestamp for when a train was detected. In other words, the records in the map pin history display the time the train was leaving the antenna location and not when it first arrived.
+To see when the last 10 trains passed an antenna location, click the antenna's name tag or its "Last Train" line to open the map pin history. Each row shows:
+
+*   The time the train was last detected. In other words, the records in the map pin history display the time the train was leaving the antenna location and not when it first arrived.
+*   The train's direction and subdivision.
+*   The train label and the devices detected on the train.
+*   A share button that shares a link to the train (see [Share a Train](#share-a-train)).
+
+Subdivision custodians also see a "Local" switch on each row to mark a train as a local.
 
 <img src={require('@site/static/img/userguide/mappinhistory.png').default} alt="Map Pin History" width="450" />
 
-### Map Pin Icons[​](#map-pin-icons "Direct link to Map Pin Icons")
+### Map Pin Icons
 
 The following table shows all combinations of map pins and what their meaning is:
 
 | Map Pin | Description |
 | :---: | --- |
-| <img src={require('@site/static/img/userguide/unknown.svg').default} alt="Unknown direction unknown motion status train" width="28" /> | Unknown direction, unknown motion status. Often indicates the head-of-train (HOT) has been detected. |
-| <img src={require('@site/static/img/userguide/unknown-green.svg').default} alt="Unknown direction moving train" width="28" /> | Unknown direction, train is reported to be moving. Often indicates the distributed power (DPU) or end-of-train (FRED) has been detected. |
-| <img src={require('@site/static/img/userguide/unknown-red.svg').default} alt="Unknown direction stopped train" width="28" /> | Unknown direction, train is reported to be stopped. Often indicates the distributed power (DPU) or end-of-train (FRED) has been detected. |
-| <img src={require('@site/static/img/userguide/arrow.svg').default} alt="Known direction unknown motion status train" width="28" /> | Known direction, unknown motion status. Often indicates the head-of-train (HOT) has been detected. |
-| <img src={require('@site/static/img/userguide/arrow-green.svg').default} alt="Known direction moving train" width="28" /> | Known direction, train is reported to be moving. Often indicates the distributed power (DPU) or end-of-train (FRED) has been detected. |
-| <img src={require('@site/static/img/userguide/arrow-red.svg').default} alt="Known direction stopped train" width="28" /> | Known direction, train is reported to be stopped. Often indicates the distributed power (DPU) or end-of-train (FRED) has been detected. |
-| <img src={require('@site/static/img/userguide/arrow-green-local.svg').default} alt="Local train map pin" width="28" /> | "L" indicates a local train as designated by the subdivision custodian. |
-| <img src={require('@site/static/img/userguide/arrow-green-tracked.svg').default} alt="Tracked train map pin" width="28" /> | "T" indicates that you are tracking this train via the train tracking feature. |
+| <img src={useBaseUrl('/img/userguide/unknown.svg')} alt="Unknown direction unknown motion status train" width="28" /> | Unknown direction, unknown motion status. Often indicates the head-of-train (HOT) has been detected. |
+| <img src={useBaseUrl('/img/userguide/unknown-green.svg')} alt="Unknown direction moving train" width="28" /> | Unknown direction, train is reported to be moving. Often indicates the distributed power (DPU) or end-of-train (EOT) has been detected. |
+| <img src={useBaseUrl('/img/userguide/unknown-red.svg')} alt="Unknown direction stopped train" width="28" /> | Unknown direction, train is reported to be stopped. Often indicates the distributed power (DPU) or end-of-train (EOT) has been detected. |
+| <img src={useBaseUrl('/img/userguide/arrow.svg')} alt="Known direction unknown motion status train" width="28" /> | Known direction, unknown motion status. Often indicates the head-of-train (HOT) has been detected. |
+| <img src={useBaseUrl('/img/userguide/arrow-green.svg')} alt="Known direction moving train" width="28" /> | Known direction, train is reported to be moving. Often indicates the distributed power (DPU) or end-of-train (EOT) has been detected. |
+| <img src={useBaseUrl('/img/userguide/arrow-red.svg')} alt="Known direction stopped train" width="28" /> | Known direction, train is reported to be stopped. Often indicates the distributed power (DPU) or end-of-train (EOT) has been detected. |
+| <img src={useBaseUrl('/img/userguide/arrow-green-local.svg')} alt="Local train map pin" width="28" /> | "L" indicates a local train as designated by the subdivision custodian. |
+| <img src={useBaseUrl('/img/userguide/arrow-green-tracked.svg')} alt="Tracked train map pin" width="28" /> | "T" indicates that you are tracking this train via the train tracking feature. |
 
-## Railroads[​](#railroads "Direct link to Railroads")
+### Passenger Trains
+
+When passenger train data is available, Amtrak trains appear as round icons with a light blue ring, turned to face the direction of travel. Click one to see the train number, route, heading, time of the last update, and speed.
+
+## Railroads
 
 The following railroads are currently supported by the Train Tracker. Additional railroads will be covered as money, time, and resources allow.
 
 *   Wisconsin
     *   Canadian National (CN)
-        *   Superior Subdivision
         *   Neenah Subdivision
+        *   Superior Subdivision
+        *   Valley Subdivision
         *   Waukesha Subdivision
+    *   Canadian Pacific Kansas City (CPKC)
+        *   Chicago and Milwaukee Subdivision
+        *   Watertown Subdivision
     *   Wisconsin & Southern (WSOR)
-        *   Horicon Subdivision
+        *   Milwaukee Subdivision
         *   Waukesha Subdivision
 
-## Features[​](#features "Direct link to Features")
+## Features
 
-### 12 or 24 Hour Time Setting[​](#12-or-24-hour-time-setting "Direct link to 12 or 24 Hour Time Setting")
+The hamburger menu on the upper right holds the settings below, along with "User Guide" and "Log Out". Settings are saved in your browser, so each device keeps its own.
 
-You can adjust the displayed time setting to be either 12 hour or 24 hour by clicking the hamburger menu on the upper right and clicking "12-hour Format" or "24-hour Format".
+### 12 or 24 Hour Time Setting
 
-### Light or Dark Mode[​](#light-or-dark-mode "Direct link to Light or Dark Mode")
+The Train Tracker displays times in 24 hour format by default. The menu item shows the current format, "24-hour Format" or "12-hour Format". Click it to switch.
 
-The Train Tracker defaults to "dark mode" which means the web page displays with a black background. To change to "light mode", click the hamburger menu on the upper right and click the "Dark Mode" / "Light Mode" menu option to toggle the mode.
+### Light or Dark Mode
 
-Light Mode Uses More Batttery Power
+The Train Tracker defaults to "dark mode", which displays a dark map and dark backgrounds. The menu item shows the current mode, "Dark Mode" or "Light Mode". Click it to switch.
 
-If you're using the Train Tracker application on a mobile device, you may opt to use "Dark Mode" to save on battery usage. As with all applications, it takes more energy to produce a white background than a black background.
+:::tip Dark Mode Can Save Battery
 
-### Track a Train[​](#track-a-train "Direct link to Track a Train")
+If you're using the Train Tracker on a mobile device with an OLED screen, dark mode uses less battery power than light mode.
+
+:::
+
+### Mileposts
+
+Milepost numbers are displayed along the tracks when you zoom in closely. Click "Mileposts On" / "Mileposts Off" in the menu to show or hide them.
+
+### Defect Detectors
+
+Defect detectors are shown as orange triangles marked with a "D". Click one to see its location, railroad, division, subdivision, milepost, and radio frequency. Click "Defect Detectors On" / "Defect Detectors Off" in the menu to show or hide them.
+
+### Highlight Railroads
+
+The tracks of selected railroads are drawn brighter and thicker than the rest. By default, the railroads the Train Tracker covers (CN, CPKC, and WSOR) are selected. To change the selection, click "Railroads" in the menu and check the railroads you want highlighted. "All", "None", and "Default" change the selection in one click.
+
+### Track a Train
 
 Perhaps the best feature in the Train Tracker is the ability to track a train as it moves across the railroad's network. This allows you to find a train that's hundreds of miles from your location and know when the train is at an antenna close to you without having to constantly look at the Train Tracker.
 
-There are two places where you can initiate train tracking:
+There are two places where you can start tracking a train:
 
-*   From the map pin fly-out, click the "Not Tracking" link.
+*   From the map pin fly-out, click the train label (for example, "Train 7KQ2ZD").
 
 <img src={require('@site/static/img/userguide/tracking_flyout_untracked.png').default} alt="Antenna Details Fly-Out" width="450" />
 
-*   From the map pin history, click the row in the table that has a timestamp close to the train you'd like to track.
+*   From the map pin history, click the train in the row that has a timestamp close to the train you'd like to track.
 
 <img src={require('@site/static/img/userguide/tracking_mappinhistory.png').default} alt="Tracking via Map Pin History" width="450" />
 
-Once the "Enter a Symbol" pop-up appears, give the train a name that is meaningful to you and then click "Save". Note that the name you chose is only visible to you across your devices.
+When the pop-up appears, give the train a symbol of up to 10 characters that is meaningful to you, and then click "Save". When you start from the map pin history, the pop-up is titled "Track This Train" and the button is labeled "Track".
 
 <img src={require('@site/static/img/userguide/tracking_track.png').default} alt="Track a Train" width="450" />
 
-Once tracked, you'll see a colored (T) icon on the map pin _if the train is actually at that map pin_. Once the train is out-of-range of an antenna, you'll see the name you gave the tracked train appear below the antenna name. This name will stay at the last antenna the train was detected at and will only move once the train approaches another antenna location.
+Once tracked, you'll see a colored "T" icon on the map pin _if the train is actually at that map pin_. Once the train is out of range of an antenna, you'll see the symbol you gave the train below the antenna name. The symbol stays at the last antenna the train was detected at and only moves once the train approaches another antenna location.
 
 <img src={require('@site/static/img/userguide/tracking_flyout_tracked.png').default} alt="Antenna Details Fly-Out" width="450" />
 
-Should you decided to stop tracking a train, click the same link used for tracking and select "Untrack".
+To change the symbol or stop tracking the train, click the train's symbol on the map pin fly-out, in the map pin history, or below the antenna name. In the "Enter a Symbol" pop-up, click "Save" to keep a new symbol or "Untrack" to stop tracking.
 
 <img src={require('@site/static/img/userguide/tracking_untrack.png').default} alt="Untrack a Train" width="450" />
 
-If you start tracking on one device, such as a laptop computer, then go trackside with just your phone, your tracked map pins will still be visible on your mobile device and vice-versa!
+Tracking ends automatically 12 hours after it starts.
+
+Your tracked trains follow you across devices. If you start tracking on one device, such as a laptop computer, then go trackside with just your phone, your tracked trains will still be visible on your phone and vice versa!
+
+### Share a Train
+
+To send a train to another Train Tracker user, click "Share" on the map pin fly-out or the share button in the map pin history. If your browser supports it, your device's share options open. Otherwise, the link is copied so you can paste it into a message.
+
+When the other user opens the link, the train is added to their tracked trains, using the symbol you gave it if you are tracking it. Shared links only work while the train is still active on the map, and the other user must have their own Train Tracker login.

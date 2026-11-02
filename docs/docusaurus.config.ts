@@ -34,7 +34,8 @@ const config: Config = {
       'classic',
       {
         docs: {
-          sidebarPath: './sidebars.ts',
+          // The guide is a single page, so there is no sidebar; its headings are listed on the right.
+          sidebarPath: false,
           routeBasePath: '/',
         },
         blog: false,
