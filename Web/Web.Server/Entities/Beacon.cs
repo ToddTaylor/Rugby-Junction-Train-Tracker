@@ -21,6 +21,21 @@ namespace Web.Server.Entities
 
         public ICollection<Telemetry> Telemetries { get; set; } = [];
 
+        /// <summary>
+        /// Number of SDR# instances that should be running on this beacon PC. Null means the count is not checked.
+        /// </summary>
+        public int? ExpectedSdrSharpCount { get; set; }
+
+        /// <summary>
+        /// Number of SoftEOT instances that should be running on this beacon PC. Null means the count is not checked.
+        /// </summary>
+        public int? ExpectedSoftEotCount { get; set; }
+
+        /// <summary>
+        /// Number of SoftDPU instances that should be running on this beacon PC. Null means the count is not checked.
+        /// </summary>
+        public int? ExpectedSoftDpuCount { get; set; }
+
         public override bool Equals(object? obj)
         {
             return Equals(obj as Beacon);
@@ -34,6 +49,9 @@ namespace Web.Server.Entities
                    ID == other.ID &&
                    OwnerID == other.OwnerID &&
                    Name == other.Name &&
+                   ExpectedSdrSharpCount == other.ExpectedSdrSharpCount &&
+                   ExpectedSoftEotCount == other.ExpectedSoftEotCount &&
+                   ExpectedSoftDpuCount == other.ExpectedSoftDpuCount &&
                    EqualityComparer<User>.Default.Equals(Owner, other.Owner) &&
                    EqualityComparer<ICollection<BeaconRailroad>>.Default.Equals(BeaconRailroads, other.BeaconRailroads) &&
                    EqualityComparer<ICollection<Telemetry>>.Default.Equals(Telemetries, other.Telemetries);

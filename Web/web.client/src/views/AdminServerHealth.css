@@ -1,0 +1,282 @@
+.admin-server-health {
+  --server-online: #4caf50;
+  --server-online-bg: rgba(76, 175, 80, 0.16);
+  --server-degraded: #ffb300;
+  --server-degraded-bg: rgba(255, 179, 0, 0.16);
+  --server-offline: #ef5350;
+  --server-offline-bg: rgba(239, 83, 80, 0.16);
+}
+
+@media (prefers-color-scheme: light) {
+  .admin-server-health {
+    --server-online: #2e7d32;
+    --server-degraded: #a15c00;
+    --server-offline: #c62828;
+  }
+}
+
+.server-health-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.server-health-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 140px;
+  padding: 0.75rem 1.1rem;
+  background: var(--admin-bg-surface);
+  border: 1px solid var(--admin-border);
+  border-radius: 8px;
+  color: var(--admin-text-secondary);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.server-health-card.active {
+  border-color: var(--admin-accent);
+  box-shadow: 0 0 0 1px var(--admin-accent);
+}
+
+.server-health-card-count {
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.server-health-card.online .server-health-card-count { color: var(--server-online); }
+.server-health-card.degraded .server-health-card-count { color: var(--server-degraded); }
+.server-health-card.offline .server-health-card-count { color: var(--server-offline); }
+
+.server-health-card-label {
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.server-health-filter {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+  color: var(--admin-text-secondary);
+}
+
+.server-health-filter select {
+  padding: 0.45rem 0.6rem;
+  background: var(--admin-bg-surface-alt);
+  border: 1px solid var(--admin-border);
+  border-radius: 4px;
+  color: var(--admin-text-primary);
+  font: inherit;
+}
+
+.server-health-table th {
+  white-space: nowrap;
+}
+
+.server-health-table td {
+  vertical-align: top;
+}
+
+.server-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.admin-server-health .server-actions button,
+.admin-server-health .form-actions button {
+  padding: 0.4rem 0.85rem;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.server-health-empty {
+  text-align: center;
+  color: var(--admin-text-secondary);
+}
+
+.server-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.server-status-chip.online { background: var(--server-online-bg); color: var(--server-online); }
+.server-status-chip.degraded { background: var(--server-degraded-bg); color: var(--server-degraded); }
+.server-status-chip.offline { background: var(--server-offline-bg); color: var(--server-offline); }
+
+.server-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.server-name {
+  font-weight: 600;
+  color: var(--admin-text-primary);
+}
+
+.server-subtext {
+  color: var(--admin-text-secondary);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.server-reason { line-height: 1.5; }
+.server-reason.degraded { color: var(--server-degraded); }
+.server-reason.offline { color: var(--server-offline); }
+
+.server-text-degraded { color: var(--server-degraded); font-weight: 600; }
+.server-text-offline { color: var(--server-offline); }
+
+.server-programs {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.server-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.server-drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(640px, 100%);
+  overflow-y: auto;
+  padding: 1.25rem 1.5rem;
+  background: var(--admin-bg-surface);
+  border-left: 1px solid var(--admin-border);
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.4);
+  color: var(--admin-text-primary);
+  box-sizing: border-box;
+}
+
+.server-drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.server-drawer-header h2 {
+  margin: 0;
+}
+
+.server-drawer-close {
+  background: none;
+  border: none;
+  color: var(--admin-text-secondary);
+  font-size: 1.25rem;
+  cursor: pointer;
+}
+
+.server-drawer-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  margin: 0.5rem 0;
+  color: var(--admin-text-secondary);
+  font-size: 0.85rem;
+}
+
+.server-drawer-section {
+  border-top: 1px solid var(--admin-border);
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+}
+
+.server-drawer-section h3 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0 0 0.5rem;
+  color: var(--admin-text-secondary);
+  font-size: 0.8rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.server-link-button {
+  background: none;
+  border: none;
+  color: var(--admin-accent);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.85rem;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.server-mini-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.server-mini-table th {
+  color: var(--admin-text-secondary);
+  font-weight: 500;
+  text-align: left;
+  padding: 0.3rem 0.5rem;
+}
+
+.server-mini-table td {
+  border-top: 1px solid var(--admin-border);
+  padding: 0.35rem 0.5rem;
+}
+
+.admin-server-health .form-group {
+  margin-bottom: 1rem;
+}
+
+.admin-server-health .form-group label {
+  display: block;
+  margin-bottom: 0.4rem;
+  font-weight: 500;
+}
+
+.admin-server-health .form-group input {
+  width: 100%;
+  padding: 0.6rem;
+  border: 1px solid var(--admin-border);
+  border-radius: 4px;
+  box-sizing: border-box;
+  font-size: 14px;
+}
+
+.admin-server-health .form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 1.5rem;
+}
+
+@media (max-width: 720px) {
+  .admin-server-health .admin-table-container {
+    overflow-x: auto;
+  }
+
+  .server-health-filter {
+    margin-left: 0;
+  }
+}

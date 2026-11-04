@@ -44,6 +44,12 @@ Repositories under `Web/Web.Server/Repositories` own EF Core persistence logic. 
 ### Real-Time And Background Work
 `Web/Web.Server/Hubs/NotificationHub.cs` defines real-time push behavior. Hosted services registered in `Web/Web.Server/Program.cs` are part of the live system behavior and should be considered during planning.
 
+### Beacon PC Health
+- Each beacon PC runs the ConsoleApp, which posts `POST api/v1/Beacons/Health/{id}` every `HealthPingIntervalMinutes` (2 in the bundled production settings). The body is a diagnostics report built by `Services/Diagnostics/MachineDiagnosticsCollector`: SDR#, SoftEOT and SoftDPU instance and hung counts, newest write time per log prefix, Task Scheduler results for `MonitoredScheduledTasks`, telemetry send outcomes, uptime, version and free disk space. Older ConsoleApp versions send an empty body, which only records the check-in.
+- The check-in updates every `BeaconRailroad.LastUpdate` (the map's online flag), and the report is stored in `BeaconDiagnostics`, one row per beacon, overwritten each time.
+- `BeaconServerStatusEvaluator` turns the last check-in, the report and the beacon's expected program counts (`Beacon.Expected*Count`, null = not checked) into Online, Degraded or Offline with plain-language reasons. A PC is Offline after three missed check-ins, between 5 and 15 minutes. A report older than that threshold is ignored, so a PC that went back to an older ConsoleApp shows as having no diagnostics.
+- `ServerHealthController` serves the Server Health admin page. Admins see every beacon; Custodians see beacons on subdivisions where they are the custodian, and may set expected counts only for those.
+
 ## Domain Concepts
 - `Beacon`: a fixed trackside detection point.
 - `BeaconRailroad`: the relationship between a beacon and a subdivision or railroad context, including directional information.
@@ -51,6 +57,7 @@ Repositories under `Web/Web.Server/Repositories` own EF Core persistence logic. 
 - `MapPinHistory`: historical snapshots of pin state.
 - `UserTrackedPin`: a user-owned tracked map pin with symbol, color, and expiration.
 - `Telemetry`: raw packet data from DPU, HOT, or EOT sources.
+- `BeaconDiagnostics`: the latest health report from a beacon PC.
 - `Subdivision` and `Railroad`: route hierarchy and ownership context.
 - `SubdivisionTrackageRight`: rules that affect which railroad context is valid.
 

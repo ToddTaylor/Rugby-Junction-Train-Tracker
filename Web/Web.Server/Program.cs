@@ -148,6 +148,7 @@ try
     // Custom repositories
     builder.Services.AddScoped<IBeaconRepository, BeaconRepository>();
     builder.Services.AddScoped<IBeaconRailroadRepository, BeaconRailroadRepository>();
+    builder.Services.AddScoped<IBeaconDiagnosticsRepository, BeaconDiagnosticsRepository>();
     builder.Services.AddScoped<IMapPinRepository, MapPinRepository>();
     builder.Services.AddScoped<IMapPinHistoryRepository, MapPinHistoryRepository>();
     builder.Services.AddScoped<IUserRepository, UserRepository>();
@@ -167,6 +168,7 @@ try
     // Custom services
     builder.Services.AddScoped<IBeaconService, BeaconService>();
     builder.Services.AddScoped<IBeaconRailroadService, BeaconRailroadService>();
+    builder.Services.AddScoped<IServerHealthService, ServerHealthService>();
 
     // Register MapPinService with processor map factory
     builder.Services.AddScoped<IMapPinService>(sp =>

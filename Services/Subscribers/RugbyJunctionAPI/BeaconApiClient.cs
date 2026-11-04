@@ -18,7 +18,7 @@ namespace Services.Subscribers.RugbyJunctionAPI
             _retryPolicy = PollyPolicies.GetExponentialBackoffPolicy(_subscriber.ID);
         }
 
-        public async Task SendBeaconHealthAsync()
+        public async Task SendBeaconHealthAsync(BeaconDiagnostics diagnostics)
         {
             var beaconID = this.GetBeaconID() ?? throw new InvalidOperationException("Beacon ID is not configured.");
 
@@ -33,7 +33,10 @@ namespace Services.Subscribers.RugbyJunctionAPI
             await _retryPolicy.ExecuteAsync(async _ =>
             {
 
-                var request = new HttpRequestMessage(HttpMethod.Post, url);
+                var request = new HttpRequestMessage(HttpMethod.Post, url)
+                {
+                    Content = System.Net.Http.Json.JsonContent.Create(diagnostics)
+                };
 
                 // Add the API key to the headers
                 var _apiKey = base.GetApiKey();

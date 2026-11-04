@@ -21,6 +21,15 @@ namespace Web.Server.Mappers
             // TODO: Added [Required] to entity properties as alternative to having to add dummy values here.
             config.NewConfig<Beacon, BeaconDTO>();
 
+            config.NewConfig<BeaconDiagnosticsReportDTO, BeaconDiagnostics>()
+                .Ignore(dest => dest.BeaconID)
+                .Ignore(dest => dest.Beacon)
+                .Ignore(dest => dest.CreatedAt)
+                .Ignore(dest => dest.LastUpdate);
+
+            config.NewConfig<BeaconDiagnostics, ServerDiagnosticsDTO>()
+                .Map(dest => dest.ReceivedAt, src => src.LastUpdate);
+
             config.NewConfig<CreateBeaconRailroadDTO, BeaconRailroad>()
                 .Ignore(dest => dest.Beacon)
                 .Ignore(dest => dest.Subdivision);

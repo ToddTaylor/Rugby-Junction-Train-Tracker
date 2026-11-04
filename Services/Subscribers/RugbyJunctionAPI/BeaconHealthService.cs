@@ -1,10 +1,13 @@
+using Services.Diagnostics;
 using Services.Models;
 
 namespace Services.Subscribers.RugbyJunctionAPI
 {
     public class BeaconHealthService : IDisposable
     {
+        private readonly AppSettings _appSettings;
         private readonly BeaconApiClient _beaconApiClient;
+        private readonly MachineDiagnosticsCollector _diagnosticsCollector;
         private readonly Subscriber _subscriber;
         private Timer? _timer;
 
@@ -13,7 +16,9 @@ namespace Services.Subscribers.RugbyJunctionAPI
             var subscriber = appSettings.Subscribers
                 .First(s => s.ID == Constants.SUBSCRIBER_ID);
 
+            _appSettings = appSettings;
             _beaconApiClient = new BeaconApiClient(appSettings, subscriber);
+            _diagnosticsCollector = new MachineDiagnosticsCollector(new WindowsSystemProbe());
 
             _subscriber = subscriber;
         }
@@ -31,7 +36,8 @@ namespace Services.Subscribers.RugbyJunctionAPI
 
             try
             {
-                await _beaconApiClient.SendBeaconHealthAsync();
+                var diagnostics = _diagnosticsCollector.Collect(_appSettings, _subscriber, DateTime.UtcNow);
+                await _beaconApiClient.SendBeaconHealthAsync(diagnostics);
 
                 Console.ForegroundColor = ConsoleColor.DarkGray;
                 Console.WriteLine($"{timestamp} [{_subscriber.ID}] Beacon health sent successfully.");

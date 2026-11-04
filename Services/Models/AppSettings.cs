@@ -5,6 +5,29 @@ namespace Services.Models
         public string LogDirectoryPath { get; set; } = string.Empty;
         public string? OptionalSubscribersPath { get; set; }
         public List<Subscriber> Subscribers { get; set; } = new();
+
+        /// <summary>
+        /// Programs whose running instances are counted and reported with each beacon health check.
+        /// Name is the label shown on the Server Health dashboard; ProcessName is the exe name without ".exe".
+        /// A trailing "*" matches any exe name starting with the text before it, so "SDRSharp*" covers SDRSharp.dotnet9.exe.
+        /// </summary>
+        public List<MonitoredProcess> MonitoredProcesses { get; set; } = new()
+        {
+            new MonitoredProcess { Name = "SDR#", ProcessName = "SDRSharp*" },
+            new MonitoredProcess { Name = "SoftEOT", ProcessName = "SoftEOT" },
+            new MonitoredProcess { Name = "SoftDPU", ProcessName = "SoftDPU" },
+        };
+
+        /// <summary>
+        /// Windows Task Scheduler task names (for example the AutoIt startup tasks) whose last run result is reported with each beacon health check.
+        /// </summary>
+        public List<string> MonitoredScheduledTasks { get; set; } = new();
+    }
+
+    public class MonitoredProcess
+    {
+        public string Name { get; set; } = string.Empty;
+        public string ProcessName { get; set; } = string.Empty;
     }
 
     public class Subscriber

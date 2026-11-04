@@ -1,18 +1,24 @@
 using Microsoft.AspNetCore.Mvc;
 using System.Text;
+using Web.Server.Services;
 
 namespace Web.Server.Controllers.v1
 {
+    /// <summary>
+    /// Reads the web server's own log files. Admin only.
+    /// </summary>
     [Route("api/v1/[controller]")]
     [ApiController]
     public class LogsController : ControllerBase
     {
         private readonly ILogger<LogsController> _logger;
+        private readonly IUserService _userService;
         private readonly string _logsDirectory;
 
-        public LogsController(ILogger<LogsController> logger)
+        public LogsController(ILogger<LogsController> logger, IUserService userService)
         {
             _logger = logger;
+            _userService = userService;
             _logsDirectory = Path.Combine(Directory.GetCurrentDirectory(), "..\\logs");
         }
 
@@ -26,6 +32,11 @@ namespace Web.Server.Controllers.v1
         {
             try
             {
+                if (!await IsAdminAsync())
+                {
+                    return StatusCode(StatusCodes.Status403Forbidden);
+                }
+
                 // Limit the number of lines
                 lines = Math.Min(Math.Max(lines, 1), 1000);
 
@@ -75,10 +86,15 @@ namespace Web.Server.Controllers.v1
         /// </summary>
         /// <returns>List of log file names with their sizes and last modified dates</returns>
         [HttpGet("files")]
-        public IActionResult GetLogFiles()
+        public async Task<IActionResult> GetLogFiles()
         {
             try
             {
+                if (!await IsAdminAsync())
+                {
+                    return StatusCode(StatusCodes.Status403Forbidden);
+                }
+
                 if (!Directory.Exists(_logsDirectory))
                 {
                     return NotFound(new { error = "Logs directory not found." });
@@ -114,6 +130,11 @@ namespace Web.Server.Controllers.v1
         {
             try
             {
+                if (!await IsAdminAsync())
+                {
+                    return StatusCode(StatusCodes.Status403Forbidden);
+                }
+
                 // Validate filename to prevent directory traversal attacks
                 if (string.IsNullOrWhiteSpace(fileName) ||
                     fileName.Contains("..") ||
@@ -180,6 +201,11 @@ namespace Web.Server.Controllers.v1
         {
             try
             {
+                if (!await IsAdminAsync())
+                {
+                    return StatusCode(StatusCodes.Status403Forbidden);
+                }
+
                 if (string.IsNullOrWhiteSpace(query))
                 {
                     return BadRequest(new { error = "Search query is required." });
@@ -232,6 +258,18 @@ namespace Web.Server.Controllers.v1
                 _logger.LogError(ex, "An error occurred while searching logs for query: {Query}.", query);
                 return StatusCode(StatusCodes.Status500InternalServerError, new { error = "An error occurred while searching logs." });
             }
+        }
+
+        private async Task<bool> IsAdminAsync()
+        {
+            if (!HttpContext.Items.TryGetValue("UserId", out var userIdObj) || userIdObj is not int userId)
+            {
+                return false;
+            }
+
+            var user = await _userService.GetUserByIdAsync(userId);
+            return user?.UserRoles?.Any(ur =>
+                string.Equals(ur.Role?.RoleName, "Admin", StringComparison.OrdinalIgnoreCase)) == true;
         }
 
         /// <summary>

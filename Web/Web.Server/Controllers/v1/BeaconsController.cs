@@ -1,5 +1,6 @@
 using MapsterMapper;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Web.Server.DTOs;
 using Web.Server.Entities;
 using Web.Server.Services;
@@ -11,12 +12,21 @@ namespace Web.Server.Controllers.v1
     public class BeaconsController : ControllerBase
     {
         private readonly IBeaconService _beaconService;
+        private readonly IServerHealthService _serverHealthService;
+        private readonly IUserService _userService;
         private readonly ILogger<BeaconsController> _logger;
         private readonly IMapper _mapper;
 
-        public BeaconsController(IBeaconService beaconService, ILogger<BeaconsController> logger, IMapper mapper)
+        public BeaconsController(
+            IBeaconService beaconService,
+            IServerHealthService serverHealthService,
+            IUserService userService,
+            ILogger<BeaconsController> logger,
+            IMapper mapper)
         {
             _beaconService = beaconService;
+            _serverHealthService = serverHealthService;
+            _userService = userService;
             _logger = logger;
             _mapper = mapper;
         }
@@ -73,6 +83,11 @@ namespace Web.Server.Controllers.v1
             var response = new MessageEnvelope<BeaconDTO>(null, []);
             try
             {
+                if (!await IsAdminAsync())
+                {
+                    return StatusCode(StatusCodes.Status403Forbidden);
+                }
+
                 if (id != updateBeaconDTO.ID)
                 {
                     return BadRequest();
@@ -108,6 +123,11 @@ namespace Web.Server.Controllers.v1
             var response = new MessageEnvelope<BeaconDTO>(null, []);
             try
             {
+                if (!await IsAdminAsync())
+                {
+                    return StatusCode(StatusCodes.Status403Forbidden);
+                }
+
                 var beacon = _mapper.Map<Beacon>(createBeaconDTO);
                 var createdBeacon = await _beaconService.CreateBeaconAsync(beacon);
                 response.Data = _mapper.Map<BeaconDTO>(createdBeacon);
@@ -122,8 +142,12 @@ namespace Web.Server.Controllers.v1
         }
 
         // POST: api/v1/Beacons/Health/{id}
+        /// <summary>
+        /// Beacon PC health check. Current ConsoleApp versions send a diagnostics report in the body;
+        /// older versions send an empty body, which only records the check-in.
+        /// </summary>
         [HttpPost("Health/{id}")]
-        public async Task<IActionResult> CheckHealth(int id)
+        public async Task<IActionResult> CheckHealth(int id, [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] BeaconDiagnosticsReportDTO? report = null)
         {
             try
             {
@@ -141,6 +165,11 @@ namespace Web.Server.Controllers.v1
 
                 await _beaconService.UpdateBeaconHealthAsync(id, beacon);
 
+                if (report != null)
+                {
+                    await _serverHealthService.RecordDiagnosticsAsync(id, _mapper.Map<BeaconDiagnostics>(report));
+                }
+
                 return NoContent();
             }
             catch (Exception ex)
@@ -156,6 +185,11 @@ namespace Web.Server.Controllers.v1
         {
             try
             {
+                if (!await IsAdminAsync())
+                {
+                    return StatusCode(StatusCodes.Status403Forbidden);
+                }
+
                 var success = await _beaconService.DeleteBeaconAsync(id);
                 if (!success)
                 {
@@ -169,6 +203,18 @@ namespace Web.Server.Controllers.v1
                 _logger.LogError(ex, "An error occurred while deleting beacon {BeaconId}.", id);
                 return StatusCode(StatusCodes.Status500InternalServerError, new { error = ex.Message });
             }
+        }
+
+        private async Task<bool> IsAdminAsync()
+        {
+            if (!HttpContext.Items.TryGetValue("UserId", out var userIdObj) || userIdObj is not int userId)
+            {
+                return false;
+            }
+
+            var user = await _userService.GetUserByIdAsync(userId);
+            return user?.UserRoles?.Any(ur =>
+                string.Equals(ur.Role?.RoleName, "Admin", StringComparison.OrdinalIgnoreCase)) == true;
         }
     }
 }
