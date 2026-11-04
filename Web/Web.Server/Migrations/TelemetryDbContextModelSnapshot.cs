@@ -137,6 +137,15 @@ namespace Web.Server.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("ExpectedSdrSharpCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("ExpectedSoftDpuCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("ExpectedSoftEotCount")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("LastUpdate")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -153,6 +162,64 @@ namespace Web.Server.Migrations
                     b.HasIndex("OwnerID");
 
                     b.ToTable("Beacons");
+                });
+
+            modelBuilder.Entity("Web.Server.Entities.BeaconDiagnostics", b =>
+                {
+                    b.Property<int>("BeaconID")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ClientVersion")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CollectedAt")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedAt")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("HealthPingIntervalMinutes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Hostname")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LastBootAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LastTelemetrySentAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LastUpdate")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("LogDriveFreeBytes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Logs")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OsVersion")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Programs")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("StartupTasks")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("TelemetrySendFailuresLastHour")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("BeaconID");
+
+                    b.ToTable("BeaconDiagnostics");
                 });
 
             modelBuilder.Entity("Web.Server.Entities.BeaconRailroad", b =>
@@ -634,6 +701,17 @@ namespace Web.Server.Migrations
                         .IsRequired();
 
                     b.Navigation("Owner");
+                });
+
+            modelBuilder.Entity("Web.Server.Entities.BeaconDiagnostics", b =>
+                {
+                    b.HasOne("Web.Server.Entities.Beacon", "Beacon")
+                        .WithOne()
+                        .HasForeignKey("Web.Server.Entities.BeaconDiagnostics", "BeaconID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Beacon");
                 });
 
             modelBuilder.Entity("Web.Server.Entities.BeaconRailroad", b =>

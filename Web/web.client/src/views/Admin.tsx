@@ -32,6 +32,7 @@ const Admin: React.FC = () => {
       { path: '/admin/railroads', label: 'Railroads', icon: '🚂' },
     ] : []),
     // Both Admin and Custodian can see these:
+    { path: '/admin/servers', label: 'Server Health', icon: '🩺' },
     { path: '/admin/users', label: 'Users', icon: '👥' },
     { path: '/admin/subdivisions', label: 'Subdivisions', icon: '🛤️' },
     { path: '/admin/telemetry', label: 'Telemetry Log', icon: '📋' },

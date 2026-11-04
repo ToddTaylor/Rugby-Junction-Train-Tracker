@@ -66,7 +66,24 @@ namespace Web.Server.Repositories
                 .FirstOrDefaultAsync(b => b.ID == beacon.ID);
         }
 
-        public async Task<bool> DeleteAsync(int id)
+        public async Task<Beacon?> UpdateExpectedProgramCountsAsync(int id, int? sdrSharpCount, int? softEotCount, int? softDpuCount)
+        {
+            var existingBeacon = await _context.Beacons.FindAsync(id);
+            if (existingBeacon == null)
+            {
+                return null;
+            }
+
+            existingBeacon.ExpectedSdrSharpCount = sdrSharpCount;
+            existingBeacon.ExpectedSoftEotCount = softEotCount;
+            existingBeacon.ExpectedSoftDpuCount = softDpuCount;
+            existingBeacon.LastUpdate = _timeProvider.UtcNow;
+
+            await _context.SaveChangesAsync();
+            return existingBeacon;
+        }
+
+                public async Task<bool> DeleteAsync(int id)
         {
             var beacon = await _context.Beacons.FindAsync(id);
             if (beacon == null)

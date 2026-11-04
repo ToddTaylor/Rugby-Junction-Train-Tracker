@@ -14,6 +14,11 @@ namespace Services
         private const string FILE_NAME_PREFIX_EOT = "eot";
         private const string FILE_NAME_PREFIX_DPU = "dpu";
 
+        /// <summary>
+        /// Log file name prefixes written by SoftEOT (eot, hot) and the SoftDPU instances (dpu1 to dpu4).
+        /// </summary>
+        public static readonly IReadOnlyList<string> LogFilePrefixes = new[] { "eot", "hot", "dpu1", "dpu2", "dpu3", "dpu4" };
+
         public delegate void DpuPacketEventHandler(object? sender, DpuPacketEventArgs e);
         public delegate void HotEotPacketEventHandler(object? sender, HotEotPacketEventArgs e);
 
@@ -144,11 +149,10 @@ namespace Services
 
             var logFiles = Directory.GetFiles(logDirectoryPath, "*.log");
 
-            // Prefixes to preserve latest file for each
-            var prefixes = new[] { "eot", "hot", "dpu1", "dpu2", "dpu3", "dpu4" };
+            // Preserve the latest file for each prefix
             var latestFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            foreach (var prefix in prefixes)
+            foreach (var prefix in LogFilePrefixes)
             {
                 var latestFile = logFiles
                     .Where(f => Path.GetFileName(f).ToLower().StartsWith(prefix))

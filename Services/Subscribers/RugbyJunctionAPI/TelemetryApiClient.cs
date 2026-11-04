@@ -1,5 +1,6 @@
 ﻿using Polly;
 using Polly.Retry;
+using Services.Diagnostics;
 using Services.Models;
 
 namespace Services.Subscribers.RugbyJunctionAPI
@@ -7,9 +8,11 @@ namespace Services.Subscribers.RugbyJunctionAPI
     public class TelemetryApiClient : ApiClient
     {
         private readonly AsyncRetryPolicy _retryPolicy;
+        private readonly string _subscriberId;
 
         public TelemetryApiClient(AppSettings appSettings, string subscriberId) : base(appSettings)
         {
+            _subscriberId = subscriberId;
             _retryPolicy = PollyPolicies.GetExponentialBackoffPolicy(subscriberId);
         }
 
@@ -45,9 +48,12 @@ namespace Services.Subscribers.RugbyJunctionAPI
                         throw new HttpRequestException($"API error: {response.StatusCode} - {errorContent}");
                     }
                 }, new Context { ["RequestUrl"] = url });
+
+                TelemetrySendTracker.RecordSuccess(_subscriberId, DateTime.UtcNow);
             }
             catch (Exception ex)
             {
+                TelemetrySendTracker.RecordFailure(_subscriberId, DateTime.UtcNow);
                 Console.WriteLine($"Error sending telemetry to API: {ex.Message}");
             }
         }

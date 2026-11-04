@@ -13,6 +13,7 @@ import AdminAmtrak from './views/AdminAmtrak';
 import PrivateRoute from './components/PrivateRoute';
 import AdminRoute from './components/AdminRoute';
 import AdminTelemetryLog from './views/AdminTelemetryLog';
+import AdminServerHealth from './views/AdminServerHealth';
 import { useEffect } from 'react';
 import { getUsers } from './api/users';
 import { useAuth } from './hooks/useAuth';
@@ -40,6 +41,7 @@ function App() {
                         <Route path="beacons" element={<AdminBeacons />} />
                         <Route path="beacon-railroads" element={<AdminBeaconRailroads />} />
                         <Route path="railroads" element={<AdminRailroads />} />
+                        <Route path="servers" element={<AdminServerHealth />} />
                         <Route path="amtrak" element={<AdminAmtrak />} />
                         <Route path="subdivisions" element={<AdminSubdivisions />} />
                         <Route path="telemetry" element={<AdminTelemetryLog />} />
