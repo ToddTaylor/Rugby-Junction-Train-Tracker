@@ -71,6 +71,42 @@ public class MachineDiagnosticsCollectorTests
         report.TelemetrySendFailuresLastHour.Should().Be(1);
     }
 
+    [TestMethod]
+    [DataRow(false, "key", false)]
+    [DataRow(true, null, false)]
+    [DataRow(true, " ", false)]
+    [DataRow(true, "key", true)]
+    public void Collect_ReportsRemoteCommandsOnlyWhenAllowedAndKeyed(bool allow, string? deviceKey, bool expected)
+    {
+        var settings = CreateSettings();
+        settings.AllowRemoteCommands = allow;
+        var subscriber = CreateSubscriber("collector-remote");
+        subscriber.Beacon.DeviceKey = deviceKey;
+
+        var report = CreateCollector(new FakeSystemProbe()).Collect(settings, subscriber, Now);
+
+        report.RemoteCommandsEnabled.Should().Be(expected);
+    }
+
+    [TestMethod]
+    public void Collect_ReportsRestartAppsOnlyWhenTheCommandFileExists()
+    {
+        var probe = new FakeSystemProbe();
+        var settings = CreateSettings();
+        settings.AllowRemoteCommands = true;
+        settings.RestartAppsCommand = @"C:\TrainTracker\AutoIt\Restart_Apps.exe";
+        var subscriber = CreateSubscriber("collector-restart-apps");
+        subscriber.Beacon.DeviceKey = "key";
+
+        CreateCollector(probe).Collect(settings, subscriber, Now).RestartAppsAvailable.Should().BeFalse();
+
+        probe.Files.Add(settings.RestartAppsCommand);
+        CreateCollector(probe).Collect(settings, subscriber, Now).RestartAppsAvailable.Should().BeTrue();
+
+        settings.AllowRemoteCommands = false;
+        CreateCollector(probe).Collect(settings, subscriber, Now).RestartAppsAvailable.Should().BeFalse();
+    }
+
     private static MachineDiagnosticsCollector CreateCollector(ISystemProbe probe) => new(probe);
 
     private static AppSettings CreateSettings() => new() { LogDirectoryPath = @"C:\TrainTracker\Logs" };
@@ -102,5 +138,9 @@ public class MachineDiagnosticsCollectorTests
 
         public ScheduledTaskStatus GetScheduledTask(string taskName) =>
             new() { Name = taskName, Found = true, LastResult = 0, LastRunAt = Now.AddHours(-6) };
+
+        public HashSet<string> Files { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+        public bool FileExists(string path) => Files.Contains(path);
     }
 }

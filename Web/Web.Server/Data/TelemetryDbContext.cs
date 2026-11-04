@@ -18,6 +18,8 @@ namespace Web.Server.Data
         public DbSet<BeaconRailroad> BeaconRailroads { get; set; }
         public DbSet<BeaconDiagnostics> BeaconDiagnostics { get; set; }
         public DbSet<BeaconServerState> BeaconServerStates { get; set; }
+        public DbSet<BeaconDeviceKey> BeaconDeviceKeys { get; set; }
+        public DbSet<BeaconCommand> BeaconCommands { get; set; }
         public DbSet<MapPin> MapPins { get; set; }
         public DbSet<MapPinHistory> MapPinHistories { get; set; }
         public DbSet<Role> Roles { get; set; }
@@ -115,6 +117,53 @@ namespace Web.Server.Data
             })
             {
                 modelBuilder.Entity<BeaconServerState>()
+                    .Property<DateTime?>(property)
+                    .HasConversion(Converters.NullableUtcDateTimeConverter);
+            }
+
+            modelBuilder.Entity<BeaconDeviceKey>()
+                .HasOne(k => k.Beacon)
+                .WithOne()
+                .HasForeignKey<BeaconDeviceKey>(k => k.BeaconID)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<BeaconDeviceKey>()
+                .Property(k => k.LastRejectedAt)
+                .HasConversion(Converters.NullableUtcDateTimeConverter);
+
+            modelBuilder.Entity<BeaconCommand>()
+                .HasOne(c => c.Beacon)
+                .WithMany()
+                .HasForeignKey(c => c.BeaconID)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<BeaconCommand>()
+                .HasIndex(c => new { c.BeaconID, c.RequestedAt });
+
+            modelBuilder.Entity<BeaconCommand>()
+                .Property(c => c.Type)
+                .HasConversion(new EnumToStringConverter<BeaconCommandType>());
+
+            modelBuilder.Entity<BeaconCommand>()
+                .Property(c => c.Outcome)
+                .HasConversion(new EnumToStringConverter<BeaconCommandStatus>());
+
+            foreach (var property in new[] { nameof(BeaconCommand.RequestedAt), nameof(BeaconCommand.ExpiresAt) })
+            {
+                modelBuilder.Entity<BeaconCommand>()
+                    .Property<DateTime>(property)
+                    .HasConversion(Converters.UtcDateTimeConverter);
+            }
+
+            foreach (var property in new[]
+            {
+                nameof(BeaconCommand.DeliveredAt),
+                nameof(BeaconCommand.StartedAt),
+                nameof(BeaconCommand.FinishedAt),
+                nameof(BeaconCommand.CancelledAt),
+            })
+            {
+                modelBuilder.Entity<BeaconCommand>()
                     .Property<DateTime?>(property)
                     .HasConversion(Converters.NullableUtcDateTimeConverter);
             }

@@ -22,6 +22,18 @@ namespace Services.Models
         /// Windows Task Scheduler task names (for example the AutoIt startup tasks) whose last run result is reported with each beacon health check.
         /// </summary>
         public List<string> MonitoredScheduledTasks { get; set; } = new();
+
+        /// <summary>
+        /// Lets support users reboot this PC, or restart its apps, from the Server Health page. Off unless turned on
+        /// here. Commands are also only accepted from a subscriber whose Beacon.DeviceKey is set.
+        /// </summary>
+        public bool AllowRemoteCommands { get; set; }
+
+        /// <summary>
+        /// Full path of a program (for example a compiled AutoIt script) that closes and reopens SDR#, SoftEOT and
+        /// SoftDPU. Run for the "Restart apps" command; exit code 0 means it worked. Leave empty to offer reboot only.
+        /// </summary>
+        public string? RestartAppsCommand { get; set; }
     }
 
     public class MonitoredProcess
@@ -72,5 +84,10 @@ namespace Services.Models
         public string? BeaconID { get; set; }
         public string? DetectorID { get; set; }
         public int HealthPingIntervalMinutes { get; set; }
+
+        /// <summary>
+        /// The device key created for this beacon on the Server Health page, sent in the X-Beacon-Key header.
+        /// </summary>
+        public string? DeviceKey { get; set; }
     }
 }

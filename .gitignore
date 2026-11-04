@@ -381,3 +381,6 @@ FodyWeavers.xsd
 /Web/Web.Server/telemetry - Copy.db
 /Web/web.client/.env.beta
 /Web/Web.Server/Properties/PublishProfiles/PRODUCTION.pubxml
+
+# Written by Program.cs when a startup migration fails
+db-migration-error.txt

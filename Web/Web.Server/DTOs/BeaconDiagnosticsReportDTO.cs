@@ -15,6 +15,13 @@ namespace Web.Server.DTOs
         public int HealthPingIntervalMinutes { get; set; }
         public DateTime? LastTelemetrySentAt { get; set; }
         public int TelemetrySendFailuresLastHour { get; set; }
+
+        /// <summary>
+        /// True when the PC allows remote commands and has a device key set. Commands are only handed to such a PC.
+        /// </summary>
+        public bool RemoteCommandsEnabled { get; set; }
+
+        public bool RestartAppsAvailable { get; set; }
         public List<DiagnosticsProgramStatusDTO> Programs { get; set; } = [];
         public List<DiagnosticsLogFileStatusDTO> Logs { get; set; } = [];
         public List<DiagnosticsStartupTaskStatusDTO> StartupTasks { get; set; } = [];

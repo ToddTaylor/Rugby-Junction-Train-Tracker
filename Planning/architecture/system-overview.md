@@ -52,6 +52,8 @@ Repositories under `Web/Web.Server/Repositories` own EF Core persistence logic. 
 - Alerts: `ServerHealthMonitorService` runs `ServerHealthService.DetectStatusChangesAsync` once a minute and sends `ServerStatusChanged` to the `user-{id}` group of every active Admin and of the beacon's active Custodians. `BeaconServerState` (one row per beacon) holds the last announced status, a pending change and the mute. A change to or from Offline is announced at once; a change between Online and Degraded must last `StatusConfirmMinutes` (3) first. The first time the monitor sees a beacon, it records the status without announcing it, so a deploy does not set off a burst of alerts.
 - Muting (`PUT`/`DELETE api/v1/ServerHealth/{id}/mute`) lasts until a set time or until alerts are turned back on. Changes on a muted server are still sent, with `alertsMuted: true`, so an open dashboard refreshes; the client shows no pop-up for them. Changes that happen while muted are not replayed when the mute ends.
 - `ServerAlertListener`, mounted in `App.tsx`, holds its own SignalR connection for signed-in Admins and Custodians, shows the pop-ups on every page, raises a browser notification when the tab is in the background and the user has allowed it, and re-raises each change as a window event that the Server Health page uses to refresh.
+- Remote reboot and restart apps: see `Planning/implementation/SERVER_REMOTE_COMMANDS_IMPLEMENTATION.md`. In short, `ServerCommandService` stores a `BeaconCommand`, the PC receives it in the response to its next check-in (`200 { command }`), reports `Started` before acting and the result after, and the server announces each step as `ServerCommandUpdated`. A beacon with a `BeaconDeviceKey` must send it in `X-Beacon-Key` on every check-in and report, or the request gets 401; commands are only handed to a PC that presents its key and reports `RemoteCommandsEnabled`.
+- The command and device key endpoints of `ServerHealthController` carry `[RequireHeaderAuthToken]`: they refuse a sign-in token sent in the `access_token` query string, which `AuthTokenMiddleware` otherwise accepts for SignalR.
 
 ## Domain Concepts
 - `Beacon`: a fixed trackside detection point.
@@ -62,6 +64,8 @@ Repositories under `Web/Web.Server/Repositories` own EF Core persistence logic. 
 - `Telemetry`: raw packet data from DPU, HOT, or EOT sources.
 - `BeaconDiagnostics`: the latest health report from a beacon PC.
 - `BeaconServerState`: the alert state of a beacon PC: last announced status, pending change and mute.
+- `BeaconDeviceKey`: the SHA-256 hash of the secret a beacon PC sends in `X-Beacon-Key`.
+- `BeaconCommand`: a reboot or restart-apps request for a beacon PC and its audit record (who asked, delivery, start, result, cancellation).
 - `Subdivision` and `Railroad`: route hierarchy and ownership context.
 - `SubdivisionTrackageRight`: rules that affect which railroad context is valid.
 

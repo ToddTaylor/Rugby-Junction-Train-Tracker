@@ -2,16 +2,22 @@ import { useCallback, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useSignalR } from '../hooks/useSignalR';
 import type { AuthSession } from '../types/Auth';
-import type { ServerStatusChange } from '../types/ServerHealth';
+import type { ServerCommandUpdate, ServerStatusChange } from '../types/ServerHealth';
 import { parseSessionRoles } from '../utils/roles';
-import { SERVER_STATUS_CHANGED_EVENT, describeStatusChange } from '../utils/serverHealth';
+import {
+  AlertTone,
+  SERVER_COMMAND_UPDATED_EVENT,
+  SERVER_STATUS_CHANGED_EVENT,
+  describeCommandUpdate,
+  describeStatusChange,
+} from '../utils/serverHealth';
 import './ServerAlertListener.css';
 
 const SESSION_KEY = 'rjtt_auth_session';
 const MAX_ALERTS = 4;
-const RECOVERY_DISMISS_MS = 15_000;
+const AUTO_DISMISS_MS = 15_000;
 
-type Alert = { id: string; change: ServerStatusChange; title: string; body: string };
+type Alert = { id: string; beaconId: number; kind: 'status' | 'command'; tone: AlertTone; title: string; body: string };
 
 /** The signed-in Admin's or Custodian's token, or null for anyone else. */
 function readSupportToken(): string | null {
@@ -26,8 +32,9 @@ function readSupportToken(): string | null {
 }
 
 /**
- * Shows a pop-up on any page when a beacon PC goes offline, becomes degraded or recovers, for Admins and
- * Custodians. The session is read again on every navigation, so signing in or out starts or stops the alerts.
+ * Shows a pop-up on any page when a beacon PC goes offline, becomes degraded or recovers, and when a reboot or
+ * restart-apps command is requested or reported on, for Admins and Custodians. The session is read again on every
+ * navigation, so signing in or out starts or stops the alerts.
  */
 const ServerAlertListener = () => {
   const location = useLocation();
@@ -41,21 +48,34 @@ const ServerAlerts = () => {
 
   const dismiss = useCallback((id: string) => setAlerts(current => current.filter(a => a.id !== id)), []);
 
+  const show = useCallback((alert: Alert, autoDismiss: boolean) => {
+    // A newer alert of the same kind for the same server replaces the older one.
+    setAlerts(current => [alert, ...current.filter(a => a.beaconId !== alert.beaconId || a.kind !== alert.kind)].slice(0, MAX_ALERTS));
+    if (autoDismiss) {
+      window.setTimeout(() => dismiss(alert.id), AUTO_DISMISS_MS);
+    }
+    showDesktopNotification(alert, () => navigate(serverLink(alert.beaconId)));
+  }, [dismiss, navigate]);
+
   const handlers = useMemo(() => ({
     ServerStatusChanged: (change: ServerStatusChange) => {
       window.dispatchEvent(new CustomEvent<ServerStatusChange>(SERVER_STATUS_CHANGED_EVENT, { detail: change }));
       if (change.alertsMuted) return;
 
-      const alert: Alert = { id: `${change.beaconID}-${change.changedAt}`, change, ...describeStatusChange(change) };
-      // A newer alert for the same server replaces the older one.
-      setAlerts(current => [alert, ...current.filter(a => a.change.beaconID !== change.beaconID)].slice(0, MAX_ALERTS));
-      if (change.status === 'Online') {
-        window.setTimeout(() => dismiss(alert.id), RECOVERY_DISMISS_MS);
-      }
-
-      showDesktopNotification(alert, () => navigate(serverLink(change.beaconID)));
+      const tone: AlertTone = change.status === 'Online' ? 'online' : change.status === 'Degraded' ? 'degraded' : 'offline';
+      show(
+        { id: `status-${change.beaconID}-${change.changedAt}`, beaconId: change.beaconID, kind: 'status', tone, ...describeStatusChange(change) },
+        change.status === 'Online');
     },
-  }), [dismiss, navigate]);
+    ServerCommandUpdated: (update: ServerCommandUpdate) => {
+      window.dispatchEvent(new CustomEvent<ServerCommandUpdate>(SERVER_COMMAND_UPDATED_EVENT, { detail: update }));
+
+      const { title, body, tone } = describeCommandUpdate(update);
+      show(
+        { id: `command-${update.command.id}-${update.command.status}`, beaconId: update.beaconID, kind: 'command', tone, title, body },
+        tone === 'info' || tone === 'online');
+    },
+  }), [show]);
 
   useSignalR(handlers);
 
@@ -66,8 +86,8 @@ const ServerAlerts = () => {
       {alerts.map(alert => (
         <div
           key={alert.id}
-          className={`server-alert ${alert.change.status.toLowerCase()}`}
-          role={alert.change.status === 'Online' ? 'status' : 'alert'}
+          className={`server-alert ${alert.tone}`}
+          role={alert.tone === 'online' || alert.tone === 'info' ? 'status' : 'alert'}
         >
           <span className="server-alert-dot" aria-hidden="true" />
           <div className="server-alert-text">
@@ -75,7 +95,7 @@ const ServerAlerts = () => {
             <span>{alert.body}</span>
           </div>
           <div className="server-alert-actions">
-            <Link to={serverLink(alert.change.beaconID)} onClick={() => dismiss(alert.id)}>View</Link>
+            <Link to={serverLink(alert.beaconId)} onClick={() => dismiss(alert.id)}>View</Link>
             <button type="button" onClick={() => dismiss(alert.id)} aria-label={`Dismiss ${alert.title}`}>✕</button>
           </div>
         </div>
@@ -90,7 +110,7 @@ const serverLink = (beaconId: number) => `/admin/servers?beacon=${beaconId}`;
 function showDesktopNotification(alert: Alert, onOpen: () => void) {
   if (typeof Notification === 'undefined' || Notification.permission !== 'granted' || !document.hidden) return;
 
-  const notification = new Notification(alert.title, { body: alert.body, tag: `server-${alert.change.beaconID}` });
+  const notification = new Notification(alert.title, { body: alert.body, tag: `server-${alert.kind}-${alert.beaconId}` });
   notification.onclick = () => {
     window.focus();
     onOpen();

@@ -4,6 +4,12 @@ namespace Web.Server.Middleware;
 
 public class AuthTokenMiddleware
 {
+    /// <summary>
+    /// HttpContext.Items key set to true when the sign-in token came from the access_token query string rather than
+    /// a header. SignalR needs the query string, but actions marked [RequireHeaderAuthToken] refuse it.
+    /// </summary>
+    public const string TokenFromQueryItemKey = "AuthTokenFromQuery";
+
     private readonly RequestDelegate _next;
 
     public AuthTokenMiddleware(RequestDelegate next)
@@ -14,9 +20,10 @@ public class AuthTokenMiddleware
     public async Task InvokeAsync(HttpContext context, IAuthService authService)
     {
         // Check for auth token in Authorization header or X-Auth-Token header
-        var token = context.Request.Headers["Authorization"].FirstOrDefault()?.Replace("Bearer ", "")
-                ?? context.Request.Headers["X-Auth-Token"].FirstOrDefault()
-                ?? context.Request.Query["access_token"].FirstOrDefault();
+        var headerToken = context.Request.Headers["Authorization"].FirstOrDefault()?.Replace("Bearer ", "")
+                ?? context.Request.Headers["X-Auth-Token"].FirstOrDefault();
+        var token = headerToken ?? context.Request.Query["access_token"].FirstOrDefault();
+        var tokenFromQuery = headerToken == null && token != null;
 
         if (!string.IsNullOrWhiteSpace(token))
         {
@@ -44,6 +51,7 @@ public class AuthTokenMiddleware
                     }
                 }
                 context.Items["UserId"] = userId.Value;
+                context.Items[TokenFromQueryItemKey] = tokenFromQuery;
             }
             else
             {

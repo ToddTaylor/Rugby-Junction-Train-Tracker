@@ -47,6 +47,31 @@ namespace Web.Server.DTOs
 
         public string? AlertsMuteNote { get; set; }
         public string? AlertsMutedBy { get; set; }
+
+        /// <summary>
+        /// When the beacon's device key was created. Null when it has none, so remote commands are not possible.
+        /// </summary>
+        public DateTime? DeviceKeySetAt { get; set; }
+
+        public string? DeviceKeySetBy { get; set; }
+
+        /// <summary>
+        /// Last time a check-in was refused because the device key was missing or wrong.
+        /// </summary>
+        public DateTime? DeviceKeyRejectedAt { get; set; }
+
+        /// <summary>
+        /// Reboots the PC started in the last 24 hours, against MaxRebootsPerDay.
+        /// </summary>
+        public int RebootsLast24Hours { get; set; }
+
+        public int MaxRebootsPerDay { get; set; }
+
+        /// <summary>
+        /// Recent reboot and restart-apps commands, newest first.
+        /// </summary>
+        public List<BeaconCommandDTO> Commands { get; set; } = [];
+
         public List<ServerProgramDTO> Programs { get; set; } = [];
         public ServerDiagnosticsDTO? Diagnostics { get; set; }
     }
@@ -76,6 +101,8 @@ namespace Web.Server.DTOs
         public int HealthPingIntervalMinutes { get; set; }
         public DateTime? LastTelemetrySentAt { get; set; }
         public int TelemetrySendFailuresLastHour { get; set; }
+        public bool RemoteCommandsEnabled { get; set; }
+        public bool RestartAppsAvailable { get; set; }
         public List<DiagnosticsLogFileStatusDTO> Logs { get; set; } = [];
         public List<DiagnosticsStartupTaskStatusDTO> StartupTasks { get; set; } = [];
     }

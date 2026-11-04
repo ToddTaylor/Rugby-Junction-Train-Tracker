@@ -1,4 +1,4 @@
-import { MuteServerAlerts, ServerHealth, UpdateServerExpectations } from '../types/ServerHealth';
+import { BeaconCommand, BeaconCommandType, MuteServerAlerts, ServerHealth, UpdateServerExpectations } from '../types/ServerHealth';
 import { getCookie } from '../utils/cookies';
 import { AuthSession } from '../types/Auth';
 
@@ -86,4 +86,25 @@ export async function muteServerAlerts(beaconId: number, mute: MuteServerAlerts)
 
 export async function unmuteServerAlerts(beaconId: number): Promise<ApiResponse<null>> {
   return fetchApi<null>(`/api/v1/ServerHealth/${beaconId}/mute`, { method: 'DELETE' });
+}
+
+/** Creates or replaces the server's device key. The key is returned only this once. */
+export async function createDeviceKey(beaconId: number): Promise<ApiResponse<{ deviceKey: string }>> {
+  return fetchApi<{ deviceKey: string }>(`/api/v1/ServerHealth/${beaconId}/device-key`, { method: 'POST' });
+}
+
+export async function removeDeviceKey(beaconId: number): Promise<ApiResponse<null>> {
+  return fetchApi<null>(`/api/v1/ServerHealth/${beaconId}/device-key`, { method: 'DELETE' });
+}
+
+/** Asks the PC to reboot or restart its apps at its next check-in. */
+export async function requestServerCommand(beaconId: number, type: BeaconCommandType): Promise<ApiResponse<BeaconCommand>> {
+  return fetchApi<BeaconCommand>(`/api/v1/ServerHealth/${beaconId}/commands`, {
+    method: 'POST',
+    body: JSON.stringify({ type }),
+  });
+}
+
+export async function cancelServerCommand(beaconId: number, commandId: number): Promise<ApiResponse<null>> {
+  return fetchApi<null>(`/api/v1/ServerHealth/${beaconId}/commands/${commandId}`, { method: 'DELETE' });
 }

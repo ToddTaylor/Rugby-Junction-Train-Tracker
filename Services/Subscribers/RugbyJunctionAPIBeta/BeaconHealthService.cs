@@ -1,5 +1,6 @@
 using Services.Diagnostics;
 using Services.Models;
+using Services.RemoteCommands;
 
 namespace Services.Subscribers.RugbyJunctionAPIBeta
 {
@@ -8,6 +9,7 @@ namespace Services.Subscribers.RugbyJunctionAPIBeta
         private readonly AppSettings _appSettings;
         private readonly BeaconApiClient _beaconApiClient;
         private readonly MachineDiagnosticsCollector _diagnosticsCollector;
+        private readonly RemoteCommandHandler _commandHandler;
         private readonly Subscriber _subscriber;
         private Timer? _timer;
 
@@ -19,6 +21,7 @@ namespace Services.Subscribers.RugbyJunctionAPIBeta
             _appSettings = appSettings;
             _beaconApiClient = new BeaconApiClient(appSettings, subscriber);
             _diagnosticsCollector = new MachineDiagnosticsCollector(new WindowsSystemProbe());
+            _commandHandler = RemoteCommandHandler.CreateDefault(appSettings, message => WriteLine(ConsoleColor.Cyan, message));
 
             _subscriber = subscriber;
         }
@@ -32,23 +35,43 @@ namespace Services.Subscribers.RugbyJunctionAPIBeta
 
         private async Task SendHealthAsync()
         {
-            var timestamp = DateTime.Now.ToString("yyyy/MM/dd-HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
-
             try
             {
                 var diagnostics = _diagnosticsCollector.Collect(_appSettings, _subscriber, DateTime.UtcNow);
-                await _beaconApiClient.SendBeaconHealthAsync(diagnostics);
+                var command = await _beaconApiClient.SendBeaconHealthAsync(diagnostics);
 
-                Console.ForegroundColor = ConsoleColor.DarkGray;
-                Console.WriteLine($"{timestamp} [{_subscriber.ID}] Beacon health sent successfully.");
-                Console.ResetColor();
+                WriteLine(ConsoleColor.DarkGray, "Beacon health sent successfully.");
+
+                if (command != null)
+                {
+                    // Runs apart from the timer, so a long restart-apps run does not hold up the next health check.
+                    _ = Task.Run(() => HandleCommandAsync(command));
+                }
             }
             catch (Exception ex)
             {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"{timestamp} [{_subscriber.ID}] Error in beacon health service: {ex.Message}");
-                Console.ResetColor();
+                WriteLine(ConsoleColor.Red, $"Error in beacon health service: {ex.Message}");
             }
+        }
+
+        private async Task HandleCommandAsync(RemoteCommand command)
+        {
+            try
+            {
+                await _commandHandler.HandleAsync(_subscriber.ID, command, _beaconApiClient.ReportCommandAsync);
+            }
+            catch (Exception ex)
+            {
+                WriteLine(ConsoleColor.Red, $"Error handling remote {command.Type} command: {ex.Message}");
+            }
+        }
+
+        private void WriteLine(ConsoleColor color, string message)
+        {
+            var timestamp = DateTime.Now.ToString("yyyy/MM/dd-HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
+            Console.ForegroundColor = color;
+            Console.WriteLine($"{timestamp} [{_subscriber.ID}] {message}");
+            Console.ResetColor();
         }
 
         public void Dispose()

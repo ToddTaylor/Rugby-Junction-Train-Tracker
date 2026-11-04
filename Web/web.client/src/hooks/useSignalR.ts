@@ -3,7 +3,7 @@ import * as signalR from "@microsoft/signalr";
 import { MapPin } from "../types/MapPin";
 import { Beacon } from "../types/Beacon";
 import { PassengerMapPin } from "../types/PassengerMapPin";
-import { ServerStatusChange } from "../types/ServerHealth";
+import { ServerCommandUpdate, ServerStatusChange } from "../types/ServerHealth";
 import { getAuthToken } from "../services/auth";
 
 const beaconUpdateMethodName = "BeaconUpdate";
@@ -15,6 +15,7 @@ const trackedPinRemovedMethodName = "TrackedPinRemoved";
 const passengerPinUpdateMethodName = "PassengerPinUpdate";
 const passengerPinRemovedMethodName = "PassengerPinRemoved";
 const serverStatusChangedMethodName = "ServerStatusChanged";
+const serverCommandUpdatedMethodName = "ServerCommandUpdated";
 
 // Accept handlers for multiple events
 export function useSignalR(handlers: {
@@ -27,6 +28,7 @@ export function useSignalR(handlers: {
     PassengerPinUpdate?: (pin: PassengerMapPin) => void;
     PassengerPinRemoved?: (payload: { trainId?: string; trainNum?: string }) => void;
     ServerStatusChanged?: (change: ServerStatusChange) => void;
+    ServerCommandUpdated?: (update: ServerCommandUpdate) => void;
 }) {
     const handlersRef = useRef(handlers);
     const [connectionState, setConnectionState] = useState<signalR.HubConnectionState | null>(null);
@@ -137,6 +139,12 @@ export function useSignalR(handlers: {
                 });
             }
 
+            if (handlersRef.current.ServerCommandUpdated) {
+                connection.on(serverCommandUpdatedMethodName, (payload: ServerCommandUpdate) => {
+                    handlersRef.current.ServerCommandUpdated?.(payload);
+                });
+            }
+
             connection.onclose(error => {
                 if (error) {
                     console.error("SignalR Connection closed with error:", error);
@@ -182,6 +190,7 @@ export function useSignalR(handlers: {
                 connection.off(passengerPinUpdateMethodName);
                 connection.off(passengerPinRemovedMethodName);
                 connection.off(serverStatusChangedMethodName);
+                connection.off(serverCommandUpdatedMethodName);
                 connection.stop();
             }
         };

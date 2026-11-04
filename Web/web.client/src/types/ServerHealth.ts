@@ -32,6 +32,10 @@ export interface ServerDiagnostics {
   healthPingIntervalMinutes: number;
   lastTelemetrySentAt: string | null;
   telemetrySendFailuresLastHour: number;
+  /** The PC allows remote commands (AllowRemoteCommands) and has its device key entered. */
+  remoteCommandsEnabled: boolean;
+  /** The PC has a RestartAppsCommand set up. */
+  restartAppsAvailable: boolean;
   logs: ServerLogFile[];
   startupTasks: ServerStartupTask[];
 }
@@ -55,6 +59,15 @@ export interface ServerHealth {
   alertsMutedUntil: string | null;
   alertsMuteNote: string | null;
   alertsMutedBy: string | null;
+  /** When the device key was created. Null when the server has none, so it cannot be rebooted remotely. */
+  deviceKeySetAt: string | null;
+  deviceKeySetBy: string | null;
+  /** Last check-in refused because the device key was missing or wrong. */
+  deviceKeyRejectedAt: string | null;
+  rebootsLast24Hours: number;
+  maxRebootsPerDay: number;
+  /** Recent reboot and restart-apps commands, newest first. */
+  commands: BeaconCommand[];
   programs: ServerProgram[];
   diagnostics: ServerDiagnostics | null;
 }
@@ -81,4 +94,29 @@ export interface ServerStatusChange {
   changedAt: string;
   /** True when alerts are muted: refresh the dashboard, but show no pop-up. */
   alertsMuted: boolean;
+}
+
+export type BeaconCommandType = 'Reboot' | 'RestartApps';
+
+export type BeaconCommandStatus = 'Pending' | 'Running' | 'Succeeded' | 'Failed' | 'Rejected' | 'Cancelled' | 'Expired';
+
+export interface BeaconCommand {
+  id: number;
+  type: BeaconCommandType;
+  status: BeaconCommandStatus;
+  requestedBy: string;
+  requestedAt: string;
+  expiresAt: string;
+  deliveredAt: string | null;
+  startedAt: string | null;
+  finishedAt: string | null;
+  resultMessage: string | null;
+  cancelledBy: string | null;
+}
+
+/** SignalR ServerCommandUpdated payload. */
+export interface ServerCommandUpdate {
+  beaconID: number;
+  beaconName: string;
+  command: BeaconCommand;
 }

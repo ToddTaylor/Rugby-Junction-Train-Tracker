@@ -34,6 +34,16 @@ namespace Web.Server.Entities
 
         public int TelemetrySendFailuresLastHour { get; set; }
 
+        /// <summary>
+        /// True when the PC allows remote commands (AllowRemoteCommands) and has a device key set.
+        /// </summary>
+        public bool RemoteCommandsEnabled { get; set; }
+
+        /// <summary>
+        /// True when the PC has a RestartAppsCommand set and the file exists.
+        /// </summary>
+        public bool RestartAppsAvailable { get; set; }
+
         public List<DiagnosticsProgramStatus> Programs { get; set; } = [];
 
         public List<DiagnosticsLogFileStatus> Logs { get; set; } = [];

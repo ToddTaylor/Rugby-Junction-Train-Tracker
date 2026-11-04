@@ -79,6 +79,8 @@ namespace Services.Diagnostics
             return newest == default ? null : DateTime.SpecifyKind(newest, DateTimeKind.Utc);
         }
 
+        public bool FileExists(string path) => File.Exists(path);
+
         public ScheduledTaskStatus GetScheduledTask(string taskName)
         {
             try
