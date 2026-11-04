@@ -48,7 +48,10 @@ Repositories under `Web/Web.Server/Repositories` own EF Core persistence logic. 
 - Each beacon PC runs the ConsoleApp, which posts `POST api/v1/Beacons/Health/{id}` every `HealthPingIntervalMinutes` (2 in the bundled production settings). The body is a diagnostics report built by `Services/Diagnostics/MachineDiagnosticsCollector`: SDR#, SoftEOT and SoftDPU instance and hung counts, newest write time per log prefix, Task Scheduler results for `MonitoredScheduledTasks`, telemetry send outcomes, uptime, version and free disk space. Older ConsoleApp versions send an empty body, which only records the check-in.
 - The check-in updates every `BeaconRailroad.LastUpdate` (the map's online flag), and the report is stored in `BeaconDiagnostics`, one row per beacon, overwritten each time.
 - `BeaconServerStatusEvaluator` turns the last check-in, the report and the beacon's expected program counts (`Beacon.Expected*Count`, null = not checked) into Online, Degraded or Offline with plain-language reasons. Log file ages are shown but never mark a PC Degraded, because SoftEOT and SoftDPU only write when they decode a train. A PC is Offline after three missed check-ins, between 5 and 15 minutes. A report older than that threshold is ignored, so a PC that went back to an older ConsoleApp shows as having no diagnostics.
-- `ServerHealthController` serves the Server Health admin page. Admins see every beacon; Custodians see beacons on subdivisions where they are the custodian, and may set expected counts only for those.
+- `ServerHealthController` serves the Server Health admin page. Admins see every beacon; Custodians see beacons on subdivisions where they are the custodian, and may set expected counts and mute alerts only for those.
+- Alerts: `ServerHealthMonitorService` runs `ServerHealthService.DetectStatusChangesAsync` once a minute and sends `ServerStatusChanged` to the `user-{id}` group of every active Admin and of the beacon's active Custodians. `BeaconServerState` (one row per beacon) holds the last announced status, a pending change and the mute. A change to or from Offline is announced at once; a change between Online and Degraded must last `StatusConfirmMinutes` (3) first. The first time the monitor sees a beacon, it records the status without announcing it, so a deploy does not set off a burst of alerts.
+- Muting (`PUT`/`DELETE api/v1/ServerHealth/{id}/mute`) lasts until a set time or until alerts are turned back on. Changes on a muted server are still sent, with `alertsMuted: true`, so an open dashboard refreshes; the client shows no pop-up for them. Changes that happen while muted are not replayed when the mute ends.
+- `ServerAlertListener`, mounted in `App.tsx`, holds its own SignalR connection for signed-in Admins and Custodians, shows the pop-ups on every page, raises a browser notification when the tab is in the background and the user has allowed it, and re-raises each change as a window event that the Server Health page uses to refresh.
 
 ## Domain Concepts
 - `Beacon`: a fixed trackside detection point.
@@ -58,6 +61,7 @@ Repositories under `Web/Web.Server/Repositories` own EF Core persistence logic. 
 - `UserTrackedPin`: a user-owned tracked map pin with symbol, color, and expiration.
 - `Telemetry`: raw packet data from DPU, HOT, or EOT sources.
 - `BeaconDiagnostics`: the latest health report from a beacon PC.
+- `BeaconServerState`: the alert state of a beacon PC: last announced status, pending change and mute.
 - `Subdivision` and `Railroad`: route hierarchy and ownership context.
 - `SubdivisionTrackageRight`: rules that affect which railroad context is valid.
 

@@ -267,6 +267,51 @@ namespace Web.Server.Migrations
                     b.ToTable("BeaconRailroads");
                 });
 
+            modelBuilder.Entity("Web.Server.Entities.BeaconServerState", b =>
+                {
+                    b.Property<int>("BeaconID")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("AlertsMuteNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AlertsMutedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AlertsMutedBy")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AlertsMutedUntil")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedAt")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LastUpdate")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PendingSince")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PendingStatus")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("StatusSince")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("BeaconID");
+
+                    b.ToTable("BeaconServerStates");
+                });
+
             modelBuilder.Entity("Web.Server.Entities.MapPin", b =>
                 {
                     b.Property<int>("ID")
@@ -731,6 +776,17 @@ namespace Web.Server.Migrations
                     b.Navigation("Beacon");
 
                     b.Navigation("Subdivision");
+                });
+
+            modelBuilder.Entity("Web.Server.Entities.BeaconServerState", b =>
+                {
+                    b.HasOne("Web.Server.Entities.Beacon", "Beacon")
+                        .WithOne()
+                        .HasForeignKey("Web.Server.Entities.BeaconServerState", "BeaconID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Beacon");
                 });
 
             modelBuilder.Entity("Web.Server.Entities.MapPin", b =>

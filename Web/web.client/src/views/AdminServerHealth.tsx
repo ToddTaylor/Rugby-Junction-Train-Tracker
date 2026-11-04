@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { ServerHealth, ServerStatus } from '../types/ServerHealth';
-import { getServerHealth, updateServerExpectations } from '../api/serverHealth';
+import { getServerHealth, muteServerAlerts, unmuteServerAlerts, updateServerExpectations } from '../api/serverHealth';
 import AdminPageHeader from '../components/admin/AdminPageHeader';
 import {
+  MUTE_DURATIONS,
+  MuteDuration,
+  SERVER_STATUS_CHANGED_EVENT,
   ServerHealthFilter,
   countByStatus,
+  describeMute,
   filterServers,
   formatGigabytes,
   formatProgramCount,
@@ -13,6 +17,7 @@ import {
   formatTimeAgo,
   formatUptime,
   isProgramShort,
+  muteUntilFor,
   parseExpectedCount,
   sortServers,
 } from '../utils/serverHealth';
@@ -50,6 +55,12 @@ const AdminServerHealth = () => {
   const [form, setForm] = useState<ExpectationsForm>({ sdrSharp: '', softEot: '', softDpu: '' });
   const [formError, setFormError] = useState<string>();
   const [now, setNow] = useState(() => new Date());
+  const [muting, setMuting] = useState<ServerHealth | null>(null);
+  const [muteDuration, setMuteDuration] = useState<MuteDuration>('day');
+  const [muteNote, setMuteNote] = useState('');
+  const [muteError, setMuteError] = useState<string>();
+  const [notificationPermission, setNotificationPermission] = useState(() =>
+    typeof Notification === 'undefined' ? 'unsupported' : Notification.permission);
 
   const loadServers = useCallback(async () => {
     const response = await getServerHealth();
@@ -68,6 +79,55 @@ const AdminServerHealth = () => {
     const timer = window.setInterval(loadServers, REFRESH_INTERVAL_MS);
     return () => window.clearInterval(timer);
   }, [loadServers]);
+
+  // The app-wide alert listener announces each status change, so the table updates without waiting for the timer.
+  useEffect(() => {
+    const refresh = () => { loadServers(); };
+    window.addEventListener(SERVER_STATUS_CHANGED_EVENT, refresh);
+    return () => window.removeEventListener(SERVER_STATUS_CHANGED_EVENT, refresh);
+  }, [loadServers]);
+
+  const enableDesktopAlerts = async () => {
+    setNotificationPermission(await Notification.requestPermission());
+  };
+
+  const openMute = (server: ServerHealth) => {
+    setMuting(server);
+    setMuteDuration('day');
+    setMuteNote('');
+    setMuteError(undefined);
+  };
+
+  const handleMute = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!muting) return;
+
+    const note = muteNote.trim();
+    const response = await muteServerAlerts(muting.beaconID, {
+      mutedUntil: muteUntilFor(muteDuration),
+      note: note === '' ? null : note,
+    });
+    if (response.errors.length > 0) {
+      setMuteError(response.errors.join(', '));
+      return;
+    }
+
+    setMuting(null);
+    await loadServers();
+  };
+
+  const handleUnmute = async (server: ServerHealth) => {
+    const response = await unmuteServerAlerts(server.beaconID);
+    if (response.errors.length > 0) {
+      setError(response.errors.join(', '));
+      return;
+    }
+    await loadServers();
+  };
+
+  const renderMuteButton = (server: ServerHealth) => server.alertsMuted
+    ? <button className="btn-secondary" onClick={() => handleUnmute(server)}>Turn alerts on</button>
+    : <button className="btn-secondary" onClick={() => openMute(server)}>Mute alerts</button>;
 
   const counts = useMemo(() => countByStatus(servers), [servers]);
   const visibleServers = useMemo(() => sortServers(filterServers(servers, filter)), [servers, filter]);
@@ -119,8 +179,18 @@ const AdminServerHealth = () => {
     <div className="admin-page admin-page--wide admin-server-health">
       <AdminPageHeader
         title="Server Health"
-        description="Whether each beacon PC is checking in and running SDR#, SoftEOT and SoftDPU. Refreshes every minute."
-        actions={<button className="btn-secondary" onClick={loadServers}>Refresh</button>}
+        description="Whether each beacon PC is checking in and running SDR#, SoftEOT and SoftDPU. Refreshes every minute and whenever a status changes."
+        actions={(
+          <>
+            {notificationPermission === 'default' && (
+              <button className="btn-secondary" onClick={enableDesktopAlerts}>Turn on desktop alerts</button>
+            )}
+            {notificationPermission === 'denied' && (
+              <span className="server-subtext">Desktop alerts are blocked in this browser's site settings.</span>
+            )}
+            <button className="btn-secondary" onClick={loadServers}>Refresh</button>
+          </>
+        )}
       />
 
       <div className="server-health-summary">
@@ -169,7 +239,7 @@ const AdminServerHealth = () => {
               </tr>
             )}
             {visibleServers.map(server => (
-              <tr key={server.beaconID}>
+              <tr key={server.beaconID} className={server.alertsMuted ? 'server-row-muted' : undefined}>
                 <td><StatusChip status={server.status} /></td>
                 <td>
                   <div className="server-name">{server.beaconName}</div>
@@ -177,6 +247,11 @@ const AdminServerHealth = () => {
                     {server.diagnostics?.hostname ?? (server.hasDiagnostics ? '' : 'No diagnostics reported')}
                     {server.diagnostics?.clientVersion ? ` · v${server.diagnostics.clientVersion}` : ''}
                   </div>
+                  {server.alertsMuted && (
+                    <div className="server-muted-note" title={server.alertsMuteNote ?? undefined}>
+                      🔕 {describeMute(server)}{server.alertsMuteNote ? `: ${server.alertsMuteNote}` : ''}
+                    </div>
+                  )}
                 </td>
                 <td className={server.status === 'Offline' ? 'server-text-offline' : undefined}>
                   {formatTimeAgo(server.lastCheckIn, now)}
@@ -201,6 +276,7 @@ const AdminServerHealth = () => {
                   <div className="server-actions">
                     <button className="btn-primary" onClick={() => setSelectedId(server.beaconID)}>Details</button>
                     <button className="btn-secondary" onClick={() => openEdit(server)}>Expected programs</button>
+                    {renderMuteButton(server)}
                   </div>
                 </td>
               </tr>
@@ -218,6 +294,7 @@ const AdminServerHealth = () => {
             </div>
             <div className="server-drawer-meta">
               <StatusChip status={selected.status} />
+              {selected.statusSince && <span>{selected.status} for {formatUptime(selected.statusSince, now)}</span>}
               <span>Last check-in {formatTimeAgo(selected.lastCheckIn, now)}</span>
               {selected.diagnostics && (
                 <>
@@ -230,6 +307,23 @@ const AdminServerHealth = () => {
             {selected.subdivisions.length > 0 && (
               <div className="server-subtext">Serves {selected.subdivisions.join(', ')}</div>
             )}
+
+            <section className="server-drawer-section">
+              <h3>Alerts</h3>
+              <div className="server-drawer-alerts">
+                <div>
+                  {selected.alertsMuted ? (
+                    <>
+                      <div className="server-muted-note">🔕 {describeMute(selected)}</div>
+                      {selected.alertsMuteNote && <div className="server-subtext">{selected.alertsMuteNote}</div>}
+                    </>
+                  ) : (
+                    <div className="server-subtext">Support users get a pop-up when this server goes offline, becomes degraded or recovers.</div>
+                  )}
+                </div>
+                {renderMuteButton(selected)}
+              </div>
+            </section>
 
             {selected.reasons.length > 0 && (
               <section className="server-drawer-section">
@@ -359,6 +453,50 @@ const AdminServerHealth = () => {
               <div className="form-actions">
                 <button type="button" className="btn-secondary" onClick={() => setEditing(null)}>Cancel</button>
                 <button type="submit" className="btn-primary">Save</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {muting && (
+        <div className="modal-overlay" onClick={() => setMuting(null)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <h2>Mute alerts: {muting.beaconName}</h2>
+            <p className="server-subtext">
+              No pop-ups for this server until the mute ends. It stays on this page with its current status.
+            </p>
+            <form onSubmit={handleMute}>
+              {muteError && <div className="error-message">{muteError}</div>}
+              <fieldset className="server-mute-durations">
+                <legend>Mute for</legend>
+                {MUTE_DURATIONS.map(option => (
+                  <label key={option.value}>
+                    <input
+                      type="radio"
+                      name="mute-duration"
+                      value={option.value}
+                      checked={muteDuration === option.value}
+                      onChange={() => setMuteDuration(option.value)}
+                    />
+                    {option.label}
+                  </label>
+                ))}
+              </fieldset>
+              <div className="form-group">
+                <label htmlFor="mute-note">Note (optional)</label>
+                <textarea
+                  id="mute-note"
+                  rows={3}
+                  maxLength={500}
+                  value={muteNote}
+                  onChange={e => setMuteNote(e.target.value)}
+                  placeholder="For example: Antenna down until the spring thaw"
+                />
+              </div>
+              <div className="form-actions">
+                <button type="button" className="btn-secondary" onClick={() => setMuting(null)}>Cancel</button>
+                <button type="submit" className="btn-primary">Mute alerts</button>
               </div>
             </form>
           </div>

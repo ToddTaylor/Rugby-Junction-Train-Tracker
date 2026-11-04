@@ -149,6 +149,7 @@ try
     builder.Services.AddScoped<IBeaconRepository, BeaconRepository>();
     builder.Services.AddScoped<IBeaconRailroadRepository, BeaconRailroadRepository>();
     builder.Services.AddScoped<IBeaconDiagnosticsRepository, BeaconDiagnosticsRepository>();
+    builder.Services.AddScoped<IBeaconServerStateRepository, BeaconServerStateRepository>();
     builder.Services.AddScoped<IMapPinRepository, MapPinRepository>();
     builder.Services.AddScoped<IMapPinHistoryRepository, MapPinHistoryRepository>();
     builder.Services.AddScoped<IUserRepository, UserRepository>();
@@ -233,6 +234,7 @@ try
     builder.Services.AddHostedService<RecordCleanupService>();
     builder.Services.AddHostedService<TelemetryConsumerService>();
     builder.Services.AddHostedService<PassengerRailPollingService>();
+    builder.Services.AddHostedService<ServerHealthMonitorService>();
 
     var app = builder.Build();
 

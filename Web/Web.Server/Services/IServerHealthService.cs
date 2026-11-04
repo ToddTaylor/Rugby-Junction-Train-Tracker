@@ -25,5 +25,26 @@ namespace Web.Server.Services
         /// Returns false when the beacon does not exist.
         /// </summary>
         Task<bool> UpdateExpectedProgramsAsync(int beaconId, UpdateServerExpectationsDTO expectations);
+
+        /// <summary>
+        /// Stops status-change pop-ups for the beacon until the mute ends. Returns false when the beacon does not exist.
+        /// </summary>
+        Task<bool> MuteAlertsAsync(int beaconId, MuteServerAlertsDTO mute, User mutedBy);
+
+        /// <summary>
+        /// Returns false when the beacon does not exist.
+        /// </summary>
+        Task<bool> UnmuteAlertsAsync(int beaconId);
+
+        /// <summary>
+        /// Evaluates every beacon, saves its alert state, and returns the status changes support users should be told
+        /// about, each with the users who may see that beacon. Called once a minute by ServerHealthMonitorService.
+        /// </summary>
+        Task<IReadOnlyList<ServerStatusChange>> DetectStatusChangesAsync();
     }
+
+    /// <summary>
+    /// A status change to announce, and the IDs of the Admins and Custodians who should receive it.
+    /// </summary>
+    public record ServerStatusChange(ServerStatusChangedDTO Notification, IReadOnlyList<int> RecipientUserIds);
 }

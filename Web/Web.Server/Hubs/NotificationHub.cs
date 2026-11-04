@@ -15,7 +15,7 @@ namespace Web.Server.Hubs
             _userService = userService;
         }
 
-        private static string GetUserGroup(int userId) => $"user-{userId}";
+        public static string GetUserGroup(int userId) => $"user-{userId}";
 
         public override async Task OnConnectedAsync()
         {

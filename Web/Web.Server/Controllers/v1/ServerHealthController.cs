@@ -14,6 +14,7 @@ namespace Web.Server.Controllers.v1
     public class ServerHealthController : ControllerBase
     {
         public const int MaxExpectedProgramCount = 20;
+        public const int MaxMuteNoteLength = 500;
 
         private readonly IServerHealthService _serverHealthService;
         private readonly IUserService _userService;
@@ -92,6 +93,86 @@ namespace Web.Server.Controllers.v1
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while updating expected programs for beacon {BeaconId}.", beaconId);
+                response.Errors.Add(ex.Message);
+                return StatusCode(StatusCodes.Status500InternalServerError, response);
+            }
+        }
+
+        // PUT: api/v1/ServerHealth/5/mute
+        [HttpPut("{beaconId:int}/mute")]
+        public async Task<IActionResult> MuteAlerts(int beaconId, MuteServerAlertsDTO dto)
+        {
+            var response = new MessageEnvelope<object?>(null, []);
+            try
+            {
+                var currentUser = await GetCurrentUserAsync();
+                if (currentUser == null)
+                {
+                    return Unauthorized();
+                }
+
+                if (!await _serverHealthService.CanManageBeaconAsync(currentUser, beaconId))
+                {
+                    response.Errors.Add("Forbidden.");
+                    return StatusCode(StatusCodes.Status403Forbidden, response);
+                }
+
+                if (dto.MutedUntil.HasValue && dto.MutedUntil.Value.ToUniversalTime() <= DateTime.UtcNow)
+                {
+                    response.Errors.Add("The mute end time must be in the future.");
+                    return BadRequest(response);
+                }
+
+                if (dto.Note?.Length > MaxMuteNoteLength)
+                {
+                    response.Errors.Add($"The note can be at most {MaxMuteNoteLength} characters.");
+                    return BadRequest(response);
+                }
+
+                if (!await _serverHealthService.MuteAlertsAsync(beaconId, dto, currentUser))
+                {
+                    return NotFound();
+                }
+
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while muting alerts for beacon {BeaconId}.", beaconId);
+                response.Errors.Add(ex.Message);
+                return StatusCode(StatusCodes.Status500InternalServerError, response);
+            }
+        }
+
+        // DELETE: api/v1/ServerHealth/5/mute
+        [HttpDelete("{beaconId:int}/mute")]
+        public async Task<IActionResult> UnmuteAlerts(int beaconId)
+        {
+            var response = new MessageEnvelope<object?>(null, []);
+            try
+            {
+                var currentUser = await GetCurrentUserAsync();
+                if (currentUser == null)
+                {
+                    return Unauthorized();
+                }
+
+                if (!await _serverHealthService.CanManageBeaconAsync(currentUser, beaconId))
+                {
+                    response.Errors.Add("Forbidden.");
+                    return StatusCode(StatusCodes.Status403Forbidden, response);
+                }
+
+                if (!await _serverHealthService.UnmuteAlertsAsync(beaconId))
+                {
+                    return NotFound();
+                }
+
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while turning alerts back on for beacon {BeaconId}.", beaconId);
                 response.Errors.Add(ex.Message);
                 return StatusCode(StatusCodes.Status500InternalServerError, response);
             }

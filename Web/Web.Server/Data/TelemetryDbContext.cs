@@ -17,6 +17,7 @@ namespace Web.Server.Data
         public DbSet<Beacon> Beacons { get; set; }
         public DbSet<BeaconRailroad> BeaconRailroads { get; set; }
         public DbSet<BeaconDiagnostics> BeaconDiagnostics { get; set; }
+        public DbSet<BeaconServerState> BeaconServerStates { get; set; }
         public DbSet<MapPin> MapPins { get; set; }
         public DbSet<MapPinHistory> MapPinHistories { get; set; }
         public DbSet<Role> Roles { get; set; }
@@ -87,6 +88,36 @@ namespace Web.Server.Data
             modelBuilder.Entity<BeaconDiagnostics>()
                 .Property(d => d.StartupTasks)
                 .HasConversion(Converters.JsonListConverter<DiagnosticsStartupTaskStatus>(), Converters.JsonListComparer<DiagnosticsStartupTaskStatus>());
+
+            modelBuilder.Entity<BeaconServerState>()
+                .HasOne(s => s.Beacon)
+                .WithOne()
+                .HasForeignKey<BeaconServerState>(s => s.BeaconID)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<BeaconServerState>()
+                .Property(s => s.Status)
+                .HasConversion(new EnumToStringConverter<ServerStatus>());
+
+            modelBuilder.Entity<BeaconServerState>()
+                .Property(s => s.PendingStatus)
+                .HasConversion(new EnumToStringConverter<ServerStatus>());
+
+            modelBuilder.Entity<BeaconServerState>()
+                .Property(s => s.StatusSince)
+                .HasConversion(Converters.UtcDateTimeConverter);
+
+            foreach (var property in new[]
+            {
+                nameof(BeaconServerState.PendingSince),
+                nameof(BeaconServerState.AlertsMutedAt),
+                nameof(BeaconServerState.AlertsMutedUntil),
+            })
+            {
+                modelBuilder.Entity<BeaconServerState>()
+                    .Property<DateTime?>(property)
+                    .HasConversion(Converters.NullableUtcDateTimeConverter);
+            }
 
             // Converts the Direction enum to text in the database instead of an int
             modelBuilder.Entity<BeaconRailroad>()
