@@ -2,6 +2,7 @@
   --server-alert-online: #4caf50;
   --server-alert-degraded: #ffb300;
   --server-alert-offline: #ef5350;
+  --server-alert-info: #4ea3f5;
   position: fixed;
   right: 16px;
   bottom: 16px;
@@ -17,6 +18,7 @@
     --server-alert-online: #2e7d32;
     --server-alert-degraded: #a15c00;
     --server-alert-offline: #c62828;
+    --server-alert-info: #1565c0;
   }
 }
 
@@ -37,6 +39,7 @@
 .server-alert.online { --server-alert-color: var(--server-alert-online); }
 .server-alert.degraded { --server-alert-color: var(--server-alert-degraded); }
 .server-alert.offline { --server-alert-color: var(--server-alert-offline); }
+.server-alert.info { --server-alert-color: var(--server-alert-info); }
 
 .server-alert-dot {
   flex: none;

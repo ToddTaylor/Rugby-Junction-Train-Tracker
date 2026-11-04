@@ -164,6 +164,104 @@ namespace Web.Server.Migrations
                     b.ToTable("Beacons");
                 });
 
+            modelBuilder.Entity("Web.Server.Entities.BeaconCommand", b =>
+                {
+                    b.Property<int>("ID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("BeaconID")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CancelledAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CancelledBy")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedAt")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DeliveredAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ExpiresAt")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FinishedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LastUpdate")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Outcome")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RequestedAt")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RequestedBy")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("RequestedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ResultMessage")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("StartedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("ID");
+
+                    b.HasIndex("BeaconID", "RequestedAt");
+
+                    b.ToTable("BeaconCommands");
+                });
+
+            modelBuilder.Entity("Web.Server.Entities.BeaconDeviceKey", b =>
+                {
+                    b.Property<int>("BeaconID")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CreatedAt")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("KeyHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LastRejectedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LastUpdate")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("BeaconID");
+
+                    b.ToTable("BeaconDeviceKeys");
+                });
+
             modelBuilder.Entity("Web.Server.Entities.BeaconDiagnostics", b =>
                 {
                     b.Property<int>("BeaconID")
@@ -209,6 +307,12 @@ namespace Web.Server.Migrations
                     b.Property<string>("Programs")
                         .IsRequired()
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("RemoteCommandsEnabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RestartAppsAvailable")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("StartupTasks")
                         .IsRequired()
@@ -746,6 +850,28 @@ namespace Web.Server.Migrations
                         .IsRequired();
 
                     b.Navigation("Owner");
+                });
+
+            modelBuilder.Entity("Web.Server.Entities.BeaconCommand", b =>
+                {
+                    b.HasOne("Web.Server.Entities.Beacon", "Beacon")
+                        .WithMany()
+                        .HasForeignKey("BeaconID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Beacon");
+                });
+
+            modelBuilder.Entity("Web.Server.Entities.BeaconDeviceKey", b =>
+                {
+                    b.HasOne("Web.Server.Entities.Beacon", "Beacon")
+                        .WithOne()
+                        .HasForeignKey("Web.Server.Entities.BeaconDeviceKey", "BeaconID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Beacon");
                 });
 
             modelBuilder.Entity("Web.Server.Entities.BeaconDiagnostics", b =>

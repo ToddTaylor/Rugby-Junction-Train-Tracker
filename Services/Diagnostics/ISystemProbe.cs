@@ -21,5 +21,6 @@ namespace Services.Diagnostics
 
         DateTime? GetNewestFileWriteUtc(string directory, string fileNamePrefix);
         ScheduledTaskStatus GetScheduledTask(string taskName);
+        bool FileExists(string path);
     }
 }

@@ -6,6 +6,8 @@ namespace Web.Server.Repositories
     {
         Task<IEnumerable<BeaconDiagnostics>> GetAllAsync();
 
+        Task<BeaconDiagnostics?> GetAsync(int beaconId);
+
         /// <summary>
         /// Replaces the stored report for the beacon, or adds one if none exists.
         /// </summary>

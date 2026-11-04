@@ -1,4 +1,4 @@
-import type { ServerHealth, ServerProgram, ServerStatus, ServerStatusChange } from '../types/ServerHealth';
+import type { BeaconCommand, BeaconCommandType, ServerCommandUpdate, ServerHealth, ServerProgram, ServerStatus, ServerStatusChange } from '../types/ServerHealth';
 
 export type ServerHealthFilter = 'all' | 'problems' | ServerStatus;
 
@@ -119,4 +119,75 @@ export function describeStatusChange(change: ServerStatusChange): { title: strin
     title: `${change.beaconName} is ${change.status.toLowerCase()}`,
     body: change.reasons.length > 0 ? change.reasons.join(' · ') : `Status changed from ${change.previousStatus}.`,
   };
+}
+
+/** Window event the alert listener raises for every ServerCommandUpdated, so an open dashboard can refresh. */
+export const SERVER_COMMAND_UPDATED_EVENT = 'rjtt:server-command-updated';
+
+export function commandLabel(type: BeaconCommandType): string {
+  return type === 'Reboot' ? 'Reboot' : 'Restart apps';
+}
+
+export function commandStatusLabel(command: BeaconCommand): string {
+  switch (command.status) {
+    case 'Pending': return command.deliveredAt ? 'Sent to the PC' : 'Waiting for the PC';
+    case 'Running': return command.type === 'Reboot' ? 'Restarting' : 'Restarting apps';
+    case 'Succeeded': return 'Done';
+    case 'Failed': return 'Failed';
+    case 'Rejected': return 'Refused by the PC';
+    case 'Cancelled': return command.cancelledBy ? `Cancelled by ${command.cancelledBy}` : 'Cancelled';
+    case 'Expired': return 'Not picked up in time';
+  }
+}
+
+/** The command waiting for or being carried out by the PC, if any. */
+export function activeCommand(server: ServerHealth): BeaconCommand | null {
+  return server.commands.find(c => c.status === 'Pending' || c.status === 'Running') ?? null;
+}
+
+/** Whether a reboot or restart-apps command can be sent now, and if not, why not. */
+export function commandAvailability(server: ServerHealth, type: BeaconCommandType): { allowed: boolean; reason?: string } {
+  if (!server.deviceKeySetAt) return { allowed: false, reason: 'Create a device key and enter it on the PC first.' };
+  if (server.status === 'Offline') return { allowed: false, reason: 'The server is offline, so it cannot pick up a command.' };
+  if (!server.diagnostics?.remoteCommandsEnabled) {
+    return { allowed: false, reason: 'The PC does not allow remote commands yet. Turn them on and enter the device key in its ConsoleApp settings (Ctrl+U).' };
+  }
+  if (type === 'RestartApps' && !server.diagnostics.restartAppsAvailable) {
+    return { allowed: false, reason: 'No restart apps command is set up on the PC.' };
+  }
+  if (activeCommand(server)) return { allowed: false, reason: 'A command is already waiting or in progress.' };
+  if (type === 'Reboot' && server.rebootsLast24Hours >= server.maxRebootsPerDay) {
+    return { allowed: false, reason: `This server has been rebooted ${server.rebootsLast24Hours} times in the last 24 hours, the most allowed.` };
+  }
+  return { allowed: true };
+}
+
+export type AlertTone = 'online' | 'degraded' | 'offline' | 'info';
+
+/** Title, body and colour for a command pop-up. */
+export function describeCommandUpdate(update: ServerCommandUpdate): { title: string; body: string; tone: AlertTone } {
+  const { beaconName: name, command } = update;
+  const label = commandLabel(command.type);
+  const isReboot = command.type === 'Reboot';
+
+  switch (command.status) {
+    case 'Pending':
+      return { title: `${label} of ${name} requested`, body: `By ${command.requestedBy}. The PC picks it up at its next check-in.`, tone: 'info' };
+    case 'Running':
+      return {
+        title: isReboot ? `${name} is restarting` : `${name} is restarting its apps`,
+        body: isReboot ? 'The PC accepted the reboot and restarts in 60 seconds.' : 'The PC is running its restart apps command.',
+        tone: 'info',
+      };
+    case 'Succeeded':
+      return { title: isReboot ? `${name} restarted` : `${name} restarted its apps`, body: command.resultMessage ?? 'Done.', tone: 'online' };
+    case 'Failed':
+      return { title: `${label} of ${name} failed`, body: command.resultMessage ?? 'The PC reported a failure.', tone: 'offline' };
+    case 'Rejected':
+      return { title: `${name} refused the ${label.toLowerCase()}`, body: command.resultMessage ?? 'The PC refused the command.', tone: 'degraded' };
+    case 'Cancelled':
+      return { title: `${label} of ${name} cancelled`, body: command.cancelledBy ? `By ${command.cancelledBy}.` : 'Cancelled.', tone: 'info' };
+    case 'Expired':
+      return { title: `${label} of ${name} was not picked up`, body: 'The PC did not check in before the command expired.', tone: 'degraded' };
+  }
 }

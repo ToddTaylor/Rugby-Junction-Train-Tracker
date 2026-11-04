@@ -150,6 +150,8 @@ try
     builder.Services.AddScoped<IBeaconRailroadRepository, BeaconRailroadRepository>();
     builder.Services.AddScoped<IBeaconDiagnosticsRepository, BeaconDiagnosticsRepository>();
     builder.Services.AddScoped<IBeaconServerStateRepository, BeaconServerStateRepository>();
+    builder.Services.AddScoped<IBeaconDeviceKeyRepository, BeaconDeviceKeyRepository>();
+    builder.Services.AddScoped<IBeaconCommandRepository, BeaconCommandRepository>();
     builder.Services.AddScoped<IMapPinRepository, MapPinRepository>();
     builder.Services.AddScoped<IMapPinHistoryRepository, MapPinHistoryRepository>();
     builder.Services.AddScoped<IUserRepository, UserRepository>();
@@ -170,6 +172,7 @@ try
     builder.Services.AddScoped<IBeaconService, BeaconService>();
     builder.Services.AddScoped<IBeaconRailroadService, BeaconRailroadService>();
     builder.Services.AddScoped<IServerHealthService, ServerHealthService>();
+    builder.Services.AddScoped<IServerCommandService, ServerCommandService>();
 
     // Register MapPinService with processor map factory
     builder.Services.AddScoped<IMapPinService>(sp =>

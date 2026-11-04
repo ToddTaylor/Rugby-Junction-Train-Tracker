@@ -44,6 +44,57 @@ public class ServerHealthServiceTests
     }
 
     [TestMethod]
+    public async Task Row_ShowsDeviceKeyAndRecentCommands_AndCountsStartedReboots()
+    {
+        var beacon = CreateBeacon(1, "Sussex", custodianId: null, lastHealthCheck: Now.AddMinutes(-1));
+        var deviceKey = new BeaconDeviceKey { BeaconID = 1, KeyHash = "x", CreatedBy = "Ada Admin", CreatedAt = Now.AddDays(-2), LastRejectedAt = Now.AddHours(-1) };
+        BeaconCommand Reboot(int id, DateTime requestedAt, DateTime? startedAt, BeaconCommandStatus? outcome = null) => new()
+        {
+            ID = id,
+            BeaconID = 1,
+            Type = BeaconCommandType.Reboot,
+            RequestedBy = "Ada Admin",
+            RequestedAt = requestedAt,
+            ExpiresAt = requestedAt.AddMinutes(10),
+            StartedAt = startedAt,
+            Outcome = outcome,
+            FinishedAt = outcome.HasValue ? startedAt : null,
+        };
+        var commands = new[]
+        {
+            Reboot(1, Now.AddDays(-40), Now.AddDays(-40), BeaconCommandStatus.Succeeded), // older than the history
+            Reboot(2, Now.AddHours(-30), Now.AddHours(-30), BeaconCommandStatus.Succeeded), // outside 24 hours
+            Reboot(3, Now.AddHours(-5), Now.AddHours(-5), BeaconCommandStatus.Succeeded),
+            Reboot(4, Now.AddHours(-3), Now.AddHours(-3), BeaconCommandStatus.Rejected), // refused by the PC
+            Reboot(5, Now.AddMinutes(-2), null), // still waiting
+        };
+        var (service, _, _) = CreateService([beacon], [], new InMemoryServerStateRepository(), [], new Clock(Now), [deviceKey], commands);
+
+        var row = (await service.GetServerHealthAsync(CreateUser(1, "Admin"))).Single();
+
+        Assert.AreEqual(Now.AddDays(-2), row.DeviceKeySetAt);
+        Assert.AreEqual("Ada Admin", row.DeviceKeySetBy);
+        Assert.AreEqual(Now.AddHours(-1), row.DeviceKeyRejectedAt);
+        Assert.AreEqual(1, row.RebootsLast24Hours);
+        Assert.AreEqual(ServerCommandService.MaxRebootsPerDay, row.MaxRebootsPerDay);
+        CollectionAssert.AreEqual(new[] { 5, 4, 3, 2 }, row.Commands.Select(c => c.ID).ToArray());
+        Assert.AreEqual(BeaconCommandStatus.Pending, row.Commands[0].Status);
+        Assert.AreEqual(BeaconCommandStatus.Rejected, row.Commands[1].Status);
+    }
+
+    [TestMethod]
+    public async Task Row_WithoutDeviceKey_HasNoKeyDetails()
+    {
+        var (service, _, _) = CreateService([CreateBeacon(1, "Sussex", custodianId: null)], []);
+
+        var row = (await service.GetServerHealthAsync(CreateUser(1, "Admin"))).Single();
+
+        Assert.IsNull(row.DeviceKeySetAt);
+        Assert.IsNull(row.DeviceKeyRejectedAt);
+        Assert.AreEqual(0, row.Commands.Count);
+    }
+
+    [TestMethod]
     public async Task Viewer_SeesNothing()
     {
         var (service, _, _) = CreateService([CreateBeacon(1, "Sussex", custodianId: null)], []);
@@ -353,7 +404,9 @@ public class ServerHealthServiceTests
         IEnumerable<BeaconDiagnostics> diagnostics,
         IBeaconServerStateRepository stateRepository,
         IEnumerable<User> users,
-        Clock clock)
+        Clock clock,
+        IEnumerable<BeaconDeviceKey>? deviceKeys = null,
+        IEnumerable<BeaconCommand>? commands = null)
     {
         var beaconList = beacons.ToList();
         var beaconRepositoryMock = new Mock<IBeaconRepository>();
@@ -375,10 +428,21 @@ public class ServerHealthServiceTests
         config.Scan(typeof(MapsterProfile).Assembly);
         var mapper = new ServiceMapper(new ServiceCollection().BuildServiceProvider(), config);
 
+        var deviceKeyRepositoryMock = new Mock<IBeaconDeviceKeyRepository>();
+        deviceKeyRepositoryMock.Setup(r => r.GetAllAsync()).ReturnsAsync((deviceKeys ?? []).ToList());
+
+        var commandList = (commands ?? []).ToList();
+        var commandRepositoryMock = new Mock<IBeaconCommandRepository>();
+        commandRepositoryMock
+            .Setup(r => r.GetRequestedSinceAsync(It.IsAny<DateTime>()))
+            .ReturnsAsync((DateTime since) => commandList.Where(c => c.RequestedAt >= since).OrderByDescending(c => c.RequestedAt).ToList());
+
         var service = new ServerHealthService(
             beaconRepositoryMock.Object,
             diagnosticsRepositoryMock.Object,
             stateRepository,
+            deviceKeyRepositoryMock.Object,
+            commandRepositoryMock.Object,
             userRepositoryMock.Object,
             mapper,
             timeProviderMock.Object);

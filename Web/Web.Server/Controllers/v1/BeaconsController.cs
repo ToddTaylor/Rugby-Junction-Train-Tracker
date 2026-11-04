@@ -12,7 +12,13 @@ namespace Web.Server.Controllers.v1
     public class BeaconsController : ControllerBase
     {
         private readonly IBeaconService _beaconService;
+        /// <summary>
+        /// Header a beacon PC sends its device key in.
+        /// </summary>
+        public const string DeviceKeyHeaderName = "X-Beacon-Key";
+
         private readonly IServerHealthService _serverHealthService;
+        private readonly IServerCommandService _serverCommandService;
         private readonly IUserService _userService;
         private readonly ILogger<BeaconsController> _logger;
         private readonly IMapper _mapper;
@@ -20,12 +26,14 @@ namespace Web.Server.Controllers.v1
         public BeaconsController(
             IBeaconService beaconService,
             IServerHealthService serverHealthService,
+            IServerCommandService serverCommandService,
             IUserService userService,
             ILogger<BeaconsController> logger,
             IMapper mapper)
         {
             _beaconService = beaconService;
             _serverHealthService = serverHealthService;
+            _serverCommandService = serverCommandService;
             _userService = userService;
             _logger = logger;
             _mapper = mapper;
@@ -145,6 +153,8 @@ namespace Web.Server.Controllers.v1
         /// <summary>
         /// Beacon PC health check. Current ConsoleApp versions send a diagnostics report in the body;
         /// older versions send an empty body, which only records the check-in.
+        /// Once the beacon has a device key, the PC must send it in X-Beacon-Key or the check-in is refused (401).
+        /// With a valid key, the response is 200 { command } when a reboot or restart-apps command is waiting, else 204.
         /// </summary>
         [HttpPost("Health/{id}")]
         public async Task<IActionResult> CheckHealth(int id, [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] BeaconDiagnosticsReportDTO? report = null)
@@ -163,11 +173,29 @@ namespace Web.Server.Controllers.v1
                     return NotFound();
                 }
 
+                var keyCheck = await _serverCommandService.CheckDeviceKeyAsync(id, Request.Headers[DeviceKeyHeaderName].FirstOrDefault());
+                if (keyCheck == DeviceKeyCheck.Invalid)
+                {
+                    _logger.LogWarning("Health check for beacon {BeaconId} refused: missing or wrong device key.", id);
+                    return Unauthorized(new { error = "Missing or wrong device key." });
+                }
+
                 await _beaconService.UpdateBeaconHealthAsync(id, beacon);
 
+                BeaconDiagnostics? diagnostics = null;
                 if (report != null)
                 {
-                    await _serverHealthService.RecordDiagnosticsAsync(id, _mapper.Map<BeaconDiagnostics>(report));
+                    diagnostics = _mapper.Map<BeaconDiagnostics>(report);
+                    await _serverHealthService.RecordDiagnosticsAsync(id, diagnostics);
+                }
+
+                if (keyCheck == DeviceKeyCheck.Valid)
+                {
+                    var command = await _serverCommandService.HandleCheckInAsync(id, diagnostics);
+                    if (command != null)
+                    {
+                        return Ok(new BeaconHealthResponseDTO { Command = command });
+                    }
                 }
 
                 return NoContent();
@@ -175,6 +203,37 @@ namespace Web.Server.Controllers.v1
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while checking health for beacon {BeaconId}.", id);
+                return StatusCode(StatusCodes.Status500InternalServerError, new { error = ex.Message });
+            }
+        }
+
+        // POST: api/v1/Beacons/Health/{id}/commands/{commandId}
+        /// <summary>
+        /// The beacon PC reports on a command it received: Started before carrying it out, then Succeeded or Failed,
+        /// or Rejected when it refuses. Requires the beacon's device key. A 409 on Started tells the PC not to run it.
+        /// </summary>
+        [HttpPost("Health/{id}/commands/{commandId:int}")]
+        public async Task<IActionResult> ReportCommand(int id, int commandId, BeaconCommandReportDTO report)
+        {
+            try
+            {
+                var keyCheck = await _serverCommandService.CheckDeviceKeyAsync(id, Request.Headers[DeviceKeyHeaderName].FirstOrDefault());
+                if (keyCheck != DeviceKeyCheck.Valid)
+                {
+                    _logger.LogWarning("Command report for beacon {BeaconId} refused: missing or wrong device key.", id);
+                    return Unauthorized(new { error = "Missing or wrong device key." });
+                }
+
+                return await _serverCommandService.ReportCommandAsync(id, commandId, report) switch
+                {
+                    CommandChangeResult.Updated => NoContent(),
+                    CommandChangeResult.NotFound => NotFound(),
+                    _ => Conflict(new { error = "The command was cancelled, expired or already handled." }),
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while recording a command report for beacon {BeaconId}.", id);
                 return StatusCode(StatusCodes.Status500InternalServerError, new { error = ex.Message });
             }
         }

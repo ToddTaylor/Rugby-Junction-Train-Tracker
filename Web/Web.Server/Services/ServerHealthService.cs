@@ -14,9 +14,18 @@ namespace Web.Server.Services
         /// </summary>
         public const int StatusConfirmMinutes = 3;
 
+        /// <summary>
+        /// How far back the Server Health page lists a server's reboot and restart-apps commands.
+        /// </summary>
+        public const int CommandHistoryDays = 30;
+
+        public const int CommandHistoryLimit = 10;
+
         private readonly IBeaconRepository _beaconRepository;
         private readonly IBeaconDiagnosticsRepository _diagnosticsRepository;
         private readonly IBeaconServerStateRepository _stateRepository;
+        private readonly IBeaconDeviceKeyRepository _deviceKeyRepository;
+        private readonly IBeaconCommandRepository _commandRepository;
         private readonly IUserRepository _userRepository;
         private readonly IMapper _mapper;
         private readonly ITimeProvider _timeProvider;
@@ -25,6 +34,8 @@ namespace Web.Server.Services
             IBeaconRepository beaconRepository,
             IBeaconDiagnosticsRepository diagnosticsRepository,
             IBeaconServerStateRepository stateRepository,
+            IBeaconDeviceKeyRepository deviceKeyRepository,
+            IBeaconCommandRepository commandRepository,
             IUserRepository userRepository,
             IMapper mapper,
             ITimeProvider timeProvider)
@@ -32,6 +43,8 @@ namespace Web.Server.Services
             _beaconRepository = beaconRepository;
             _diagnosticsRepository = diagnosticsRepository;
             _stateRepository = stateRepository;
+            _deviceKeyRepository = deviceKeyRepository;
+            _commandRepository = commandRepository;
             _userRepository = userRepository;
             _mapper = mapper;
             _timeProvider = timeProvider;
@@ -56,10 +69,19 @@ namespace Web.Server.Services
                 .Where(b => isAdmin || IsCustodianOf(user, b));
             var diagnosticsByBeacon = (await _diagnosticsRepository.GetAllAsync()).ToDictionary(d => d.BeaconID);
             var statesByBeacon = (await _stateRepository.GetAllAsync()).ToDictionary(s => s.BeaconID);
+            var keysByBeacon = (await _deviceKeyRepository.GetAllAsync()).ToDictionary(k => k.BeaconID);
             var utcNow = _timeProvider.UtcNow;
+            var commandsByBeacon = (await _commandRepository.GetRequestedSinceAsync(utcNow.AddDays(-CommandHistoryDays)))
+                .ToLookup(c => c.BeaconID);
 
             return beacons
-                .Select(b => BuildRow(b, diagnosticsByBeacon.GetValueOrDefault(b.ID), statesByBeacon.GetValueOrDefault(b.ID), utcNow))
+                .Select(b => BuildRow(
+                    b,
+                    diagnosticsByBeacon.GetValueOrDefault(b.ID),
+                    statesByBeacon.GetValueOrDefault(b.ID),
+                    keysByBeacon.GetValueOrDefault(b.ID),
+                    commandsByBeacon[b.ID].ToList(),
+                    utcNow))
                 .OrderBy(r => r.BeaconName, StringComparer.OrdinalIgnoreCase)
                 .ToList();
         }
@@ -99,7 +121,7 @@ namespace Web.Server.Services
 
             DateTime? mutedUntil = mute.MutedUntil.HasValue ? ToUtc(mute.MutedUntil.Value) : null;
             var note = string.IsNullOrWhiteSpace(mute.Note) ? null : mute.Note.Trim();
-            await _stateRepository.SetMuteAsync(beaconId, mutedUntil, note, $"{mutedBy.FirstName} {mutedBy.LastName}".Trim());
+            await _stateRepository.SetMuteAsync(beaconId, mutedUntil, note, ServerSupportUsers.DisplayName(mutedBy));
             return true;
         }
 
@@ -167,20 +189,10 @@ namespace Web.Server.Services
                 return [];
             }
 
-            var activeUsers = (await _userRepository.GetAllAsync()).Where(u => u.IsActive).ToList();
-            var adminIds = activeUsers.Where(u => HasRole(u, "Admin")).Select(u => u.ID).ToList();
-            var custodianIds = activeUsers.Where(u => HasRole(u, "Custodian")).Select(u => u.ID).ToHashSet();
+            var users = (await _userRepository.GetAllAsync()).ToList();
 
             return announced
-                .Select(a => new ServerStatusChange(
-                    a.Notification,
-                    adminIds
-                        .Concat(a.Beacon.BeaconRailroads
-                            .Select(br => br.Subdivision?.CustodianId)
-                            .OfType<int>()
-                            .Where(custodianIds.Contains))
-                        .Distinct()
-                        .ToList()))
+                .Select(a => new ServerStatusChange(a.Notification, ServerSupportUsers.GetRecipientIds(a.Beacon, users)))
                 .ToList();
         }
 
@@ -231,7 +243,13 @@ namespace Web.Server.Services
             _ => DateTime.SpecifyKind(value, DateTimeKind.Utc),
         };
 
-        private ServerHealthDTO BuildRow(Beacon beacon, BeaconDiagnostics? diagnostics, BeaconServerState? state, DateTime utcNow)
+        private ServerHealthDTO BuildRow(
+            Beacon beacon,
+            BeaconDiagnostics? diagnostics,
+            BeaconServerState? state,
+            BeaconDeviceKey? deviceKey,
+            IReadOnlyList<BeaconCommand> commands,
+            DateTime utcNow)
         {
             var lastCheckIn = GetLastCheckIn(beacon, diagnostics);
             var result = BeaconServerStatusEvaluator.Evaluate(beacon, diagnostics, lastCheckIn, utcNow);
@@ -262,6 +280,15 @@ namespace Web.Server.Services
                 AlertsMutedUntil = isMuted ? state!.AlertsMutedUntil : null,
                 AlertsMuteNote = isMuted ? state!.AlertsMuteNote : null,
                 AlertsMutedBy = isMuted ? state!.AlertsMutedBy : null,
+                DeviceKeySetAt = deviceKey?.CreatedAt,
+                DeviceKeySetBy = deviceKey?.CreatedBy,
+                DeviceKeyRejectedAt = deviceKey?.LastRejectedAt,
+                RebootsLast24Hours = ServerCommandService.CountStartedSince(commands, BeaconCommandType.Reboot, utcNow.AddDays(-1)),
+                MaxRebootsPerDay = ServerCommandService.MaxRebootsPerDay,
+                Commands = commands
+                    .Take(CommandHistoryLimit)
+                    .Select(c => ServerCommandService.ToDto(c, utcNow))
+                    .ToList(),
                 Programs = BeaconServerStatusEvaluator.GetExpectedPrograms(beacon)
                     .Select(p =>
                     {
@@ -284,7 +311,7 @@ namespace Web.Server.Services
         /// Health checks update every BeaconRailroad's LastUpdate, so the newest of those (or of the
         /// diagnostics report, for a beacon not yet linked to a railroad) is the last time the PC was heard from.
         /// </summary>
-        private static DateTime? GetLastCheckIn(Beacon beacon, BeaconDiagnostics? diagnostics)
+        public static DateTime? GetLastCheckIn(Beacon beacon, BeaconDiagnostics? diagnostics)
         {
             var times = beacon.BeaconRailroads
                 .Select(br => br.LastUpdate)
@@ -295,13 +322,8 @@ namespace Web.Server.Services
             return times.Count == 0 ? null : times.Max();
         }
 
-        private static bool IsCustodianOf(User user, Beacon beacon) =>
-            beacon.BeaconRailroads.Any(br => br.Subdivision?.CustodianId == user.ID);
+        private static bool IsCustodianOf(User user, Beacon beacon) => ServerSupportUsers.IsCustodianOf(user, beacon);
 
-        private static bool HasRole(User user, string roleName)
-        {
-            return user.UserRoles?.Any(ur =>
-                string.Equals(ur.Role?.RoleName, roleName, StringComparison.OrdinalIgnoreCase)) == true;
-        }
+        private static bool HasRole(User user, string roleName) => ServerSupportUsers.HasRole(user, roleName);
     }
 }

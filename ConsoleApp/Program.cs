@@ -47,8 +47,14 @@ void ShowSettingsSummary(AppSettings? appSettings)
         {
             foreach (var subscriber in appSettings.Subscribers)
             {
-                Console.WriteLine($"  Subscriber {subscriber.ID} Beacon ID: {subscriber.Beacon.BeaconID}");
+                var keyState = string.IsNullOrWhiteSpace(subscriber.Beacon.DeviceKey) ? "not set" : "set";
+                Console.WriteLine($"  Subscriber {subscriber.ID} Beacon ID: {subscriber.Beacon.BeaconID} (device key {keyState})");
             }
+        }
+        Console.WriteLine($"  Remote restart from the Server Health page: {(appSettings.AllowRemoteCommands ? "allowed" : "off")}");
+        if (!string.IsNullOrWhiteSpace(appSettings.RestartAppsCommand))
+        {
+            Console.WriteLine($"  Restart apps command: {appSettings.RestartAppsCommand}");
         }
     }
     Console.ResetColor();
@@ -91,6 +97,50 @@ void PromptAndUpdateSettings(AppSettings? appSettings)
                 {
                     subscriber.Beacon.BeaconID = beaconIdInput;
                 }
+
+                // The device key comes from the Server Health page of the site this subscriber sends to.
+                var keyState = string.IsNullOrWhiteSpace(subscriber.Beacon.DeviceKey) ? "not set" : "set";
+                Console.Write($"Enter device key for Subscriber {subscriber.ID} ({subscriber.ApiSettings.Url}) [{keyState}; Enter keeps it, - clears it]: ");
+                var deviceKeyInput = Console.ReadLine()?.Trim();
+                if (deviceKeyInput == "-")
+                {
+                    subscriber.Beacon.DeviceKey = null;
+                }
+                else if (!string.IsNullOrWhiteSpace(deviceKeyInput))
+                {
+                    subscriber.Beacon.DeviceKey = deviceKeyInput;
+                }
+            }
+        }
+
+        Console.Write($"Allow reboot and restart apps from the Server Health page? (y/n) [{(appSettings.AllowRemoteCommands ? "y" : "n")}]: ");
+        var allowInput = Console.ReadLine()?.Trim();
+        if (string.Equals(allowInput, "y", StringComparison.OrdinalIgnoreCase) || string.Equals(allowInput, "yes", StringComparison.OrdinalIgnoreCase))
+        {
+            appSettings.AllowRemoteCommands = true;
+        }
+        else if (string.Equals(allowInput, "n", StringComparison.OrdinalIgnoreCase) || string.Equals(allowInput, "no", StringComparison.OrdinalIgnoreCase))
+        {
+            appSettings.AllowRemoteCommands = false;
+        }
+
+        Console.Write($"Restart apps command (full path of the AutoIt exe) [{(string.IsNullOrWhiteSpace(appSettings.RestartAppsCommand) ? "none" : appSettings.RestartAppsCommand)}; Enter keeps it, - clears it]: ");
+        var restartAppsInput = Console.ReadLine()?.Trim().Trim('"');
+        if (restartAppsInput == "-")
+        {
+            appSettings.RestartAppsCommand = null;
+        }
+        else if (!string.IsNullOrWhiteSpace(restartAppsInput))
+        {
+            if (File.Exists(restartAppsInput))
+            {
+                appSettings.RestartAppsCommand = restartAppsInput;
+            }
+            else
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("That file does not exist. The restart apps command was not changed.");
+                Console.ResetColor();
             }
         }
     }

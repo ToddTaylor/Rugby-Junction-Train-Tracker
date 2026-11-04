@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import type { ServerHealth, ServerProgram, ServerStatusChange } from '../types/ServerHealth';
+import type { BeaconCommand, ServerDiagnostics, ServerHealth, ServerProgram, ServerStatusChange } from '../types/ServerHealth';
 import {
+  activeCommand,
+  commandAvailability,
+  commandStatusLabel,
   countByStatus,
+  describeCommandUpdate,
   describeMute,
   describeStatusChange,
   filterServers,
@@ -36,9 +40,56 @@ function server(beaconName: string, status: ServerHealth['status']): ServerHealt
     alertsMutedUntil: null,
     alertsMuteNote: null,
     alertsMutedBy: null,
+    deviceKeySetAt: null,
+    deviceKeySetBy: null,
+    deviceKeyRejectedAt: null,
+    rebootsLast24Hours: 0,
+    maxRebootsPerDay: 3,
+    commands: [],
     programs: [],
     diagnostics: null,
   };
+}
+
+function diagnostics(remoteCommandsEnabled: boolean, restartAppsAvailable = false): ServerDiagnostics {
+  return {
+    receivedAt: NOW.toISOString(),
+    collectedAt: NOW.toISOString(),
+    hostname: 'SUSSEX-NUC',
+    clientVersion: '2.5.0.0',
+    osVersion: null,
+    lastBootAt: null,
+    logDriveFreeBytes: null,
+    healthPingIntervalMinutes: 2,
+    lastTelemetrySentAt: null,
+    telemetrySendFailuresLastHour: 0,
+    remoteCommandsEnabled,
+    restartAppsAvailable,
+    logs: [],
+    startupTasks: [],
+  };
+}
+
+function command(status: BeaconCommand['status'], type: BeaconCommand['type'] = 'Reboot', extra: Partial<BeaconCommand> = {}): BeaconCommand {
+  return {
+    id: 7,
+    type,
+    status,
+    requestedBy: 'Ada Admin',
+    requestedAt: NOW.toISOString(),
+    expiresAt: new Date(NOW.getTime() + 600_000).toISOString(),
+    deliveredAt: null,
+    startedAt: null,
+    finishedAt: null,
+    resultMessage: null,
+    cancelledBy: null,
+    ...extra,
+  };
+}
+
+/** An Online server with a device key, reporting that it allows remote commands. */
+function readyServer(): ServerHealth {
+  return { ...server('Sussex', 'Online'), deviceKeySetAt: NOW.toISOString(), diagnostics: diagnostics(true, true) };
 }
 
 function program(running: number | null, expected: number | null): ServerProgram {
@@ -176,5 +227,86 @@ describe('describeStatusChange', () => {
 
   it('says a degraded server has cleared', () => {
     expect(describeStatusChange(change('Online', 'Degraded')).body).toBe('The earlier problems have cleared.');
+  });
+});
+
+describe('commandAvailability', () => {
+  it('allows a reboot on a ready server', () => {
+    expect(commandAvailability(readyServer(), 'Reboot')).toEqual({ allowed: true });
+    expect(commandAvailability(readyServer(), 'RestartApps')).toEqual({ allowed: true });
+  });
+
+  it('needs a device key first', () => {
+    const result = commandAvailability({ ...readyServer(), deviceKeySetAt: null }, 'Reboot');
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain('device key');
+  });
+
+  it('refuses an offline server', () => {
+    expect(commandAvailability({ ...readyServer(), status: 'Offline' }, 'Reboot').reason).toContain('offline');
+  });
+
+  it('refuses a PC that does not allow remote commands, or has no diagnostics', () => {
+    expect(commandAvailability({ ...readyServer(), diagnostics: diagnostics(false) }, 'Reboot').allowed).toBe(false);
+    expect(commandAvailability({ ...readyServer(), diagnostics: null }, 'Reboot').allowed).toBe(false);
+  });
+
+  it('offers restart apps only when the PC has the command set up', () => {
+    const server = { ...readyServer(), diagnostics: diagnostics(true, false) };
+    expect(commandAvailability(server, 'RestartApps').allowed).toBe(false);
+    expect(commandAvailability(server, 'Reboot').allowed).toBe(true);
+  });
+
+  it('allows one command at a time', () => {
+    const server = { ...readyServer(), commands: [command('Pending')] };
+    expect(commandAvailability(server, 'Reboot').reason).toContain('already');
+    expect(commandAvailability(server, 'RestartApps').allowed).toBe(false);
+  });
+
+  it('stops at the daily reboot limit but still allows restarting the apps', () => {
+    const server = { ...readyServer(), rebootsLast24Hours: 3 };
+    expect(commandAvailability(server, 'Reboot').allowed).toBe(false);
+    expect(commandAvailability(server, 'RestartApps').allowed).toBe(true);
+  });
+});
+
+describe('activeCommand', () => {
+  it('finds a waiting or running command and ignores finished ones', () => {
+    expect(activeCommand({ ...readyServer(), commands: [command('Succeeded'), command('Expired')] })).toBeNull();
+    expect(activeCommand({ ...readyServer(), commands: [command('Running', 'Reboot', { id: 9 }), command('Failed')] })?.id).toBe(9);
+  });
+});
+
+describe('commandStatusLabel', () => {
+  it('tells a waiting command apart from one the PC has received', () => {
+    expect(commandStatusLabel(command('Pending'))).toBe('Waiting for the PC');
+    expect(commandStatusLabel(command('Pending', 'Reboot', { deliveredAt: NOW.toISOString() }))).toBe('Sent to the PC');
+    expect(commandStatusLabel(command('Cancelled', 'Reboot', { cancelledBy: 'Cody Custodian' }))).toBe('Cancelled by Cody Custodian');
+    expect(commandStatusLabel(command('Running', 'RestartApps'))).toBe('Restarting apps');
+  });
+});
+
+describe('describeCommandUpdate', () => {
+  it('announces a request with who asked', () => {
+    const text = describeCommandUpdate({ beaconID: 1, beaconName: 'Sussex', command: command('Pending') });
+    expect(text.title).toBe('Reboot of Sussex requested');
+    expect(text.body).toContain('Ada Admin');
+    expect(text.tone).toBe('info');
+  });
+
+  it('shows the PC reason for a refusal as a warning', () => {
+    const text = describeCommandUpdate({
+      beaconID: 1,
+      beaconName: 'Sussex',
+      command: command('Rejected', 'Reboot', { resultMessage: 'The PC started 3 min ago.' }),
+    });
+    expect(text.title).toBe('Sussex refused the reboot');
+    expect(text.body).toBe('The PC started 3 min ago.');
+    expect(text.tone).toBe('degraded');
+  });
+
+  it('marks a failure as an error and a success as online', () => {
+    expect(describeCommandUpdate({ beaconID: 1, beaconName: 'Sussex', command: command('Failed', 'RestartApps') }).tone).toBe('offline');
+    expect(describeCommandUpdate({ beaconID: 1, beaconName: 'Sussex', command: command('Succeeded') }).title).toBe('Sussex restarted');
   });
 });

@@ -323,3 +323,59 @@
   width: auto;
   margin: 0;
 }
+
+.server-command-note {
+  margin-top: 0.25rem;
+  color: var(--admin-accent);
+  font-size: 0.8rem;
+}
+
+.server-command-active {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0.75rem 0;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--admin-border);
+  border-left: 4px solid var(--admin-accent);
+  border-radius: 4px;
+  background: var(--admin-bg-surface-alt);
+}
+
+.server-remote-actions {
+  margin: 0.75rem 0 0.4rem;
+}
+
+.admin-server-health button:disabled,
+.admin-server-health button:disabled:hover {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: var(--admin-muted-button);
+}
+
+.server-device-key {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+
+.server-device-key input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.5rem;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.85rem;
+  color: var(--admin-text-primary);
+  background: var(--admin-bg-surface-alt);
+  border: 1px solid var(--admin-border);
+  border-radius: 4px;
+}
+
+.server-key-steps {
+  margin: 0 0 0.75rem;
+  padding-left: 1.25rem;
+  color: var(--admin-text-primary);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}

@@ -21,6 +21,11 @@ namespace Web.Server.Repositories
             return await _context.BeaconDiagnostics.AsNoTracking().ToListAsync();
         }
 
+        public async Task<BeaconDiagnostics?> GetAsync(int beaconId)
+        {
+            return await _context.BeaconDiagnostics.AsNoTracking().FirstOrDefaultAsync(d => d.BeaconID == beaconId);
+        }
+
         public async Task<BeaconDiagnostics> UpsertAsync(BeaconDiagnostics diagnostics)
         {
             var utcNow = _timeProvider.UtcNow;
@@ -45,6 +50,10 @@ namespace Web.Server.Repositories
             existing.HealthPingIntervalMinutes = diagnostics.HealthPingIntervalMinutes;
             existing.LastTelemetrySentAt = diagnostics.LastTelemetrySentAt;
             existing.TelemetrySendFailuresLastHour = diagnostics.TelemetrySendFailuresLastHour;
+            existing.RemoteCommandsEnabled = diagnostics.RemoteCommandsEnabled;
+            existing.RestartAppsAvailable = diagnostics.RestartAppsAvailable;
+            existing.RemoteCommandsEnabled = diagnostics.RemoteCommandsEnabled;
+            existing.RestartAppsAvailable = diagnostics.RestartAppsAvailable;
             existing.Programs = diagnostics.Programs;
             existing.Logs = diagnostics.Logs;
             existing.StartupTasks = diagnostics.StartupTasks;

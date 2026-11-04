@@ -18,6 +18,7 @@ namespace Services.Diagnostics
         public BeaconDiagnostics Collect(AppSettings appSettings, Subscriber subscriber, DateTime utcNow)
         {
             var (lastSuccessAt, failuresLastHour) = TelemetrySendTracker.GetSnapshot(subscriber.ID, utcNow);
+            var remoteCommandsEnabled = appSettings.AllowRemoteCommands && !string.IsNullOrWhiteSpace(subscriber.Beacon.DeviceKey);
 
             return new BeaconDiagnostics
             {
@@ -30,6 +31,10 @@ namespace Services.Diagnostics
                 HealthPingIntervalMinutes = subscriber.Beacon.HealthPingIntervalMinutes,
                 LastTelemetrySentAt = lastSuccessAt,
                 TelemetrySendFailuresLastHour = failuresLastHour,
+                RemoteCommandsEnabled = remoteCommandsEnabled,
+                RestartAppsAvailable = remoteCommandsEnabled
+                    && !string.IsNullOrWhiteSpace(appSettings.RestartAppsCommand)
+                    && _probe.FileExists(appSettings.RestartAppsCommand),
                 Programs = appSettings.MonitoredProcesses
                     .Select(p =>
                     {

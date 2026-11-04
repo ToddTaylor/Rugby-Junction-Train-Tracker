@@ -9,5 +9,6 @@
         public const string PassengerPinUpdate = "PassengerPinUpdate";
         public const string PassengerPinRemoved = "PassengerPinRemoved";
         public const string ServerStatusChanged = "ServerStatusChanged";
+        public const string ServerCommandUpdated = "ServerCommandUpdated";
     }
 }

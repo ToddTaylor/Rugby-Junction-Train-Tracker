@@ -15,6 +15,16 @@ namespace Services.Models
         public int HealthPingIntervalMinutes { get; set; }
         public DateTime? LastTelemetrySentAt { get; set; }
         public int TelemetrySendFailuresLastHour { get; set; }
+
+        /// <summary>
+        /// True when AllowRemoteCommands is on and this subscriber has a device key.
+        /// </summary>
+        public bool RemoteCommandsEnabled { get; set; }
+
+        /// <summary>
+        /// True when remote commands are enabled and RestartAppsCommand points to a file that exists.
+        /// </summary>
+        public bool RestartAppsAvailable { get; set; }
         public List<ProgramStatus> Programs { get; set; } = new();
         public List<LogFileStatus> Logs { get; set; } = new();
         public List<ScheduledTaskStatus> StartupTasks { get; set; } = new();

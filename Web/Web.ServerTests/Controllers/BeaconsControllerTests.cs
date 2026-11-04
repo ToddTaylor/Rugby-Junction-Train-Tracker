@@ -102,6 +102,84 @@ public class BeaconsControllerTests
         serverHealthServiceMock.Verify(s => s.RecordDiagnosticsAsync(It.IsAny<int>(), It.IsAny<BeaconDiagnostics>()), Times.Never);
     }
 
+    [TestMethod]
+    public async Task CheckHealth_WrongDeviceKey_IsUnauthorized_AndRecordsNothing()
+    {
+        var (controller, beaconServiceMock, serverHealthServiceMock, _) = CreateController(userId: null, roleName: null);
+        beaconServiceMock.Setup(s => s.GetBeaconByIdAsync(4)).ReturnsAsync(new Beacon { ID = 4, Name = "Slinger" });
+        controller.HttpContext.Request.Headers[BeaconsController.DeviceKeyHeaderName] = "guess";
+        _commandService.Setup(s => s.CheckDeviceKeyAsync(4, "guess")).ReturnsAsync(DeviceKeyCheck.Invalid);
+
+        var result = await controller.CheckHealth(4, new BeaconDiagnosticsReportDTO());
+
+        AssertStatus(StatusCodes.Status401Unauthorized, result);
+        beaconServiceMock.Verify(s => s.UpdateBeaconHealthAsync(It.IsAny<int>(), It.IsAny<Beacon>()), Times.Never);
+        serverHealthServiceMock.Verify(s => s.RecordDiagnosticsAsync(It.IsAny<int>(), It.IsAny<BeaconDiagnostics>()), Times.Never);
+        _commandService.Verify(s => s.HandleCheckInAsync(It.IsAny<int>(), It.IsAny<BeaconDiagnostics?>()), Times.Never);
+    }
+
+    [TestMethod]
+    public async Task CheckHealth_NoDeviceKeyConfigured_NeverHandsOutCommands()
+    {
+        var (controller, beaconServiceMock, _, _) = CreateController(userId: null, roleName: null);
+        beaconServiceMock.Setup(s => s.GetBeaconByIdAsync(4)).ReturnsAsync(new Beacon { ID = 4, Name = "Slinger" });
+        _commandService.Setup(s => s.CheckDeviceKeyAsync(4, null)).ReturnsAsync(DeviceKeyCheck.NotConfigured);
+
+        var result = await controller.CheckHealth(4);
+
+        AssertStatus(StatusCodes.Status204NoContent, result);
+        _commandService.Verify(s => s.HandleCheckInAsync(It.IsAny<int>(), It.IsAny<BeaconDiagnostics?>()), Times.Never);
+    }
+
+    [TestMethod]
+    public async Task CheckHealth_ValidDeviceKey_ReturnsWaitingCommand()
+    {
+        var (controller, beaconServiceMock, _, mapperMock) = CreateController(userId: null, roleName: null);
+        var report = new BeaconDiagnosticsReportDTO { RemoteCommandsEnabled = true };
+        var mapped = new BeaconDiagnostics { RemoteCommandsEnabled = true };
+        beaconServiceMock.Setup(s => s.GetBeaconByIdAsync(4)).ReturnsAsync(new Beacon { ID = 4, Name = "Slinger" });
+        mapperMock.Setup(m => m.Map<BeaconDiagnostics>(report)).Returns(mapped);
+        controller.HttpContext.Request.Headers[BeaconsController.DeviceKeyHeaderName] = "secret";
+        _commandService.Setup(s => s.CheckDeviceKeyAsync(4, "secret")).ReturnsAsync(DeviceKeyCheck.Valid);
+        _commandService
+            .Setup(s => s.HandleCheckInAsync(4, mapped))
+            .ReturnsAsync(new PendingBeaconCommandDTO { ID = 12, Type = Web.Server.Enums.BeaconCommandType.Reboot });
+
+        var result = await controller.CheckHealth(4, report);
+
+        var ok = result as OkObjectResult;
+        Assert.IsNotNull(ok);
+        Assert.AreEqual(12, (ok.Value as BeaconHealthResponseDTO)!.Command!.ID);
+    }
+
+    [TestMethod]
+    public async Task ReportCommand_WithoutValidDeviceKey_IsUnauthorized()
+    {
+        var (controller, _, _, _) = CreateController(userId: 1, roleName: "Admin");
+        _commandService.Setup(s => s.CheckDeviceKeyAsync(4, null)).ReturnsAsync(DeviceKeyCheck.NotConfigured);
+
+        var result = await controller.ReportCommand(4, 12, new BeaconCommandReportDTO { Status = Web.Server.Enums.BeaconCommandReportStatus.Started });
+
+        AssertStatus(StatusCodes.Status401Unauthorized, result);
+        _commandService.Verify(s => s.ReportCommandAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<BeaconCommandReportDTO>()), Times.Never);
+    }
+
+    [TestMethod]
+    public async Task ReportCommand_CancelledCommand_IsConflict()
+    {
+        var (controller, _, _, _) = CreateController(userId: null, roleName: null);
+        var report = new BeaconCommandReportDTO { Status = Web.Server.Enums.BeaconCommandReportStatus.Started };
+        controller.HttpContext.Request.Headers[BeaconsController.DeviceKeyHeaderName] = "secret";
+        _commandService.Setup(s => s.CheckDeviceKeyAsync(4, "secret")).ReturnsAsync(DeviceKeyCheck.Valid);
+        _commandService.Setup(s => s.ReportCommandAsync(4, 12, report)).ReturnsAsync(CommandChangeResult.Conflict);
+
+        var result = await controller.ReportCommand(4, 12, report);
+
+        AssertStatus(StatusCodes.Status409Conflict, result);
+    }
+
+    private readonly Mock<IServerCommandService> _commandService = new();
+
     private static void AssertStatus(int expected, object result)
     {
         var statusResult = (result is ActionResult<BeaconDTO> typed ? typed.Result : result) as IStatusCodeActionResult;
@@ -109,7 +187,7 @@ public class BeaconsControllerTests
         Assert.AreEqual(expected, statusResult.StatusCode);
     }
 
-    private static (BeaconsController Controller, Mock<IBeaconService> BeaconService, Mock<IServerHealthService> ServerHealthService, Mock<IMapper> Mapper) CreateController(
+    private (BeaconsController Controller, Mock<IBeaconService> BeaconService, Mock<IServerHealthService> ServerHealthService, Mock<IMapper> Mapper) CreateController(
         int? userId,
         string? roleName)
     {
@@ -133,6 +211,7 @@ public class BeaconsControllerTests
         var controller = new BeaconsController(
             beaconServiceMock.Object,
             serverHealthServiceMock.Object,
+            _commandService.Object,
             userServiceMock.Object,
             new Mock<ILogger<BeaconsController>>().Object,
             mapperMock.Object);
