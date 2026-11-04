@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import type { ServerHealth, ServerProgram } from '../types/ServerHealth';
+import type { ServerHealth, ServerProgram, ServerStatusChange } from '../types/ServerHealth';
 import {
   countByStatus,
+  describeMute,
+  describeStatusChange,
   filterServers,
   formatGigabytes,
   formatProgramCount,
@@ -9,6 +11,7 @@ import {
   formatTimeAgo,
   formatUptime,
   isProgramShort,
+  muteUntilFor,
   parseExpectedCount,
   sortServers,
 } from './serverHealth';
@@ -28,6 +31,11 @@ function server(beaconName: string, status: ServerHealth['status']): ServerHealt
     expectedSdrSharpCount: null,
     expectedSoftEotCount: null,
     expectedSoftDpuCount: null,
+    statusSince: null,
+    alertsMuted: false,
+    alertsMutedUntil: null,
+    alertsMuteNote: null,
+    alertsMutedBy: null,
     programs: [],
     diagnostics: null,
   };
@@ -115,5 +123,58 @@ describe('parseExpectedCount', () => {
     expect(parseExpectedCount('-1')).toBeUndefined();
     expect(parseExpectedCount('2.5')).toBeUndefined();
     expect(parseExpectedCount('21')).toBeUndefined();
+  });
+});
+
+describe('muteUntilFor', () => {
+  it('adds the chosen length to now', () => {
+    expect(muteUntilFor('hour', NOW)).toBe('2026-11-03T13:00:00.000Z');
+    expect(muteUntilFor('week', NOW)).toBe('2026-11-10T12:00:00.000Z');
+  });
+
+  it('has no end time for a mute that lasts until alerts are turned back on', () => {
+    expect(muteUntilFor('untilTurnedOn', NOW)).toBeNull();
+  });
+});
+
+describe('describeMute', () => {
+  it('names who muted an open-ended mute', () => {
+    const muted = { ...server('Sussex', 'Offline'), alertsMuted: true, alertsMutedBy: 'Todd Taylor' };
+    expect(describeMute(muted)).toBe('Alerts muted until turned back on by Todd Taylor');
+  });
+
+  it('shows when a timed mute ends', () => {
+    const muted = { ...server('Sussex', 'Offline'), alertsMuted: true, alertsMutedUntil: '2026-11-04T12:00:00Z' };
+    expect(describeMute(muted)).toMatch(/^Alerts muted until .+2026/);
+  });
+});
+
+describe('describeStatusChange', () => {
+  const change = (status: ServerStatusChange['status'], previousStatus: ServerStatusChange['status'], reasons: string[] = []): ServerStatusChange => ({
+    beaconID: 1,
+    beaconName: 'Sussex',
+    previousStatus,
+    status,
+    reasons,
+    changedAt: NOW.toISOString(),
+    alertsMuted: false,
+  });
+
+  it('lists the reasons for a problem', () => {
+    expect(describeStatusChange(change('Degraded', 'Online', ['SDR# is not running', 'Low disk space']))).toEqual({
+      title: 'Sussex is degraded',
+      body: 'SDR# is not running · Low disk space',
+    });
+  });
+
+  it('says a server that was offline is checking in again', () => {
+    expect(describeStatusChange(change('Online', 'Offline'))).toEqual({
+      title: 'Sussex is back online',
+      body: 'Checking in again.',
+    });
+  });
+
+  it('says a degraded server has cleared', () => {
+    expect(describeStatusChange(change('Online', 'Degraded')).body).toBe('The earlier problems have cleared.');
   });
 });

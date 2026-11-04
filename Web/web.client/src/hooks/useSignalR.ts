@@ -3,6 +3,7 @@ import * as signalR from "@microsoft/signalr";
 import { MapPin } from "../types/MapPin";
 import { Beacon } from "../types/Beacon";
 import { PassengerMapPin } from "../types/PassengerMapPin";
+import { ServerStatusChange } from "../types/ServerHealth";
 import { getAuthToken } from "../services/auth";
 
 const beaconUpdateMethodName = "BeaconUpdate";
@@ -13,6 +14,7 @@ const trackedPinUpdatedMethodName = "TrackedPinUpdated";
 const trackedPinRemovedMethodName = "TrackedPinRemoved";
 const passengerPinUpdateMethodName = "PassengerPinUpdate";
 const passengerPinRemovedMethodName = "PassengerPinRemoved";
+const serverStatusChangedMethodName = "ServerStatusChanged";
 
 // Accept handlers for multiple events
 export function useSignalR(handlers: {
@@ -24,6 +26,7 @@ export function useSignalR(handlers: {
     TrackedPinRemoved?: (mapPinId: number) => void;
     PassengerPinUpdate?: (pin: PassengerMapPin) => void;
     PassengerPinRemoved?: (payload: { trainId?: string; trainNum?: string }) => void;
+    ServerStatusChanged?: (change: ServerStatusChange) => void;
 }) {
     const handlersRef = useRef(handlers);
     const [connectionState, setConnectionState] = useState<signalR.HubConnectionState | null>(null);
@@ -128,6 +131,12 @@ export function useSignalR(handlers: {
                 });
             }
 
+            if (handlersRef.current.ServerStatusChanged) {
+                connection.on(serverStatusChangedMethodName, (payload: ServerStatusChange) => {
+                    handlersRef.current.ServerStatusChanged?.(payload);
+                });
+            }
+
             connection.onclose(error => {
                 if (error) {
                     console.error("SignalR Connection closed with error:", error);
@@ -172,6 +181,7 @@ export function useSignalR(handlers: {
                 connection.off(trackedPinRemovedMethodName);
                 connection.off(passengerPinUpdateMethodName);
                 connection.off(passengerPinRemovedMethodName);
+                connection.off(serverStatusChangedMethodName);
                 connection.stop();
             }
         };

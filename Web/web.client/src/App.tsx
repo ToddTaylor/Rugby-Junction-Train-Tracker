@@ -14,6 +14,7 @@ import PrivateRoute from './components/PrivateRoute';
 import AdminRoute from './components/AdminRoute';
 import AdminTelemetryLog from './views/AdminTelemetryLog';
 import AdminServerHealth from './views/AdminServerHealth';
+import ServerAlertListener from './components/ServerAlertListener';
 import { useEffect } from 'react';
 import { getUsers } from './api/users';
 import { useAuth } from './hooks/useAuth';
@@ -49,6 +50,7 @@ function App() {
                     </Route>
                     <Route path="*" element={<PrivateRoute><RailMap /></PrivateRoute>} />
                 </Routes>
+                <ServerAlertListener />
             </BrowserRouter>
         </>
     );

@@ -1,4 +1,4 @@
-import { ServerHealth, UpdateServerExpectations } from '../types/ServerHealth';
+import { MuteServerAlerts, ServerHealth, UpdateServerExpectations } from '../types/ServerHealth';
 import { getCookie } from '../utils/cookies';
 import { AuthSession } from '../types/Auth';
 
@@ -75,4 +75,15 @@ export async function updateServerExpectations(beaconId: number, expectations: U
     method: 'PUT',
     body: JSON.stringify(expectations),
   });
+}
+
+export async function muteServerAlerts(beaconId: number, mute: MuteServerAlerts): Promise<ApiResponse<null>> {
+  return fetchApi<null>(`/api/v1/ServerHealth/${beaconId}/mute`, {
+    method: 'PUT',
+    body: JSON.stringify(mute),
+  });
+}
+
+export async function unmuteServerAlerts(beaconId: number): Promise<ApiResponse<null>> {
+  return fetchApi<null>(`/api/v1/ServerHealth/${beaconId}/mute`, { method: 'DELETE' });
 }

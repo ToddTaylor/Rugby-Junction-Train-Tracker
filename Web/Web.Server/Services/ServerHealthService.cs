@@ -1,6 +1,7 @@
 using MapsterMapper;
 using Web.Server.DTOs;
 using Web.Server.Entities;
+using Web.Server.Enums;
 using Web.Server.Providers;
 using Web.Server.Repositories;
 
@@ -8,19 +9,30 @@ namespace Web.Server.Services
 {
     public class ServerHealthService : IServerHealthService
     {
+        /// <summary>
+        /// How long a change between Online and Degraded must last before support users are alerted.
+        /// </summary>
+        public const int StatusConfirmMinutes = 3;
+
         private readonly IBeaconRepository _beaconRepository;
         private readonly IBeaconDiagnosticsRepository _diagnosticsRepository;
+        private readonly IBeaconServerStateRepository _stateRepository;
+        private readonly IUserRepository _userRepository;
         private readonly IMapper _mapper;
         private readonly ITimeProvider _timeProvider;
 
         public ServerHealthService(
             IBeaconRepository beaconRepository,
             IBeaconDiagnosticsRepository diagnosticsRepository,
+            IBeaconServerStateRepository stateRepository,
+            IUserRepository userRepository,
             IMapper mapper,
             ITimeProvider timeProvider)
         {
             _beaconRepository = beaconRepository;
             _diagnosticsRepository = diagnosticsRepository;
+            _stateRepository = stateRepository;
+            _userRepository = userRepository;
             _mapper = mapper;
             _timeProvider = timeProvider;
         }
@@ -43,10 +55,11 @@ namespace Web.Server.Services
             var beacons = (await _beaconRepository.GetAllAsync())
                 .Where(b => isAdmin || IsCustodianOf(user, b));
             var diagnosticsByBeacon = (await _diagnosticsRepository.GetAllAsync()).ToDictionary(d => d.BeaconID);
+            var statesByBeacon = (await _stateRepository.GetAllAsync()).ToDictionary(s => s.BeaconID);
             var utcNow = _timeProvider.UtcNow;
 
             return beacons
-                .Select(b => BuildRow(b, diagnosticsByBeacon.GetValueOrDefault(b.ID), utcNow))
+                .Select(b => BuildRow(b, diagnosticsByBeacon.GetValueOrDefault(b.ID), statesByBeacon.GetValueOrDefault(b.ID), utcNow))
                 .OrderBy(r => r.BeaconName, StringComparer.OrdinalIgnoreCase)
                 .ToList();
         }
@@ -77,11 +90,153 @@ namespace Web.Server.Services
             return beacon != null;
         }
 
-        private ServerHealthDTO BuildRow(Beacon beacon, BeaconDiagnostics? diagnostics, DateTime utcNow)
+        public async Task<bool> MuteAlertsAsync(int beaconId, MuteServerAlertsDTO mute, User mutedBy)
+        {
+            if (await _beaconRepository.GetByIdAsync(beaconId) == null)
+            {
+                return false;
+            }
+
+            DateTime? mutedUntil = mute.MutedUntil.HasValue ? ToUtc(mute.MutedUntil.Value) : null;
+            var note = string.IsNullOrWhiteSpace(mute.Note) ? null : mute.Note.Trim();
+            await _stateRepository.SetMuteAsync(beaconId, mutedUntil, note, $"{mutedBy.FirstName} {mutedBy.LastName}".Trim());
+            return true;
+        }
+
+        public async Task<bool> UnmuteAlertsAsync(int beaconId)
+        {
+            if (await _beaconRepository.GetByIdAsync(beaconId) == null)
+            {
+                return false;
+            }
+
+            await _stateRepository.ClearMuteAsync(beaconId);
+            return true;
+        }
+
+        public async Task<IReadOnlyList<ServerStatusChange>> DetectStatusChangesAsync()
+        {
+            var utcNow = _timeProvider.UtcNow;
+            var beacons = (await _beaconRepository.GetAllAsync()).ToList();
+            var diagnosticsByBeacon = (await _diagnosticsRepository.GetAllAsync()).ToDictionary(d => d.BeaconID);
+            var statesByBeacon = (await _stateRepository.GetAllAsync()).ToDictionary(s => s.BeaconID);
+            var announced = new List<(Beacon Beacon, ServerStatusChangedDTO Notification)>();
+
+            foreach (var beacon in beacons)
+            {
+                var diagnostics = diagnosticsByBeacon.GetValueOrDefault(beacon.ID);
+                var result = BeaconServerStatusEvaluator.Evaluate(beacon, diagnostics, GetLastCheckIn(beacon, diagnostics), utcNow);
+
+                if (!statesByBeacon.TryGetValue(beacon.ID, out var state))
+                {
+                    // First time the monitor sees this server: record where it stands without alerting,
+                    // so a deploy or a new beacon does not set off a burst of pop-ups.
+                    await _stateRepository.UpdateStatusAsync(new BeaconServerState
+                    {
+                        BeaconID = beacon.ID,
+                        Status = result.Status,
+                        StatusSince = utcNow,
+                    });
+                    continue;
+                }
+
+                var previousStatus = state.Status;
+                var (stateChanged, isAnnounced) = ApplyObservedStatus(state, result.Status, utcNow);
+                if (stateChanged)
+                {
+                    await _stateRepository.UpdateStatusAsync(state);
+                }
+
+                if (isAnnounced)
+                {
+                    announced.Add((beacon, new ServerStatusChangedDTO
+                    {
+                        BeaconID = beacon.ID,
+                        BeaconName = beacon.Name,
+                        PreviousStatus = previousStatus,
+                        Status = state.Status,
+                        Reasons = result.Reasons.ToList(),
+                        ChangedAt = state.StatusSince,
+                        AlertsMuted = state.IsMuted(utcNow),
+                    }));
+                }
+            }
+
+            if (announced.Count == 0)
+            {
+                return [];
+            }
+
+            var activeUsers = (await _userRepository.GetAllAsync()).Where(u => u.IsActive).ToList();
+            var adminIds = activeUsers.Where(u => HasRole(u, "Admin")).Select(u => u.ID).ToList();
+            var custodianIds = activeUsers.Where(u => HasRole(u, "Custodian")).Select(u => u.ID).ToHashSet();
+
+            return announced
+                .Select(a => new ServerStatusChange(
+                    a.Notification,
+                    adminIds
+                        .Concat(a.Beacon.BeaconRailroads
+                            .Select(br => br.Subdivision?.CustodianId)
+                            .OfType<int>()
+                            .Where(custodianIds.Contains))
+                        .Distinct()
+                        .ToList()))
+                .ToList();
+        }
+
+        /// <summary>
+        /// Moves the announced status toward the status just observed. A change to or from Offline is announced at
+        /// once, because the offline threshold already allows for a late check-in. A change between Online and
+        /// Degraded must last StatusConfirmMinutes first, so a program restarting or briefly not responding does
+        /// not cause a pop-up. Returns whether the state needs saving and whether the change should be announced.
+        /// </summary>
+        public static (bool StateChanged, bool Announce) ApplyObservedStatus(BeaconServerState state, ServerStatus observed, DateTime utcNow)
+        {
+            if (observed == state.Status)
+            {
+                if (state.PendingStatus == null)
+                {
+                    return (false, false);
+                }
+
+                state.PendingStatus = null;
+                state.PendingSince = null;
+                return (true, false);
+            }
+
+            var pendingChanged = state.PendingStatus != observed;
+            if (pendingChanged)
+            {
+                state.PendingStatus = observed;
+                state.PendingSince = utcNow;
+            }
+
+            var involvesOffline = observed == ServerStatus.Offline || state.Status == ServerStatus.Offline;
+            if (!involvesOffline && utcNow - state.PendingSince!.Value < TimeSpan.FromMinutes(StatusConfirmMinutes))
+            {
+                return (pendingChanged, false);
+            }
+
+            state.Status = observed;
+            state.StatusSince = state.PendingSince!.Value;
+            state.PendingStatus = null;
+            state.PendingSince = null;
+            return (true, true);
+        }
+
+        private static DateTime ToUtc(DateTime value) => value.Kind switch
+        {
+            DateTimeKind.Utc => value,
+            DateTimeKind.Local => value.ToUniversalTime(),
+            _ => DateTime.SpecifyKind(value, DateTimeKind.Utc),
+        };
+
+        private ServerHealthDTO BuildRow(Beacon beacon, BeaconDiagnostics? diagnostics, BeaconServerState? state, DateTime utcNow)
         {
             var lastCheckIn = GetLastCheckIn(beacon, diagnostics);
             var result = BeaconServerStatusEvaluator.Evaluate(beacon, diagnostics, lastCheckIn, utcNow);
             var reportedDiagnostics = result.UsesDiagnostics ? diagnostics : null;
+            var isMuted = state?.IsMuted(utcNow) == true;
 
             return new ServerHealthDTO
             {
@@ -102,6 +257,11 @@ namespace Web.Server.Services
                 ExpectedSdrSharpCount = beacon.ExpectedSdrSharpCount,
                 ExpectedSoftEotCount = beacon.ExpectedSoftEotCount,
                 ExpectedSoftDpuCount = beacon.ExpectedSoftDpuCount,
+                StatusSince = state?.Status == result.Status ? state.StatusSince : null,
+                AlertsMuted = isMuted,
+                AlertsMutedUntil = isMuted ? state!.AlertsMutedUntil : null,
+                AlertsMuteNote = isMuted ? state!.AlertsMuteNote : null,
+                AlertsMutedBy = isMuted ? state!.AlertsMutedBy : null,
                 Programs = BeaconServerStatusEvaluator.GetExpectedPrograms(beacon)
                     .Select(p =>
                     {
