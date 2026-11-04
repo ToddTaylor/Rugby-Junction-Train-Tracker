@@ -6,7 +6,9 @@ namespace Web.Server.Services
 {
     /// <summary>
     /// Decides whether a beacon PC is Online, Degraded or Offline from its last check-in and its latest
-    /// diagnostics report, and lists the problems in plain language.
+    /// diagnostics report, and lists the problems in plain language. Log file ages are reported but never
+    /// mark a PC Degraded: SoftEOT and SoftDPU only write when they decode a train, so a quiet line leaves
+    /// a healthy program's log untouched for hours.
     /// </summary>
     public static class BeaconServerStatusEvaluator
     {
@@ -51,7 +53,7 @@ namespace Web.Server.Services
             (SoftDpu, beacon.ExpectedSoftDpuCount),
         ];
 
-        public static Result Evaluate(Beacon beacon, BeaconDiagnostics? diagnostics, DateTime? lastCheckIn, int telemetryStaleHours, DateTime utcNow)
+        public static Result Evaluate(Beacon beacon, BeaconDiagnostics? diagnostics, DateTime? lastCheckIn, DateTime utcNow)
         {
             var threshold = GetOfflineThresholdMinutes(diagnostics?.HealthPingIntervalMinutes);
 
@@ -74,7 +76,6 @@ namespace Web.Server.Services
 
             var reasons = new List<string>();
             AddProgramReasons(beacon, diagnostics, reasons);
-            AddLogReasons(beacon, diagnostics, telemetryStaleHours, utcNow, reasons);
             AddStartupTaskReasons(diagnostics, reasons);
             AddTelemetrySendReasons(diagnostics, utcNow, reasons);
 
@@ -109,43 +110,6 @@ namespace Web.Server.Services
                         : $"{reported.NotResponding} {name} instances are not responding");
                 }
             }
-        }
-
-        /// <summary>
-        /// SoftEOT writes the eot and hot logs and each SoftDPU instance writes dpu1 to dpu4, so a log is only
-        /// checked when its program is expected to run, and a dpu log only up to the expected SoftDPU count.
-        /// </summary>
-        private static void AddLogReasons(Beacon beacon, BeaconDiagnostics diagnostics, int telemetryStaleHours, DateTime utcNow, List<string> reasons)
-        {
-            foreach (var log in diagnostics.Logs)
-            {
-                if (log.LastWriteAt is not { } lastWriteAt || !IsLogExpected(beacon, log.Prefix))
-                {
-                    continue;
-                }
-
-                var age = utcNow - lastWriteAt;
-                if (age > TimeSpan.FromHours(telemetryStaleHours))
-                {
-                    reasons.Add($"No {log.Prefix} log written in {FormatDuration(age)}");
-                }
-            }
-        }
-
-        private static bool IsLogExpected(Beacon beacon, string prefix)
-        {
-            if (prefix.Equals("eot", StringComparison.OrdinalIgnoreCase) || prefix.Equals("hot", StringComparison.OrdinalIgnoreCase))
-            {
-                return beacon.ExpectedSoftEotCount is > 0;
-            }
-
-            if (prefix.StartsWith("dpu", StringComparison.OrdinalIgnoreCase) &&
-                int.TryParse(prefix.AsSpan(3), NumberStyles.Integer, CultureInfo.InvariantCulture, out var instance))
-            {
-                return beacon.ExpectedSoftDpuCount >= instance;
-            }
-
-            return false;
         }
 
         private static void AddStartupTaskReasons(BeaconDiagnostics diagnostics, List<string> reasons)

@@ -8,14 +8,13 @@ namespace Web.ServerTests.Services;
 public class BeaconServerStatusEvaluatorTests
 {
     private static readonly DateTime Now = new(2026, 11, 3, 12, 0, 0, DateTimeKind.Utc);
-    private const int StaleHours = 6;
 
     // ── Offline ─────────────────────────────────────────────────────────────
 
     [TestMethod]
     public void NeverCheckedIn_IsOffline()
     {
-        var result = BeaconServerStatusEvaluator.Evaluate(new Beacon(), null, null, StaleHours, Now);
+        var result = BeaconServerStatusEvaluator.Evaluate(new Beacon(), null, null, Now);
 
         Assert.AreEqual(ServerStatus.Offline, result.Status);
         CollectionAssert.AreEqual(new[] { "Never checked in" }, result.Reasons.ToArray());
@@ -26,7 +25,7 @@ public class BeaconServerStatusEvaluatorTests
     {
         var diagnostics = Healthy(receivedAt: Now.AddMinutes(-47));
 
-        var result = BeaconServerStatusEvaluator.Evaluate(Expecting(), diagnostics, Now.AddMinutes(-47), StaleHours, Now);
+        var result = BeaconServerStatusEvaluator.Evaluate(Expecting(), diagnostics, Now.AddMinutes(-47), Now);
 
         Assert.AreEqual(ServerStatus.Offline, result.Status);
         CollectionAssert.AreEqual(new[] { "No check-in for 47 min" }, result.Reasons.ToArray());
@@ -47,7 +46,7 @@ public class BeaconServerStatusEvaluatorTests
     {
         var diagnostics = Healthy(receivedAt: Now.AddMinutes(-7));
 
-        var result = BeaconServerStatusEvaluator.Evaluate(Expecting(), diagnostics, Now.AddMinutes(-7), StaleHours, Now);
+        var result = BeaconServerStatusEvaluator.Evaluate(Expecting(), diagnostics, Now.AddMinutes(-7), Now);
 
         Assert.AreEqual(ServerStatus.Offline, result.Status);
         Assert.AreEqual(6, result.OfflineThresholdMinutes);
@@ -58,7 +57,7 @@ public class BeaconServerStatusEvaluatorTests
     [TestMethod]
     public void CheckingInWithoutDiagnostics_IsOnline_AndDoesNotUseDiagnostics()
     {
-        var result = BeaconServerStatusEvaluator.Evaluate(Expecting(), null, Now.AddMinutes(-3), StaleHours, Now);
+        var result = BeaconServerStatusEvaluator.Evaluate(Expecting(), null, Now.AddMinutes(-3), Now);
 
         Assert.AreEqual(ServerStatus.Online, result.Status);
         Assert.AreEqual(0, result.Reasons.Count);
@@ -72,7 +71,7 @@ public class BeaconServerStatusEvaluatorTests
         var diagnostics = Healthy(receivedAt: Now.AddHours(-2));
         diagnostics.Programs.Single(p => p.Name == "SoftEOT").Running = 0;
 
-        var result = BeaconServerStatusEvaluator.Evaluate(Expecting(), diagnostics, Now.AddMinutes(-3), StaleHours, Now);
+        var result = BeaconServerStatusEvaluator.Evaluate(Expecting(), diagnostics, Now.AddMinutes(-3), Now);
 
         Assert.AreEqual(ServerStatus.Online, result.Status);
         Assert.IsFalse(result.UsesDiagnostics);
@@ -164,43 +163,12 @@ public class BeaconServerStatusEvaluatorTests
     // ── Logs ────────────────────────────────────────────────────────────────
 
     [TestMethod]
-    public void StaleLogForExpectedProgram_IsDegraded()
+    public void QuietLogs_DoNotMarkServerDegraded()
     {
+        // SoftDPU only writes when it decodes a train, so a healthy instance on a quiet line leaves its log alone for hours.
         var diagnostics = Healthy();
-        diagnostics.Logs.Single(l => l.Prefix == "hot").LastWriteAt = Now.AddHours(-8);
-
-        var result = Evaluate(Expecting(), diagnostics);
-
-        CollectionAssert.AreEqual(new[] { "No hot log written in 8 h" }, result.Reasons.ToArray());
-    }
-
-    [TestMethod]
-    public void StaleDpuLogBeyondExpectedInstanceCount_IsIgnored()
-    {
-        var diagnostics = Healthy();
-        diagnostics.Logs.Add(new DiagnosticsLogFileStatus { Prefix = "dpu3", LastWriteAt = Now.AddDays(-4) });
-
-        var result = Evaluate(Expecting(softDpu: 2), diagnostics);
-
-        Assert.AreEqual(ServerStatus.Online, result.Status);
-    }
-
-    [TestMethod]
-    public void StaleLog_UsesTelemetryStaleHours()
-    {
-        var diagnostics = Healthy();
-        diagnostics.Logs.Single(l => l.Prefix == "eot").LastWriteAt = Now.AddHours(-8);
-
-        var result = BeaconServerStatusEvaluator.Evaluate(Expecting(), diagnostics, Now.AddMinutes(-1), 12, Now);
-
-        Assert.AreEqual(ServerStatus.Online, result.Status);
-    }
-
-    [TestMethod]
-    public void LogNeverWritten_IsIgnored()
-    {
-        var diagnostics = Healthy();
-        diagnostics.Logs.Single(l => l.Prefix == "eot").LastWriteAt = null;
+        diagnostics.Logs.Single(l => l.Prefix == "dpu1").LastWriteAt = Now.AddHours(-14);
+        diagnostics.Logs.Single(l => l.Prefix == "hot").LastWriteAt = Now.AddHours(-35);
 
         var result = Evaluate(Expecting(), diagnostics);
 
@@ -290,7 +258,7 @@ public class BeaconServerStatusEvaluatorTests
     // ── Helpers ─────────────────────────────────────────────────────────────
 
     private static BeaconServerStatusEvaluator.Result Evaluate(Beacon beacon, BeaconDiagnostics diagnostics) =>
-        BeaconServerStatusEvaluator.Evaluate(beacon, diagnostics, diagnostics.LastUpdate, StaleHours, Now);
+        BeaconServerStatusEvaluator.Evaluate(beacon, diagnostics, diagnostics.LastUpdate, Now);
 
     private static Beacon Expecting(int sdrSharp = 1, int softEot = 1, int softDpu = 2) => new()
     {

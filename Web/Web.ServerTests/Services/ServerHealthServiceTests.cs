@@ -1,6 +1,5 @@
 using Mapster;
 using MapsterMapper;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using Web.Server.DTOs;
@@ -166,8 +165,7 @@ public class ServerHealthServiceTests
             beaconRepositoryMock.Object,
             diagnosticsRepositoryMock.Object,
             mapper,
-            timeProviderMock.Object,
-            new ConfigurationBuilder().Build());
+            timeProviderMock.Object);
 
         return (service, beaconRepositoryMock, diagnosticsRepositoryMock);
     }

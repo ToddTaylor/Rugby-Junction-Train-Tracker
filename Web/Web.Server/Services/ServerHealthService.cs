@@ -12,20 +12,17 @@ namespace Web.Server.Services
         private readonly IBeaconDiagnosticsRepository _diagnosticsRepository;
         private readonly IMapper _mapper;
         private readonly ITimeProvider _timeProvider;
-        private readonly int _telemetryStaleHoursDefault;
 
         public ServerHealthService(
             IBeaconRepository beaconRepository,
             IBeaconDiagnosticsRepository diagnosticsRepository,
             IMapper mapper,
-            ITimeProvider timeProvider,
-            IConfiguration configuration)
+            ITimeProvider timeProvider)
         {
             _beaconRepository = beaconRepository;
             _diagnosticsRepository = diagnosticsRepository;
             _mapper = mapper;
             _timeProvider = timeProvider;
-            _telemetryStaleHoursDefault = configuration.GetValue<int>("ApplicationSettings:TelemetryStaleHoursDefault", 6);
         }
 
         public async Task RecordDiagnosticsAsync(int beaconId, BeaconDiagnostics diagnostics)
@@ -83,7 +80,7 @@ namespace Web.Server.Services
         private ServerHealthDTO BuildRow(Beacon beacon, BeaconDiagnostics? diagnostics, DateTime utcNow)
         {
             var lastCheckIn = GetLastCheckIn(beacon, diagnostics);
-            var result = BeaconServerStatusEvaluator.Evaluate(beacon, diagnostics, lastCheckIn, GetTelemetryStaleHours(beacon), utcNow);
+            var result = BeaconServerStatusEvaluator.Evaluate(beacon, diagnostics, lastCheckIn, utcNow);
             var reportedDiagnostics = result.UsesDiagnostics ? diagnostics : null;
 
             return new ServerHealthDTO
@@ -136,19 +133,6 @@ namespace Web.Server.Services
                 .ToList();
 
             return times.Count == 0 ? null : times.Max();
-        }
-
-        /// <summary>
-        /// Uses the most lenient per-railroad override so one quiet line does not mark the PC Degraded.
-        /// </summary>
-        private int GetTelemetryStaleHours(Beacon beacon)
-        {
-            var overrides = beacon.BeaconRailroads
-                .Where(br => br.TelemetryStaleHoursOverride is > 0)
-                .Select(br => br.TelemetryStaleHoursOverride!.Value)
-                .ToList();
-
-            return overrides.Count == 0 ? _telemetryStaleHoursDefault : overrides.Max();
         }
 
         private static bool IsCustodianOf(User user, Beacon beacon) =>
