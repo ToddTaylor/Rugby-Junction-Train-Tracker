@@ -86,6 +86,18 @@ namespace Web.Server.Services
                 .ToList();
         }
 
+        public async Task<IReadOnlyDictionary<int, BeaconMapStatus>> GetMapStatusesAsync()
+        {
+            var beacons = await _beaconRepository.GetAllAsync();
+            var diagnosticsByBeacon = (await _diagnosticsRepository.GetAllAsync()).ToDictionary(d => d.BeaconID);
+            var statesByBeacon = (await _stateRepository.GetAllAsync()).ToDictionary(s => s.BeaconID);
+            var utcNow = _timeProvider.UtcNow;
+
+            return beacons.ToDictionary(
+                b => b.ID,
+                b => BeaconMapStatus.Resolve(b, diagnosticsByBeacon.GetValueOrDefault(b.ID), statesByBeacon.GetValueOrDefault(b.ID), utcNow));
+        }
+
         public async Task<bool> CanManageBeaconAsync(User user, int beaconId)
         {
             if (HasRole(user, "Admin"))

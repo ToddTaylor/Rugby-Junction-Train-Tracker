@@ -1,3 +1,5 @@
+import type { ServerStatus } from './ServerHealth';
+
 export type Beacon = {
     beaconID: string;
     beaconName: string;
@@ -10,7 +12,10 @@ export type Beacon = {
     milepost: number;
     online: boolean; // primitive boolean for reliable equality checks & persistence
     telemetryStale?: boolean; // true when health endpoint is pinging but telemetry is stale past threshold
-    offlineNote?: string | null; // note explaining why this beacon railroad is offline; cleared automatically once back online
+    // The beacon PC's confirmed Server Health status, shared by every row of the same beacon.
+    // online is true only when this is 'Online'; Degraded and Offline beacons are drawn gray.
+    serverStatus?: ServerStatus;
+    serverStatusReasons?: string[]; // plain-language reasons for a Degraded or Offline status
     // Every subdivision passing through this physical beacon, each with its own milepost.
     // A junction such as Junction City - where one railroad crosses its own tracks - has
     // several entries here, all sharing the same coordinates. Populated when beacon railroad

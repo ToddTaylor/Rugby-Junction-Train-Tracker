@@ -128,20 +128,20 @@ describe('collapseBeaconPins', () => {
       expect(markers[0].telemetryStale).toBe(true);
     });
 
-    it('is offline with its note only when every subdivision is offline', () => {
+    it('is offline only when every subdivision is offline, and keeps the Server Health status', () => {
       const offline = collapseBeaconPins([
-        { ...junctionCitySuperior, online: false, offlineNote: 'Power outage' },
+        { ...junctionCitySuperior, online: false, serverStatus: 'Degraded', serverStatusReasons: ['SoftEOT not running'] },
         { ...junctionCityValley, online: false }
       ]);
       expect(offline[0].online).toBe(false);
-      expect(offline[0].offlineNote).toBe('Power outage');
+      expect(offline[0].serverStatus).toBe('Degraded');
+      expect(offline[0].serverStatusReasons).toEqual(['SoftEOT not running']);
 
       const mixed = collapseBeaconPins([
         { ...junctionCitySuperior, online: true },
-        { ...junctionCityValley, online: false, offlineNote: 'Power outage' }
+        { ...junctionCityValley, online: false }
       ]);
       expect(mixed[0].online).toBe(true);
-      expect(mixed[0].offlineNote).toBeNull();
     });
 
     it('leaves the status of separate railroads at one location independent', () => {

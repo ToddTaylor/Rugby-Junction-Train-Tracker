@@ -326,98 +326,115 @@ namespace Web.ServerTests.Services
             Assert.IsTrue(dto.TelemetryStale, "TelemetryStale should be true when no telemetry has ever been received");
         }
 
-        // ── OfflineNote clearing ────────────────────────────────────────────────
+        // ── Server Health status ───────────────────────────────────────────────
 
         [TestMethod]
-        public async Task OfflineNote_IsCleared_WhenBeaconComesBackOnline()
+        public void ServerStatus_Degraded_IsGrayState_WithReasons()
         {
-            var dbName = nameof(OfflineNote_IsCleared_WhenBeaconComesBackOnline);
+            // The PC checks in, but an expected program is not running: Server Health reports
+            // Degraded, which the map draws gray like Offline.
+            var dbName = nameof(ServerStatus_Degraded_IsGrayState_WithReasons);
             using var dbContext = CreateInMemoryDbContext(dbName);
 
             SeedHealthyBeacon(dbContext, beaconId: 1, subdivisionId: 1, telemetryStaleHoursOverride: null,
-                lastHealthUpdate: DateTime.UtcNow.AddMinutes(-5), // online
-                lastTelemetryUpdate: DateTime.UtcNow.AddHours(-1));
+                lastHealthUpdate: DateTime.UtcNow.AddMinutes(-1),
+                lastTelemetryUpdate: DateTime.UtcNow.AddHours(-8));
+            var beacon = dbContext.Beacons.Single(b => b.ID == 1);
+            beacon.ExpectedSdrSharpCount = 1;
+            dbContext.BeaconDiagnostics.Add(new BeaconDiagnostics
+            {
+                BeaconID = 1,
+                HealthPingIntervalMinutes = 1,
+                CollectedAt = DateTime.UtcNow.AddMinutes(-1),
+                CreatedAt = DateTime.UtcNow.AddMinutes(-1),
+                LastUpdate = DateTime.UtcNow.AddMinutes(-1),
+                Programs = [],
+            });
+            dbContext.SaveChanges();
 
-            var beaconRailroad = await dbContext.BeaconRailroads.FirstAsync(br => br.BeaconID == 1 && br.SubdivisionID == 1);
-            beaconRailroad.OfflineNote = "Storm damage";
-            await dbContext.SaveChangesAsync();
-
-            _serviceProviderMock.Setup(sp => sp.GetService(typeof(TelemetryDbContext))).Returns(dbContext);
-
-            var config = BuildConfig(defaultHours: 6);
             var sentDTOs = CaptureBeaconUpdate();
 
-            RunOneIteration(config, dbContext);
+            RunOneIteration(BuildConfig(defaultHours: 6), dbContext);
 
             var dto = sentDTOs.First(d => d.BeaconID == 1);
-            Assert.IsTrue(dto.Online, "Beacon should be online");
-            Assert.IsNull(dto.OfflineNote, "OfflineNote should be cleared in the broadcast DTO once the beacon is back online");
-
-            var persisted = await dbContext.BeaconRailroads.FirstAsync(br => br.BeaconID == 1 && br.SubdivisionID == 1);
-            Assert.IsNull(persisted.OfflineNote, "OfflineNote should be cleared and persisted once the beacon is back online");
+            Assert.AreEqual(ServerStatus.Degraded, dto.ServerStatus);
+            Assert.IsFalse(dto.Online, "Degraded beacons are drawn gray");
+            Assert.IsFalse(dto.TelemetryStale, "TelemetryStale only applies to online beacons");
+            Assert.IsTrue(dto.ServerStatusReasons.Any(r => r.Contains("SDR#")), string.Join("; ", dto.ServerStatusReasons));
         }
 
         [TestMethod]
-        public async Task OfflineNote_IsPreserved_WhileBeaconRemainsOffline()
+        public void ServerStatus_UsesConfirmedState_WhileChangeIsPending()
         {
-            var dbName = nameof(OfflineNote_IsPreserved_WhileBeaconRemainsOffline);
+            // Saved alert state says Online and a Degraded spell started a minute ago: the map
+            // keeps showing Online until the change is confirmed.
+            var dbName = nameof(ServerStatus_UsesConfirmedState_WhileChangeIsPending);
             using var dbContext = CreateInMemoryDbContext(dbName);
 
             SeedHealthyBeacon(dbContext, beaconId: 1, subdivisionId: 1, telemetryStaleHoursOverride: null,
-                lastHealthUpdate: DateTime.UtcNow.AddMinutes(-20), // offline
+                lastHealthUpdate: DateTime.UtcNow.AddMinutes(-1),
                 lastTelemetryUpdate: DateTime.UtcNow.AddHours(-1));
+            dbContext.Beacons.Single(b => b.ID == 1).ExpectedSdrSharpCount = 1;
+            dbContext.BeaconDiagnostics.Add(new BeaconDiagnostics
+            {
+                BeaconID = 1,
+                HealthPingIntervalMinutes = 1,
+                CollectedAt = DateTime.UtcNow.AddMinutes(-1),
+                CreatedAt = DateTime.UtcNow.AddMinutes(-1),
+                LastUpdate = DateTime.UtcNow.AddMinutes(-1),
+                Programs = [],
+            });
+            dbContext.BeaconServerStates.Add(new BeaconServerState
+            {
+                BeaconID = 1,
+                Status = ServerStatus.Online,
+                StatusSince = DateTime.UtcNow.AddHours(-2),
+                PendingStatus = ServerStatus.Degraded,
+                PendingSince = DateTime.UtcNow.AddMinutes(-1),
+            });
+            dbContext.SaveChanges();
 
-            var beaconRailroad = await dbContext.BeaconRailroads.FirstAsync(br => br.BeaconID == 1 && br.SubdivisionID == 1);
-            beaconRailroad.OfflineNote = "Storm damage";
-            await dbContext.SaveChangesAsync();
-
-            _serviceProviderMock.Setup(sp => sp.GetService(typeof(TelemetryDbContext))).Returns(dbContext);
-
-            var config = BuildConfig(defaultHours: 6);
             var sentDTOs = CaptureBeaconUpdate();
 
-            RunOneIteration(config, dbContext);
+            RunOneIteration(BuildConfig(defaultHours: 6), dbContext);
 
             var dto = sentDTOs.First(d => d.BeaconID == 1);
-            Assert.IsFalse(dto.Online, "Beacon should still be offline");
-            Assert.AreEqual("Storm damage", dto.OfflineNote, "OfflineNote should be preserved while the beacon remains offline");
-
-            var persisted = await dbContext.BeaconRailroads.FirstAsync(br => br.BeaconID == 1 && br.SubdivisionID == 1);
-            Assert.AreEqual("Storm damage", persisted.OfflineNote);
+            Assert.AreEqual(ServerStatus.Online, dto.ServerStatus);
+            Assert.IsTrue(dto.Online);
         }
 
         [TestMethod]
-        public async Task OfflineNote_IsCleared_WhenTelemetryReceived_EvenIfHealthCheckStillOffline()
+        public void ServerStatus_IsSharedByEverySubdivisionOfTheBeacon()
         {
-            // Reproduces the reported bug: telemetry arrives for an offline beacon (no health
-            // check yet), but the note never cleared because clearing was gated solely on the
-            // health-check-based Online flag. Per the feature's own definition, "offline" means
-            // neither health check NOR telemetry is being received — so recent telemetry alone
-            // must also clear the note.
-            var dbName = nameof(OfflineNote_IsCleared_WhenTelemetryReceived_EvenIfHealthCheckStillOffline);
+            // Server Health is per beacon PC. One subdivision's row having an old LastUpdate must
+            // not make it gray while the PC checks in through the other row.
+            var dbName = nameof(ServerStatus_IsSharedByEverySubdivisionOfTheBeacon);
             using var dbContext = CreateInMemoryDbContext(dbName);
 
             SeedHealthyBeacon(dbContext, beaconId: 1, subdivisionId: 1, telemetryStaleHoursOverride: null,
-                lastHealthUpdate: DateTime.UtcNow.AddMinutes(-20), // still health-offline
-                lastTelemetryUpdate: DateTime.UtcNow.AddMinutes(-2)); // telemetry just received
+                lastHealthUpdate: DateTime.UtcNow.AddMinutes(-1),
+                lastTelemetryUpdate: DateTime.UtcNow.AddHours(-1));
+            var railroad = new Railroad { ID = 2, Name = "RR2" };
+            var subdivision = new Subdivision { ID = 2, Name = "Sub2", RailroadID = 2, Railroad = railroad };
+            dbContext.Railroads.Add(railroad);
+            dbContext.Subdivisions.Add(subdivision);
+            dbContext.BeaconRailroads.Add(new BeaconRailroad
+            {
+                BeaconID = 1,
+                SubdivisionID = 2,
+                Subdivision = subdivision,
+                Direction = Direction.All,
+                CreatedAt = DateTime.UtcNow.AddDays(-1),
+                LastUpdate = DateTime.UtcNow.AddHours(-3),
+            });
+            dbContext.SaveChanges();
 
-            var beaconRailroad = await dbContext.BeaconRailroads.FirstAsync(br => br.BeaconID == 1 && br.SubdivisionID == 1);
-            beaconRailroad.OfflineNote = "Storm damage";
-            await dbContext.SaveChangesAsync();
-
-            _serviceProviderMock.Setup(sp => sp.GetService(typeof(TelemetryDbContext))).Returns(dbContext);
-
-            var config = BuildConfig(defaultHours: 6);
             var sentDTOs = CaptureBeaconUpdate();
 
-            RunOneIteration(config, dbContext);
+            RunOneIteration(BuildConfig(defaultHours: 6), dbContext);
 
-            var dto = sentDTOs.First(d => d.BeaconID == 1);
-            Assert.IsFalse(dto.Online, "Online (gray/blue map visual) stays health-check-only and should remain offline");
-            Assert.IsNull(dto.OfflineNote, "OfflineNote should be cleared once telemetry is received, even without a health check");
-
-            var persisted = await dbContext.BeaconRailroads.FirstAsync(br => br.BeaconID == 1 && br.SubdivisionID == 1);
-            Assert.IsNull(persisted.OfflineNote);
+            Assert.AreEqual(2, sentDTOs.Count(d => d.BeaconID == 1));
+            Assert.IsTrue(sentDTOs.Where(d => d.BeaconID == 1).All(d => d.Online && d.ServerStatus == ServerStatus.Online));
         }
 
         // ── TelemetryStaleHoursOverride passthrough in DTO ────────────────────

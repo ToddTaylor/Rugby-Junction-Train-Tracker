@@ -358,9 +358,6 @@ namespace Web.Server.Migrations
                     b.Property<bool>("MultipleTracks")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("OfflineNote")
-                        .HasColumnType("TEXT");
-
                     b.Property<int?>("TelemetryStaleHoursOverride")
                         .HasColumnType("INTEGER");
 

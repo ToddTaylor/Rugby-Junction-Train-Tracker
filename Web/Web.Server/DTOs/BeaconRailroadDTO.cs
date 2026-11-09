@@ -1,4 +1,5 @@
 using Web.Server.Enums;
+using Web.Server.Services;
 
 namespace Web.Server.DTOs
 {
@@ -61,10 +62,20 @@ namespace Web.Server.DTOs
         public bool MultipleTracks { get; set; }
 
         /// <summary>
-        /// Reports the online status of the beacon. If the beacon's last update
-        /// is older than 15 minutes, it is considered offline.
+        /// True when the beacon PC's confirmed Server Health status is Online.
+        /// Degraded and Offline beacons are not online.
         /// </summary>
         public bool Online { get; set; }
+
+        /// <summary>
+        /// The beacon PC's confirmed Server Health status. Shared by every beacon railroad of the same beacon.
+        /// </summary>
+        public ServerStatus ServerStatus { get; set; }
+
+        /// <summary>
+        /// Plain-language reasons for a Degraded or Offline status. Empty when Online.
+        /// </summary>
+        public List<string> ServerStatusReasons { get; set; } = [];
 
         /// <summary>
         /// Reports whether telemetry is stale for this beacon railroad.
@@ -81,12 +92,6 @@ namespace Web.Server.DTOs
         public int? TelemetryStaleHoursOverride { get; set; }
 
         /// <summary>
-        /// Free-text note explaining why this beacon railroad is currently offline.
-        /// Null when the beacon railroad is online or no note has been set.
-        /// </summary>
-        public string? OfflineNote { get; set; }
-
-        /// <summary>
         /// The direction in which telemetry data is moving.
         /// </summary>
         /// <example>NorthSouth</example>
@@ -101,6 +106,16 @@ namespace Web.Server.DTOs
         /// The date and time when the beacon was last updated.
         /// </summary>
         public DateTime LastUpdate { get; set; }
+
+        /// <summary>
+        /// Sets Online, ServerStatus and ServerStatusReasons from the beacon PC's Server Health status.
+        /// </summary>
+        public void ApplyServerStatus(BeaconMapStatus status)
+        {
+            ServerStatus = status.Status;
+            ServerStatusReasons = status.Reasons.ToList();
+            Online = status.IsOnline;
+        }
 
         public override bool Equals(object? obj)
         {
@@ -119,7 +134,8 @@ namespace Web.Server.DTOs
                    Online == other.Online &&
                    TelemetryStale == other.TelemetryStale &&
                    TelemetryStaleHoursOverride == other.TelemetryStaleHoursOverride &&
-                   OfflineNote == other.OfflineNote &&
+                   ServerStatus == other.ServerStatus &&
+                   ServerStatusReasons.SequenceEqual(other.ServerStatusReasons) &&
                    Direction == other.Direction &&
                    CreatedAt == other.CreatedAt &&
                    LastUpdate == other.LastUpdate;
@@ -137,7 +153,7 @@ namespace Web.Server.DTOs
             hash.Add(Online);
             hash.Add(TelemetryStale);
             hash.Add(TelemetryStaleHoursOverride);
-            hash.Add(OfflineNote);
+            hash.Add(ServerStatus);
             hash.Add(Direction);
             hash.Add(CreatedAt);
             hash.Add(LastUpdate);

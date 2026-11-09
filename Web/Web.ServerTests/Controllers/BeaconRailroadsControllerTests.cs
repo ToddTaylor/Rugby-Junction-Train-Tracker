@@ -8,7 +8,6 @@ using Web.Server.Controllers.v1;
 using Web.Server.DTOs;
 using Web.Server.Entities;
 using Web.Server.Enums;
-using Web.Server.Providers;
 using Web.Server.Services;
 
 namespace Web.ServerTests.Controllers;
@@ -45,15 +44,15 @@ public class BeaconRailroadsControllerTests
     }
 
     [TestMethod]
-    public async Task GetAll_ComputesOnline_FromLastUpdate()
+    public async Task GetAll_SetsOnline_FromServerHealthStatus()
     {
-        var offlineEntity = SeedBeaconRailroad(custodianId: null, lastUpdate: Now.AddMinutes(-20));
-        var onlineEntity = SeedBeaconRailroad(custodianId: null, lastUpdate: Now.AddMinutes(-5));
+        var degradedEntity = SeedBeaconRailroad(custodianId: null, lastUpdate: Now);
+        var onlineEntity = SeedBeaconRailroad(custodianId: null, lastUpdate: Now);
         onlineEntity.BeaconID = 2;
 
-        var (controller, serviceMock, _, mapperMock, _) = CreateController(userId: 70, roleName: "Admin");
+        var (controller, serviceMock, _, mapperMock, serverHealthMock) = CreateController(userId: 70, roleName: "Admin");
 
-        serviceMock.Setup(s => s.GetAllAsync()).ReturnsAsync([offlineEntity, onlineEntity]);
+        serviceMock.Setup(s => s.GetAllAsync()).ReturnsAsync([degradedEntity, onlineEntity]);
         mapperMock
             .Setup(m => m.Map<IEnumerable<BeaconRailroadDTO>>(It.IsAny<IEnumerable<BeaconRailroad>>()))
             .Returns((IEnumerable<BeaconRailroad> entities) => entities.Select(e => new BeaconRailroadDTO
@@ -62,6 +61,13 @@ public class BeaconRailroadsControllerTests
                 SubdivisionID = e.SubdivisionID,
                 LastUpdate = e.LastUpdate
             }));
+        serverHealthMock
+            .Setup(s => s.GetMapStatusesAsync())
+            .ReturnsAsync(new Dictionary<int, BeaconMapStatus>
+            {
+                [1] = new(ServerStatus.Degraded, ["SoftEOT not running"]),
+                [2] = new(ServerStatus.Online, []),
+            });
 
         var result = await controller.GetAll();
 
@@ -71,53 +77,60 @@ public class BeaconRailroadsControllerTests
         Assert.IsNotNull(envelope);
         var dtos = envelope.Data!.ToList();
 
-        Assert.IsFalse(dtos.First(d => d.BeaconID == 1).Online, "20-minute-old LastUpdate should be offline.");
-        Assert.IsTrue(dtos.First(d => d.BeaconID == 2).Online, "5-minute-old LastUpdate should be online.");
+        var degraded = dtos.First(d => d.BeaconID == 1);
+        Assert.IsFalse(degraded.Online, "A Degraded server is not online, even with a fresh LastUpdate.");
+        Assert.AreEqual(ServerStatus.Degraded, degraded.ServerStatus);
+        CollectionAssert.AreEqual(new[] { "SoftEOT not running" }, degraded.ServerStatusReasons);
+
+        var online = dtos.First(d => d.BeaconID == 2);
+        Assert.IsTrue(online.Online);
+        Assert.AreEqual(ServerStatus.Online, online.ServerStatus);
     }
 
     [TestMethod]
-    public async Task GetById_ComputesOnline_FromLastUpdate()
+    public async Task GetById_SetsOnline_FromServerHealthStatus()
     {
-        var offlineEntity = SeedBeaconRailroad(custodianId: null, lastUpdate: Now.AddMinutes(-20));
+        var entity = SeedBeaconRailroad(custodianId: null, lastUpdate: Now);
 
-        var (controller, serviceMock, _, mapperMock, _) = CreateController(userId: 70, roleName: "Admin", existing: offlineEntity);
+        var (controller, _, _, mapperMock, serverHealthMock) = CreateController(userId: 70, roleName: "Admin", existing: entity);
 
         mapperMock
-            .Setup(m => m.Map<BeaconRailroadDTO>(offlineEntity))
+            .Setup(m => m.Map<BeaconRailroadDTO>(entity))
             .Returns(new BeaconRailroadDTO
             {
-                BeaconID = offlineEntity.BeaconID,
-                SubdivisionID = offlineEntity.SubdivisionID,
-                LastUpdate = offlineEntity.LastUpdate
+                BeaconID = entity.BeaconID,
+                SubdivisionID = entity.SubdivisionID,
+                LastUpdate = entity.LastUpdate
             });
+        serverHealthMock
+            .Setup(s => s.GetMapStatusesAsync())
+            .ReturnsAsync(new Dictionary<int, BeaconMapStatus> { [1] = new(ServerStatus.Offline, ["No check-in for 20m"]) });
 
-        var result = await controller.GetById(offlineEntity.BeaconID, offlineEntity.SubdivisionID);
+        var result = await controller.GetById(entity.BeaconID, entity.SubdivisionID);
 
         var okResult = result.Result as OkObjectResult;
         Assert.IsNotNull(okResult);
         var envelope = okResult.Value as MessageEnvelope<BeaconRailroadDTO>;
         Assert.IsNotNull(envelope);
-        Assert.IsFalse(envelope.Data!.Online, "20-minute-old LastUpdate should be offline.");
+        Assert.IsFalse(envelope.Data!.Online);
+        Assert.AreEqual(ServerStatus.Offline, envelope.Data.ServerStatus);
     }
 
     [TestMethod]
-    public async Task Update_Admin_CanSetOfflineNote_WhenOffline()
+    public async Task Update_Admin_UpdatesBeaconRailroad()
     {
-        var existing = SeedBeaconRailroad(custodianId: null, lastUpdate: Now.AddMinutes(-20)); // offline
+        var existing = SeedBeaconRailroad(custodianId: null, lastUpdate: Now);
         var dto = ToUpdateDto(existing);
-        dto.OfflineNote = "Storm damage to relay box";
+        dto.Milepost = 102.0;
 
         var mapped = new BeaconRailroad
         {
-            BeaconID = existing.BeaconID,
-            SubdivisionID = existing.SubdivisionID,
             Direction = dto.Direction,
             Latitude = dto.Latitude,
             Longitude = dto.Longitude,
             Milepost = dto.Milepost,
             MultipleTracks = dto.MultipleTracks,
-            TelemetryStaleHoursOverride = dto.TelemetryStaleHoursOverride,
-            OfflineNote = dto.OfflineNote
+            TelemetryStaleHoursOverride = dto.TelemetryStaleHoursOverride
         };
 
         var (controller, serviceMock, _, mapperMock, _) = CreateController(userId: 70, roleName: "Admin", existing: existing);
@@ -127,105 +140,20 @@ public class BeaconRailroadsControllerTests
         var result = await controller.Update(existing.BeaconID, existing.SubdivisionID, dto);
 
         Assert.IsInstanceOfType(result, typeof(NoContentResult));
-        serviceMock.Verify(s => s.UpdateAsync(It.Is<BeaconRailroad>(br => br.OfflineNote == "Storm damage to relay box")), Times.Once);
-    }
-
-    [TestMethod]
-    public async Task Update_SettingOfflineNote_WhileOnline_IsRejected()
-    {
-        var existing = SeedBeaconRailroad(custodianId: null, lastUpdate: Now); // online
-        var dto = ToUpdateDto(existing);
-        dto.OfflineNote = "Should not be allowed";
-
-        var (controller, serviceMock, _, _, _) = CreateController(userId: 70, roleName: "Admin", existing: existing);
-
-        var result = await controller.Update(existing.BeaconID, existing.SubdivisionID, dto);
-
-        var badRequest = result as BadRequestObjectResult;
-        Assert.IsNotNull(badRequest);
-        var envelope = badRequest.Value as MessageEnvelope<BeaconRailroadDTO>;
-        Assert.IsNotNull(envelope);
-        Assert.IsTrue(envelope.Errors.Any(e => e.Contains("currently online", StringComparison.OrdinalIgnoreCase)));
-        serviceMock.Verify(s => s.UpdateAsync(It.IsAny<BeaconRailroad>()), Times.Never);
-    }
-
-    [TestMethod]
-    public async Task Update_SettingOfflineNote_WhenTelemetryRecentlyReceived_IsRejected_EvenIfHealthCheckOffline()
-    {
-        // Per the offline-note feature's own definition, "offline" means neither health check
-        // NOR telemetry is being received. A beacon that's health-offline but has recent
-        // telemetry is not truly offline, so setting a note on it must be rejected the same as
-        // for a fully online beacon.
-        var existing = SeedBeaconRailroad(custodianId: null, lastUpdate: Now.AddMinutes(-20)); // health-offline
-        var dto = ToUpdateDto(existing);
-        dto.OfflineNote = "Should not be allowed";
-
-        var (controller, serviceMock, _, _, _) = CreateController(userId: 70, roleName: "Admin", existing: existing);
-        serviceMock
-            .Setup(s => s.GetLatestTelemetryTimestampAsync(existing.BeaconID, existing.SubdivisionID))
-            .ReturnsAsync(Now.AddMinutes(-2)); // telemetry just received
-
-        var result = await controller.Update(existing.BeaconID, existing.SubdivisionID, dto);
-
-        var badRequest = result as BadRequestObjectResult;
-        Assert.IsNotNull(badRequest);
-        var envelope = badRequest.Value as MessageEnvelope<BeaconRailroadDTO>;
-        Assert.IsNotNull(envelope);
-        Assert.IsTrue(envelope.Errors.Any(e => e.Contains("currently online", StringComparison.OrdinalIgnoreCase)));
-        serviceMock.Verify(s => s.UpdateAsync(It.IsAny<BeaconRailroad>()), Times.Never);
-    }
-
-    [TestMethod]
-    public async Task Update_AssignedCustodian_CanUpdateOnlyOfflineNote_WhenOffline()
-    {
-        var existing = SeedBeaconRailroad(custodianId: 50, lastUpdate: Now.AddMinutes(-30)); // offline
-        var dto = ToUpdateDto(existing);
-        dto.OfflineNote = "Track washed out";
-
-        var (controller, serviceMock, _, mapperMock, _) = CreateController(userId: 50, roleName: "Custodian", existing: existing);
-
-        var result = await controller.Update(existing.BeaconID, existing.SubdivisionID, dto);
-
-        Assert.IsInstanceOfType(result, typeof(NoContentResult));
         serviceMock.Verify(s => s.UpdateAsync(It.Is<BeaconRailroad>(br =>
-            br.OfflineNote == "Track washed out" &&
-            br.Latitude == existing.Latitude &&
-            br.Longitude == existing.Longitude &&
-            br.Milepost == existing.Milepost &&
-            br.MultipleTracks == existing.MultipleTracks &&
-            br.Direction == existing.Direction)), Times.Once);
-        mapperMock.Verify(m => m.Map<BeaconRailroad>(It.IsAny<UpdateBeaconRailroadDTO>()), Times.Never);
+            br.BeaconID == existing.BeaconID &&
+            br.SubdivisionID == existing.SubdivisionID &&
+            br.Milepost == 102.0)), Times.Once);
     }
 
     [TestMethod]
-    public async Task Update_AssignedCustodian_CannotChangeOtherFields()
+    public async Task Update_Custodian_IsForbidden()
     {
-        var existing = SeedBeaconRailroad(custodianId: 51, lastUpdate: Now.AddMinutes(-30)); // offline
+        // Custodians could only set the offline note, which Server Health status replaced.
+        var existing = SeedBeaconRailroad(custodianId: 50, lastUpdate: Now);
         var dto = ToUpdateDto(existing);
-        dto.Milepost = existing.Milepost + 5;
 
-        var (controller, serviceMock, _, _, _) = CreateController(userId: 51, roleName: "Custodian", existing: existing);
-
-        var result = await controller.Update(existing.BeaconID, existing.SubdivisionID, dto);
-
-        var objectResult = result as ObjectResult;
-        Assert.IsNotNull(objectResult);
-        Assert.AreEqual(StatusCodes.Status403Forbidden, objectResult.StatusCode);
-
-        var envelope = objectResult.Value as MessageEnvelope<BeaconRailroadDTO>;
-        Assert.IsNotNull(envelope);
-        Assert.IsTrue(envelope.Errors.Any(e => e.Contains("OfflineNote", StringComparison.OrdinalIgnoreCase)));
-        serviceMock.Verify(s => s.UpdateAsync(It.IsAny<BeaconRailroad>()), Times.Never);
-    }
-
-    [TestMethod]
-    public async Task Update_UnassignedCustodian_IsForbidden()
-    {
-        var existing = SeedBeaconRailroad(custodianId: 999, lastUpdate: Now.AddMinutes(-30)); // offline
-        var dto = ToUpdateDto(existing);
-        dto.OfflineNote = "Not my subdivision";
-
-        var (controller, serviceMock, _, _, _) = CreateController(userId: 52, roleName: "Custodian", existing: existing);
+        var (controller, serviceMock, _, _, _) = CreateController(userId: 50, roleName: "Custodian", existing: existing);
 
         var result = await controller.Update(existing.BeaconID, existing.SubdivisionID, dto);
 
@@ -269,21 +197,22 @@ public class BeaconRailroadsControllerTests
             Longitude = existing.Longitude,
             Milepost = existing.Milepost,
             MultipleTracks = existing.MultipleTracks,
-            TelemetryStaleHoursOverride = existing.TelemetryStaleHoursOverride,
-            OfflineNote = existing.OfflineNote
+            TelemetryStaleHoursOverride = existing.TelemetryStaleHoursOverride
         };
     }
 
-    private static (BeaconRailroadsController Controller, Mock<IBeaconRailroadService> ServiceMock, Mock<IUserService> UserServiceMock, Mock<IMapper> MapperMock, Mock<ITimeProvider> TimeProviderMock) CreateController(
+    private static (BeaconRailroadsController Controller, Mock<IBeaconRailroadService> ServiceMock, Mock<IUserService> UserServiceMock, Mock<IMapper> MapperMock, Mock<IServerHealthService> ServerHealthMock) CreateController(
         int userId, string roleName, BeaconRailroad? existing = null)
     {
         var serviceMock = new Mock<IBeaconRailroadService>();
+        var serverHealthMock = new Mock<IServerHealthService>();
         var userServiceMock = new Mock<IUserService>();
-        var timeProviderMock = new Mock<ITimeProvider>();
         var loggerMock = new Mock<ILogger<BeaconRailroadsController>>();
         var mapperMock = new Mock<IMapper>();
 
-        timeProviderMock.Setup(tp => tp.UtcNow).Returns(Now);
+        serverHealthMock
+            .Setup(s => s.GetMapStatusesAsync())
+            .ReturnsAsync(new Dictionary<int, BeaconMapStatus>());
 
         userServiceMock
             .Setup(s => s.GetUserByIdAsync(userId))
@@ -310,8 +239,8 @@ public class BeaconRailroadsControllerTests
 
         var controller = new BeaconRailroadsController(
             serviceMock.Object,
+            serverHealthMock.Object,
             userServiceMock.Object,
-            timeProviderMock.Object,
             loggerMock.Object,
             mapperMock.Object);
 
@@ -323,6 +252,6 @@ public class BeaconRailroadsControllerTests
             HttpContext = httpContext
         };
 
-        return (controller, serviceMock, userServiceMock, mapperMock, timeProviderMock);
+        return (controller, serviceMock, userServiceMock, mapperMock, serverHealthMock);
     }
 }

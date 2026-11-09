@@ -41,9 +41,9 @@ namespace Web.ServerTests.Repositories
         [TestMethod]
         public async Task UpdateAsync_DoesNotBumpLastUpdate()
         {
-            // LastUpdate is the sole signal BeaconRailroadHealthService uses to determine
-            // online/offline. If UpdateAsync bumped it on ordinary edits, saving something as
-            // unrelated as an OfflineNote would spuriously mark an offline beacon "online" again.
+            // LastUpdate records health check-ins, which Server Health uses to decide whether a
+            // beacon PC is offline. If UpdateAsync bumped it on ordinary edits, saving a metadata
+            // change would spuriously mark an offline beacon "online" again.
             var seededLastUpdate = new DateTime(2026, 7, 17, 11, 0, 0, DateTimeKind.Utc); // 1 hour before the update call
             var updateCallTime = new DateTime(2026, 7, 17, 12, 0, 0, DateTimeKind.Utc);
             var (context, timeProviderMock) = BuildContext(updateCallTime);
@@ -58,69 +58,14 @@ namespace Web.ServerTests.Repositories
                 Direction = Direction.NorthSouth,
                 Latitude = 43.3,
                 Longitude = -88.2,
-                Milepost = 101.5,
-                MultipleTracks = true,
-                OfflineNote = "Downed power line near milepost 101"
+                Milepost = 102.0,
+                MultipleTracks = true
             };
 
             await repository.UpdateAsync(update);
 
             var persisted = await context.BeaconRailroads.FirstAsync(br => br.BeaconID == 1 && br.SubdivisionID == 1);
-            Assert.AreEqual(seededLastUpdate, persisted.LastUpdate, "LastUpdate must be untouched by ordinary metadata/note edits.");
-        }
-
-        [TestMethod]
-        public async Task UpdateAsync_PersistsOfflineNote_WhenSet()
-        {
-            var now = new DateTime(2026, 7, 17, 12, 0, 0, DateTimeKind.Utc);
-            var (context, timeProviderMock) = BuildContext(now);
-
-            await SeedBeaconRailroadAsync(context, now, telemetryStaleHoursOverride: null);
-
-            var repository = new BeaconRailroadRepository(context, timeProviderMock.Object);
-            var update = new BeaconRailroad
-            {
-                BeaconID = 1,
-                SubdivisionID = 1,
-                Direction = Direction.NorthSouth,
-                Latitude = 43.3,
-                Longitude = -88.2,
-                Milepost = 101.5,
-                MultipleTracks = true,
-                OfflineNote = "Downed power line near milepost 101"
-            };
-
-            await repository.UpdateAsync(update);
-
-            var persisted = await context.BeaconRailroads.FirstAsync(br => br.BeaconID == 1 && br.SubdivisionID == 1);
-            Assert.AreEqual("Downed power line near milepost 101", persisted.OfflineNote);
-        }
-
-        [TestMethod]
-        public async Task UpdateAsync_ClearsOfflineNote_WhenNull()
-        {
-            var now = new DateTime(2026, 7, 17, 12, 0, 0, DateTimeKind.Utc);
-            var (context, timeProviderMock) = BuildContext(now);
-
-            await SeedBeaconRailroadAsync(context, now, telemetryStaleHoursOverride: null, offlineNote: "Existing note");
-
-            var repository = new BeaconRailroadRepository(context, timeProviderMock.Object);
-            var update = new BeaconRailroad
-            {
-                BeaconID = 1,
-                SubdivisionID = 1,
-                Direction = Direction.NorthSouth,
-                Latitude = 43.3,
-                Longitude = -88.2,
-                Milepost = 101.5,
-                MultipleTracks = true,
-                OfflineNote = null
-            };
-
-            await repository.UpdateAsync(update);
-
-            var persisted = await context.BeaconRailroads.FirstAsync(br => br.BeaconID == 1 && br.SubdivisionID == 1);
-            Assert.IsNull(persisted.OfflineNote);
+            Assert.AreEqual(seededLastUpdate, persisted.LastUpdate, "LastUpdate must be untouched by ordinary metadata edits.");
         }
 
         [TestMethod]
@@ -148,61 +93,6 @@ namespace Web.ServerTests.Repositories
 
             var persisted = await context.BeaconRailroads.FirstAsync(br => br.BeaconID == 1 && br.SubdivisionID == 1);
             Assert.IsNull(persisted.TelemetryStaleHoursOverride);
-        }
-
-        [TestMethod]
-        public async Task GetLatestTelemetryTimestampAsync_ReturnsMostRecent_ForMatchingBeaconAndSubdivision()
-        {
-            var now = new DateTime(2026, 7, 17, 12, 0, 0, DateTimeKind.Utc);
-            var (context, timeProviderMock) = BuildContext(now);
-            await SeedBeaconRailroadAsync(context, now, telemetryStaleHoursOverride: null);
-
-            var older = now.AddHours(-2);
-            var newest = now.AddMinutes(-5);
-            context.MapPinHistories.Add(new MapPinHistory
-            {
-                BeaconID = 1,
-                SubdivisionId = 1,
-                AddressesJson = "[]",
-                CreatedAt = older,
-                LastUpdate = older
-            });
-            context.MapPinHistories.Add(new MapPinHistory
-            {
-                BeaconID = 1,
-                SubdivisionId = 1,
-                AddressesJson = "[]",
-                CreatedAt = newest,
-                LastUpdate = newest
-            });
-            // Different subdivision — must not be picked up for BeaconID=1/SubdivisionID=1.
-            context.MapPinHistories.Add(new MapPinHistory
-            {
-                BeaconID = 1,
-                SubdivisionId = 2,
-                AddressesJson = "[]",
-                CreatedAt = now,
-                LastUpdate = now
-            });
-            await context.SaveChangesAsync();
-
-            var repository = new BeaconRailroadRepository(context, timeProviderMock.Object);
-            var result = await repository.GetLatestTelemetryTimestampAsync(1, 1);
-
-            Assert.AreEqual(newest, result);
-        }
-
-        [TestMethod]
-        public async Task GetLatestTelemetryTimestampAsync_ReturnsNull_WhenNoTelemetryRecorded()
-        {
-            var now = new DateTime(2026, 7, 17, 12, 0, 0, DateTimeKind.Utc);
-            var (context, timeProviderMock) = BuildContext(now);
-            await SeedBeaconRailroadAsync(context, now, telemetryStaleHoursOverride: null);
-
-            var repository = new BeaconRailroadRepository(context, timeProviderMock.Object);
-            var result = await repository.GetLatestTelemetryTimestampAsync(1, 1);
-
-            Assert.IsNull(result);
         }
 
         [TestMethod]
@@ -325,7 +215,7 @@ namespace Web.ServerTests.Repositories
             return (context, timeProviderMock);
         }
 
-        private static async Task SeedBeaconRailroadAsync(TelemetryDbContext context, DateTime now, int? telemetryStaleHoursOverride, string? offlineNote = null)
+        private static async Task SeedBeaconRailroadAsync(TelemetryDbContext context, DateTime now, int? telemetryStaleHoursOverride)
         {
             var owner = new User
             {
@@ -380,7 +270,6 @@ namespace Web.ServerTests.Repositories
                 Milepost = 100.0,
                 MultipleTracks = false,
                 TelemetryStaleHoursOverride = telemetryStaleHoursOverride,
-                OfflineNote = offlineNote,
                 CreatedAt = now,
                 LastUpdate = now
             };

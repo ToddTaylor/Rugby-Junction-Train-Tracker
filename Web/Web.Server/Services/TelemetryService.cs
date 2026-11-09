@@ -1,8 +1,4 @@
-using MapsterMapper;
-using Microsoft.AspNetCore.SignalR;
-using Web.Server.DTOs;
 using Web.Server.Entities;
-using Web.Server.Hubs;
 using Web.Server.Providers;
 using Web.Server.Repositories;
 
@@ -15,24 +11,18 @@ namespace Web.Server.Services
         private readonly ITelemetryRepository _telemetryRepository;
         private readonly IBeaconService _beaconService;
         private readonly IBeaconRailroadService _beaconRailroadService;
-        private readonly IHubContext<NotificationHub> _hubContext;
-        private readonly IMapper _mapper;
         private readonly IMapPinService _mapPinsService;
         private readonly ITimeProvider _timeProvider;
 
         public TelemetryService(
             IBeaconRailroadService beaconRailroadService,
             IBeaconService beaconService,
-            IHubContext<NotificationHub> hubContext,
-            IMapper mapper,
             IMapPinService mapPinsService,
             ITelemetryRepository telemetryRepository,
             ITimeProvider timeProvider)
         {
             _beaconRailroadService = beaconRailroadService;
             _beaconService = beaconService;
-            _hubContext = hubContext;
-            _mapper = mapper;
             _mapPinsService = mapPinsService;
             _telemetryRepository = telemetryRepository;
             _timeProvider = timeProvider;
@@ -95,15 +85,16 @@ namespace Web.Server.Services
         }
 
         /// <summary>
-        /// Checks the health status of the specified beacon and updates its state if it is determined to be offline.
+        /// Refreshes the beacon's last-heard timestamps when telemetry arrives after a quiet period.
         /// </summary>
-        /// <remarks>If the beacon is considered offline based on its last update timestamp, this method
-        /// updates the beacon and its associated railroads, and notifies connected clients of the change.</remarks>
+        /// <remarks>Telemetry proves the beacon PC is running, so the beacon and its railroads are touched, which
+        /// Server Health counts as a check-in. The map status itself is broadcast by BeaconRailroadHealthService,
+        /// which applies the Server Health rules.</remarks>
         /// <param name="beacon">The beacon to check and potentially update. Must not be null.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains the updated beacon instance.</returns>
         private async Task<Beacon> UpdateBeaconHealth(Beacon beacon)
         {
-            var cutoff = _timeProvider.UtcNow.AddMinutes(-15);
+            var cutoff = _timeProvider.UtcNow.AddMinutes(-BeaconServerStatusEvaluator.MaxOfflineThresholdMinutes);
             var beaconIsOffline = beacon.LastUpdate <= cutoff;
 
             if (beaconIsOffline)
@@ -111,14 +102,8 @@ namespace Web.Server.Services
                 // Update beacon's last update timestamp as it's the beacon that is actually online.
                 beacon = await _beaconService.UpdateBeaconAsync(beacon.ID, beacon);
 
-                // Update beacon railroads last update timestamps as well bcause they are what is visible on the map.
-                var updatedBeaconRailroads = await _beaconRailroadService.UpdateAsync(beacon.BeaconRailroads);
-
-                var beaconRailroadDTOs = _mapper.Map<ICollection<BeaconRailroadDTO>>(updatedBeaconRailroads);
-                beaconRailroadDTOs.ToList().ForEach(beaconRailroadDTO => beaconRailroadDTO.Online = true);
-
-                // Notify clients.
-                await _hubContext.Clients.All.SendAsync(NotificationMethods.BeaconUpdate, beaconRailroadDTOs);
+                // Update beacon railroads last update timestamps as well, since Server Health reads its check-ins from them.
+                await _beaconRailroadService.UpdateAsync(beacon.BeaconRailroads);
             }
 
             return beacon;

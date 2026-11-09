@@ -1,11 +1,12 @@
 import { openRailwaysDB } from './db';
 import { fetchWithAuth } from '../utils/fetchWithAuth';
 import {
-  BEACON_OFFLINE_NOTE_MAP_KEY,
+  BEACON_SERVER_STATUS_MAP_KEY,
   BEACON_STALE_MAP_KEY,
   BEACON_STATUS_MAP_KEY,
   beaconStatusKey,
-  readBeaconMap
+  readBeaconMap,
+  type StoredServerStatus
 } from '../utils/beaconStatusKeys';
 
 // Fetch and cache beacons with status persistence & focus grace period overlay.
@@ -24,7 +25,7 @@ export const fetchBeacons = async (setBeacons: any, setBeaconsLoaded: any) => {
 
   const statusMap = readBeaconMap<boolean>(BEACON_STATUS_MAP_KEY);
   const telemetryStaleMap = readBeaconMap<boolean>(BEACON_STALE_MAP_KEY);
-  const offlineNoteMap = readBeaconMap<string | null>(BEACON_OFFLINE_NOTE_MAP_KEY);
+  const serverStatusMap = readBeaconMap<StoredServerStatus>(BEACON_SERVER_STATUS_MAP_KEY);
   const graceUntil = Number(localStorage.getItem('focusGraceUntil') || '0');
   const now = Date.now();
 
@@ -33,7 +34,7 @@ export const fetchBeacons = async (setBeacons: any, setBeaconsLoaded: any) => {
       const key = beaconStatusKey(b.beaconID, b.subdivisionID);
       const prevOnline = statusMap[key];
       const prevStale = telemetryStaleMap[key];
-      const prevOfflineNote = offlineNoteMap[key];
+      const prevServerStatus = serverStatusMap[key];
       let result = b;
       if (prevOnline === true && b.online === false && now < graceUntil) {
         result = { ...result, online: true };
@@ -43,8 +44,8 @@ export const fetchBeacons = async (setBeacons: any, setBeaconsLoaded: any) => {
       if (prevStale !== undefined) {
         result = { ...result, telemetryStale: prevStale };
       }
-      if (prevOfflineNote !== undefined) {
-        result = { ...result, offlineNote: prevOfflineNote };
+      if (prevServerStatus !== undefined) {
+        result = { ...result, ...prevServerStatus };
       }
       return result;
     });
@@ -67,7 +68,7 @@ export const fetchBeacons = async (setBeacons: any, setBeaconsLoaded: any) => {
     const withStatus = (beacons as any[]).map(b => {
       const prevOnline = statusMap[b.beaconID];
       const prevStale = telemetryStaleMap[b.beaconID];
-      const prevOfflineNote = offlineNoteMap[b.beaconID];
+      const prevServerStatus = serverStatusMap[b.beaconID];
       let result = b;
       if (prevOnline === true && b.online === false && now < graceUntil) {
         result = { ...result, online: true };
@@ -77,8 +78,8 @@ export const fetchBeacons = async (setBeacons: any, setBeaconsLoaded: any) => {
       if (prevStale !== undefined) {
         result = { ...result, telemetryStale: prevStale };
       }
-      if (prevOfflineNote !== undefined) {
-        result = { ...result, offlineNote: prevOfflineNote };
+      if (prevServerStatus !== undefined) {
+        result = { ...result, ...prevServerStatus };
       }
       return result;
     });

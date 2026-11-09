@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   validateTelemetryStaleHoursOverride,
-  canEditOfflineNote,
   groupByBeacon,
   availableSubdivisions,
   validateMilepost,
@@ -86,31 +85,6 @@ describe('validateTelemetryStaleHoursOverride', () => {
     expect(error).toBe('Telemetry stale hours override must be a whole integer greater than zero');
   });
 });
-
-describe('canEditOfflineNote', () => {
-  it('allows admins regardless of subdivision custodian', () => {
-    expect(canEditOfflineNote(true, false, 999, 1)).toBe(true);
-    expect(canEditOfflineNote(true, false, null, 1)).toBe(true);
-  });
-
-  it('allows a custodian assigned to the subdivision', () => {
-    expect(canEditOfflineNote(false, true, 50, 50)).toBe(true);
-  });
-
-  it('denies a custodian not assigned to the subdivision', () => {
-    expect(canEditOfflineNote(false, true, 999, 50)).toBe(false);
-  });
-
-  it('denies a custodian when the subdivision has no assigned custodian', () => {
-    expect(canEditOfflineNote(false, true, null, 50)).toBe(false);
-    expect(canEditOfflineNote(false, true, undefined, 50)).toBe(false);
-  });
-
-  it('denies a user who is neither admin nor custodian', () => {
-    expect(canEditOfflineNote(false, false, 50, 50)).toBe(false);
-  });
-});
-
 
 describe('groupByBeacon', () => {
   it('returns an empty array for no rows', () => {

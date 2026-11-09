@@ -1,3 +1,5 @@
+import type { Beacon } from '../types/Beacon';
+
 /**
  * Keys for the beacon state persisted in localStorage.
  *
@@ -14,11 +16,17 @@ export const BEACON_STATUS_MAP_KEY = 'beaconStatusMapV2';
 /** Storage key for the per beacon railroad telemetry stale map. */
 export const BEACON_STALE_MAP_KEY = 'beaconTelemetryStaleMapV2';
 
-/** Storage key for the per beacon railroad offline note map. */
-export const BEACON_OFFLINE_NOTE_MAP_KEY = 'beaconOfflineNoteMapV2';
+/** Storage key for the per beacon railroad Server Health status map. */
+export const BEACON_SERVER_STATUS_MAP_KEY = 'beaconServerStatusMapV1';
 
-/** Storage keys holding the beacon-only shape, removed on first read of the current shape. */
-const LEGACY_KEYS = ['beaconStatusMap', 'beaconTelemetryStaleMap', 'beaconOfflineNoteMap'];
+/** A beacon railroad's persisted Server Health status. */
+export type StoredServerStatus = Pick<Beacon, 'serverStatus' | 'serverStatusReasons'>;
+
+/**
+ * Storage keys no longer read: the beacon-only key shape, and the offline note map that the
+ * Server Health status replaced. Removed on first read of the current shape.
+ */
+const LEGACY_KEYS = ['beaconStatusMap', 'beaconTelemetryStaleMap', 'beaconOfflineNoteMap', 'beaconOfflineNoteMapV2'];
 
 /**
  * Identifies one beacon railroad row. Falls back to the beacon alone when no subdivision is

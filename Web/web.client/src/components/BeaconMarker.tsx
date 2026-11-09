@@ -28,32 +28,52 @@ function escapeHtml(value: string): string {
 }
 
 export interface BeaconVisualState {
+    /** True when the beacon PC is not Online in Server Health (Degraded or Offline): drawn gray. */
     isOffline: boolean;
     isTelemetryStale: boolean;
     color: string;
     dotCenterColor: string;
     title: string;
-    hasOfflineNote: boolean;
+    /** 'Degraded' or 'Offline' for a gray beacon, otherwise null. */
+    statusLabel: string | null;
 }
 
 export function getBeaconVisualState(beacon: Beacon, mapTheme: 'dark' | 'light' = 'dark'): BeaconVisualState {
     const isOffline = beacon.online === false;
-    const isTelemetryStale = beacon.online !== false && beacon.telemetryStale === true;
-    const hasOfflineNote = isOffline && !!beacon.offlineNote;
+    const isTelemetryStale = !isOffline && beacon.telemetryStale === true;
+    const statusLabel = isOffline
+        ? (beacon.serverStatus === 'Degraded' ? 'Degraded' : 'Offline')
+        : null;
     const color = isOffline ? BEACON_OFFLINE_COLOR : BEACON_ONLINE_COLOR;
     const dotCenterColor = isTelemetryStale
         ? (mapTheme === 'dark' ? '#1a1a2e' : '#ffffff')
         : color;
-    const title = isOffline
-        ? (hasOfflineNote ? 'offline - click for note' : 'offline')
+    const title = statusLabel
+        ? `${statusLabel.toLowerCase()} - click for details`
         : isTelemetryStale ? 'telemetry stale' : 'online';
-    return { isOffline, isTelemetryStale, color, dotCenterColor, title, hasOfflineNote };
+    return { isOffline, isTelemetryStale, color, dotCenterColor, title, statusLabel };
+}
+
+/** Popup HTML for a gray beacon: its Server Health status and the reasons behind it. */
+export function buildServerStatusPopupHtml(beaconName: string, statusLabel: string, reasons: string[] | undefined): string {
+    const reasonItems = (reasons ?? [])
+        .map(reason => `<li>${escapeHtml(reason)}</li>`)
+        .join('');
+    return `
+            <div>
+                <strong>${escapeHtml(beaconName)}</strong><br/>
+                <span style="color:#f5a623;font-weight:600;">${escapeHtml(statusLabel)}</span>
+                ${reasonItems ? `<ul style="margin:4px 0 0;padding-left:18px;">${reasonItems}</ul>` : ''}
+            </div>
+        `;
 }
 
 const BeaconMarker: React.FC<BeaconMarkerProps> = ({ pin: beaconPin, zoom, idx, mapTheme = 'dark' }) => {
     const beaconName = beaconPin.beaconName;
-    const { isOffline, isTelemetryStale, color, dotCenterColor, title, hasOfflineNote } = getBeaconVisualState(beaconPin, mapTheme);
+    const { isOffline, isTelemetryStale, color, dotCenterColor, title, statusLabel } = getBeaconVisualState(beaconPin, mapTheme);
     const markerRef = useRef<L.Marker>(null);
+    // Arrays arrive as new references on every SignalR tick; compare their contents instead.
+    const reasonsKey = (beaconPin.serverStatusReasons ?? []).join('\n');
 
     const beaconDotSizePx = getBeaconDotSizePx(zoom);
 
@@ -119,9 +139,9 @@ const BeaconMarker: React.FC<BeaconMarkerProps> = ({ pin: beaconPin, zoom, idx, 
         \" ></div>`
         : '';
 
-    // Small badge marking an offline beacon that has a note to view (click target)
+    // Small badge marking a gray beacon whose Server Health status can be viewed (click target)
     const noteBadgeSizePx = Math.max(10, Math.round(beaconDotSizePx * 0.55));
-    const noteBadge = hasOfflineNote
+    const noteBadge = statusLabel
         ? `<div class=\"beacon-note-badge\" style=\"
             position:absolute;
             top:${beaconDotOffsetPx - noteBadgeSizePx * 0.3}px;
@@ -189,7 +209,7 @@ const BeaconMarker: React.FC<BeaconMarkerProps> = ({ pin: beaconPin, zoom, idx, 
     ]);
 
     // Inject the same dark-mode popup CSS used by TelemetryMarker/PassengerTelemetryMarker so
-    // the offline-note popup matches the rest of the map's Leaflet popups (idempotent: guarded
+    // the server status popup matches the rest of the map's Leaflet popups (idempotent: guarded
     // by element id, so it's a no-op if another marker already injected it).
     useEffect(() => {
         const styleId = 'leaflet-popup-darkmode-style';
@@ -219,7 +239,7 @@ const BeaconMarker: React.FC<BeaconMarkerProps> = ({ pin: beaconPin, zoom, idx, 
         }
     }, []);
 
-    // Bind a native Leaflet popup showing the offline note, toggled on click — matches the
+    // Bind a native Leaflet popup showing the Server Health status, toggled on click — matches the
     // popup pattern used for Amtrak/telemetry markers elsewhere on the map. Re-bound whenever
     // markerIcon changes since react-leaflet swaps the marker's underlying DOM element (via
     // Leaflet's setIcon) any time the icon reference changes.
@@ -227,19 +247,12 @@ const BeaconMarker: React.FC<BeaconMarkerProps> = ({ pin: beaconPin, zoom, idx, 
         const marker = markerRef.current;
         if (!marker) return;
 
-        if (!hasOfflineNote || !beaconPin.offlineNote) {
+        if (!statusLabel) {
             marker.unbindPopup();
             return;
         }
 
-        const popupContent = `
-            <div>
-                <strong>${escapeHtml(beaconName)}</strong><br/>
-                <span style="color:#f5a623;font-weight:600;">Offline</span><br/>
-                ${escapeHtml(beaconPin.offlineNote)}
-            </div>
-        `;
-        marker.bindPopup(popupContent);
+        marker.bindPopup(buildServerStatusPopupHtml(beaconName, statusLabel, reasonsKey ? reasonsKey.split('\n') : []));
 
         let popupOpen = false;
         const handleClick = () => {
@@ -256,7 +269,7 @@ const BeaconMarker: React.FC<BeaconMarkerProps> = ({ pin: beaconPin, zoom, idx, 
             marker.off('click', handleClick);
             marker.unbindPopup();
         };
-    }, [markerIcon, hasOfflineNote, beaconPin.offlineNote, beaconName]);
+    }, [markerIcon, statusLabel, reasonsKey, beaconName]);
 
     return (
         <Marker
