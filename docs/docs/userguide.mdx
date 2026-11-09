@@ -77,9 +77,10 @@ An antenna with a hollow dot inside a solid blue ring is online but hasn't detec
 
 ### Offline Status
 
-*   An offline antenna displays a gray dot and a gray dotted circle. It is not capable of providing train statuses.
-*   The subdivision custodian responsible for the antenna is likely aware the antenna is offline and working to get it online as soon as possible.
-*   An orange "i" badge on the dot means the custodian left a note about the outage. Click the badge to read it.
+*   An antenna displays a gray dot and a gray dotted circle when its computer is having problems. It may not be capable of providing train statuses.
+*   An antenna turns gray when its computer stops checking in (Offline), or when it is checking in but a program the antenna needs isn't running correctly (Degraded).
+*   Click the orange "i" badge on a gray dot to see which of the two it is and the reasons, such as "No check-in for 2h" or "SoftEOT not running".
+*   The subdivision custodian responsible for the antenna is alerted when this happens and is likely working to fix it.
 
 <img src={require('@site/static/img/userguide/antenna_offline.png').default} alt="Offline Antenna Example" width="450" />
 

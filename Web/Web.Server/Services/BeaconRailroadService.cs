@@ -58,10 +58,5 @@ namespace Web.Server.Services
         {
             await _repository.TouchBeaconHealthAsync(beaconId, timestampUtc);
         }
-
-        public async Task<DateTime?> GetLatestTelemetryTimestampAsync(int beaconId, int subdivisionId)
-        {
-            return await _repository.GetLatestTelemetryTimestampAsync(beaconId, subdivisionId);
-        }
     }
 }

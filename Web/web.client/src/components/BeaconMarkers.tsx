@@ -80,7 +80,7 @@ export function collapseBeaconPins(beaconPins: Beacon[]): Beacon[] {
 /**
  * Merges the status of several rows for one location into the last row.
  *
- * online and offlineNote describe the beacon's radio, which every row shares, but
+ * online and the Server Health status describe the beacon PC, which every row shares, but
  * telemetryStale measures train traffic per subdivision. A quiet subdivision must not mark a
  * junction stale while trains are still passing on the other one.
  */
@@ -88,8 +88,14 @@ function mergeBeaconStatus(rows: Beacon[]): Beacon {
     const online = rows.some(r => r.online !== false);
     const onlineRows = rows.filter(r => r.online !== false);
     const telemetryStale = online && onlineRows.every(r => r.telemetryStale === true);
-    const offlineNote = online ? null : rows.find(r => r.offlineNote)?.offlineNote ?? null;
-    return { ...rows[rows.length - 1], online, telemetryStale, offlineNote };
+    const statusRow = [...rows].reverse().find(r => r.serverStatus !== undefined);
+    return {
+        ...rows[rows.length - 1],
+        online,
+        telemetryStale,
+        serverStatus: statusRow?.serverStatus,
+        serverStatusReasons: statusRow?.serverStatusReasons,
+    };
 }
 
 const BeaconMarkers: React.FC<BeaconMarkersProps> = ({ 

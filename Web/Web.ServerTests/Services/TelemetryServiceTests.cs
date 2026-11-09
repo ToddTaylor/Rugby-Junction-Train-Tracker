@@ -43,8 +43,6 @@ namespace Web.ServerTests.Services
             _service = new TelemetryService(
                 _beaconRailroadServiceMock.Object,
                 _beaconServiceMock.Object,
-                _hubContextMock.Object,
-                _mapperMock.Object,
                 _mapPinServiceMock.Object,
                 _telemetryRepositoryMock.Object,
                 _timeProviderMock.Object

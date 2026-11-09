@@ -30,17 +30,22 @@ namespace Web.Server.Services
         public sealed record Result(ServerStatus Status, IReadOnlyList<string> Reasons, int OfflineThresholdMinutes, bool UsesDiagnostics);
 
         /// <summary>
+        /// The longest a PC may go without a check-in before it is Offline.
+        /// </summary>
+        public const int MaxOfflineThresholdMinutes = 15;
+
+        /// <summary>
         /// Minutes without a check-in before a PC is Offline: three missed health checks, at least 5 minutes,
-        /// and never longer than the map's 15-minute offline cutoff.
+        /// and never longer than MaxOfflineThresholdMinutes.
         /// </summary>
         public static int GetOfflineThresholdMinutes(int? healthPingIntervalMinutes)
         {
             if (healthPingIntervalMinutes is not > 0)
             {
-                return BeaconRailroadHealthService.HealthCutoffMinutes;
+                return MaxOfflineThresholdMinutes;
             }
 
-            return Math.Min(BeaconRailroadHealthService.HealthCutoffMinutes, Math.Max(3 * healthPingIntervalMinutes.Value, 5));
+            return Math.Min(MaxOfflineThresholdMinutes, Math.Max(3 * healthPingIntervalMinutes.Value, 5));
         }
 
         /// <summary>

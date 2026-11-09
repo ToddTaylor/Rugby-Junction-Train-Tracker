@@ -327,7 +327,8 @@ const RailMap: React.FC = () => {
                         milepost: b.milepost,
                         online: b.online,
                         telemetryStale: b.telemetryStale,
-                        offlineNote: b.offlineNote
+                        serverStatus: b.serverStatus,
+                        serverStatusReasons: b.serverStatusReasons ?? []
                     };
                     // Filter out beacons with invalid IDs (0 or null/undefined)
                     if (mappedBeacon.beaconID && Number(mappedBeacon.beaconID) !== 0 && mappedBeacon.railroadID && Number(mappedBeacon.railroadID) !== 0) {

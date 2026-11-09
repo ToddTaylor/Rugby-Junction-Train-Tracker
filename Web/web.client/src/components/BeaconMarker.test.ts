@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { getBeaconVisualState } from './BeaconMarker';
+import { buildServerStatusPopupHtml, getBeaconVisualState } from './BeaconMarker';
+import { BEACON_OFFLINE_COLOR } from '../constants/beaconColors';
 import type { Beacon } from '../types/Beacon';
 
 function makeBeacon(overrides: Partial<Beacon> = {}): Beacon {
@@ -50,9 +51,9 @@ describe('getBeaconVisualState', () => {
             expect(state.dotCenterColor).toBe('#888888');
         });
 
-        it('reports title as offline', () => {
+        it('reports title as offline with details available', () => {
             const state = getBeaconVisualState(makeBeacon({ online: false }));
-            expect(state.title).toBe('offline');
+            expect(state.title).toBe('offline - click for details');
         });
 
         it('is never telemetry-stale when offline, even if telemetryStale is true', () => {
@@ -62,25 +63,53 @@ describe('getBeaconVisualState', () => {
         });
     });
 
-    describe('offline beacon with a note', () => {
-        it('reports hasOfflineNote when offline and a note is present', () => {
-            const state = getBeaconVisualState(makeBeacon({ online: false, offlineNote: 'Storm damage' }));
-            expect(state.hasOfflineNote).toBe(true);
+    describe('Server Health status', () => {
+        it('labels a gray Offline beacon Offline', () => {
+            const state = getBeaconVisualState(makeBeacon({ online: false, serverStatus: 'Offline' }));
+            expect(state.isOffline).toBe(true);
+            expect(state.statusLabel).toBe('Offline');
+            expect(state.title).toBe('offline - click for details');
         });
 
-        it('does not report hasOfflineNote when offline but no note is present', () => {
-            const state = getBeaconVisualState(makeBeacon({ online: false, offlineNote: null }));
-            expect(state.hasOfflineNote).toBe(false);
+        it('draws a Degraded beacon gray and labels it Degraded', () => {
+            const state = getBeaconVisualState(makeBeacon({ online: false, serverStatus: 'Degraded', telemetryStale: true }));
+            expect(state.isOffline).toBe(true);
+            expect(state.isTelemetryStale).toBe(false);
+            expect(state.color).toBe(BEACON_OFFLINE_COLOR);
+            expect(state.statusLabel).toBe('Degraded');
+            expect(state.title).toBe('degraded - click for details');
         });
 
-        it('does not report hasOfflineNote when online, even if a note is somehow present', () => {
-            const state = getBeaconVisualState(makeBeacon({ online: true, offlineNote: 'Stale note' }));
-            expect(state.hasOfflineNote).toBe(false);
+        it('labels a gray beacon with no status yet Offline', () => {
+            const state = getBeaconVisualState(makeBeacon({ online: false }));
+            expect(state.statusLabel).toBe('Offline');
         });
 
-        it('reports title indicating a note is available when offline with a note', () => {
-            const state = getBeaconVisualState(makeBeacon({ online: false, offlineNote: 'Storm damage' }));
-            expect(state.title).toBe('offline - click for note');
+        it('has no status label when online', () => {
+            const state = getBeaconVisualState(makeBeacon({ online: true, serverStatus: 'Online' }));
+            expect(state.statusLabel).toBeNull();
+        });
+    });
+
+    describe('buildServerStatusPopupHtml', () => {
+        it('lists each reason under the status', () => {
+            const html = buildServerStatusPopupHtml('Eagle', 'Degraded', ['SDR# not running (0 of 1)', 'Low disk space']);
+            expect(html).toContain('<strong>Eagle</strong>');
+            expect(html).toContain('Degraded');
+            expect(html).toContain('<li>SDR# not running (0 of 1)</li>');
+            expect(html).toContain('<li>Low disk space</li>');
+        });
+
+        it('omits the list when there are no reasons', () => {
+            const html = buildServerStatusPopupHtml('Eagle', 'Offline', []);
+            expect(html).not.toContain('<ul');
+        });
+
+        it('escapes HTML in the name and reasons', () => {
+            const html = buildServerStatusPopupHtml('<b>x</b>', 'Offline', ['<script>']);
+            expect(html).not.toContain('<b>x</b>');
+            expect(html).not.toContain('<script>');
+            expect(html).toContain('&lt;script&gt;');
         });
     });
 

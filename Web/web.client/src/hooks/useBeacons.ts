@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react';
 import { openDB } from 'idb';
 import { Beacon } from '../types/Beacon';
 import {
-  BEACON_OFFLINE_NOTE_MAP_KEY,
+  BEACON_SERVER_STATUS_MAP_KEY,
   BEACON_STALE_MAP_KEY,
   BEACON_STATUS_MAP_KEY,
   beaconStatusKey,
   clearLegacyBeaconMaps,
-  readBeaconMap
+  readBeaconMap,
+  type StoredServerStatus
 } from '../utils/beaconStatusKeys';
 
 export function useBeacons() {
@@ -17,7 +18,7 @@ export function useBeacons() {
   clearLegacyBeaconMaps();
   const initialStatusMap = readBeaconMap<boolean>(BEACON_STATUS_MAP_KEY);
   const initialStaleMap = readBeaconMap<boolean>(BEACON_STALE_MAP_KEY);
-  const initialOfflineNoteMap = readBeaconMap<string | null>(BEACON_OFFLINE_NOTE_MAP_KEY);
+  const initialServerStatusMap = readBeaconMap<StoredServerStatus>(BEACON_SERVER_STATUS_MAP_KEY);
 
   useEffect(() => {
     const fetchBeacons = async () => {
@@ -25,7 +26,7 @@ export function useBeacons() {
       const DB_VERSION = 2;
       // Cache schema version - increment when beacon data structure changes
       // This ensures stale cached data without new fields (like railroad/subdivision names) is refreshed
-      const BEACON_CACHE_VERSION = 5; // v5: per-subdivision mileposts at junctions — caches written before a beacon's second subdivision row existed would hide it (issue #80)
+      const BEACON_CACHE_VERSION = 6; // v6: Server Health status replaces the offline note (issue #96)
       const CACHE_VERSION_KEY = 'beacons_version';
       
       const db = await openDB('railways-db', DB_VERSION, {
@@ -73,7 +74,7 @@ export function useBeacons() {
           const key = beaconStatusKey(b.beaconID, b.subdivisionID);
           const stored = initialStatusMap[key];
           const storedStale = initialStaleMap[key];
-          const storedOfflineNote = initialOfflineNoteMap[key];
+          const storedServerStatus = initialServerStatusMap[key];
           let result = b;
           if (stored === true && b.online === false && now < graceUntil) {
             result = { ...result, online: true };
@@ -83,8 +84,8 @@ export function useBeacons() {
           if (storedStale !== undefined) {
             result = { ...result, telemetryStale: storedStale };
           }
-          if (storedOfflineNote !== undefined) {
-            result = { ...result, offlineNote: storedOfflineNote };
+          if (storedServerStatus !== undefined) {
+            result = { ...result, ...storedServerStatus };
           }
           return result;
         });
@@ -116,7 +117,8 @@ export function useBeacons() {
           milepost: b.milepost,
           online: b.online,
           telemetryStale: b.telemetryStale,
-          offlineNote: b.offlineNote
+          serverStatus: b.serverStatus,
+          serverStatusReasons: b.serverStatusReasons ?? []
         }));
         
         // Store beacons and cache version together
@@ -127,7 +129,7 @@ export function useBeacons() {
           const key = beaconStatusKey(b.beaconID, b.subdivisionID);
           const stored = initialStatusMap[key];
           const storedStale = initialStaleMap[key];
-          const storedOfflineNote = initialOfflineNoteMap[key];
+          const storedServerStatus = initialServerStatusMap[key];
           let result = b;
           if (stored === true && b.online === false && now < graceUntil) {
             result = { ...result, online: true };
@@ -137,8 +139,8 @@ export function useBeacons() {
           if (storedStale !== undefined) {
             result = { ...result, telemetryStale: storedStale };
           }
-          if (storedOfflineNote !== undefined) {
-            result = { ...result, offlineNote: storedOfflineNote };
+          if (storedServerStatus !== undefined) {
+            result = { ...result, ...storedServerStatus };
           }
           return result;
         });
@@ -156,19 +158,21 @@ export function useBeacons() {
     if (!beacons.length) return;
     const statusMap: Record<string, boolean> = {};
     const staleMap: Record<string, boolean> = {};
-    const offlineNoteMap: Record<string, string | null> = {};
+    const serverStatusMap: Record<string, StoredServerStatus> = {};
     beacons.forEach(b => {
       if (b && b.beaconID) {
         const key = beaconStatusKey(b.beaconID, b.subdivisionID);
         statusMap[key] = !!b.online;
         staleMap[key] = !!b.telemetryStale;
-        offlineNoteMap[key] = b.offlineNote ?? null;
+        if (b.serverStatus) {
+          serverStatusMap[key] = { serverStatus: b.serverStatus, serverStatusReasons: b.serverStatusReasons ?? [] };
+        }
       }
     });
     try {
       localStorage.setItem(BEACON_STATUS_MAP_KEY, JSON.stringify(statusMap));
       localStorage.setItem(BEACON_STALE_MAP_KEY, JSON.stringify(staleMap));
-      localStorage.setItem(BEACON_OFFLINE_NOTE_MAP_KEY, JSON.stringify(offlineNoteMap));
+      localStorage.setItem(BEACON_SERVER_STATUS_MAP_KEY, JSON.stringify(serverStatusMap));
     } catch { /* ignore quota */ }
   }, [beacons]);
 

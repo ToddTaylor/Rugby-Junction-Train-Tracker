@@ -10,7 +10,6 @@ namespace Web.Server.Services
         Task<BeaconRailroad> UpdateAsync(BeaconRailroad beaconRailroad);
         Task<ICollection<BeaconRailroad>> UpdateAsync(ICollection<BeaconRailroad> beaconRailroads);
         Task<bool> DeleteAsync(int beaconId, int railroadId);
-        Task<DateTime?> GetLatestTelemetryTimestampAsync(int beaconId, int subdivisionId);
         Task TouchBeaconHealthAsync(int beaconId, DateTime timestampUtc);
     }
 }

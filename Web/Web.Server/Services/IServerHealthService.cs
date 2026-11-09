@@ -17,6 +17,11 @@ namespace Web.Server.Services
         Task<IReadOnlyList<ServerHealthDTO>> GetServerHealthAsync(User user);
 
         /// <summary>
+        /// The confirmed Server Health status of every beacon, keyed by beacon ID, for showing on the map.
+        /// </summary>
+        Task<IReadOnlyDictionary<int, BeaconMapStatus>> GetMapStatusesAsync();
+
+        /// <summary>
         /// True for Admins, and for Custodians of a subdivision the beacon serves.
         /// </summary>
         Task<bool> CanManageBeaconAsync(User user, int beaconId);
