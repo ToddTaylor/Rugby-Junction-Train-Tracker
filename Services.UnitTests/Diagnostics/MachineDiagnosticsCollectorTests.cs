@@ -16,12 +16,14 @@ public class MachineDiagnosticsCollectorTests
         probe.Processes["SDRSharp*"] = [true, true];
         probe.Processes["SoftEOT"] = [true];
         probe.Processes["SoftDPU"] = [true, false, true, true];
+        probe.Windows[("SDRSharp*", "Sharp Slicer")] = [true, true, true, false, true, true];
 
         var report = CreateCollector(probe).Collect(CreateSettings(), CreateSubscriber("collector-programs"), Now);
 
         report.Programs.Should().BeEquivalentTo(new[]
         {
             new ProgramStatus { Name = "SDR#", Running = 2, NotResponding = 0 },
+            new ProgramStatus { Name = "SDR# slices", Running = 6, NotResponding = 1 },
             new ProgramStatus { Name = "SoftEOT", Running = 1, NotResponding = 0 },
             new ProgramStatus { Name = "SoftDPU", Running = 4, NotResponding = 1 },
         });
@@ -120,6 +122,7 @@ public class MachineDiagnosticsCollectorTests
     private sealed class FakeSystemProbe : ISystemProbe
     {
         public Dictionary<string, bool[]> Processes { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public Dictionary<(string ProcessName, string TitleText), bool[]> Windows { get; } = new();
         public Dictionary<string, DateTime> LogWrites { get; } = new(StringComparer.OrdinalIgnoreCase);
 
         public string? Hostname => "RJ-SDR01";
@@ -132,6 +135,9 @@ public class MachineDiagnosticsCollectorTests
 
         public IReadOnlyList<bool> GetProcessRespondingStates(string processName) =>
             Processes.TryGetValue(processName, out var states) ? states : [];
+
+        public IReadOnlyList<bool> GetWindowRespondingStates(string processName, string titleText) =>
+            Windows.TryGetValue((processName, titleText), out var states) ? states : [];
 
         public DateTime? GetNewestFileWriteUtc(string directory, string fileNamePrefix) =>
             LogWrites.TryGetValue(fileNamePrefix, out var time) ? time : null;

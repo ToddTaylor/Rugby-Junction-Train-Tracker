@@ -13,6 +13,7 @@ namespace Web.Server.Services
     public static class BeaconServerStatusEvaluator
     {
         public const string SdrSharp = "SDR#";
+        public const string SdrSlices = "SDR# slices";
         public const string SoftEot = "SoftEOT";
         public const string SoftDpu = "SoftDPU";
 
@@ -54,6 +55,7 @@ namespace Web.Server.Services
         public static IReadOnlyList<(string Name, int? Expected)> GetExpectedPrograms(Beacon beacon) =>
         [
             (SdrSharp, beacon.ExpectedSdrSharpCount),
+            (SdrSlices, beacon.ExpectedSdrSliceCount),
             (SoftEot, beacon.ExpectedSoftEotCount),
             (SoftDpu, beacon.ExpectedSoftDpuCount),
         ];
@@ -99,6 +101,16 @@ namespace Web.Server.Services
                 var reported = FindProgram(diagnostics, name);
                 var running = reported?.Running ?? 0;
 
+                if (name == SdrSlices)
+                {
+                    // ConsoleApp versions before slice counting do not report slices; that is not a slice problem.
+                    if (reported != null)
+                    {
+                        AddSliceReasons(expected, running, reported.NotResponding, reasons);
+                    }
+                    continue;
+                }
+
                 if (expected is > 0 && running == 0)
                 {
                     reasons.Add($"{name} is not running");
@@ -114,6 +126,26 @@ namespace Web.Server.Services
                         ? $"{name} is not responding"
                         : $"{reported.NotResponding} {name} instances are not responding");
                 }
+            }
+        }
+
+        // Slices are windows inside SDR#, so they are "open" rather than "running".
+        private static void AddSliceReasons(int? expected, int open, int notResponding, List<string> reasons)
+        {
+            if (expected is > 0 && open == 0)
+            {
+                reasons.Add("No SDR# slices are open");
+            }
+            else if (expected.HasValue && open < expected.Value)
+            {
+                reasons.Add($"Only {open} of {expected.Value} SDR# slices open");
+            }
+
+            if (notResponding > 0)
+            {
+                reasons.Add(notResponding == 1
+                    ? "An SDR# slice is not responding"
+                    : $"{notResponding} SDR# slices are not responding");
             }
         }
 

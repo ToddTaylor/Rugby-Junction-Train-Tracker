@@ -235,6 +235,9 @@ if (appSettings == null)
     return;
 }
 
+// Settings saved by an older version list only the programs monitored then.
+appSettings.AddMissingMonitoredProcesses();
+
 // Only prompt and update config on first run
 if (!File.Exists(firstRunFlagPath))
 {

@@ -120,7 +120,8 @@ namespace Web.Server.Services
                 beaconId,
                 expectations.ExpectedSdrSharpCount,
                 expectations.ExpectedSoftEotCount,
-                expectations.ExpectedSoftDpuCount);
+                expectations.ExpectedSoftDpuCount,
+                expectations.ExpectedSdrSliceCount);
             return beacon != null;
         }
 
@@ -287,6 +288,7 @@ namespace Web.Server.Services
                 ExpectedSdrSharpCount = beacon.ExpectedSdrSharpCount,
                 ExpectedSoftEotCount = beacon.ExpectedSoftEotCount,
                 ExpectedSoftDpuCount = beacon.ExpectedSoftDpuCount,
+                ExpectedSdrSliceCount = beacon.ExpectedSdrSliceCount,
                 StatusSince = state?.Status == result.Status ? state.StatusSince : null,
                 AlertsMuted = isMuted,
                 AlertsMutedUntil = isMuted ? state!.AlertsMutedUntil : null,
@@ -310,7 +312,10 @@ namespace Web.Server.Services
                         {
                             Name = p.Name,
                             Expected = p.Expected,
-                            Running = reportedDiagnostics == null ? null : reported?.Running ?? 0,
+                            // Slices missing from a report were not counted (an older ConsoleApp), so they show as unknown.
+                            Running = reportedDiagnostics == null || (reported == null && p.Name == BeaconServerStatusEvaluator.SdrSlices)
+                                ? null
+                                : reported?.Running ?? 0,
                             NotResponding = reported?.NotResponding ?? 0,
                         };
                     })

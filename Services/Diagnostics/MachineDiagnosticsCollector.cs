@@ -38,7 +38,9 @@ namespace Services.Diagnostics
                 Programs = appSettings.MonitoredProcesses
                     .Select(p =>
                     {
-                        var states = _probe.GetProcessRespondingStates(p.ProcessName);
+                        var states = string.IsNullOrWhiteSpace(p.WindowTitleContains)
+                            ? _probe.GetProcessRespondingStates(p.ProcessName)
+                            : _probe.GetWindowRespondingStates(p.ProcessName, p.WindowTitleContains);
                         return new ProgramStatus
                         {
                             Name = p.Name,

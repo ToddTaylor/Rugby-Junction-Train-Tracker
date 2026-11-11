@@ -52,6 +52,8 @@ export interface ServerHealth {
   expectedSdrSharpCount: number | null;
   expectedSoftEotCount: number | null;
   expectedSoftDpuCount: number | null;
+  /** SDR# slice windows (Sharp Slicer) that should be open. Null for PCs that do not run SDR# in slice mode. */
+  expectedSdrSliceCount: number | null;
   /** When the server entered its current status. Null until the alert monitor has seen it. */
   statusSince: string | null;
   alertsMuted: boolean;
@@ -76,6 +78,8 @@ export interface UpdateServerExpectations {
   expectedSdrSharpCount: number | null;
   expectedSoftEotCount: number | null;
   expectedSoftDpuCount: number | null;
+  /** SDR# slice windows (Sharp Slicer) that should be open. Null for PCs that do not run SDR# in slice mode. */
+  expectedSdrSliceCount: number | null;
 }
 
 export interface MuteServerAlerts {

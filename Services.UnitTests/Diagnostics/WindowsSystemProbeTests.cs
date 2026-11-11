@@ -48,6 +48,16 @@ public class WindowsSystemProbeTests
     }
 
     [TestMethod]
+    public void GetWindowRespondingStates_NoMatchingProcessOrTitle_ReturnsEmpty()
+    {
+        var currentName = System.Diagnostics.Process.GetCurrentProcess().ProcessName;
+        var probe = new WindowsSystemProbe();
+
+        probe.GetWindowRespondingStates("NoSuchProcessRjtt*", "Sharp Slicer").Should().BeEmpty();
+        probe.GetWindowRespondingStates(currentName, "No window has this title Rjtt").Should().BeEmpty();
+    }
+
+    [TestMethod]
     public void GetNewestFileWriteUtc_MissingDirectory_ReturnsNull()
     {
         new WindowsSystemProbe().GetNewestFileWriteUtc(@"C:\does-not-exist-rjtt", "eot").Should().BeNull();

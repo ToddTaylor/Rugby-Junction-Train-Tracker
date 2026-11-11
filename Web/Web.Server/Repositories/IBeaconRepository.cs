@@ -10,9 +10,9 @@ namespace Web.Server.Repositories
         Task<Beacon> UpdateAsync(Beacon beacon);
 
         /// <summary>
-        /// Sets how many SDR#, SoftEOT and SoftDPU instances the beacon PC should run. Returns null when the beacon does not exist.
+        /// Sets how many SDR#, SoftEOT and SoftDPU instances and SDR# slices the beacon PC should run. Returns null when the beacon does not exist.
         /// </summary>
-        Task<Beacon?> UpdateExpectedProgramCountsAsync(int id, int? sdrSharpCount, int? softEotCount, int? softDpuCount);
+        Task<Beacon?> UpdateExpectedProgramCountsAsync(int id, int? sdrSharpCount, int? softEotCount, int? softDpuCount, int? sdrSliceCount);
         Task<bool> DeleteAsync(int id);
     }
 }

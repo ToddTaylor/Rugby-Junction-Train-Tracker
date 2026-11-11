@@ -36,19 +36,11 @@ namespace Services.Diagnostics
 
         public IReadOnlyList<bool> GetProcessRespondingStates(string processName)
         {
-            var prefix = processName.EndsWith('*') ? processName[..^1] : null;
-            var processes = prefix == null ? Process.GetProcessesByName(processName) : Process.GetProcesses();
-
             var states = new List<bool>();
-            foreach (var process in processes)
+            foreach (var process in GetMatchingProcesses(processName))
             {
                 using (process)
                 {
-                    if (prefix != null && !process.ProcessName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-                    {
-                        continue;
-                    }
-
                     try
                     {
                         states.Add(process.Responding);
@@ -61,6 +53,101 @@ namespace Services.Diagnostics
                 }
             }
             return states;
+        }
+
+        public IReadOnlyList<bool> GetWindowRespondingStates(string processName, string titleText)
+        {
+            var processIds = new HashSet<uint>();
+            foreach (var process in GetMatchingProcesses(processName))
+            {
+                using (process)
+                {
+                    processIds.Add((uint)process.Id);
+                }
+            }
+
+            var states = new List<bool>();
+            if (processIds.Count == 0 || !OperatingSystem.IsWindows())
+            {
+                return states;
+            }
+
+            // Reading another program's window titles works even when that program runs as administrator
+            // and the ConsoleApp does not.
+            NativeMethods.EnumWindows((hWnd, _) =>
+            {
+                NativeMethods.GetWindowThreadProcessId(hWnd, out var processId);
+                if (processIds.Contains(processId) && NativeMethods.IsWindowVisible(hWnd))
+                {
+                    var title = GetWindowTitle(hWnd);
+                    if (title.Contains(titleText, StringComparison.OrdinalIgnoreCase))
+                    {
+                        states.Add(!NativeMethods.IsHungAppWindow(hWnd));
+                    }
+                }
+                return true;
+            }, IntPtr.Zero);
+
+            return states;
+        }
+
+        /// <summary>
+        /// Processes named processName; a trailing "*" matches every process whose name starts with the text before it.
+        /// </summary>
+        private static IEnumerable<Process> GetMatchingProcesses(string processName)
+        {
+            if (!processName.EndsWith('*'))
+            {
+                return Process.GetProcessesByName(processName);
+            }
+
+            var prefix = processName[..^1];
+            var matches = new List<Process>();
+            foreach (var process in Process.GetProcesses())
+            {
+                if (process.ProcessName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                {
+                    matches.Add(process);
+                }
+                else
+                {
+                    process.Dispose();
+                }
+            }
+            return matches;
+        }
+
+        // GetWindowTextLength can send the window a message, which Windows blocks when SDR# runs as administrator
+        // and the ConsoleApp does not, so the title is read with a fixed buffer instead. GetWindowText reads another
+        // program's window title without sending it a message.
+        private static string GetWindowTitle(IntPtr hWnd)
+        {
+            var buffer = new char[512];
+            var copied = NativeMethods.GetWindowText(hWnd, buffer, buffer.Length);
+            return copied > 0 ? new string(buffer, 0, copied) : string.Empty;
+        }
+
+        private static class NativeMethods
+        {
+            public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
+            [DllImport("user32.dll")]
+            [return: MarshalAs(UnmanagedType.Bool)]
+            public static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+
+            [DllImport("user32.dll")]
+            public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+
+            [DllImport("user32.dll")]
+            [return: MarshalAs(UnmanagedType.Bool)]
+            public static extern bool IsWindowVisible(IntPtr hWnd);
+
+            [DllImport("user32.dll")]
+            [return: MarshalAs(UnmanagedType.Bool)]
+            public static extern bool IsHungAppWindow(IntPtr hWnd);
+
+            [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+            public static extern int GetWindowText(IntPtr hWnd, [Out] char[] lpString, int nMaxCount);
         }
 
         public DateTime? GetNewestFileWriteUtc(string directory, string fileNamePrefix)

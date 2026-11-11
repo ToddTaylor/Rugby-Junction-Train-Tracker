@@ -19,6 +19,12 @@ namespace Services.Diagnostics
         /// </summary>
         IReadOnlyList<bool> GetProcessRespondingStates(string processName);
 
+        /// <summary>
+        /// Returns one entry per visible top-level window of the process whose title contains titleText
+        /// (ignoring case): true when the window is responding. processName matches as in GetProcessRespondingStates.
+        /// </summary>
+        IReadOnlyList<bool> GetWindowRespondingStates(string processName, string titleText);
+
         DateTime? GetNewestFileWriteUtc(string directory, string fileNamePrefix);
         ScheduledTaskStatus GetScheduledTask(string taskName);
         bool FileExists(string path);

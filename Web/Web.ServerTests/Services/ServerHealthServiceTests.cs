@@ -1,4 +1,4 @@
-using Mapster;
+﻿using Mapster;
 using MapsterMapper;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
@@ -134,6 +134,7 @@ public class ServerHealthServiceTests
         Assert.AreEqual(2, softEot.Expected);
         Assert.AreEqual(1, softEot.Running);
         Assert.AreEqual(0, row.Programs.Single(p => p.Name == "SDR#").Running);
+        Assert.IsNull(row.Programs.Single(p => p.Name == "SDR# slices").Running, "slices missing from the report are unknown, not 0");
     }
 
     [TestMethod]
@@ -178,7 +179,7 @@ public class ServerHealthServiceTests
     {
         var (service, beaconRepositoryMock, _) = CreateService([], []);
         beaconRepositoryMock
-            .Setup(r => r.UpdateExpectedProgramCountsAsync(3, 1, 2, 4))
+            .Setup(r => r.UpdateExpectedProgramCountsAsync(3, 1, 2, 4, 6))
             .ReturnsAsync((Beacon?)null);
 
         var updated = await service.UpdateExpectedProgramsAsync(3, new UpdateServerExpectationsDTO
@@ -186,6 +187,7 @@ public class ServerHealthServiceTests
             ExpectedSdrSharpCount = 1,
             ExpectedSoftEotCount = 2,
             ExpectedSoftDpuCount = 4,
+            ExpectedSdrSliceCount = 6,
         });
 
         Assert.IsFalse(updated);
