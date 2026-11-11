@@ -117,17 +117,14 @@ namespace Services.Diagnostics
             return matches;
         }
 
+        // GetWindowTextLength can send the window a message, which Windows blocks when SDR# runs as administrator
+        // and the ConsoleApp does not, so the title is read with a fixed buffer instead. GetWindowText reads another
+        // program's window title without sending it a message.
         private static string GetWindowTitle(IntPtr hWnd)
         {
-            var length = NativeMethods.GetWindowTextLength(hWnd);
-            if (length <= 0)
-            {
-                return string.Empty;
-            }
-
-            var buffer = new char[length + 1];
+            var buffer = new char[512];
             var copied = NativeMethods.GetWindowText(hWnd, buffer, buffer.Length);
-            return new string(buffer, 0, copied);
+            return copied > 0 ? new string(buffer, 0, copied) : string.Empty;
         }
 
         private static class NativeMethods
@@ -148,9 +145,6 @@ namespace Services.Diagnostics
             [DllImport("user32.dll")]
             [return: MarshalAs(UnmanagedType.Bool)]
             public static extern bool IsHungAppWindow(IntPtr hWnd);
-
-            [DllImport("user32.dll", CharSet = CharSet.Unicode)]
-            public static extern int GetWindowTextLength(IntPtr hWnd);
 
             [DllImport("user32.dll", CharSet = CharSet.Unicode)]
             public static extern int GetWindowText(IntPtr hWnd, [Out] char[] lpString, int nMaxCount);
