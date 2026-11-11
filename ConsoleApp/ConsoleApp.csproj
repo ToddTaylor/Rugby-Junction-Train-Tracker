@@ -41,4 +41,18 @@
 	  <None Include="favicon.ico" />
 	</ItemGroup>
 
+	<!--
+		Makes every ClickOnce release required, so the PCs install it at startup without asking. The deployment
+		manifest's minimum required version is set to the version being published. This is done here rather than with
+		MinimumRequiredVersion in the publish profile because Visual Studio writes a fixed version number back into the
+		profile after each publish, which would leave the next release optional. It runs only when the profile sets
+		UpdateRequired to True.
+	-->
+	<Target Name="RequireThisClickOnceVersion" BeforeTargets="GenerateDeploymentManifest" Condition="'$(UpdateRequired)' == 'true' And '$(Install)' == 'true'">
+		<PropertyGroup>
+			<_DeploymentBuiltMinimumRequiredVersion>$(_DeploymentManifestVersion)</_DeploymentBuiltMinimumRequiredVersion>
+		</PropertyGroup>
+		<Message Importance="high" Text="ClickOnce minimum required version: $(_DeploymentBuiltMinimumRequiredVersion)" />
+	</Target>
+
 </Project>
