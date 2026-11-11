@@ -32,6 +32,7 @@ namespace Web.Server.DTOs
         public int? ExpectedSdrSharpCount { get; set; }
         public int? ExpectedSoftEotCount { get; set; }
         public int? ExpectedSoftDpuCount { get; set; }
+        public int? ExpectedSdrSliceCount { get; set; }
 
         /// <summary>
         /// When the server entered its current status, as far as the alert monitor knows. Null until the monitor has seen it.
@@ -140,5 +141,6 @@ namespace Web.Server.DTOs
         public int? ExpectedSdrSharpCount { get; set; }
         public int? ExpectedSoftEotCount { get; set; }
         public int? ExpectedSoftDpuCount { get; set; }
+        public int? ExpectedSdrSliceCount { get; set; }
     }
 }

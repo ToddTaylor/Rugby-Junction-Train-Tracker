@@ -36,6 +36,12 @@ namespace Web.Server.Entities
         /// </summary>
         public int? ExpectedSoftDpuCount { get; set; }
 
+        /// <summary>
+        /// Number of SDR# slice windows (Sharp Slicer) that should be open on this beacon PC, usually one per SoftEOT
+        /// and SoftDPU instance. Null means the count is not checked, for PCs that do not run SDR# in slice mode.
+        /// </summary>
+        public int? ExpectedSdrSliceCount { get; set; }
+
         public override bool Equals(object? obj)
         {
             return Equals(obj as Beacon);
@@ -52,6 +58,7 @@ namespace Web.Server.Entities
                    ExpectedSdrSharpCount == other.ExpectedSdrSharpCount &&
                    ExpectedSoftEotCount == other.ExpectedSoftEotCount &&
                    ExpectedSoftDpuCount == other.ExpectedSoftDpuCount &&
+                   ExpectedSdrSliceCount == other.ExpectedSdrSliceCount &&
                    EqualityComparer<User>.Default.Equals(Owner, other.Owner) &&
                    EqualityComparer<ICollection<BeaconRailroad>>.Default.Equals(BeaconRailroads, other.BeaconRailroads) &&
                    EqualityComparer<ICollection<Telemetry>>.Default.Equals(Telemetries, other.Telemetries);

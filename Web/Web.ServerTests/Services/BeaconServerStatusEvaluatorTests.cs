@@ -255,6 +255,60 @@ public class BeaconServerStatusEvaluatorTests
         Assert.AreEqual("9 days", BeaconServerStatusEvaluator.FormatDuration(TimeSpan.FromDays(9.2)));
     }
 
+    // ── SDR# slices ─────────────────────────────────────────────────────────
+
+    [TestMethod]
+    public void AllExpectedSlicesOpen_IsOnline()
+    {
+        var diagnostics = Healthy();
+        diagnostics.Programs.Add(new DiagnosticsProgramStatus { Name = "SDR# slices", Running = 3 });
+        var beacon = Expecting();
+        beacon.ExpectedSdrSliceCount = 3;
+
+        var result = Evaluate(beacon, diagnostics);
+
+        Assert.AreEqual(ServerStatus.Online, result.Status);
+    }
+
+    [TestMethod]
+    public void FewerSlicesThanExpected_IsDegraded()
+    {
+        var diagnostics = Healthy();
+        diagnostics.Programs.Add(new DiagnosticsProgramStatus { Name = "SDR# slices", Running = 4 });
+        var beacon = Expecting();
+        beacon.ExpectedSdrSliceCount = 6;
+
+        var result = Evaluate(beacon, diagnostics);
+
+        Assert.AreEqual(ServerStatus.Degraded, result.Status);
+        CollectionAssert.AreEqual(new[] { "Only 4 of 6 SDR# slices open" }, result.Reasons.ToArray());
+    }
+
+    [TestMethod]
+    public void NoSlicesOpen_OrMissingFromOlderReport_IsDegraded()
+    {
+        var beacon = Expecting();
+        beacon.ExpectedSdrSliceCount = 6;
+
+        var result = Evaluate(beacon, Healthy());
+
+        CollectionAssert.AreEqual(new[] { "No SDR# slices are open" }, result.Reasons.ToArray());
+    }
+
+    [TestMethod]
+    public void SliceCountNotSet_SkipsCheck_ButReportsHungSlices()
+    {
+        var diagnostics = Healthy();
+        diagnostics.Programs.Add(new DiagnosticsProgramStatus { Name = "SDR# slices", Running = 0 });
+
+        Assert.AreEqual(ServerStatus.Online, Evaluate(Expecting(), diagnostics).Status);
+
+        diagnostics.Programs.Single(p => p.Name == "SDR# slices").Running = 6;
+        diagnostics.Programs.Single(p => p.Name == "SDR# slices").NotResponding = 2;
+
+        CollectionAssert.AreEqual(new[] { "2 SDR# slices are not responding" }, Evaluate(Expecting(), diagnostics).Reasons.ToArray());
+    }
+
     // ── Helpers ─────────────────────────────────────────────────────────────
 
     private static BeaconServerStatusEvaluator.Result Evaluate(Beacon beacon, BeaconDiagnostics diagnostics) =>

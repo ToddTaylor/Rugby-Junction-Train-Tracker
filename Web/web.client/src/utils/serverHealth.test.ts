@@ -14,6 +14,7 @@ import {
   formatTaskResult,
   formatTimeAgo,
   formatUptime,
+  isProgramInSummary,
   isProgramShort,
   muteUntilFor,
   parseExpectedCount,
@@ -35,6 +36,7 @@ function server(beaconName: string, status: ServerHealth['status']): ServerHealt
     expectedSdrSharpCount: null,
     expectedSoftEotCount: null,
     expectedSoftDpuCount: null,
+    expectedSdrSliceCount: null,
     statusSince: null,
     alertsMuted: false,
     alertsMutedUntil: null,
@@ -162,6 +164,13 @@ describe('program counts', () => {
     expect(isProgramShort(program(2, 2))).toBe(false);
     expect(isProgramShort(program(0, null))).toBe(false);
     expect(isProgramShort(program(null, 2))).toBe(false);
+  });
+
+  it('leaves unchecked programs with nothing running out of the summary', () => {
+    expect(isProgramInSummary(program(0, null))).toBe(false);
+    expect(isProgramInSummary(program(6, null))).toBe(true);
+    expect(isProgramInSummary(program(0, 6))).toBe(true);
+    expect(isProgramInSummary(program(null, null))).toBe(true);
   });
 });
 

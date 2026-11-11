@@ -178,7 +178,7 @@ public class ServerHealthServiceTests
     {
         var (service, beaconRepositoryMock, _) = CreateService([], []);
         beaconRepositoryMock
-            .Setup(r => r.UpdateExpectedProgramCountsAsync(3, 1, 2, 4))
+            .Setup(r => r.UpdateExpectedProgramCountsAsync(3, 1, 2, 4, 6))
             .ReturnsAsync((Beacon?)null);
 
         var updated = await service.UpdateExpectedProgramsAsync(3, new UpdateServerExpectationsDTO
@@ -186,6 +186,7 @@ public class ServerHealthServiceTests
             ExpectedSdrSharpCount = 1,
             ExpectedSoftEotCount = 2,
             ExpectedSoftDpuCount = 4,
+            ExpectedSdrSliceCount = 6,
         });
 
         Assert.IsFalse(updated);

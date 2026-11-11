@@ -10,10 +10,13 @@ namespace Services.Models
         /// Programs whose running instances are counted and reported with each beacon health check.
         /// Name is the label shown on the Server Health dashboard; ProcessName is the exe name without ".exe".
         /// A trailing "*" matches any exe name starting with the text before it, so "SDRSharp*" covers SDRSharp.dotnet9.exe.
+        /// An entry with WindowTitleContains counts that program's open windows whose title contains the text instead
+        /// of its processes, which is how the SDR# slices opened by the Sharp Slicer plugin are counted.
         /// </summary>
         public List<MonitoredProcess> MonitoredProcesses { get; set; } = new()
         {
             new MonitoredProcess { Name = "SDR#", ProcessName = "SDRSharp*" },
+            new MonitoredProcess { Name = "SDR# slices", ProcessName = "SDRSharp*", WindowTitleContains = "Sharp Slicer" },
             new MonitoredProcess { Name = "SoftEOT", ProcessName = "SoftEOT" },
             new MonitoredProcess { Name = "SoftDPU", ProcessName = "SoftDPU" },
         };
@@ -40,6 +43,11 @@ namespace Services.Models
     {
         public string Name { get; set; } = string.Empty;
         public string ProcessName { get; set; } = string.Empty;
+
+        /// <summary>
+        /// When set, the visible windows of ProcessName whose title contains this text are counted, not the processes.
+        /// </summary>
+        public string? WindowTitleContains { get; set; }
     }
 
     public class Subscriber

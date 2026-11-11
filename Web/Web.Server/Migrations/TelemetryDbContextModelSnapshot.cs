@@ -140,6 +140,9 @@ namespace Web.Server.Migrations
                     b.Property<int?>("ExpectedSdrSharpCount")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int?>("ExpectedSdrSliceCount")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int?>("ExpectedSoftDpuCount")
                         .HasColumnType("INTEGER");
 

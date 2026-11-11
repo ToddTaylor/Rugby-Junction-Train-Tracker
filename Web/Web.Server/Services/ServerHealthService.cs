@@ -120,7 +120,8 @@ namespace Web.Server.Services
                 beaconId,
                 expectations.ExpectedSdrSharpCount,
                 expectations.ExpectedSoftEotCount,
-                expectations.ExpectedSoftDpuCount);
+                expectations.ExpectedSoftDpuCount,
+                expectations.ExpectedSdrSliceCount);
             return beacon != null;
         }
 
@@ -287,6 +288,7 @@ namespace Web.Server.Services
                 ExpectedSdrSharpCount = beacon.ExpectedSdrSharpCount,
                 ExpectedSoftEotCount = beacon.ExpectedSoftEotCount,
                 ExpectedSoftDpuCount = beacon.ExpectedSoftDpuCount,
+                ExpectedSdrSliceCount = beacon.ExpectedSdrSliceCount,
                 StatusSince = state?.Status == result.Status ? state.StatusSince : null,
                 AlertsMuted = isMuted,
                 AlertsMutedUntil = isMuted ? state!.AlertsMutedUntil : null,

@@ -83,7 +83,7 @@ namespace Web.Server.Controllers.v1
                     return StatusCode(StatusCodes.Status403Forbidden, response);
                 }
 
-                var counts = new[] { dto.ExpectedSdrSharpCount, dto.ExpectedSoftEotCount, dto.ExpectedSoftDpuCount };
+                var counts = new[] { dto.ExpectedSdrSharpCount, dto.ExpectedSoftEotCount, dto.ExpectedSoftDpuCount, dto.ExpectedSdrSliceCount };
                 if (counts.Any(c => c is < 0 or > MaxExpectedProgramCount))
                 {
                     response.Errors.Add($"Expected program counts must be between 0 and {MaxExpectedProgramCount}, or empty to skip the check.");

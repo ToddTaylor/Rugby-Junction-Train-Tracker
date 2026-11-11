@@ -30,6 +30,7 @@ import {
   formatTaskResult,
   formatTimeAgo,
   formatUptime,
+  isProgramInSummary,
   isProgramShort,
   muteUntilFor,
   parseExpectedCount,
@@ -53,7 +54,7 @@ const StatusChip = ({ status }: { status: ServerStatus }) => (
   </span>
 );
 
-type ExpectationsForm = { sdrSharp: string; softEot: string; softDpu: string };
+type ExpectationsForm = { sdrSharp: string; sdrSlices: string; softEot: string; softDpu: string };
 
 type CommandConfirm = { server: ServerHealth; type: BeaconCommandType };
 
@@ -76,7 +77,7 @@ const AdminServerHealth = () => {
   // ?beacon=<id> opens that server's details, so other pages can link straight to it.
   const selectedId = Number(searchParams.get('beacon')) || null;
   const [editing, setEditing] = useState<ServerHealth | null>(null);
-  const [form, setForm] = useState<ExpectationsForm>({ sdrSharp: '', softEot: '', softDpu: '' });
+  const [form, setForm] = useState<ExpectationsForm>({ sdrSharp: '', sdrSlices: '', softEot: '', softDpu: '' });
   const [formError, setFormError] = useState<string>();
   const [now, setNow] = useState(() => new Date());
   const [muting, setMuting] = useState<ServerHealth | null>(null);
@@ -343,6 +344,7 @@ const AdminServerHealth = () => {
     setEditing(server);
     setForm({
       sdrSharp: toField(server.expectedSdrSharpCount),
+      sdrSlices: toField(server.expectedSdrSliceCount),
       softEot: toField(server.expectedSoftEotCount),
       softDpu: toField(server.expectedSoftDpuCount),
     });
@@ -356,7 +358,8 @@ const AdminServerHealth = () => {
     const sdrSharp = parseExpectedCount(form.sdrSharp);
     const softEot = parseExpectedCount(form.softEot);
     const softDpu = parseExpectedCount(form.softDpu);
-    if (sdrSharp === undefined || softEot === undefined || softDpu === undefined) {
+    const sdrSlices = parseExpectedCount(form.sdrSlices);
+    if (sdrSharp === undefined || softEot === undefined || softDpu === undefined || sdrSlices === undefined) {
       setFormError('Enter a whole number from 0 to 20, or leave the field blank to skip the check.');
       return;
     }
@@ -365,6 +368,7 @@ const AdminServerHealth = () => {
       expectedSdrSharpCount: sdrSharp,
       expectedSoftEotCount: softEot,
       expectedSoftDpuCount: softDpu,
+      expectedSdrSliceCount: sdrSlices,
     });
     if (response.errors.length > 0) {
       setFormError(response.errors.join(', '));
@@ -475,7 +479,7 @@ const AdminServerHealth = () => {
                 </td>
                 <td>
                   <div className="server-programs">
-                    {server.programs.map(program => (
+                    {server.programs.filter(isProgramInSummary).map(program => (
                       <span key={program.name} className={isProgramShort(program) || program.notResponding > 0 ? 'server-text-degraded' : undefined}>
                         {program.name} {formatProgramCount(program)}
                       </span>
@@ -648,6 +652,7 @@ const AdminServerHealth = () => {
                 ['sdrSharp', 'SDR#'],
                 ['softEot', 'SoftEOT'],
                 ['softDpu', 'SoftDPU'],
+                ['sdrSlices', 'SDR# slices'],
               ] as [keyof ExpectationsForm, string][]).map(([key, label]) => (
                 <div className="form-group" key={key}>
                   <label htmlFor={`expected-${key}`}>{label}</label>
@@ -660,6 +665,11 @@ const AdminServerHealth = () => {
                     onChange={e => setForm({ ...form, [key]: e.target.value })}
                     placeholder="Not checked"
                   />
+                  {key === 'sdrSlices' && (
+                    <div className="server-subtext">
+                      Sharp Slicer windows in SDR#, usually one per SoftEOT and SoftDPU. Leave blank if this PC does not use slice mode.
+                    </div>
+                  )}
                 </div>
               ))}
               <div className="form-actions">
