@@ -103,7 +103,11 @@ namespace Web.Server.Services
 
                 if (name == SdrSlices)
                 {
-                    AddSliceReasons(expected, running, reported?.NotResponding ?? 0, reasons);
+                    // ConsoleApp versions before slice counting do not report slices; that is not a slice problem.
+                    if (reported != null)
+                    {
+                        AddSliceReasons(expected, running, reported.NotResponding, reasons);
+                    }
                     continue;
                 }
 

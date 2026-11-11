@@ -285,14 +285,27 @@ public class BeaconServerStatusEvaluatorTests
     }
 
     [TestMethod]
-    public void NoSlicesOpen_OrMissingFromOlderReport_IsDegraded()
+    public void NoSlicesOpen_IsDegraded()
+    {
+        var diagnostics = Healthy();
+        diagnostics.Programs.Add(new DiagnosticsProgramStatus { Name = "SDR# slices", Running = 0 });
+        var beacon = Expecting();
+        beacon.ExpectedSdrSliceCount = 6;
+
+        var result = Evaluate(beacon, diagnostics);
+
+        CollectionAssert.AreEqual(new[] { "No SDR# slices are open" }, result.Reasons.ToArray());
+    }
+
+    [TestMethod]
+    public void SlicesMissingFromOlderReport_AreNotAProblem()
     {
         var beacon = Expecting();
         beacon.ExpectedSdrSliceCount = 6;
 
         var result = Evaluate(beacon, Healthy());
 
-        CollectionAssert.AreEqual(new[] { "No SDR# slices are open" }, result.Reasons.ToArray());
+        Assert.AreEqual(ServerStatus.Online, result.Status);
     }
 
     [TestMethod]

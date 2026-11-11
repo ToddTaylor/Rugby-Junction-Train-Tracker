@@ -1,4 +1,4 @@
-using Mapster;
+﻿using Mapster;
 using MapsterMapper;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
@@ -134,6 +134,7 @@ public class ServerHealthServiceTests
         Assert.AreEqual(2, softEot.Expected);
         Assert.AreEqual(1, softEot.Running);
         Assert.AreEqual(0, row.Programs.Single(p => p.Name == "SDR#").Running);
+        Assert.IsNull(row.Programs.Single(p => p.Name == "SDR# slices").Running, "slices missing from the report are unknown, not 0");
     }
 
     [TestMethod]

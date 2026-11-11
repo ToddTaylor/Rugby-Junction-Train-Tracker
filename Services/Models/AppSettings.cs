@@ -12,14 +12,34 @@ namespace Services.Models
         /// A trailing "*" matches any exe name starting with the text before it, so "SDRSharp*" covers SDRSharp.dotnet9.exe.
         /// An entry with WindowTitleContains counts that program's open windows whose title contains the text instead
         /// of its processes, which is how the SDR# slices opened by the Sharp Slicer plugin are counted.
+        /// Saved settings keep the list as it was when they were saved, so AddMissingMonitoredProcesses is called
+        /// after loading to add programs that were added to the defaults later.
         /// </summary>
-        public List<MonitoredProcess> MonitoredProcesses { get; set; } = new()
+        public List<MonitoredProcess> MonitoredProcesses { get; set; } = DefaultMonitoredProcesses();
+
+        public static List<MonitoredProcess> DefaultMonitoredProcesses() => new()
         {
             new MonitoredProcess { Name = "SDR#", ProcessName = "SDRSharp*" },
             new MonitoredProcess { Name = "SDR# slices", ProcessName = "SDRSharp*", WindowTitleContains = "Sharp Slicer" },
             new MonitoredProcess { Name = "SoftEOT", ProcessName = "SoftEOT" },
             new MonitoredProcess { Name = "SoftDPU", ProcessName = "SoftDPU" },
         };
+
+        /// <summary>
+        /// Adds each default monitored program whose Name is not in MonitoredProcesses. Entries already there,
+        /// including changed ones, are kept as they are.
+        /// </summary>
+        public void AddMissingMonitoredProcesses()
+        {
+            MonitoredProcesses ??= new();
+            foreach (var program in DefaultMonitoredProcesses())
+            {
+                if (!MonitoredProcesses.Any(p => string.Equals(p.Name, program.Name, StringComparison.OrdinalIgnoreCase)))
+                {
+                    MonitoredProcesses.Add(program);
+                }
+            }
+        }
 
         /// <summary>
         /// Windows Task Scheduler task names (for example the AutoIt startup tasks) whose last run result is reported with each beacon health check.

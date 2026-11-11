@@ -170,7 +170,8 @@ describe('program counts', () => {
     expect(isProgramInSummary(program(0, null))).toBe(false);
     expect(isProgramInSummary(program(6, null))).toBe(true);
     expect(isProgramInSummary(program(0, 6))).toBe(true);
-    expect(isProgramInSummary(program(null, null))).toBe(true);
+    expect(isProgramInSummary(program(null, null))).toBe(false);
+    expect(isProgramInSummary(program(null, 6))).toBe(true);
   });
 });
 

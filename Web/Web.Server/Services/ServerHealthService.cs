@@ -312,7 +312,10 @@ namespace Web.Server.Services
                         {
                             Name = p.Name,
                             Expected = p.Expected,
-                            Running = reportedDiagnostics == null ? null : reported?.Running ?? 0,
+                            // Slices missing from a report were not counted (an older ConsoleApp), so they show as unknown.
+                            Running = reportedDiagnostics == null || (reported == null && p.Name == BeaconServerStatusEvaluator.SdrSlices)
+                                ? null
+                                : reported?.Running ?? 0,
                             NotResponding = reported?.NotResponding ?? 0,
                         };
                     })

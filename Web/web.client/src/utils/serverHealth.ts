@@ -68,9 +68,12 @@ export function formatProgramCount(program: ServerProgram): string {
   return program.expected === null ? String(program.running) : `${program.running}/${program.expected}`;
 }
 
-/** False for a program that is not checked and has nothing running, such as SDR# slices on a PC without slice mode. */
+/**
+ * False for a program that is not checked and has nothing running or reported, such as SDR# slices on a PC
+ * without slice mode.
+ */
 export function isProgramInSummary(program: ServerProgram): boolean {
-  return program.expected !== null || program.running !== 0 || program.notResponding > 0;
+  return program.expected !== null || (program.running ?? 0) > 0 || program.notResponding > 0;
 }
 
 export function isProgramShort(program: ServerProgram): boolean {
