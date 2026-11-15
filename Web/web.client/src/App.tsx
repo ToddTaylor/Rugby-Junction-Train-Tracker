@@ -16,15 +16,15 @@ import AdminTelemetryLog from './views/AdminTelemetryLog';
 import AdminServerHealth from './views/AdminServerHealth';
 import ServerAlertListener from './components/ServerAlertListener';
 import { useEffect } from 'react';
-import { getUsers } from './api/users';
+import { checkSession } from './api/auth';
 import { useAuth } from './hooks/useAuth';
 
 function App() {
     const { session } = useAuth();
-    // Only call protected API if user is authenticated to ensure inactive users are logged out
+    // Signs out a user whose token is no longer good, for example after being deactivated.
     useEffect(() => {
         if (session) {
-            getUsers();
+            checkSession();
         }
     }, [session]);
 

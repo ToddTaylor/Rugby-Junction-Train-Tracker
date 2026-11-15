@@ -1,5 +1,8 @@
 // Authentication API calls using real backend endpoints.
 
+import { getAuthToken } from './client';
+import { fetchWithAuth } from '../utils/fetchWithAuth';
+
 const API_BASE = import.meta.env.VITE_API_URL;
 const API_KEY = import.meta.env.VITE_API_KEY;
 
@@ -64,5 +67,24 @@ export async function verifyLoginCode(req: VerifyCodeRequest): Promise<VerifyCod
     };
   } catch (e: any) {
     return { success: false, errors: [e.message || 'Unknown error'] };
+  }
+}
+
+/**
+ * Asks the server whether the stored sign-in token is still good. A token that is invalid, expired or
+ * belongs to a deactivated user gets a 401, which fetchWithAuth turns into a sign-out.
+ */
+export async function checkSession(): Promise<void> {
+  const token = getAuthToken();
+  if (!token || !API_KEY) {
+    return;
+  }
+
+  try {
+    await fetchWithAuth(`${API_BASE}/api/v1/auth/session`, {
+      headers: { 'X-Api-Key': String(API_KEY), 'X-Auth-Token': token },
+    });
+  } catch {
+    // Offline or server unreachable: keep the session and let the next call decide.
   }
 }

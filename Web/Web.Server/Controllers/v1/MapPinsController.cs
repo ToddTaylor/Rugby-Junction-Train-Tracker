@@ -2,6 +2,8 @@ using MapsterMapper;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
 using Web.Server.DTOs;
+using Web.Server.Enums;
+using Web.Server.Filters;
 using Web.Server.Entities;
 using Web.Server.Services;
 
@@ -182,6 +184,7 @@ namespace Web.Server.Controllers.v1
         }
 
         // DELETE: api/v1/MapPin/5
+        [RequireRole(RoleNames.Admin, RoleNames.Custodian)]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteBeacon(int id)
         {
@@ -203,14 +206,10 @@ namespace Web.Server.Controllers.v1
         }
 
         // DELETE: api/v1/MapPins/5/addresses
+        [RequireRole(RoleNames.Admin)]
         [HttpDelete("{id}/addresses")]
         public async Task<IActionResult> ClearAddresses(int id)
         {
-            if (!await IsAdminAsync())
-            {
-                return StatusCode(StatusCodes.Status403Forbidden);
-            }
-
             try
             {
                 var success = await _mapPinsService.DeleteMapPinAsync(id);
@@ -229,17 +228,6 @@ namespace Web.Server.Controllers.v1
             }
         }
 
-        private async Task<bool> IsAdminAsync()
-        {
-            if (!HttpContext.Items.TryGetValue("UserId", out var userIdObj) || userIdObj is not int userId)
-            {
-                return false;
-            }
-
-            var user = await _userService.GetUserByIdAsync(userId);
-            return user?.UserRoles?.Any(ur =>
-                string.Equals(ur.Role?.RoleName, "Admin", StringComparison.OrdinalIgnoreCase)) == true;
-        }
 
         private async Task<bool> CanViewSupportAddressesAsync()
         {

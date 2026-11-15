@@ -2,6 +2,8 @@ using MapsterMapper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Web.Server.DTOs;
+using Web.Server.Enums;
+using Web.Server.Filters;
 using Web.Server.Entities;
 using Web.Server.Services;
 
@@ -19,7 +21,6 @@ namespace Web.Server.Controllers.v1
 
         private readonly IServerHealthService _serverHealthService;
         private readonly IServerCommandService _serverCommandService;
-        private readonly IUserService _userService;
         private readonly ILogger<BeaconsController> _logger;
         private readonly IMapper _mapper;
 
@@ -27,14 +28,12 @@ namespace Web.Server.Controllers.v1
             IBeaconService beaconService,
             IServerHealthService serverHealthService,
             IServerCommandService serverCommandService,
-            IUserService userService,
             ILogger<BeaconsController> logger,
             IMapper mapper)
         {
             _beaconService = beaconService;
             _serverHealthService = serverHealthService;
             _serverCommandService = serverCommandService;
-            _userService = userService;
             _logger = logger;
             _mapper = mapper;
         }
@@ -85,17 +84,13 @@ namespace Web.Server.Controllers.v1
         }
 
         // PUT: api/v1/Beacons/5
+        [RequireRole(RoleNames.Admin)]
         [HttpPut("{id}")]
         public async Task<IActionResult> PutBeacon(int id, UpdateBeaconDTO updateBeaconDTO)
         {
             var response = new MessageEnvelope<BeaconDTO>(null, []);
             try
             {
-                if (!await IsAdminAsync())
-                {
-                    return StatusCode(StatusCodes.Status403Forbidden);
-                }
-
                 if (id != updateBeaconDTO.ID)
                 {
                     return BadRequest();
@@ -125,17 +120,13 @@ namespace Web.Server.Controllers.v1
         }
 
         // POST: api/v1/Beacons
+        [RequireRole(RoleNames.Admin)]
         [HttpPost]
         public async Task<ActionResult> PostBeacon(CreateBeaconDTO createBeaconDTO)
         {
             var response = new MessageEnvelope<BeaconDTO>(null, []);
             try
             {
-                if (!await IsAdminAsync())
-                {
-                    return StatusCode(StatusCodes.Status403Forbidden);
-                }
-
                 var beacon = _mapper.Map<Beacon>(createBeaconDTO);
                 var createdBeacon = await _beaconService.CreateBeaconAsync(beacon);
                 response.Data = _mapper.Map<BeaconDTO>(createdBeacon);
@@ -239,16 +230,12 @@ namespace Web.Server.Controllers.v1
         }
 
         // DELETE: api/v1/Beacons/5
+        [RequireRole(RoleNames.Admin)]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteBeacon(int id)
         {
             try
             {
-                if (!await IsAdminAsync())
-                {
-                    return StatusCode(StatusCodes.Status403Forbidden);
-                }
-
                 var success = await _beaconService.DeleteBeaconAsync(id);
                 if (!success)
                 {
@@ -264,17 +251,6 @@ namespace Web.Server.Controllers.v1
             }
         }
 
-        private async Task<bool> IsAdminAsync()
-        {
-            if (!HttpContext.Items.TryGetValue("UserId", out var userIdObj) || userIdObj is not int userId)
-            {
-                return false;
-            }
-
-            var user = await _userService.GetUserByIdAsync(userId);
-            return user?.UserRoles?.Any(ur =>
-                string.Equals(ur.Role?.RoleName, "Admin", StringComparison.OrdinalIgnoreCase)) == true;
-        }
     }
 }
 

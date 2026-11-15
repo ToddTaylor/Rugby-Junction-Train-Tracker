@@ -20,6 +20,16 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
+    /// Tells the web client whether its sign-in token is still good. AuthTokenMiddleware answers 401 before this
+    /// runs when the token is invalid, expired or belongs to an inactive user, which signs the client out.
+    /// </summary>
+    [HttpGet("session")]
+    public IActionResult GetSession()
+    {
+        return Ok(new { authenticated = HttpContext.Items.ContainsKey("UserId") });
+    }
+
+    /// <summary>
     /// Logs out the user by invalidating the token.
     /// </summary>
     [HttpPost("logout")]

@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Web.Server.DTOs;
+using Web.Server.Enums;
+using Web.Server.Filters;
 using Web.Server.Services;
 
 namespace Web.Server.Controllers.v1
@@ -9,27 +11,20 @@ namespace Web.Server.Controllers.v1
     public class AmtrakController : ControllerBase
     {
         private readonly IAmtrakConfigurationService _configurationService;
-        private readonly IUserService _userService;
         private readonly ILogger<AmtrakController> _logger;
 
         public AmtrakController(
             IAmtrakConfigurationService configurationService,
-            IUserService userService,
             ILogger<AmtrakController> logger)
         {
             _configurationService = configurationService;
-            _userService = userService;
             _logger = logger;
         }
 
+        [RequireRole(RoleNames.Admin)]
         [HttpGet("trains")]
         public async Task<ActionResult<MessageEnvelope<IEnumerable<AmtrakTrackedTrainDTO>>>> GetTrackedTrains()
         {
-            if (!await IsAdminAsync())
-            {
-                return StatusCode(StatusCodes.Status403Forbidden);
-            }
-
             var response = new MessageEnvelope<IEnumerable<AmtrakTrackedTrainDTO>>(null!, []);
             try
             {
@@ -44,14 +39,10 @@ namespace Web.Server.Controllers.v1
             }
         }
 
+        [RequireRole(RoleNames.Admin)]
         [HttpPost("trains")]
         public async Task<ActionResult<MessageEnvelope<AmtrakTrackedTrainDTO>>> AddTrackedTrain(CreateAmtrakTrackedTrainDTO request)
         {
-            if (!await IsAdminAsync())
-            {
-                return StatusCode(StatusCodes.Status403Forbidden);
-            }
-
             var response = new MessageEnvelope<AmtrakTrackedTrainDTO>(null!, []);
             try
             {
@@ -66,14 +57,10 @@ namespace Web.Server.Controllers.v1
             }
         }
 
+        [RequireRole(RoleNames.Admin)]
         [HttpDelete("trains/{id}")]
         public async Task<IActionResult> DeleteTrackedTrain(int id)
         {
-            if (!await IsAdminAsync())
-            {
-                return StatusCode(StatusCodes.Status403Forbidden);
-            }
-
             try
             {
                 var deleted = await _configurationService.DeleteTrackedTrainAsync(id);
@@ -91,14 +78,10 @@ namespace Web.Server.Controllers.v1
             }
         }
 
+        [RequireRole(RoleNames.Admin)]
         [HttpGet("polling")]
         public async Task<ActionResult<MessageEnvelope<AmtrakPollingConfigurationDTO>>> GetPollingConfiguration()
         {
-            if (!await IsAdminAsync())
-            {
-                return StatusCode(StatusCodes.Status403Forbidden);
-            }
-
             var response = new MessageEnvelope<AmtrakPollingConfigurationDTO>(null!, []);
             try
             {
@@ -113,14 +96,10 @@ namespace Web.Server.Controllers.v1
             }
         }
 
+        [RequireRole(RoleNames.Admin)]
         [HttpPut("polling")]
         public async Task<ActionResult<MessageEnvelope<AmtrakPollingConfigurationDTO>>> UpdatePollingConfiguration(UpdateAmtrakPollingConfigurationDTO request)
         {
-            if (!await IsAdminAsync())
-            {
-                return StatusCode(StatusCodes.Status403Forbidden);
-            }
-
             var response = new MessageEnvelope<AmtrakPollingConfigurationDTO>(null!, []);
             try
             {
@@ -140,16 +119,5 @@ namespace Web.Server.Controllers.v1
             }
         }
 
-        private async Task<bool> IsAdminAsync()
-        {
-            if (!HttpContext.Items.TryGetValue("UserId", out var userIdObj) || userIdObj is not int userId)
-            {
-                return false;
-            }
-
-            var user = await _userService.GetUserByIdAsync(userId);
-            return user?.UserRoles?.Any(ur =>
-                string.Equals(ur.Role?.RoleName, "Admin", StringComparison.OrdinalIgnoreCase)) == true;
-        }
     }
 }

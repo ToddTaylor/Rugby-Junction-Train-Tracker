@@ -39,6 +39,7 @@ import { parseSessionRoles } from '../utils/roles';
 import { PassengerMapPin } from '../types/PassengerMapPin';
 import { DEFAULT_SELECTED_OWNERS, isTrackSelected, summarizeOwners } from '../utils/railroadOwners';
 import { getPassengerMapPins } from '../api/passengerMapPins';
+import { checkSession } from '../api/auth';
 
 const ICON_CACHE_BUSTER = import.meta.env.VITE_APP_VERSION
     ? `?v=${import.meta.env.VITE_APP_VERSION}`
@@ -103,10 +104,9 @@ function trackedPinNeedsRefresh(trackedPin: ReturnType<typeof getTrackedMapPins>
 }
 
 const RailMap: React.FC = () => {
-        // On mount, trigger a protected API call to ensure inactive users are blocked immediately
+        // On mount, sign out a user whose token is no longer good, for example after being deactivated.
         useEffect(() => {
-            // This call will log out and redirect if the user is inactive
-            import('../api/users').then(({ getUsers }) => getUsers());
+            checkSession();
         }, []);
     // Use cached location and zoom if available, else fallbackCenter and default zoom
     const savedMapState = JSON.parse(localStorage.getItem('mapState') || 'null');

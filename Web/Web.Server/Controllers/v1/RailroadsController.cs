@@ -1,5 +1,7 @@
 using MapsterMapper;
 using Microsoft.AspNetCore.Mvc;
+using Web.Server.Enums;
+using Web.Server.Filters;
 using Web.Server.DTOs;
 using Web.Server.Entities;
 using Web.Server.Services;
@@ -70,6 +72,7 @@ namespace Web.Server.Controllers.v1
         }
 
         // PUT: api/Railroads/5
+        [RequireRole(RoleNames.Admin, RoleNames.Custodian)]
         [HttpPut("{id}")]
         public async Task<ActionResult> PutRailroad(int id, UpdateRailroadDTO updateRailroadDTO)
         {
@@ -106,6 +109,7 @@ namespace Web.Server.Controllers.v1
         }
 
         // POST: api/Railroads
+        [RequireRole(RoleNames.Admin, RoleNames.Custodian)]
         [HttpPost]
         public async Task<ActionResult> PostRailroad(CreateRailroadDTO createRailroadDTO)
         {
@@ -126,6 +130,7 @@ namespace Web.Server.Controllers.v1
         }
 
         // DELETE: api/Railroads/5
+        [RequireRole(RoleNames.Admin, RoleNames.Custodian)]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteRailroad(int id)
         {
