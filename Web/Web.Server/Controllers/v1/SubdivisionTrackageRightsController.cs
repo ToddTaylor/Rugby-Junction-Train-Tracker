@@ -1,5 +1,7 @@
 using MapsterMapper;
 using Microsoft.AspNetCore.Mvc;
+using Web.Server.Enums;
+using Web.Server.Filters;
 using Web.Server.DTOs;
 using Web.Server.Services;
 
@@ -41,6 +43,7 @@ namespace Web.Server.Controllers.v1
         /// <summary>
         /// Replaces all trackage rights for a subdivision.
         /// </summary>
+        [RequireRole(RoleNames.Admin, RoleNames.Custodian)]
         [HttpPost("from/{fromSubdivisionID}")]
         public async Task<ActionResult<MessageEnvelope<object>>> ReplaceTrackageRights(int fromSubdivisionID, [FromBody] int[] toSubdivisionIDs)
         {
@@ -59,6 +62,7 @@ namespace Web.Server.Controllers.v1
         /// <summary>
         /// Deletes a single trackage right.
         /// </summary>
+        [RequireRole(RoleNames.Admin, RoleNames.Custodian)]
         [HttpDelete("{id}")]
         public async Task<ActionResult<MessageEnvelope<object>>> DeleteTrackageRight(int id)
         {

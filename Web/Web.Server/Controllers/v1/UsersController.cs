@@ -2,12 +2,18 @@ using MapsterMapper;
 using Microsoft.AspNetCore.Mvc;
 using Web.Server.DTOs;
 using Web.Server.Entities;
+using Web.Server.Enums;
+using Web.Server.Filters;
 using Web.Server.Services;
 
 namespace Web.Server.Controllers.v1
 {
+    /// <summary>
+    /// User management for Admins and Custodians. What a Custodian may not do is in UserManagementPolicy.
+    /// </summary>
     [Route("api/v1/[controller]")]
     [ApiController]
+    [RequireRole(RoleNames.Admin, RoleNames.Custodian)]
     public class UsersController : ControllerBase
     {
         private readonly IUserService _userService;
@@ -105,6 +111,11 @@ namespace Web.Server.Controllers.v1
             var response = new MessageEnvelope<UserDTO>(default!, new List<string>());
             try
             {
+                if (Refuse(target: null, createUser.Roles) is { } refusal)
+                {
+                    return refusal;
+                }
+
                 var existingUser = await _userService.GetUserByEmailAsync(createUser.Email);
                 if (existingUser != null)
                 {
@@ -155,6 +166,17 @@ namespace Web.Server.Controllers.v1
                 if (id != updateUser.ID)
                 {
                     return BadRequest();
+                }
+
+                var target = await _userService.GetUserByIdAsync(id);
+                if (target == null)
+                {
+                    return NotFound();
+                }
+
+                if (Refuse(target, updateUser.Roles) is { } refusal)
+                {
+                    return refusal;
                 }
 
                 var existingUser = await _userService.GetUserByEmailAsync(updateUser.Email);
@@ -212,6 +234,17 @@ namespace Web.Server.Controllers.v1
         {
             try
             {
+                var target = await _userService.GetUserByIdAsync(id);
+                if (target == null)
+                {
+                    return NotFound();
+                }
+
+                if (Refuse(target, []) is { } refusal)
+                {
+                    return refusal;
+                }
+
                 var success = await _userService.DeleteUserAsync(id);
                 if (!success)
                 {
@@ -225,6 +258,21 @@ namespace Web.Server.Controllers.v1
                 _logger.LogError(ex, "An error occurred while deleting user {UserId}.", id);
                 return StatusCode(StatusCodes.Status500InternalServerError, new { error = ex.Message });
             }
+        }
+
+        /// <summary>
+        /// Returns a 403 result when UserManagementPolicy refuses the signed-in user's change, or null when it is allowed.
+        /// </summary>
+        private ObjectResult? Refuse(User? target, IEnumerable<string>? requestedRoles)
+        {
+            var actor = RequireRoleAttribute.GetCurrentUser(HttpContext);
+            var refusal = actor == null
+                ? "You do not have permission to do this."
+                : UserManagementPolicy.GetRefusal(actor, target, requestedRoles ?? []);
+
+            return refusal == null
+                ? null
+                : StatusCode(StatusCodes.Status403Forbidden, new MessageEnvelope<UserDTO?>(null, [refusal]));
         }
     }
 }

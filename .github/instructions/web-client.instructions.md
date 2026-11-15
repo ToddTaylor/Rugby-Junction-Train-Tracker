@@ -8,6 +8,7 @@ applyTo: "Web/web.client/src/**"
 - The frontend lives in `Web/web.client` and is built with React 19, TypeScript, and Vite.
 - Start from `src/App.tsx`, then inspect `src/components`, `src/views`, `src/hooks`, and `src/services` for the actual feature surface.
 - Put HTTP and SignalR access in `src/services` rather than embedding request logic directly inside components.
+- Call admin endpoints through `fetchApi` in `src/api/client.ts`, which sends the sign-in token. Do not add another copy of the token lookup.
 - Keep domain types centralized in `src/types` when a shape is reused across views or services.
 - Treat map pin rendering, beacon label rendering, tracked pin state, and stale-refresh behavior as correctness-sensitive UI behavior.
 - When a frontend change depends on server semantics, read the matching server service and tests before proposing the client change.

@@ -17,39 +17,6 @@ public class BeaconsControllerTests
     private static readonly DateTime Now = new(2026, 11, 3, 12, 0, 0, DateTimeKind.Utc);
 
     [TestMethod]
-    public async Task Create_NonAdmin_IsForbidden()
-    {
-        var (controller, beaconServiceMock, _, _) = CreateController(userId: 2, roleName: "Custodian");
-
-        var result = await controller.PostBeacon(new CreateBeaconDTO { Name = "Sussex", OwnerID = 1 });
-
-        AssertStatus(StatusCodes.Status403Forbidden, result);
-        beaconServiceMock.Verify(s => s.CreateBeaconAsync(It.IsAny<Beacon>()), Times.Never);
-    }
-
-    [TestMethod]
-    public async Task Update_WithoutSignedInUser_IsForbidden()
-    {
-        var (controller, beaconServiceMock, _, _) = CreateController(userId: null, roleName: null);
-
-        var result = await controller.PutBeacon(1, new UpdateBeaconDTO { ID = 1, Name = "Sussex", OwnerID = 1 });
-
-        AssertStatus(StatusCodes.Status403Forbidden, result);
-        beaconServiceMock.Verify(s => s.UpdateBeaconAsync(It.IsAny<int>(), It.IsAny<Beacon>()), Times.Never);
-    }
-
-    [TestMethod]
-    public async Task Delete_NonAdmin_IsForbidden()
-    {
-        var (controller, beaconServiceMock, _, _) = CreateController(userId: 3, roleName: "Viewer");
-
-        var result = await controller.DeleteBeacon(1);
-
-        AssertStatus(StatusCodes.Status403Forbidden, result);
-        beaconServiceMock.Verify(s => s.DeleteBeaconAsync(It.IsAny<int>()), Times.Never);
-    }
-
-    [TestMethod]
     public async Task Delete_Admin_DeletesBeacon()
     {
         var (controller, beaconServiceMock, _, _) = CreateController(userId: 1, roleName: "Admin");
@@ -212,7 +179,6 @@ public class BeaconsControllerTests
             beaconServiceMock.Object,
             serverHealthServiceMock.Object,
             _commandService.Object,
-            userServiceMock.Object,
             new Mock<ILogger<BeaconsController>>().Object,
             mapperMock.Object);
 

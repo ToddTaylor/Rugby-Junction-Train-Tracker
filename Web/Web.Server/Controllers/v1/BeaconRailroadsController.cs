@@ -1,6 +1,8 @@
 using MapsterMapper;
 using Microsoft.AspNetCore.Mvc;
 using Web.Server.DTOs;
+using Web.Server.Enums;
+using Web.Server.Filters;
 using Web.Server.Entities;
 using Web.Server.Services;
 
@@ -12,20 +14,17 @@ namespace Web.Server.Controllers.v1
     {
         private readonly IBeaconRailroadService _service;
         private readonly IServerHealthService _serverHealthService;
-        private readonly IUserService _userService;
         private readonly ILogger<BeaconRailroadsController> _logger;
         private readonly IMapper _mapper;
 
         public BeaconRailroadsController(
             IBeaconRailroadService service,
             IServerHealthService serverHealthService,
-            IUserService userService,
             ILogger<BeaconRailroadsController> logger,
             IMapper mapper)
         {
             _service = service;
             _serverHealthService = serverHealthService;
-            _userService = userService;
             _logger = logger;
             _mapper = mapper;
         }
@@ -76,18 +75,13 @@ namespace Web.Server.Controllers.v1
             }
         }
 
+        [RequireRole(RoleNames.Admin)]
         [HttpPost]
         public async Task<ActionResult> Create(CreateBeaconRailroadDTO dto)
         {
             var response = new MessageEnvelope<BeaconRailroadDTO>(null, []);
             try
             {
-                if (!await IsAdminAsync())
-                {
-                    response.Errors.Add("Forbidden.");
-                    return StatusCode(StatusCodes.Status403Forbidden, response);
-                }
-
                 if (dto.TelemetryStaleHoursOverride.HasValue && dto.TelemetryStaleHoursOverride.Value <= 0)
                 {
                     response.Errors.Add("TelemetryStaleHoursOverride must be a whole integer greater than zero when provided.");
@@ -113,6 +107,7 @@ namespace Web.Server.Controllers.v1
             }
         }
 
+        [RequireRole(RoleNames.Admin)]
         [HttpPut("{beaconId:int}/{subdivisionId:int}")]
         public async Task<IActionResult> Update(int beaconId, int subdivisionId, UpdateBeaconRailroadDTO dto)
         {
@@ -130,12 +125,6 @@ namespace Web.Server.Controllers.v1
                 {
                     response.Errors.Add("TelemetryStaleHoursOverride must be a whole integer greater than zero when provided.");
                     return BadRequest(response);
-                }
-
-                if (!await IsAdminAsync())
-                {
-                    response.Errors.Add("Forbidden.");
-                    return StatusCode(StatusCodes.Status403Forbidden, response);
                 }
 
                 var existingBeaconRailroad = await _service.GetByIdAsync(beaconId, subdivisionId);
@@ -161,16 +150,12 @@ namespace Web.Server.Controllers.v1
             }
         }
 
+        [RequireRole(RoleNames.Admin)]
         [HttpDelete("{beaconId:int}/{subdivisionId:int}")]
         public async Task<IActionResult> Delete(int beaconId, int subdivisionId)
         {
             try
             {
-                if (!await IsAdminAsync())
-                {
-                    return StatusCode(StatusCodes.Status403Forbidden);
-                }
-
                 var deleted = await _service.DeleteAsync(beaconId, subdivisionId);
                 if (!deleted)
                 {
@@ -199,28 +184,6 @@ namespace Web.Server.Controllers.v1
                     dto.ApplyServerStatus(status);
                 }
             }
-        }
-
-        private async Task<bool> IsAdminAsync()
-        {
-            var user = await GetCurrentUserAsync();
-            return user != null && HasRole(user, "Admin");
-        }
-
-        private async Task<User?> GetCurrentUserAsync()
-        {
-            if (!HttpContext.Items.TryGetValue("UserId", out var userIdObj) || userIdObj is not int userId)
-            {
-                return null;
-            }
-
-            return await _userService.GetUserByIdAsync(userId);
-        }
-
-        private static bool HasRole(User user, string roleName)
-        {
-            return user.UserRoles?.Any(ur =>
-                string.Equals(ur.Role?.RoleName, roleName, StringComparison.OrdinalIgnoreCase)) == true;
         }
     }
 }

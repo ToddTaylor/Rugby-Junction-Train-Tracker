@@ -44,6 +44,15 @@ Repositories under `Web/Web.Server/Repositories` own EF Core persistence logic. 
 ### Real-Time And Background Work
 `Web/Web.Server/Hubs/NotificationHub.cs` defines real-time push behavior. Hosted services registered in `Web/Web.Server/Program.cs` are part of the live system behavior and should be considered during planning.
 
+### Authorization
+- `X-Api-Key` is compiled into the web client, so it is public. It identifies the client and proves nothing about who is calling.
+- `AuthTokenMiddleware` turns a valid sign-in token of an active user into `HttpContext.Items["UserId"]`. A request with no token passes through with no user.
+- `[RequireRole(...)]` (`Web/Web.Server/Filters/RequireRoleAttribute.cs`) is the gate for admin endpoints: 401 with no signed-in user, 403 when the user holds none of the listed roles. It runs before model binding and keeps the loaded user for the action (`RequireRoleAttribute.GetCurrentUser`).
+- A Custodian is an admin whose access to beacon PCs is limited to the subdivisions they are custodian of. Admin or Custodian: all of `UsersController`, and the writes of `RailroadsController`, `SubdivisionTrackageRightsController` and `DELETE api/v1/MapPins/{id}`. Admin only: Beacon, BeaconRailroad and Amtrak changes, Subdivision create and delete, server logs, and `DELETE api/v1/MapPins/{id}/addresses`.
+- `UserManagementPolicy` stops a Custodian from becoming an Admin: a Custodian may not assign the Admin role, and may not change or delete a user who holds it.
+- Actions that change data without `[RequireRole]` are listed, each with what protects it instead, in `EndpointAuthorizationTests.ProtectedAnotherWay`. That test fails when a new POST, PUT, PATCH or DELETE action has neither.
+- `GET api/v1/auth/session` is what the web client calls to learn whether its stored token is still good; a 401 signs the user out.
+
 ### Beacon PC Health
 - Each beacon PC runs the ConsoleApp, which posts `POST api/v1/Beacons/Health/{id}` every `HealthPingIntervalMinutes` (2 in the bundled production settings). The body is a diagnostics report built by `Services/Diagnostics/MachineDiagnosticsCollector`: SDR#, SoftEOT and SoftDPU instance and hung counts, the number of SDR# slice windows (visible SDR# windows titled "Sharp Slicer", counted through `MonitoredProcess.WindowTitleContains`), newest write time per log prefix, Task Scheduler results for `MonitoredScheduledTasks`, telemetry send outcomes, uptime, version and free disk space. Older ConsoleApp versions send an empty body, which only records the check-in.
 - The check-in updates every `BeaconRailroad.LastUpdate`, which is the PC's last check-in time, and the report is stored in `BeaconDiagnostics`, one row per beacon, overwritten each time.

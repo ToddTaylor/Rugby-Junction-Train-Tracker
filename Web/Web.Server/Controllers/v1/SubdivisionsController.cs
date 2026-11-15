@@ -1,6 +1,8 @@
 using MapsterMapper;
 using Microsoft.AspNetCore.Mvc;
 using Web.Server.DTOs;
+using Web.Server.Enums;
+using Web.Server.Filters;
 using Web.Server.Entities;
 using Web.Server.Services;
 
@@ -174,18 +176,13 @@ namespace Web.Server.Controllers.v1
         }
 
         // POST: api/Subdivisions
+        [RequireRole(RoleNames.Admin)]
         [HttpPost]
         public async Task<ActionResult> PostSubdivision(CreateSubdivisionDTO createSubdivisionDTO)
         {
             var response = new MessageEnvelope<SubdivisionDTO>(null, []);
             try
             {
-                if (!await IsAdminAsync())
-                {
-                    response.Errors.Add("Forbidden.");
-                    return StatusCode(StatusCodes.Status403Forbidden, response);
-                }
-
                 var subdivision = _mapper.Map<Subdivision>(createSubdivisionDTO);
                 var createdSubdivision = await _subdivisionService.CreateSubdivisionAsync(subdivision);
                 response.Data = _mapper.Map<SubdivisionDTO>(createdSubdivision);
@@ -205,16 +202,12 @@ namespace Web.Server.Controllers.v1
         }
 
         // DELETE: api/Subdivisions/5
+        [RequireRole(RoleNames.Admin)]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteSubdivision(int id)
         {
             try
             {
-                if (!await IsAdminAsync())
-                {
-                    return StatusCode(StatusCodes.Status403Forbidden);
-                }
-
                 try
                 {
                     await _subdivisionService.DeleteSubdivisionAsync(id);
@@ -233,11 +226,6 @@ namespace Web.Server.Controllers.v1
             }
         }
 
-        private async Task<bool> IsAdminAsync()
-        {
-            var user = await GetCurrentUserAsync();
-            return user != null && HasRole(user, "Admin");
-        }
 
         private async Task<User?> GetCurrentUserAsync()
         {

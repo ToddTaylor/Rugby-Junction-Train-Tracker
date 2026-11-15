@@ -1,39 +1,8 @@
 import { SubdivisionTrackageRight } from '../types/SubdivisionTrackageRight';
-import { getCookie } from '../utils/cookies';
-import { AuthSession } from '../types/Auth';
+import { getAuthToken } from './client';
 
 const API_URL = import.meta.env.VITE_API_URL;
 const API_KEY = import.meta.env.VITE_API_KEY;
-const SESSION_KEY = 'rjtt_auth_session';
-const COOKIE_NAME = 'rjtt_auth';
-
-function getAuthToken(): string | null {
-    const localData = localStorage.getItem(SESSION_KEY);
-    if (localData) {
-        try {
-            const session = JSON.parse(localData) as AuthSession;
-            return session.token;
-        } catch { }
-    }
-
-  const cookieData = getCookie(COOKIE_NAME);
-  if (cookieData) {
-    try {
-      const session = JSON.parse(cookieData) as AuthSession;
-      return session.token;
-    } catch { }
-  }
-  
-  const sessionData = sessionStorage.getItem(SESSION_KEY);
-  if (sessionData) {
-    try {
-      const session = JSON.parse(sessionData) as AuthSession;
-      return session.token;
-    } catch { }
-  }
-  
-  return null;
-}
 
 export async function getTrackageRights(fromSubdivisionID: number): Promise<{
     data: SubdivisionTrackageRight[];

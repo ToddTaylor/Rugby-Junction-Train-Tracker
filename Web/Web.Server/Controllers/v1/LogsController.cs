@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using System.Text;
-using Web.Server.Services;
+using Web.Server.Enums;
+using Web.Server.Filters;
 
 namespace Web.Server.Controllers.v1
 {
@@ -12,13 +13,11 @@ namespace Web.Server.Controllers.v1
     public class LogsController : ControllerBase
     {
         private readonly ILogger<LogsController> _logger;
-        private readonly IUserService _userService;
         private readonly string _logsDirectory;
 
-        public LogsController(ILogger<LogsController> logger, IUserService userService)
+        public LogsController(ILogger<LogsController> logger)
         {
             _logger = logger;
-            _userService = userService;
             _logsDirectory = Path.Combine(Directory.GetCurrentDirectory(), "..\\logs");
         }
 
@@ -27,16 +26,12 @@ namespace Web.Server.Controllers.v1
         /// </summary>
         /// <param name="lines">Number of lines to retrieve from the end of the file (default: 100, max: 1000)</param>
         /// <returns>Log entries as plain text</returns>
+        [RequireRole(RoleNames.Admin)]
         [HttpGet("latest")]
         public async Task<IActionResult> GetLatestLogs([FromQuery] int lines = 100)
         {
             try
             {
-                if (!await IsAdminAsync())
-                {
-                    return StatusCode(StatusCodes.Status403Forbidden);
-                }
-
                 // Limit the number of lines
                 lines = Math.Min(Math.Max(lines, 1), 1000);
 
@@ -85,16 +80,12 @@ namespace Web.Server.Controllers.v1
         /// Gets a list of available log files.
         /// </summary>
         /// <returns>List of log file names with their sizes and last modified dates</returns>
+        [RequireRole(RoleNames.Admin)]
         [HttpGet("files")]
         public async Task<IActionResult> GetLogFiles()
         {
             try
             {
-                if (!await IsAdminAsync())
-                {
-                    return StatusCode(StatusCodes.Status403Forbidden);
-                }
-
                 if (!Directory.Exists(_logsDirectory))
                 {
                     return NotFound(new { error = "Logs directory not found." });
@@ -125,16 +116,12 @@ namespace Web.Server.Controllers.v1
         /// <param name="fileName">The name of the log file (e.g., web-server-20260108.log)</param>
         /// <param name="lines">Number of lines to retrieve from the end of the file (default: all, max: 10000)</param>
         /// <returns>Log file contents as plain text</returns>
+        [RequireRole(RoleNames.Admin)]
         [HttpGet("file/{fileName}")]
         public async Task<IActionResult> GetLogFile(string fileName, [FromQuery] int? lines = null)
         {
             try
             {
-                if (!await IsAdminAsync())
-                {
-                    return StatusCode(StatusCodes.Status403Forbidden);
-                }
-
                 // Validate filename to prevent directory traversal attacks
                 if (string.IsNullOrWhiteSpace(fileName) ||
                     fileName.Contains("..") ||
@@ -196,16 +183,12 @@ namespace Web.Server.Controllers.v1
         /// <param name="query">The text to search for</param>
         /// <param name="maxResults">Maximum number of results to return (default: 100, max: 500)</param>
         /// <returns>Matching log entries</returns>
+        [RequireRole(RoleNames.Admin)]
         [HttpGet("search")]
         public async Task<IActionResult> SearchLogs([FromQuery] string query, [FromQuery] int maxResults = 100)
         {
             try
             {
-                if (!await IsAdminAsync())
-                {
-                    return StatusCode(StatusCodes.Status403Forbidden);
-                }
-
                 if (string.IsNullOrWhiteSpace(query))
                 {
                     return BadRequest(new { error = "Search query is required." });
@@ -260,17 +243,6 @@ namespace Web.Server.Controllers.v1
             }
         }
 
-        private async Task<bool> IsAdminAsync()
-        {
-            if (!HttpContext.Items.TryGetValue("UserId", out var userIdObj) || userIdObj is not int userId)
-            {
-                return false;
-            }
-
-            var user = await _userService.GetUserByIdAsync(userId);
-            return user?.UserRoles?.Any(ur =>
-                string.Equals(ur.Role?.RoleName, "Admin", StringComparison.OrdinalIgnoreCase)) == true;
-        }
 
         /// <summary>
         /// Helper method to read all lines from a file with shared access.

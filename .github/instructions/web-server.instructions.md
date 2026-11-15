@@ -11,5 +11,6 @@ applyTo: "Web/Web.Server/**"
 - Keep data access in repositories and persistence schema changes in entities, DbContext, and migrations.
 - Use `Program.cs` as the source of truth for DI registration, middleware order, hosted services, CORS, and runtime wiring.
 - Treat hosted services, auth middleware, and SignalR notifications as part of feature behavior when planning changes, not as separate infrastructure concerns.
+- Put `[RequireRole(...)]` on every action that changes data or returns admin-only data. `X-Api-Key` is public and is not authorization. If an action is protected another way, list it with the reason in `EndpointAuthorizationTests.ProtectedAnotherWay`.
 - Preserve UTC time handling and be careful with expiration, freshness, and history semantics.
 - Before proposing non-trivial server changes, inspect the matching tests in `Web/Web.ServerTests` and `Web/Web.Server.IntegrationTests`.

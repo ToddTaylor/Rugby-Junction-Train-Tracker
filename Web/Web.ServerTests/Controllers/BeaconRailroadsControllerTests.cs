@@ -18,32 +18,6 @@ public class BeaconRailroadsControllerTests
     private static readonly DateTime Now = new(2026, 7, 26, 12, 0, 0, DateTimeKind.Utc);
 
     [TestMethod]
-    public async Task Create_NonAdmin_IsForbidden()
-    {
-        var (controller, serviceMock, _, _, _) = CreateController(userId: 1, roleName: "Custodian");
-
-        var result = await controller.Create(new CreateBeaconRailroadDTO { BeaconID = 1, SubdivisionID = 1 });
-
-        var objectResult = result as ObjectResult;
-        Assert.IsNotNull(objectResult);
-        Assert.AreEqual(StatusCodes.Status403Forbidden, objectResult.StatusCode);
-        serviceMock.Verify(s => s.AddAsync(It.IsAny<BeaconRailroad>()), Times.Never);
-    }
-
-    [TestMethod]
-    public async Task Delete_NonAdmin_IsForbidden()
-    {
-        var (controller, serviceMock, _, _, _) = CreateController(userId: 1, roleName: "Custodian");
-
-        var result = await controller.Delete(1, 1);
-
-        var statusResult = result as IStatusCodeActionResult;
-        Assert.IsNotNull(statusResult);
-        Assert.AreEqual(StatusCodes.Status403Forbidden, statusResult.StatusCode);
-        serviceMock.Verify(s => s.DeleteAsync(It.IsAny<int>(), It.IsAny<int>()), Times.Never);
-    }
-
-    [TestMethod]
     public async Task GetAll_SetsOnline_FromServerHealthStatus()
     {
         var degradedEntity = SeedBeaconRailroad(custodianId: null, lastUpdate: Now);
@@ -146,23 +120,6 @@ public class BeaconRailroadsControllerTests
             br.Milepost == 102.0)), Times.Once);
     }
 
-    [TestMethod]
-    public async Task Update_Custodian_IsForbidden()
-    {
-        // Custodians could only set the offline note, which Server Health status replaced.
-        var existing = SeedBeaconRailroad(custodianId: 50, lastUpdate: Now);
-        var dto = ToUpdateDto(existing);
-
-        var (controller, serviceMock, _, _, _) = CreateController(userId: 50, roleName: "Custodian", existing: existing);
-
-        var result = await controller.Update(existing.BeaconID, existing.SubdivisionID, dto);
-
-        var objectResult = result as ObjectResult;
-        Assert.IsNotNull(objectResult);
-        Assert.AreEqual(StatusCodes.Status403Forbidden, objectResult.StatusCode);
-        serviceMock.Verify(s => s.UpdateAsync(It.IsAny<BeaconRailroad>()), Times.Never);
-    }
-
     private static BeaconRailroad SeedBeaconRailroad(int? custodianId, DateTime lastUpdate)
     {
         return new BeaconRailroad
@@ -240,7 +197,6 @@ public class BeaconRailroadsControllerTests
         var controller = new BeaconRailroadsController(
             serviceMock.Object,
             serverHealthMock.Object,
-            userServiceMock.Object,
             loggerMock.Object,
             mapperMock.Object);
 
