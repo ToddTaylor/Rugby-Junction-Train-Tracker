@@ -5,6 +5,7 @@ import { Beacon } from '../types/Beacon';
 import { metersToPixels } from '../utils/geo';
 import { getBeaconDotSizePx } from '../utils/markerSizing';
 import { BEACON_ONLINE_COLOR, BEACON_OFFLINE_COLOR } from '../constants/beaconColors';
+import { escapeHtml } from '../utils/escapeHtml';
 
 // Adjustable real-world diameter for the outline (in meters)
 const OUTLINE_DIAMETER_METERS = 7080;
@@ -16,15 +17,6 @@ interface BeaconMarkerProps {
     zoom: number;
     idx: number;
     mapTheme?: 'dark' | 'light';
-}
-
-function escapeHtml(value: string): string {
-    return value
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
 }
 
 export interface BeaconVisualState {

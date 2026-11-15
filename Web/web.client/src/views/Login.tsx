@@ -61,7 +61,7 @@ const Login: React.FC = () => {
         )}
         {step === 'code' && (
           <form onSubmit={handleCodeSubmit} noValidate>
-            <div className="login-info">Enter the 6-digit code sent to <strong>{emailInput}</strong>.</div>
+            <div className="login-info">If <strong>{emailInput}</strong> is registered, a 6-digit code was sent to it. Enter the code below.</div>
             <input
               className="login-input"
               type="text"

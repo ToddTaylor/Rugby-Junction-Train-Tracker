@@ -9,13 +9,11 @@ namespace Web.Server.Controllers.v1;
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
-    private readonly IUserService _userService;
     private readonly ILogger<AuthController> _logger;
 
-    public AuthController(IAuthService authService, IUserService userService, ILogger<AuthController> logger)
+    public AuthController(IAuthService authService, ILogger<AuthController> logger)
     {
         _authService = authService;
-        _userService = userService;
         _logger = logger;
     }
 
@@ -46,25 +44,21 @@ public class AuthController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "An error occurred while logging out token {Token}", token);
+            // The token is a credential, so it is kept out of the log.
+            _logger.LogError(ex, "An error occurred while logging out.");
             return StatusCode(StatusCodes.Status500InternalServerError, new { success = false, errors = new List<string> { "An error occurred while logging out." } });
         }
     }
 
     /// <summary>
-    /// Sends a verification code to the provided email address.
+    /// Sends a verification code to the provided email address. The answer is the same whether or not the
+    /// address has an account, so it cannot be used to find out who is registered.
     /// </summary>
     [HttpPost("send-code")]
     public async Task<IActionResult> SendCode([FromBody] SendCodeRequestDTO request)
     {
         try
         {
-            var user = await _userService.GetUserByEmailAsync(request.Email);
-            if (user == null || !user.IsActive)
-            {
-                return BadRequest(new { success = false, errors = new List<string> { "User does not exist or is not active." } });
-            }
-
             var (success, errors) = await _authService.SendCodeAsync(request.Email);
             if (success)
             {

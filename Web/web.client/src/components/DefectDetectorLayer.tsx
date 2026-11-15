@@ -4,6 +4,7 @@ import { LatLngTuple, Map as LeafletMap } from 'leaflet';
 import L from 'leaflet';
 import { DefectDetector } from '../hooks/useDefectDetectors';
 import { getBeaconDotSizePx } from '../utils/markerSizing';
+import { escapeHtml } from '../utils/escapeHtml';
 
 type DefectDetectorLayerProps = {
     mapRef: RefObject<LeafletMap | null>;
@@ -41,15 +42,6 @@ function ensurePopupDarkModeStyle() {
         }
     `;
     document.head.appendChild(style);
-}
-
-function escapeHtml(value: string) {
-    return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
 }
 
 function buildPopupContent(detector: DefectDetector) {

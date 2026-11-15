@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Marker } from 'react-leaflet';
 import L from 'leaflet';
 import { PassengerMapPin } from '../types/PassengerMapPin';
+import { escapeHtml } from '../utils/escapeHtml';
 
 const ICON_CACHE_BUSTER = import.meta.env.VITE_APP_VERSION
   ? `?v=${import.meta.env.VITE_APP_VERSION}`
@@ -63,11 +64,11 @@ const PassengerTelemetryMarker: React.FC<Props> = ({ pin, size, mapTheme }) => {
     // No inline background or text color — the injected CSS handles dark/light theming.
     const popupContent = `
       <div>
-        <strong>${pin.provider}</strong><br/>
-        ${pin.trainNum} ${pin.routeName}<br/>
-        ${pin.heading}<br/>
-        ${localTime}<br/>
-        ${pin.velocity} MPH${pin.isStale ? `<br/><span style='color:${staleColor};font-weight:600;'>⚠ Stale data</span>` : ''}
+        <strong>${escapeHtml(pin.provider)}</strong><br/>
+        ${escapeHtml(pin.trainNum)} ${escapeHtml(pin.routeName)}<br/>
+        ${escapeHtml(pin.heading)}<br/>
+        ${escapeHtml(localTime)}<br/>
+        ${escapeHtml(pin.velocity)} MPH${pin.isStale ? `<br/><span style='color:${staleColor};font-weight:600;'>⚠ Stale data</span>` : ''}
       </div>
     `;
 
