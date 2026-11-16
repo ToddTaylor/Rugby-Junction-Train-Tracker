@@ -35,6 +35,8 @@
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+		<!-- EF Core 9 pulls in SQLitePCLRaw 2.1.10, whose bundled SQLite has CVE-2025-6965 (GHSA-2m69-gcr7-jv3q). Remove this once the EF Core packages bring in 2.1.12 or later. -->
+		<PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.14" />
 		<PackageReference Include="Serilog" Version="4.2.0" />
 		<PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
 		<PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
