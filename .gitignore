@@ -375,10 +375,9 @@ FodyWeavers.xsd
 /Web/Web.Server/telemetry.db-wal
 /Web/web.client/.env.development
 /Web/web.client/.env.production
-# ConsoleApp settings hold the API keys. Copy the matching .example.json file and fill in the keys.
-/ConsoleApp/appsettings.Production.json
-/ConsoleApp/appsettings.Development.json
-/ConsoleApp/appsettings.Local.json
+/RailroadTelemetryLogService.ConsoleApp/appsettings.Production.json
+/RailroadTelemetryLogService.ConsoleApp/appsettings.Development.json
+/RailroadTelemetryLogService.ConsoleApp/appsettings.Local.json
 /Web/Web.Server/telemetry - Copy.db
 /Web/web.client/.env.beta
 /Web/Web.Server/Properties/PublishProfiles/PRODUCTION.pubxml

@@ -8,7 +8,6 @@ RugbyJunctionTrainTracker is a train telemetry and map-tracking application. It 
 - `Web/Web.Server`: ASP.NET Core application with REST controllers, SignalR hub, EF Core data access, middleware, and hosted background services.
 - `Services`: shared telemetry-support library for deserialization, throttling, subscribers, logging, and resilience policies.
 - `ConsoleApp`: desktop telemetry client built on .NET. It tails the SoftEOT and SoftDPU logs and hands each packet to every configured subscriber (an API to send telemetry to). Each subscriber sends from its own queue and worker (`TelemetrySendQueue`), so an API that is down or slow does not delay the others; packets that wait more than 5 minutes are dropped, as the server would discard them.
-  - Its bundled settings (`ConsoleApp/appsettings.Production.json` and `appsettings.Local.json`) hold the subscriber API keys, so they are not in git. Each has a committed `.example.json` copy with `REPLACE_WITH_API_KEY` placeholders. A ClickOnce publish fails while `appsettings.Production.json` is missing or still has a placeholder.
 - `Services.Models`: shared models and configuration surface for non-web components.
 - `Web/Web.ServerTests`: primary server-side unit and service tests.
 - `Web/Web.Server.IntegrationTests`: API-flow coverage, including auth and tracked pin flows.
