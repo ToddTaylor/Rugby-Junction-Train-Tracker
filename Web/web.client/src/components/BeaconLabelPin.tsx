@@ -9,6 +9,7 @@ import { getBeaconDotSizePx } from '../utils/markerSizing';
 import { fetchBeaconLatestFromHistory } from '../services/mapPinsHistory';
 import { resolveHistorySubdivisionID } from './BeaconHistoryModal';
 import { markerSubdivisionIDs, pinAtMarker } from '../utils/beaconSubdivisions';
+import { escapeHtml } from '../utils/escapeHtml';
 
 interface BeaconLabelPinProps {
     beaconPin: Beacon;
@@ -431,8 +432,8 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
                                 border-top-${arrowOnRight ? 'right' : 'left'}-radius: 0;
                                 box-shadow: 0 1px 6px rgba(0,0,0,0.13);
                             ">
-                                ${beaconPin.beaconName || ''}
-                                ${beaconPin.railroad ? `<span style="position: absolute; bottom: -5px; right: 4px; font-size: 9px; font-weight: 400; background: #005aa9; color: #fff; padding: 0px 3px; border-radius: 3px; white-space: nowrap; line-height: 1.2;">${beaconPin.railroad.toUpperCase()}</span>` : ''}
+                                ${escapeHtml(beaconPin.beaconName)}
+                                ${beaconPin.railroad ? `<span style="position: absolute; bottom: -5px; right: 4px; font-size: 9px; font-weight: 400; background: #005aa9; color: #fff; padding: 0px 3px; border-radius: 3px; white-space: nowrap; line-height: 1.2;">${escapeHtml(beaconPin.railroad.toUpperCase())}</span>` : ''}
                             </div>
                         </div>
                         ${statusTextForSingleBeacon ? `<div class="beacon-status" style="
@@ -453,7 +454,7 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
                         ">${statusTextForSingleBeacon}</div>` : ''}
                         ${trackedTrainsAtBeacon.length > 0 ? `<div style="display: flex; flex-direction: column; gap: 2px; align-items: ${arrowOnRight ? 'flex-end' : 'flex-start'}; margin-top: 4px;">
                                 ${trackedTrainsAtBeacon.map(train => `
-                                    <div class="track-indicator" data-train-id="${train.actionTrackedId}" data-symbol="${train.symbol || ''}" style="
+                                    <div class="track-indicator" data-train-id="${escapeHtml(train.actionTrackedId)}" data-symbol="${escapeHtml(train.symbol)}" style="
                                         display: flex;
                                         align-items: center;
                                         gap: 2px;
@@ -463,7 +464,7 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
                                         <div style="
                                             width: 14px;
                                             height: 14px;
-                                            background-color: ${train.color};
+                                            background-color: ${escapeHtml(train.color)};
                                             border-radius: 50%;
                                             border: 1px solid rgba(0, 0, 0, 0.5);
                                             display: flex;
@@ -477,9 +478,9 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
                                         ${train.symbol ? `<span style="
                                             font-size: 13px;
                                             font-weight: bold;
-                                            color: ${train.color};
+                                            color: ${escapeHtml(train.color)};
                                             text-decoration: underline;
-                                        ">${train.symbol}</span>` : ''}
+                                        ">${escapeHtml(train.symbol)}</span>` : ''}
                                     </div>
                                 `).join('')}
                             </div>` : ''}
@@ -499,8 +500,8 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
                         <div style="position: relative; z-index: 1; width:0;height:0;border-left:${pointerWidth}px solid transparent;border-right:${pointerWidth}px solid transparent;border-bottom:${pointerHeight}px solid ${pointerColor};margin-top:2px;"></div>
                         <div style="display: flex; flex-direction: column; align-items: center;">
                             <div class="beacon-name" style="position: relative; background:${labelBg};color:${labelColor};font-size:${labelFontSize}px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-weight:500;padding:${labelPadding}px 12px;border-radius:${labelRadius}px;box-shadow:0 1px 6px rgba(0,0,0,0.13);margin-top:-2px;white-space:nowrap;text-transform:uppercase;border:1px solid ${borderColor};cursor:pointer;pointer-events:auto;">
-                                ${beaconPin.beaconName || ''}
-                                ${beaconPin.railroad ? `<span style="position: absolute; bottom: -5px; right: 4px; font-size: 9px; font-weight: 400; background: #005aa9; color: #fff; padding: 0px 3px; border-radius: 3px; white-space: nowrap; line-height: 1.2;">${beaconPin.railroad.toUpperCase()}</span>` : ''}
+                                ${escapeHtml(beaconPin.beaconName)}
+                                ${beaconPin.railroad ? `<span style="position: absolute; bottom: -5px; right: 4px; font-size: 9px; font-weight: 400; background: #005aa9; color: #fff; padding: 0px 3px; border-radius: 3px; white-space: nowrap; line-height: 1.2;">${escapeHtml(beaconPin.railroad.toUpperCase())}</span>` : ''}
                             </div>
                             ${statusTextForSingleBeacon ? `<div class="beacon-status" style="
                                 background:${statusBg};
@@ -519,7 +520,7 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
                             ">${statusTextForSingleBeacon}</div>` : ''}
                             ${trackedTrainsAtBeacon.length > 0 ? `<div style="display: flex; flex-direction: column; gap: 2px; margin-top: 4px; align-items: center;">
                                 ${trackedTrainsAtBeacon.map(train => `
-                                    <div class="track-indicator" data-train-id="${train.actionTrackedId}" data-symbol="${train.symbol || ''}" style="
+                                    <div class="track-indicator" data-train-id="${escapeHtml(train.actionTrackedId)}" data-symbol="${escapeHtml(train.symbol)}" style="
                                         display: flex;
                                         align-items: center;
                                         gap: 2px;
@@ -529,7 +530,7 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
                                         <div style="
                                             width: 14px;
                                             height: 14px;
-                                            background-color: ${train.color};
+                                            background-color: ${escapeHtml(train.color)};
                                             border-radius: 50%;
                                             border: 1px solid rgba(0, 0, 0, 0.5);
                                             display: flex;
@@ -543,9 +544,9 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
                                         ${train.symbol ? `<span style="
                                             font-size: 13px;
                                             font-weight: bold;
-                                            color: ${train.color};
+                                            color: ${escapeHtml(train.color)};
                                             text-decoration: underline;
-                                        ">${train.symbol}</span>` : ''}
+                                        ">${escapeHtml(train.symbol)}</span>` : ''}
                                     </div>
                                 `).join('')}
                             </div>` : ''}

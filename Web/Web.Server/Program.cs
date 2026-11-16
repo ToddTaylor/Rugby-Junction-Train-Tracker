@@ -96,7 +96,8 @@ try
     {
         // Azure free tier web app does not support WebSockets, so we need to use Server-Sent Events
         options.SupportedProtocols.Add(HttpTransportType.WebSockets.ToString());
-        options.EnableDetailedErrors = true;
+        // Detailed errors send exception messages to the browser, so they stay off outside Development.
+        options.EnableDetailedErrors = builder.Environment.IsDevelopment();
     });
 
     // Add DbContext with SQLite connection string
@@ -285,16 +286,18 @@ try
 
     // Configure the HTTP request pipeline.
 
-    //if (app.Environment.IsDevelopment()) { }
-    app.UseSwagger(options =>
+    // The API description lists every endpoint and its payloads, so it is served in Development only.
+    if (app.Environment.IsDevelopment())
     {
-        options.OpenApiVersion = Microsoft.OpenApi.OpenApiSpecVersion.OpenApi2_0;
-    });
-    app.UseSwaggerUI(options =>
-    {
-        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Telemetry API v1");
-    });
-    //}
+        app.UseSwagger(options =>
+        {
+            options.OpenApiVersion = Microsoft.OpenApi.OpenApiSpecVersion.OpenApi2_0;
+        });
+        app.UseSwaggerUI(options =>
+        {
+            options.SwaggerEndpoint("/swagger/v1/swagger.json", "Telemetry API v1");
+        });
+    }
 
     app.UseHttpsRedirection();
 

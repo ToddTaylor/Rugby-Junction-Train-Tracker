@@ -27,8 +27,8 @@ public class EndpointAuthorizationTests
     private static readonly Dictionary<string, string> ProtectedAnotherWay = new()
     {
         ["AuthController.Logout"] = "Needs the token it invalidates.",
-        ["AuthController.SendCode"] = "Sign-in starts here; mails a code to an active user only, rate limited.",
-        ["AuthController.VerifyCode"] = "Sign-in ends here; needs the emailed code.",
+        ["AuthController.SendCode"] = "Sign-in starts here; mails a code to an active user only, rate limited, same answer for every address.",
+        ["AuthController.VerifyCode"] = "Sign-in ends here; needs the emailed code, which is discarded after five wrong tries.",
         ["TelemetriesController.PostTelemetry"] = "Called by beacon PCs, which have no user.",
         ["BeaconsController.CheckHealth"] = BeaconPc,
         ["BeaconsController.ReportCommand"] = BeaconPc,

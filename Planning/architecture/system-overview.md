@@ -51,6 +51,9 @@ Repositories under `Web/Web.Server/Repositories` own EF Core persistence logic. 
 - A Custodian is an admin whose access to beacon PCs is limited to the subdivisions they are custodian of. Admin or Custodian: all of `UsersController`, and the writes of `RailroadsController`, `SubdivisionTrackageRightsController` and `DELETE api/v1/MapPins/{id}`. Admin only: Beacon, BeaconRailroad and Amtrak changes, Subdivision create and delete, server logs, and `DELETE api/v1/MapPins/{id}/addresses`.
 - `UserManagementPolicy` stops a Custodian from becoming an Admin: a Custodian may not assign the Admin role, and may not change or delete a user who holds it.
 - Actions that change data without `[RequireRole]` are listed, each with what protects it instead, in `EndpointAuthorizationTests.ProtectedAnotherWay`. That test fails when a new POST, PUT, PATCH or DELETE action has neither.
+- Sign-in is by emailed code (`AuthService`). `send-code` answers the same way for every address, registered or not, and is limited to `MaxSendsPerHour` per address; only an active user is mailed a code. `verify-code` gives one message for every failure and discards a code after `MaxVerifyAttempts` wrong tries. Both exist so the endpoints cannot be used to find out who has an account or to guess a code.
+- Swagger and SignalR detailed errors are on in the Development environment only.
+- Leaflet popups and divIcons are built from HTML strings. Every value from a user or the server goes through `escapeHtml` (`Web/web.client/src/utils/escapeHtml.ts`) first; train symbols are typed by users and shared between them. The server also limits a symbol to `TrackedPinLimits.MaxSymbolLength`.
 - `GET api/v1/auth/session` is what the web client calls to learn whether its stored token is still good; a 401 signs the user out.
 
 ### Beacon PC Health

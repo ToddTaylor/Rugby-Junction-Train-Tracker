@@ -18,6 +18,7 @@ import { UnknownIcon } from './UnknownIcon';
 import TrackSymbolModal from './TrackSymbolModal';
 import { MapPin } from '../types/MapPin';
 import { CopyIcon } from './CopyIcon';
+import { escapeHtml } from '../utils/escapeHtml';
 
 const ICON_CACHE_BUSTER = import.meta.env.VITE_APP_VERSION
     ? `?v=${import.meta.env.VITE_APP_VERSION}`
@@ -194,7 +195,7 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
             addressLines = pin.addresses
                 .map((a: { source: string; addressID: number; isActive?: boolean }) => {
                     const color = a.isActive ? activeAddressColor : inactiveAddressColor;
-                    return `<span style='color:${color};'>${a.addressID} ${a.source}</span><br/>`;
+                    return `<span style='color:${color};'>${escapeHtml(a.addressID)} ${escapeHtml(a.source)}</span><br/>`;
                 })
                 .join('');
         } else if (!canViewSupportAddresses) {
@@ -204,7 +205,7 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
                 : '';
             const dpuColor = mapTheme === 'dark' ? '#d5d9df' : '#4b5563';
             addressLines = sourceTypesLabel
-                ? `<span style='color:${dpuColor};font-size:0.9em;'>${sourceTypesLabel}</span><br/>`
+                ? `<span style='color:${dpuColor};font-size:0.9em;'>${escapeHtml(sourceTypesLabel)}</span><br/>`
                 : '';
         }
 
@@ -217,17 +218,19 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
             trackedPins.find(tp => String(tp.id) === String(pin.id)) ||
             (pin.shareCode ? trackedPins.find(tp => tp.shareCode === pin.shareCode) : undefined);
         const trackedSymbolLabel = trackedPinForLabel?.symbol?.trim();
-        const displayTrainLabel = trackedSymbolLabel || (pin.shareCode ? `Train ${pin.shareCode}` : '');
+        // Symbols are typed by users and shared between them, so they are escaped before going into the popup HTML.
+        const displayTrainLabel = escapeHtml(trackedSymbolLabel || (pin.shareCode ? `Train ${pin.shareCode}` : ''));
+        const safeTrackColor = escapeHtml(trackColor || '#FFD700');
         const isCoarsePointer = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
         const actionRowPadding = isCoarsePointer ? '4px 0' : '1px 0';
         const actionRowGap = isCoarsePointer ? '10px' : '6px';
-        const trackingBadgeColor = isTracked ? (trackColor || '#FFD700') : '#cccccc';
+        const trackingBadgeColor = isTracked ? safeTrackColor : '#cccccc';
         const trackingBadgeBorder = isTracked ? '1px solid rgba(0, 0, 0, 0.5)' : '1px solid rgba(0, 0, 0, 0.3)';
         const trackingBadgeTextColor = isTracked ? '#000' : '#666';
         const trackingBadge = `<span style='width:14px;height:14px;background-color:${trackingBadgeColor};border-radius:50%;border:${trackingBadgeBorder};display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:900;color:${trackingBadgeTextColor};line-height:14px;flex-shrink:0;'>T</span>`;
         const showLocalStatus = canManageLocalTrains && pin.isLocal;
         const shareCodeLine = pin.shareCode
-            ? `<span id='${trackTextId}' style='cursor:pointer;display:inline-flex;align-items:center;gap:6px;padding:${actionRowPadding};margin-bottom:${actionRowGap};'><span style='display:inline-flex;align-items:center;'>${trackingBadge}</span><span style='text-decoration:${isTracked ? 'underline' : 'none'};color:${isTracked ? (trackColor || '#FFD700') : 'inherit'};font-weight:${isTracked ? 700 : 400};'>${displayTrainLabel}</span></span><br/>`
+            ? `<span id='${trackTextId}' style='cursor:pointer;display:inline-flex;align-items:center;gap:6px;padding:${actionRowPadding};margin-bottom:${actionRowGap};'><span style='display:inline-flex;align-items:center;'>${trackingBadge}</span><span style='text-decoration:${isTracked ? 'underline' : 'none'};color:${isTracked ? safeTrackColor : 'inherit'};font-weight:${isTracked ? 700 : 400};'>${displayTrainLabel}</span></span><br/>`
             : '';
         const copyIcon = ReactDOMServer.renderToStaticMarkup(
             <CopyIcon size={14} color={mapTheme === 'dark' ? '#d5d9df' : '#4b5563'} />
@@ -243,10 +246,10 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
         // Use only inline color for the track link, not for the popup background
         const popupContent = `
             <div>
-                ${pin.beaconName ? `<strong>${pin.beaconName}</strong><br/>` : ''}
-                ${pin.railroad?.trim() ? `${pin.railroad} ${pin.subdivision + ' Sub' || ''}<br/>` : ''}
-                MP ${pin.milepost}<br/>
-                ${formatDirection(pin.direction)}<br/>
+                ${pin.beaconName ? `<strong>${escapeHtml(pin.beaconName)}</strong><br/>` : ''}
+                ${pin.railroad?.trim() ? `${escapeHtml(pin.railroad)}${pin.subdivision ? ` ${escapeHtml(pin.subdivision)} Sub` : ''}<br/>` : ''}
+                MP ${escapeHtml(pin.milepost)}<br/>
+                ${escapeHtml(formatDirection(pin.direction))}<br/>
                 ${pin.moving === true ? "Moving<br/>" : pin.moving === false ? "Not Moving<br/>" : ''}
                 ${(() => {
                     try {
@@ -256,7 +259,7 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
                             return format(parseISO(pin.lastUpdate), 'HH:mm');
                         }
                     } catch {
-                        return pin.lastUpdate;
+                        return escapeHtml(pin.lastUpdate);
                     }
                 })()}<br/>
                 ${shareCodeLine}
