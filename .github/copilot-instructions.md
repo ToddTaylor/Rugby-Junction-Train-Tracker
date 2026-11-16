@@ -46,9 +46,10 @@
 ## Build And Test
 - Build the main solution with `dotnet build RugbyJunctionTrainTracker.sln`.
 - Run server tests with `dotnet test Web/Web.ServerTests/Web.Server.Tests.csproj`.
-- Run integration tests with `dotnet test Web/Web.Server.IntegrationTests/Web.Server.IntegrationTests.csproj` when API flows or auth behavior change.
+- Run integration tests with `dotnet test Web/Web.Server.IntegrationTests/Web.Server.IntegrationTests.csproj` when API flows or auth behavior change. Its only test is skipped until it is rewritten to host the app in-process.
 - Run shared services tests with `dotnet test Services.UnitTests/Services.UnitTests.csproj`.
 - Build the frontend with `cd Web/web.client && npm run build`.
+- CI (`.github/workflows/ci.yml`) runs on every pull request: it builds the solution, runs the three .NET test projects, and runs the client tests and build. Both deploy workflows run the server and client tests before publishing, so a failing test stops the deploy. Client lint is not part of CI yet.
 
 ### Validation Policy For Changes
 - For every code change, run and pass the affected automated tests before considering the task complete.

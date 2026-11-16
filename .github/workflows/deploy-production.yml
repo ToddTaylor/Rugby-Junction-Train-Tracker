@@ -62,6 +62,16 @@ jobs:
       - name: Build
         run: dotnet build ${{ env.WEB_PROJECT }} -c Release --no-restore
 
+      # A failing test stops the deploy before anything is published.
+      - name: Test server
+        run: dotnet test Web/Web.ServerTests/Web.Server.Tests.csproj -c Release
+
+      - name: Test client
+        working-directory: Web/web.client
+        run: |
+          npm ci
+          npm run test
+
       - name: Publish and deploy to shared IIS (MSDeploy)
         shell: pwsh
         env:

@@ -14,7 +14,7 @@ public class HotEotDeserializerTests
         var data = "2025/03/28-06:53:19  0.9 HOT  6720 --- - - -- --- - SRQ NML - - CN   ------------";
         var expected = new HotEotPacket
         {
-            TimeReceived = new DateTime(2025, 3, 28, 11, 53, 19),
+            TimeReceived = LogTime(2025, 3, 28, 06, 53, 19),
             SIG = 0.9m,
             SRC = "HOT",
             ID = "6720",
@@ -37,7 +37,7 @@ public class HotEotDeserializerTests
         var data = "2025/03/28-06:58:15  1.3 EOT  6720  88 1 1 OK   0 1 --- NML 1 0 CN   ------------";
         var expected = new HotEotPacket
         {
-            TimeReceived = new DateTime(2025, 3, 28, 11, 58, 15),
+            TimeReceived = LogTime(2025, 3, 28, 06, 58, 15),
             SIG = 1.3m,
             SRC = "EOT",
             ID = "6720",
@@ -67,7 +67,7 @@ public class HotEotDeserializerTests
         var data = "2025/03/28-06:58:15  1.3 EOT  6720  88 1 1 OK   0 1 --- NML 1 0 WSOR T4H         ";
         var expected = new HotEotPacket
         {
-            TimeReceived = new DateTime(2025, 3, 28, 11, 58, 15), // UTC
+            TimeReceived = LogTime(2025, 3, 28, 06, 58, 15),
             SIG = 1.3m,
             SRC = "EOT",
             ID = "6720",
@@ -98,7 +98,7 @@ public class HotEotDeserializerTests
         var data = "2025/09/24-14:10:53  2.7 HOT 20505 --- - - -- --- - SRQ NML - - ---- ------------";
         var expected = new HotEotPacket
         {
-            TimeReceived = new DateTime(2025, 9, 24, 19, 10, 53),
+            TimeReceived = LogTime(2025, 9, 24, 14, 10, 53),
             SIG = 2.7m,
             SRC = "HOT",
             ID = "20505",
@@ -121,7 +121,7 @@ public class HotEotDeserializerTests
         var data = "2025/03/28-09:04:33 ---- INV ----- --- - - -- --- - --- --- - - ---- ------------";
         var expected = new HotEotPacket
         {
-            TimeReceived = new DateTime(2025, 3, 28, 14, 04, 33), // UTC
+            TimeReceived = LogTime(2025, 3, 28, 09, 04, 33),
             ID = null,
             SRC = "INV"
         };
@@ -132,4 +132,8 @@ public class HotEotDeserializerTests
         // Assert
         actual.Should().BeEquivalentTo(expected);
     }
+
+    /// <summary>The UTC time the parser gives for a log timestamp, which is written in the PC's local time.</summary>
+    private static DateTime LogTime(int year, int month, int day, int hour, int minute, int second) =>
+        new DateTime(year, month, day, hour, minute, second, DateTimeKind.Local).ToUniversalTime();
 }

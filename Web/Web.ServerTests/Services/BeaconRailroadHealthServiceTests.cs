@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Web.Server.Data;
 using Web.Server.DTOs;
@@ -70,7 +71,8 @@ namespace Web.ServerTests.Services
                 _hubContextMock.Object,
                 _mapper,
                 _scopeFactoryMock.Object,
-                config);
+                config,
+                NullLogger<BeaconRailroadHealthService>.Instance);
         }
 
         // ── Threshold resolution ────────────────────────────────────────────────
@@ -561,7 +563,7 @@ namespace Web.ServerTests.Services
             IServiceScopeFactory scopeFactory,
             IConfiguration configuration,
             TelemetryDbContext testDbContext)
-            : base(hubContext, mapper, scopeFactory, configuration)
+            : base(hubContext, mapper, scopeFactory, configuration, NullLogger<BeaconRailroadHealthService>.Instance)
         {
             _testDbContext = testDbContext;
         }

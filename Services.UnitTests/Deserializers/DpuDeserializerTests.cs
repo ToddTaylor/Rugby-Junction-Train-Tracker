@@ -14,7 +14,7 @@ public class DpuDeserializerTests
         var data = "2025/03/29-15:42:57  0.5 57135  27 CM LD DI 18 1 - N8    FO 1 1 0 0 ---   REL ----- ----- --- ---   0  ----- ---- ---- ---- ---- ---                       ---- ------------";
         var expected = new DpuPacket
         {
-            TimeReceived = new DateTime(2025, 3, 29, 20, 42, 57), // UTC
+            TimeReceived = LogTime(2025, 3, 29, 15, 42, 57),
             SIG = 0.5m,
             ADDR = "57135",
             TRID = "27",
@@ -47,7 +47,7 @@ public class DpuDeserializerTests
         var data = "2025/03/29-15:44:19  2.8 29080  27 ST RM DI 22 - 1 N8    FO 1 1 0 0  48 -----  89.5  91.0   0 133 ----   0.0 ---- ---- ---- ---- ---                       ---- ------------";
         var expected = new DpuPacket
         {
-            TimeReceived = new DateTime(2025, 3, 29, 20, 44, 19), // UTC
+            TimeReceived = LogTime(2025, 3, 29, 15, 44, 19),
             SIG = 2.8m,
             ADDR = "29080",
             TRID = "27",
@@ -84,7 +84,7 @@ public class DpuDeserializerTests
         var data = "2025/03/29-15:41:58  0.4   INV --- -- -- -- -- - - ----- -- - - - - --- ----- ----- ----- --- --- ---- ----- ---- ---- ---- ---- ---                       ---- ------------";
         var expected = new DpuPacket
         {
-            TimeReceived = new DateTime(2025, 3, 29, 20, 41, 58),
+            TimeReceived = LogTime(2025, 3, 29, 15, 41, 58),
             SIG = 0.4m,
             ADDR = "INV"
         };
@@ -95,4 +95,8 @@ public class DpuDeserializerTests
         // Assert
         actual.Should().BeEquivalentTo(expected);
     }
+
+    /// <summary>The UTC time the parser gives for a log timestamp, which is written in the PC's local time.</summary>
+    private static DateTime LogTime(int year, int month, int day, int hour, int minute, int second) =>
+        new DateTime(year, month, day, hour, minute, second, DateTimeKind.Local).ToUniversalTime();
 }
