@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
 import L from 'leaflet';
 import { Marker } from 'react-leaflet';
 import { Beacon, BeaconSubdivision } from '../types/Beacon';
@@ -6,18 +6,17 @@ import { TrackedPin, updateTrackedPinSymbol, removeTrackedMapPin } from '../serv
 import { MapPin } from '../types/MapPin';
 import TrackSymbolModal from './TrackSymbolModal';
 import { getBeaconDotSizePx } from '../utils/markerSizing';
-import { fetchBeaconLatestFromHistory } from '../services/mapPinsHistory';
-import { resolveHistorySubdivisionID } from './BeaconHistoryModal';
 import { markerSubdivisionIDs, pinAtMarker } from '../utils/beaconSubdivisions';
 import { escapeHtml } from '../utils/escapeHtml';
 
 interface BeaconLabelPinProps {
     beaconPin: Beacon;
-    idx: number;
     zoom: number;
     mapTheme: 'dark' | 'light';
     getLabelOffsetLat: (lat: number, zoom: number) => number;
-    lastUpdateTime?: string | null;
+    /** When the last train passed this marker (ISO time), on any of its subdivisions. */
+    lastUpdate?: string | null;
+    /** Direction of that train. */
     direction?: string | null;
     onClick?: (beaconID: string, beaconName: string, subdivisionID?: string, railroad?: string, subdivision?: string, subdivisions?: BeaconSubdivision[]) => void;
     trackedPins?: TrackedPin[];
@@ -28,11 +27,10 @@ interface BeaconLabelPinProps {
 
 const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({ 
     beaconPin, 
-    idx, 
     zoom, 
     mapTheme, 
     getLabelOffsetLat, 
-    lastUpdateTime, 
+    lastUpdate, 
     direction, 
     onClick, 
     trackedPins = [],
@@ -40,90 +38,12 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
     horizontalShift = 0,
     hourFormat = '24'
 }) => {
-    // Fetch most recent history entry from same API as BeaconHistoryModal to ensure timestamp accuracy
-    const [fetchedLastUpdateTime, setFetchedLastUpdateTime] = useState<string | null>(null);
-    const [fetchedDirection, setFetchedDirection] = useState<string | null | undefined>(undefined); // undefined = not yet fetched
-    const lastLiveUpdateRef = useRef<string | null>(null);
-
-    // A junction marker stands for every subdivision through the location, so its "Last Train"
-    // covers all of them: history is requested for the whole beacon and live pins on any of its
-    // subdivisions count. A string key keeps the hooks below stable across re-renders.
-    const historySubdivisionID = resolveHistorySubdivisionID(beaconPin.subdivisionID, beaconPin.subdivisions);
+    // The last train comes from the map's per-beacon record, which the map seeds with one request for every
+    // beacon and keeps current from live updates. Labels used to fetch it themselves, one request per beacon.
+    // A string key keeps the hooks below stable across re-renders.
     const subdivisionKey = markerSubdivisionIDs(beaconPin).join(',');
-
-    // Always update both timestamp and direction together, even if direction is null
-    const updateFromHistory = useCallback(async (bypassCache = false) => {
-        if (!beaconPin.beaconID) return;
-        try {
-            const latest = await fetchBeaconLatestFromHistory(beaconPin.beaconID, historySubdivisionID, { bypassCache });
-            if (latest?.lastUpdate) {
-                const d = new Date(latest.lastUpdate);
-                let formattedTime;
-                if (hourFormat === '12') {
-                    formattedTime = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
-                } else {
-                    formattedTime = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-                }
-                setFetchedLastUpdateTime(formattedTime);
-                setFetchedDirection(Object.prototype.hasOwnProperty.call(latest, 'direction') ? latest.direction : null);
-            } else {
-                // If no latest record, only clear direction
-                setFetchedDirection(null);
-            }
-        } catch (e) {
-            console.error('Error fetching latest beacon history:', e);
-            setFetchedDirection(null);
-        }
-    }, [beaconPin.beaconID, historySubdivisionID, hourFormat]);
-
-    useEffect(() => {
-        updateFromHistory(false);
-    }, [updateFromHistory]);
-
-    // On live map pin changes (e.g., SignalR updates), update immediately from the latest mapPins data.
-    // Keep timestamp and direction in sync so the status arrow always matches the displayed "Last Train" time.
-    useEffect(() => {
-        if (!beaconPin.beaconID || !mapPins.length) return;
-        const latestForBeacon = mapPins
-            .filter(pin => pinAtMarker(pin, beaconPin))
-            .reduce<{ lastUpdate: string | null; direction: string | null } | null>((acc, pin) => {
-                if (!pin.lastUpdate) return acc;
-                if (!acc || new Date(pin.lastUpdate) > new Date(acc.lastUpdate || 0)) {
-                    return { lastUpdate: pin.lastUpdate, direction: pin.direction ?? null };
-                }
-                return acc;
-            }, null);
-
-        if (latestForBeacon?.lastUpdate) {
-            const d = new Date(latestForBeacon.lastUpdate);
-            let formattedTime;
-            if (hourFormat === '12') {
-                formattedTime = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
-            } else {
-                formattedTime = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-            }
-            setFetchedLastUpdateTime(formattedTime);
-
-            // Do not clear a previously known direction when live payload omits it.
-            if (latestForBeacon.direction) {
-                setFetchedDirection(latestForBeacon.direction);
-            }
-
-            // Every fresh live timestamp forces a no-cache history refresh so the arrow
-            // redraws with authoritative direction data instead of waiting for a full reload.
-            if (lastLiveUpdateRef.current !== latestForBeacon.lastUpdate) {
-                lastLiveUpdateRef.current = latestForBeacon.lastUpdate;
-                void updateFromHistory(true);
-            }
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [mapPins, beaconPin.beaconID, subdivisionKey, hourFormat, updateFromHistory]);
-
-    // Use fetched data if available, otherwise fall back to props
-    // For direction: only use fallback prop if history hasn't been fetched yet
-    const actualLastUpdateTime = fetchedLastUpdateTime || lastUpdateTime;
-    const actualDirection = fetchedDirection !== undefined ? fetchedDirection : direction;
-    const markerStatusKey = `${actualLastUpdateTime || 'none'}|${actualDirection || 'none'}`;
+    const actualLastUpdateTime = useMemo(() => formatLastTrainTime(lastUpdate, hourFormat), [lastUpdate, hourFormat]);
+    const actualDirection = direction ?? null;
 
     // Sizing and style logic
     const base = 1 + (zoom - 7) * 0.09;
@@ -195,7 +115,7 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
         score: number;
     };
 
-    const trackedTrainsAtBeacon = React.useMemo(() => {
+    const resolvedTrackedTrains = React.useMemo(() => {
         const toAddressList = (pin: MapPin): Array<{ id: string; source: string }> =>
             Array.isArray(pin.addresses)
                 ? pin.addresses.map(addr => ({ id: String(addr.addressID), source: addr.source }))
@@ -268,6 +188,11 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
         return Array.from(deduped.values());
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [trackedPins, mapPins, beaconPin.beaconID, subdivisionKey]);
+
+    // Recomputed whenever any map pin changes, but kept as the same array while the rows are the same,
+    // so the label icon below is rebuilt only when this beacon's tracked trains change.
+    const trackedTrainsKey = JSON.stringify(resolvedTrackedTrains);
+    const trackedTrainsAtBeacon = useMemo<ResolvedTrackedTrain[]>(() => JSON.parse(trackedTrainsKey), [trackedTrainsKey]);
     
     const handleStatusClick = () => {
         if (onClick && beaconPin.beaconID && beaconPin.beaconName) {
@@ -275,59 +200,51 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
         }
     };
 
-    const markerRef = useRef<L.Marker>(null);
     const [modalOpen, setModalOpen] = useState(false);
     const [selectedTrainId, setSelectedTrainId] = useState<string | null>(null);
     const [selectedSymbol, setSelectedSymbol] = useState('');
     const [selectedMapPinId, setSelectedMapPinId] = useState<number | undefined>(undefined);
     const [selectedAddresses, setSelectedAddresses] = useState<Array<{id: string, source: string}>>([]);
 
-    useEffect(
-        () => {
-            const marker = markerRef.current;
-            if (!marker) return;
+    const handleLabelClick = (e: MouseEvent): void => {
+        const target = e.target as HTMLElement;
 
-            const handleClick = (e: MouseEvent): void => {
-            const target = e.target as HTMLElement;
-            
-            // Handle track indicator clicks
-            const trackIndicator = target.closest('.track-indicator');
-            if (trackIndicator) {
-                const trainId = trackIndicator.getAttribute('data-train-id');
-                const currentSymbol = trackIndicator.getAttribute('data-symbol');
-                if (trainId) {
-                    e.stopPropagation();
-                    const resolvedTrain = trackedTrainsAtBeacon.find(t => t.actionTrackedId === trainId);
-                    const trackedPin = trackedPins.find(p => p.id === trainId);
-                    const addresses = resolvedTrain?.addresses
-                        || (trackedPin?.addresses ? [...trackedPin.addresses] : []);
-                    setSelectedTrainId(trainId);
-                    setSelectedSymbol(currentSymbol || '');
-                    setSelectedMapPinId(resolvedTrain?.mapPinId || trackedPin?.mapPinId);
-                    setSelectedAddresses(addresses);
-                    setModalOpen(true);
-                    return;
-                }
-            }
-
-            // Handle beacon name and status clicks
-            if (target.closest('.beacon-status') || target.closest('.beacon-name')) {
-                handleStatusClick();
+        // Handle track indicator clicks
+        const trackIndicator = target.closest('.track-indicator');
+        if (trackIndicator) {
+            const trainId = trackIndicator.getAttribute('data-train-id');
+            const currentSymbol = trackIndicator.getAttribute('data-symbol');
+            if (trainId) {
                 e.stopPropagation();
+                const resolvedTrain = trackedTrainsAtBeacon.find(t => t.actionTrackedId === trainId);
+                const trackedPin = trackedPins.find(p => p.id === trainId);
+                const addresses = resolvedTrain?.addresses
+                    || (trackedPin?.addresses ? [...trackedPin.addresses] : []);
+                setSelectedTrainId(trainId);
+                setSelectedSymbol(currentSymbol || '');
+                setSelectedMapPinId(resolvedTrain?.mapPinId || trackedPin?.mapPinId);
+                setSelectedAddresses(addresses);
+                setModalOpen(true);
+                return;
             }
-        };
-
-        const markerElement = marker.getElement();
-        if (markerElement) {
-            markerElement.addEventListener('click', handleClick);
         }
 
-        return () => {
-            if (markerElement) {
-                markerElement.removeEventListener('click', handleClick);
-            }
-        };
-    }, [trackedTrainsAtBeacon, trackedPins, onClick, beaconPin.beaconID, beaconPin.beaconName]);
+        // Handle beacon name and status clicks
+        if (target.closest('.beacon-status') || target.closest('.beacon-name')) {
+            handleStatusClick();
+            e.stopPropagation();
+        }
+    };
+
+    // Leaflet's marker click event survives an icon change, unlike a listener on the icon's DOM element, which
+    // is replaced with each new icon. The ref lets that one stable listener reach the latest state.
+    const labelClickRef = useRef(handleLabelClick);
+    useEffect(() => {
+        labelClickRef.current = handleLabelClick;
+    });
+    const markerEventHandlers = useMemo<L.LeafletEventHandlerFnMap>(() => ({
+        click: (e: L.LeafletEvent) => labelClickRef.current((e as L.LeafletMouseEvent).originalEvent)
+    }), []);
     
     const handleSaveSymbol = async (newSymbol: string) => {
         if (selectedTrainId) {
@@ -599,13 +516,12 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
     return (
         <>
             <Marker
-            ref={markerRef}
-            key={`beacon-label-${beaconPin.beaconID ?? idx}-${markerStatusKey}`}
             position={showArrow 
                 ? [beaconPin.latitude, beaconPin.longitude] 
                 : [getLabelOffsetLat(beaconPin.latitude, zoom), beaconPin.longitude]}
             pane="beaconLabelPane"
             icon={markerIcon}
+            eventHandlers={markerEventHandlers}
         />
         <TrackSymbolModal
             key={selectedTrainId || selectedMapPinId}
@@ -629,4 +545,14 @@ const BeaconLabelPin: React.FC<BeaconLabelPinProps> = ({
     );
 };
 
-export default BeaconLabelPin;
+function formatLastTrainTime(lastUpdate: string | null | undefined, hourFormat: string): string | null {
+    if (!lastUpdate) return null;
+    const d = new Date(lastUpdate);
+    if (Number.isNaN(d.getTime())) return null;
+    return hourFormat === '12'
+        ? d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true })
+        : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+}
+
+// Re-rendered only when one of its own props changes, not on every map update.
+export default React.memo(BeaconLabelPin);

@@ -94,25 +94,3 @@ export function invalidateBeaconHistoryCache(beaconID: string | number) {
     }
     keysToDelete.forEach(key => historyCache.delete(key));
 }
-
-export async function fetchBeaconLatestFromHistory(
-    beaconID: string | number,
-    subdivisionID?: string | number,
-    options?: { ttlMs?: number; bypassCache?: boolean }
-): Promise<{ lastUpdate: string | null; direction: string | null } | null> {
-    // Prefer fulfilling from any cached list with limit>1 if available
-    const ttl = options?.ttlMs ?? CACHE_TTL_MS;
-    for (const [k, entry] of historyCache.entries()) {
-        if (!isFresh(entry, ttl)) continue;
-        const [b, s, l] = k.split('|');
-        if (String(b) === String(beaconID) && String(s || '') === String(subdivisionID || '') && Number(l) > 1) {
-            const first = entry.data?.[0];
-            if (first) return { lastUpdate: first.lastUpdate ?? null, direction: (first as any).direction ?? null };
-        }
-    }
-
-    const list = await fetchBeaconHistory(beaconID, subdivisionID, 1, options);
-    const latest = list[0];
-    if (!latest) return null;
-    return { lastUpdate: latest.lastUpdate ?? null, direction: (latest as any).direction ?? null };
-}

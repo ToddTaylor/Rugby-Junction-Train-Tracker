@@ -12,7 +12,6 @@ import { LatLngTuple, Map as LeafletMap } from 'leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useSignalR } from '../hooks/useSignalR';
-import { useUserLocation } from '../hooks/useUserLocation';
 import { Beacon, BeaconSubdivision } from '../types/Beacon';
 import { MapPin } from '../types/MapPin';
 import BeaconMarkers from '../components/BeaconMarkers';
@@ -41,6 +40,7 @@ import { DEFAULT_SELECTED_OWNERS, isTrackSelected, summarizeOwners } from '../ut
 import { getPassengerMapPins } from '../api/passengerMapPins';
 import { checkSession } from '../api/auth';
 import LiveStatusBanner from '../components/LiveStatusBanner';
+import { sameTrackedPins } from '../utils/trackingDisplay';
 
 const ICON_CACHE_BUSTER = import.meta.env.VITE_APP_VERSION
     ? `?v=${import.meta.env.VITE_APP_VERSION}`
@@ -104,6 +104,33 @@ function trackedPinNeedsRefresh(trackedPin: ReturnType<typeof getTrackedMapPins>
     return locationChanged || shareCodeChanged || addressesChanged;
 }
 
+/**
+ * Keeps the map's zoom and center in state and saved for the next visit. Declared outside RailMap so it keeps
+ * its identity; a component declared inside would be a new type on every render, remounted each time.
+ */
+function MapViewListener({ onZoomChange, onCenterChange }: {
+    onZoomChange: (zoom: number) => void;
+    onCenterChange: (center: LatLngTuple) => void;
+}) {
+    const saveView = (map: LeafletMap) => {
+        const center: LatLngTuple = [map.getCenter().lat, map.getCenter().lng];
+        onCenterChange(center);
+        localStorage.setItem('mapState', JSON.stringify({ center, zoom: map.getZoom() }));
+        return center;
+    };
+
+    useMapEvents({
+        zoomend: (e) => {
+            onZoomChange(e.target.getZoom());
+            saveView(e.target);
+        },
+        moveend: (e) => {
+            saveView(e.target);
+        }
+    });
+    return null;
+}
+
 const RailMap: React.FC = () => {
         // On mount, sign out a user whose token is no longer good, for example after being deactivated.
         useEffect(() => {
@@ -157,10 +184,13 @@ const RailMap: React.FC = () => {
     const [passengerMapPins, setPassengerMapPins] = useState<PassengerMapPin[]>([]);
     const { milepostPoints } = useMileposts();
     const { defectDetectors } = useDefectDetectors();
-    const userLocation = useUserLocation();
 
-    // Track the current tracked pins in state to trigger re-renders when they change
-    const [trackedPinsState, setTrackedPinsState] = useState(() => getTrackedMapPins());
+    // Track the current tracked pins in state to trigger re-renders when they change. Tracked pins are re-read
+    // every few seconds; the old array is kept when nothing changed, so those reads do not re-render the map.
+    const [trackedPinsState, setTrackedPinsStateRaw] = useState(() => getTrackedMapPins());
+    const setTrackedPinsState = useCallback((next: ReturnType<typeof getTrackedMapPins>) => {
+        setTrackedPinsStateRaw(prev => sameTrackedPins(prev, next) ? prev : next);
+    }, []);
 
     // Provide a global callback for TelemetryMarker to update tracked pins from API
     // (This is a workaround for prop drilling; in a real app, use context or a state manager)
@@ -171,7 +201,7 @@ const RailMap: React.FC = () => {
         refreshTrackedPinsFromApi().then(setTrackedPinsState).catch(() => {
             // fallback silently to cached state
         });
-    }, []);
+    }, [setTrackedPinsState]);
 
     const refreshPassengerPins = useCallback(async () => {
         const response = await getPassengerMapPins();
@@ -224,7 +254,7 @@ const RailMap: React.FC = () => {
                 url.searchParams.delete('share');
                 window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
             });
-    }, [session?.token]);
+    }, [session?.token, setTrackedPinsState]);
 
     // Periodically refresh tracked pins state (to handle expiration and updates)
     useEffect(() => {
@@ -261,7 +291,7 @@ const RailMap: React.FC = () => {
             window.removeEventListener('storage', handleStorageChange);
             document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
-    }, []);
+    }, [setTrackedPinsState]);
 
     // Sync tracked pin locations with current mapPins on load and when mapPins change
     useEffect(() => {
@@ -283,7 +313,7 @@ const RailMap: React.FC = () => {
                 setTrackedPinsState(results[results.length - 1] || getTrackedMapPins());
             });
         }
-    }, [mapPins]);
+    }, [mapPins, setTrackedPinsState]);
 
     // SignalR updates
     const { status: liveStatus } = useSignalR({
@@ -449,11 +479,11 @@ const RailMap: React.FC = () => {
         return { groupedPins: grouped, offsetMarkers: offsets };
     }, [mapPins, mapZoom]);
 
-    // Prune pins older than 10 minutes on a timer so they disappear even if no new data arrives
-    // @ts-expect-error
-    const [pruneTick, setPruneTick] = useState(0);
+    // Prune old pins on a timer so they disappear even if no new data arrives. The age check uses this time
+    // rather than the time of each render, so renders between ticks reuse the filtered pins.
+    const [pruneNow, setPruneNow] = useState(() => Date.now());
     useEffect(() => {
-        const interval = setInterval(() => setPruneTick(tick => tick + 1), 30 * 1000);
+        const interval = setInterval(() => setPruneNow(Date.now()), 30 * 1000);
         return () => clearInterval(interval);
     }, []);
 
@@ -464,7 +494,6 @@ const RailMap: React.FC = () => {
     // For filtering (milliseconds)
     const MAX_PIN_AGE_MINUTES = Number(import.meta.env.VITE_MAX_PIN_AGE_MINUTES);
     const MAX_PIN_AGE_MS = MAX_PIN_AGE_MINUTES * 60 * 1000;
-    const now = Date.now();
     const filteredPins: MapPin[] = useMemo(() => {
         const list: MapPin[] = [];
         Object.values(groupedPins).forEach(group => {
@@ -476,11 +505,11 @@ const RailMap: React.FC = () => {
                 const allAddressesAreDpu = addresses.length > 0 && addresses.every(addr => addr.source?.toUpperCase() === 'DPU');
                 const shouldUseHalfLife = activeSource === 'EOT' || (activeSource === 'DPU' && allAddressesAreDpu);
                 const maxAge = shouldUseHalfLife ? MAX_PIN_AGE_MS / 2 : MAX_PIN_AGE_MS;
-                if (now - lastUpdate <= maxAge) list.push(pin);
+                if (pruneNow - lastUpdate <= maxAge) list.push(pin);
             });
         });
         return list;
-    }, [groupedPins, now, MAX_PIN_AGE_MS]);
+    }, [groupedPins, pruneNow, MAX_PIN_AGE_MS]);
 
     // Group filtered pins by their lat/lng to handle overlapping markers
     const { offsetFilteredMarkers } = useMemo(() => {
@@ -613,10 +642,23 @@ const RailMap: React.FC = () => {
     }, [mapPins]);
 
     // Build a map of pins by id for TelemetryMarkers (only non-expired pins)
-    const telemetryPins: { [id: string]: MapPin } = {};
-    offsetFilteredMarkers.forEach(pin => {
-        telemetryPins[pin.id] = pin;
-    });
+    const telemetryPins = useMemo(() => {
+        const byId: { [id: string]: MapPin } = {};
+        offsetFilteredMarkers.forEach(pin => {
+            byId[pin.id] = pin;
+        });
+        return byId;
+    }, [offsetFilteredMarkers]);
+
+    const handleBeaconClick = useCallback((beaconID: string, beaconName: string, subdivisionID?: string, railroad?: string, subdivision?: string, subdivisions?: BeaconSubdivision[]) => {
+        setSelectedBeaconID(beaconID);
+        setSelectedBeaconName(beaconName);
+        setSelectedSubdivisionID(subdivisionID);
+        setSelectedRailroad(railroad);
+        setSelectedSubdivision(subdivision);
+        setSelectedSubdivisions(subdivisions);
+        setHistoryModalOpen(true);
+    }, []);
 
     const handleMapPinDeleted = useCallback((deletedPinId: number) => {
         setMapPins((prevPins: MapPin[]) => prevPins.filter(p => Number(p.id) !== deletedPinId));
@@ -748,28 +790,6 @@ const RailMap: React.FC = () => {
         const userLocationPaneCreated = map.getPane('userLocationPane');
         if (userLocationPaneCreated) userLocationPaneCreated.style.zIndex = '550';
     }, [mapRef.current]);
-
-    // Save map center and zoom on move/zoom
-    function MapZoomListener() {
-        useMapEvents({
-            zoomend: (e) => {
-                setMapZoom(e.target.getZoom());
-                setMapCenter([e.target.getCenter().lat, e.target.getCenter().lng]);
-                localStorage.setItem('mapState', JSON.stringify({
-                    center: [e.target.getCenter().lat, e.target.getCenter().lng],
-                    zoom: e.target.getZoom()
-                }));
-            },
-            moveend: (e) => {
-                setMapCenter([e.target.getCenter().lat, e.target.getCenter().lng]);
-                localStorage.setItem('mapState', JSON.stringify({
-                    center: [e.target.getCenter().lat, e.target.getCenter().lng],
-                    zoom: e.target.getZoom()
-                }));
-            }
-        });
-        return null;
-    }
 
     // Load and clean up tracked pins on map load
     useEffect(() => {
@@ -1042,7 +1062,7 @@ const RailMap: React.FC = () => {
             >
                 {/* Tile attribution is required by the OSM and Esri terms; the "Leaflet" prefix is dropped to keep it compact. */}
                 <AttributionControl position="bottomright" prefix={false} />
-                <MapZoomListener />
+                <MapViewListener onZoomChange={setMapZoom} onCenterChange={setMapCenter} />
                 {mapTheme === 'dark' ? (
                     <>
                         <TileLayer
@@ -1111,15 +1131,7 @@ const RailMap: React.FC = () => {
                     zoom={mapZoom} 
                     mapTheme={mapTheme as 'dark' | 'light'} 
                     beaconLastUpdateMap={beaconLastUpdateMap}
-                    onBeaconClick={(beaconID, beaconName, subdivisionID, railroad, subdivision, subdivisions) => {
-                        setSelectedBeaconID(beaconID);
-                        setSelectedBeaconName(beaconName);
-                        setSelectedSubdivisionID(subdivisionID);
-                        setSelectedRailroad(railroad);
-                        setSelectedSubdivision(subdivision);
-                        setSelectedSubdivisions(subdivisions);
-                        setHistoryModalOpen(true);
-                    }}
+                    onBeaconClick={handleBeaconClick}
                     trackedPins={trackedPinsState}
                     mapPins={mapPins}
                     hourFormat={hourFormat}
@@ -1149,10 +1161,7 @@ const RailMap: React.FC = () => {
 
                 <UserLocationPin mapTheme={mapTheme as 'dark' | 'light'} />
                 
-                <FindMeControl 
-                    mapRef={mapRef}
-                    userLocation={userLocation}
-                />
+                <FindMeControl mapRef={mapRef} />
 
             </MapContainer>
 

@@ -98,6 +98,16 @@ function mergeBeaconStatus(rows: Beacon[]): Beacon {
     };
 }
 
+// Vertical offset for label marker (in degrees latitude, approx 7px)
+function getLabelOffsetLat(lat: number, zoom: number): number {
+    // Pointer is 1/3 smaller, so 7px at current zoom
+    const metersPerPixel = 156543.03392 * Math.cos(lat * Math.PI / 180) / Math.pow(2, zoom);
+    const offsetMeters = 7 * metersPerPixel;
+    return lat - (offsetMeters / 111320); // 1 deg lat ~ 111.32km
+}
+
+const NO_MAP_PINS: MapPin[] = [];
+
 const BeaconMarkers: React.FC<BeaconMarkersProps> = ({ 
     pins: beaconPins, 
     zoom, 
@@ -108,13 +118,9 @@ const BeaconMarkers: React.FC<BeaconMarkersProps> = ({
     mapPins = [],
     hourFormat = '24'
 }) => {
-    // Vertical offset for label marker (in degrees latitude, approx 7px)
-    const getLabelOffsetLat = (lat: number, zoom: number) => {
-        // Pointer is 1/3 smaller, so 7px at current zoom
-        const metersPerPixel = 156543.03392 * Math.cos(lat * Math.PI / 180) / Math.pow(2, zoom);
-        const offsetMeters = 7 * metersPerPixel;
-        return lat - (offsetMeters / 111320); // 1 deg lat ~ 111.32km
-    };
+    // Labels read map pins only to place the user's tracked trains. Without tracked pins they get a fixed empty
+    // list, so a train update does not re-render every label.
+    const labelMapPins = trackedPins.length > 0 ? mapPins : NO_MAP_PINS;
 
     const uniqueBeaconPins = useMemo(() => collapseBeaconPins(beaconPins), [beaconPins]);
 
@@ -153,17 +159,8 @@ const BeaconMarkers: React.FC<BeaconMarkersProps> = ({
         <>
             {uniqueBeaconPins.map((beaconPin, idx) => {
                 const LABEL_ZOOM_THRESHOLD = 11;
-                // Find the latest telemetry pin for this beacon
-                // Always use the last known update time and direction for this beacon
-                let lastUpdateTime: string | null = null;
-                let direction: string | null = null;
-                // Keys match makeBeaconKey in RailMap.tsx; a junction takes its latest subdivision.
+                // The last train at this marker. Keys match makeBeaconKey in RailMap.tsx; a junction takes its latest subdivision.
                 const entry = latestBeaconUpdate(beaconLastUpdateMap, beaconPin);
-                if (entry) {
-                    const d = new Date(entry.lastUpdate);
-                    lastUpdateTime = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-                    direction = entry.direction;
-                }
                 // Stable unique key: use beaconID+railroadID for identity, fallback to idx
                 const keyRoot = beaconPin.beaconID != null && beaconPin.railroadID != null 
                     ? `beacon-${beaconPin.beaconID}-${beaconPin.railroadID}` 
@@ -182,15 +179,14 @@ const BeaconMarkers: React.FC<BeaconMarkersProps> = ({
                         {zoom >= LABEL_ZOOM_THRESHOLD && (
                             <BeaconLabelPin
                                 beaconPin={beaconPin}
-                                idx={idx}
                                 zoom={zoom}
                                 mapTheme={mapTheme}
                                 getLabelOffsetLat={getLabelOffsetLat}
-                                lastUpdateTime={lastUpdateTime}
-                                direction={direction}
+                                lastUpdate={entry?.lastUpdate ?? null}
+                                direction={entry?.direction ?? null}
                                 onClick={onBeaconClick}
                                 trackedPins={trackedPins}
-                                mapPins={mapPins}
+                                mapPins={labelMapPins}
                                 horizontalShift={horizontalShift}
                                 hourFormat={hourFormat}
                             />

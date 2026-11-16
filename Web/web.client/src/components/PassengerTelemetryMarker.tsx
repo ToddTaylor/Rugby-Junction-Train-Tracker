@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { Marker } from 'react-leaflet';
 import L from 'leaflet';
 import { PassengerMapPin } from '../types/PassengerMapPin';
@@ -91,11 +91,15 @@ const PassengerTelemetryMarker: React.FC<Props> = ({ pin, size, mapTheme }) => {
     };
   }, [pin, mapTheme]);
 
+  // A new icon makes Leaflet replace the marker's DOM element, so it is built only when its inputs change.
+  const moving = pin.velocity > 0;
+  const icon = useMemo(() => createPassengerIcon(pin.heading, moving, size), [pin.heading, moving, size]);
+
   return (
     <Marker
       ref={markerRef}
       position={[pin.latitude, pin.longitude]}
-      icon={createPassengerIcon(pin.heading, pin.velocity > 0, size)}
+      icon={icon}
       pane="telemetryPane"
     />
   );
@@ -161,4 +165,4 @@ function getRotationFromHeading(heading: string): number {
   }
 }
 
-export default PassengerTelemetryMarker;
+export default React.memo(PassengerTelemetryMarker);

@@ -1,6 +1,8 @@
+import { useMemo } from 'react';
 import { MapPin } from '../types/MapPin';
 import TelemetryMarker from './TelemetryMarker';
 import type { TrackedPin } from '../services/trackedPins';
+import { buildTrackingLookup } from '../utils/trackingDisplay';
 
 // Add dynamic marker sizing based on zoom
 function getMarkerSize(zoom: number): number {
@@ -33,6 +35,7 @@ const TelemetryMarkers: React.FC<TelemetryMarkersProps & { mapTheme: 'dark' | 'l
     onMapPinDeleted,
 }) => {
     const size = getMarkerSize(zoom);
+    const trackingFor = useMemo(() => buildTrackingLookup(trackedPins), [trackedPins]);
 
     // Fix: Only render if pins is an object and has values
     if (!telemetryPins || typeof telemetryPins !== 'object') return null;
@@ -41,14 +44,17 @@ const TelemetryMarkers: React.FC<TelemetryMarkersProps & { mapTheme: 'dark' | 'l
 
     return (
         <>
-            {pinsArray.map((telemetryPin) =>
-                telemetryPin ? (
+            {pinsArray.map((telemetryPin) => {
+                const { isTracked, trackColor, trackedSymbol } = trackingFor(telemetryPin);
+                return (
                     <TelemetryMarker
                         key={telemetryPin.id}
                         pin={telemetryPin}
                         size={size}
                         maxPinAgeMinutes={maxPinAgeMinutes}
-                        trackedPins={trackedPins}
+                        isTracked={isTracked}
+                        trackColor={trackColor}
+                        trackedSymbol={trackedSymbol}
                         mapTheme={mapTheme}
                         hourFormat={hourFormat}
                         canViewSupportAddresses={canViewSupportAddresses}
@@ -56,8 +62,8 @@ const TelemetryMarkers: React.FC<TelemetryMarkersProps & { mapTheme: 'dark' | 'l
                         canManageLocalTrains={canManageLocalTrains}
                         onMapPinDeleted={onMapPinDeleted}
                     />
-                ) : null
-            )}
+                );
+            })}
         </>
     );
 };
