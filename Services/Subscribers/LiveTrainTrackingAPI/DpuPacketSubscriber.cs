@@ -5,16 +5,18 @@ namespace Services.Subscribers.LiveTrainTrackingAPI
 {
     public class DpuPacketSubscriber
     {
-        private readonly AppSettings _appSettings;
         private readonly Subscriber _subscriber;
         private readonly TelemetryThrottleService _throttleService;
+        private readonly TelemetryApiClient _apiClient;
+        private readonly TelemetrySendQueue _sendQueue;
 
         public DpuPacketSubscriber(AppSettings appSettings)
         {
-            _appSettings = appSettings;
             _subscriber = appSettings.Subscribers
                 .First(s => s.ID == Constants.SUBSCRIBER_ID);
             _throttleService = new TelemetryThrottleService(_subscriber.TelemetryThrottleIntervalSeconds);
+            _apiClient = new TelemetryApiClient(appSettings);
+            _sendQueue = TelemetrySendQueue.ForSubscriber(Constants.SUBSCRIBER_ID);
         }
 
         private void OnDpuPacketReceived(object sender, DpuPacketEventArgs e)
@@ -44,19 +46,18 @@ namespace Services.Subscribers.LiveTrainTrackingAPI
 
             var alert = new Telemetry
             {
-                AddressID = int.Parse(e.Packet.ADDR),
+                AddressID = addressId,
                 BeaconID = _subscriber.Beacon.BeaconID,
                 Detector = _subscriber.Beacon.DetectorID,
                 Motion = IsMoving(e.Packet),
                 Source = "DPU",
-                TrainID = int.Parse(e.Packet.TRID),
+                // TRID is "---" in some packets; the deserializer turns that into null.
+                TrainID = int.TryParse(e.Packet.TRID, out var trainId) ? trainId : null,
             };
 
-            var apiClient = new TelemetryApiClient(_appSettings);
-            apiClient.SendTelemetryAsync(alert).GetAwaiter().GetResult();
-
-            // Let web page respond to previous request before sending the next one.
-            Thread.Sleep(100);
+            // Sent from this subscriber's own queue, so a slow or unreachable API does not hold up the log reader
+            // or the other subscribers.
+            _sendQueue.Enqueue(() => _apiClient.SendTelemetryAsync(alert));
         }
 
         /// <summary>

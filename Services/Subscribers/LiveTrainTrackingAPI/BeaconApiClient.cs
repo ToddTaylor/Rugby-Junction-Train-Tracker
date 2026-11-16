@@ -21,13 +21,13 @@ namespace Services.Subscribers.LiveTrainTrackingAPI
 
                 var url = base.GetHealthUrl();
 
-                var request = new HttpRequestMessage(HttpMethod.Post, url);
+                using var request = new HttpRequestMessage(HttpMethod.Post, url);
 
                 // Add the API key to the headers
                 var _apiKey = base.GetApiKey();
                 request.Headers.Add("X-Api-Key", _apiKey);
 
-                var response = await base._httpClient.SendAsync(request);
+                using var response = await base._httpClient.SendAsync(request);
 
                 if (response.IsSuccessStatusCode == false)
                 {

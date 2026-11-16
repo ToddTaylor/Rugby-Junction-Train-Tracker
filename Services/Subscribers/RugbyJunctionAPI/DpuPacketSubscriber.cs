@@ -5,30 +5,29 @@ namespace Services.Subscribers.RugbyJunctionAPI
 {
     public class DpuPacketSubscriber
     {
-        private readonly AppSettings _appSettings;
         private readonly Subscriber _subscriber;
         private readonly TelemetryThrottleService _throttleService;
+        private readonly TelemetryApiClient _apiClient;
+        private readonly TelemetrySendQueue _sendQueue;
 
         // Address IDs that should be ignored.
         private readonly int[] addressIdBlackList = new int[] { 0, 999999 };
 
         public DpuPacketSubscriber(AppSettings appSettings)
         {
-            _appSettings = appSettings;
             _subscriber = appSettings.Subscribers
                 .First(s => s.ID == Constants.SUBSCRIBER_ID);
             _throttleService = new TelemetryThrottleService(_subscriber.TelemetryThrottleIntervalSeconds);
+            _apiClient = new TelemetryApiClient(appSettings, Constants.SUBSCRIBER_ID);
+            _sendQueue = TelemetrySendQueue.ForSubscriber(Constants.SUBSCRIBER_ID);
         }
 
         private void OnDpuPacketReceived(object sender, DpuPacketEventArgs e)
         {
+            // Also drops ADDR "INV", which is not a number.
             if (!int.TryParse(e.Packet.ADDR, out var addressId)) { return; }
 
             if (addressIdBlackList.Contains(addressId)) { return; }
-
-            var sendInvalidMessages = _subscriber.SendInvalidMessages;
-
-            if (sendInvalidMessages == false && e.Packet.ADDR == "INV") { return; }
 
             // Check if this message should be throttled based on AddressID
             if (!_throttleService.ShouldSendMessage(addressId))
@@ -50,19 +49,18 @@ namespace Services.Subscribers.RugbyJunctionAPI
             var alert = new Telemetry
             {
                 BeaconID = _subscriber.Beacon.BeaconID,
-                AddressID = int.Parse(e.Packet.ADDR),
-                TrainID = int.Parse(e.Packet.TRID),
+                AddressID = addressId,
+                // TRID is "---" in some packets; the deserializer turns that into null.
+                TrainID = int.TryParse(e.Packet.TRID, out var trainId) ? trainId : null,
                 BrakePipePressure = e.Packet.BP,
                 Moving = null,
                 Source = "DPU",
                 Timestamp = e.Packet.TimeReceived
             };
 
-            var apiClient = new TelemetryApiClient(_appSettings, Constants.SUBSCRIBER_ID);
-            apiClient.SendTelemetryAsync(alert).GetAwaiter().GetResult();
-
-            // Let web page respond to previous request before sending the next one.
-            Thread.Sleep(100);
+            // Sent from this subscriber's own queue, so a slow or unreachable API does not hold up the log reader
+            // or the other subscribers.
+            _sendQueue.Enqueue(() => _apiClient.SendTelemetryAsync(alert));
         }
     }
 }

@@ -31,7 +31,7 @@ namespace Services.Subscribers.RugbyJunctionAPIBeta
                 await _retryPolicy.ExecuteAsync(async _ =>
                 {
 
-                    var request = new HttpRequestMessage(HttpMethod.Post, url)
+                    using var request = new HttpRequestMessage(HttpMethod.Post, url)
                     {
                         Content = System.Net.Http.Json.JsonContent.Create(telemetry)
                     };
@@ -40,12 +40,13 @@ namespace Services.Subscribers.RugbyJunctionAPIBeta
                     var _apiKey = base.GetApiKey();
                     request.Headers.Add("X-Api-Key", _apiKey);
 
-                    var response = await base._httpClient.SendAsync(request);
+                    using var response = await base._httpClient.SendAsync(request);
 
                     if (response.IsSuccessStatusCode == false)
                     {
                         var errorContent = await response.Content.ReadAsStringAsync();
-                        throw new HttpRequestException($"API error: {response.StatusCode} - {errorContent}");
+                        // The status code lets the retry policy tell a server error from a refusal.
+                        throw new HttpRequestException($"API error: {response.StatusCode} - {errorContent}", null, response.StatusCode);
                     }
                 }, new Context { ["RequestUrl"] = url });
 

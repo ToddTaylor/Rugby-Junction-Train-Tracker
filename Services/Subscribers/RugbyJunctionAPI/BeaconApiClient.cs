@@ -43,7 +43,7 @@ namespace Services.Subscribers.RugbyJunctionAPI
                 if (response.IsSuccessStatusCode == false)
                 {
                     var errorContent = await response.Content.ReadAsStringAsync();
-                    throw new HttpRequestException($"API error: {response.StatusCode} - {errorContent}");
+                    throw new HttpRequestException($"API error: {response.StatusCode} - {errorContent}", null, response.StatusCode);
                 }
 
                 command = response.StatusCode == HttpStatusCode.OK
@@ -76,7 +76,7 @@ namespace Services.Subscribers.RugbyJunctionAPI
                 if (response.IsSuccessStatusCode == false)
                 {
                     var errorContent = await response.Content.ReadAsStringAsync();
-                    throw new HttpRequestException($"API error: {response.StatusCode} - {errorContent}");
+                    throw new HttpRequestException($"API error: {response.StatusCode} - {errorContent}", null, response.StatusCode);
                 }
             }, new Context { ["RequestUrl"] = url });
 

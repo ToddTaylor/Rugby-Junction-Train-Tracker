@@ -1,4 +1,5 @@
-﻿using Services.Models;
+﻿using Services.Http;
+using Services.Models;
 
 namespace Services.Subscribers.LiveTrainTrackingAPI
 {
@@ -9,7 +10,7 @@ namespace Services.Subscribers.LiveTrainTrackingAPI
 
         public ApiClient(AppSettings appSettings)
         {
-            _httpClient = new HttpClient();
+            _httpClient = SharedHttpClient.Instance;
             _apiSettings = appSettings.Subscribers
                 .First(s => s.ID == Constants.SUBSCRIBER_ID)
                 .ApiSettings;
