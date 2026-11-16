@@ -5,6 +5,7 @@ import { Beacon } from "../types/Beacon";
 import { PassengerMapPin } from "../types/PassengerMapPin";
 import { ServerCommandUpdate, ServerStatusChange } from "../types/ServerHealth";
 import { getAuthToken } from "../services/auth";
+import { LiveConnectionStatus, reconnectPolicy, startWithRetry } from "../services/liveConnection";
 
 const beaconUpdateMethodName = "BeaconUpdate";
 const mapPinUpdateMethodName = "MapPinUpdate";
@@ -17,8 +18,16 @@ const passengerPinRemovedMethodName = "PassengerPinRemoved";
 const serverStatusChangedMethodName = "ServerStatusChanged";
 const serverCommandUpdatedMethodName = "ServerCommandUpdated";
 
-// Accept handlers for multiple events
+/**
+ * Opens the SignalR connection for live updates and keeps it open: it retries without limit when the
+ * connection drops or cannot be opened. Returns `status` so a view can tell the user when updates have stopped.
+ *
+ * Messages sent while the connection was down are not replayed. Pass `Reconnected` to re-fetch whatever the
+ * view shows once the connection is back.
+ */
 export function useSignalR(handlers: {
+    /** The connection is open again after being down, or opened only after failed attempts. */
+    Reconnected?: () => void;
     MapPinUpdate?: (mapPin: MapPin) => void;
     MapPinRemoved?: (mapPinId: number) => void;
     BeaconUpdate?: (beacons: Beacon[]) => void;
@@ -31,8 +40,8 @@ export function useSignalR(handlers: {
     ServerCommandUpdated?: (update: ServerCommandUpdate) => void;
 }) {
     const handlersRef = useRef(handlers);
-    const [connectionState, setConnectionState] = useState<signalR.HubConnectionState | null>(null);
-    const connectionRef = useRef<signalR.HubConnection | null>(null);
+    // null until a connection is attempted; it never is when nobody is signed in.
+    const [status, setStatus] = useState<LiveConnectionStatus | null>(null);
 
     // Keep ref updated
     useEffect(() => {
@@ -45,6 +54,10 @@ export function useSignalR(handlers: {
 
         const startConnection = async () => {
             const token = await getAuthToken();
+            // The effect may have been cleaned up while the token was read; do not open a connection nobody will stop.
+            if (disposed) {
+                return;
+            }
             if (!token) {
                 console.warn("SignalR connection skipped: missing auth token");
                 return;
@@ -58,10 +71,30 @@ export function useSignalR(handlers: {
 
             connection = new signalR.HubConnectionBuilder()
                 .withUrl(signalRUrl, options)
-                .withAutomaticReconnect()
+                .withAutomaticReconnect(reconnectPolicy)
                 .build();
-            connectionRef.current = connection;
-            setConnectionState(connection.state);
+            const hub = connection;
+            setStatus('connecting');
+
+            // Opens the connection, retrying until it works. `afterOutage` is true when it was open before.
+            const open = async (afterOutage: boolean) => {
+                const failedAttempts = await startWithRetry(hub, {
+                    isDisposed: () => disposed,
+                    onAttemptFailed: error => {
+                        console.error("SignalR Connection Error: ", error);
+                        setStatus('reconnecting');
+                    }
+                });
+                if (failedAttempts === null) {
+                    return;
+                }
+
+                console.log("SignalR Connected");
+                setStatus('connected');
+                if (afterOutage || failedAttempts > 0) {
+                    handlersRef.current.Reconnected?.();
+                }
+            };
 
             // Register handlers if provided
             if (handlersRef.current.MapPinUpdate) {
@@ -146,34 +179,28 @@ export function useSignalR(handlers: {
             }
 
             connection.onclose(error => {
-                if (error) {
-                    console.error("SignalR Connection closed with error:", error);
-                } else {
-                    console.log("SignalR Connection closed.");
+                if (disposed) {
+                    return;
                 }
+
+                // Automatic reconnect never gives up, so this is a close it does not cover. Open it again.
+                console.error("SignalR Connection closed:", error);
+                setStatus('reconnecting');
+                open(true);
             });
 
             connection.onreconnecting(error => {
                 console.warn("SignalR reconnecting...", error);
-                setConnectionState(connection?.state ?? null);
+                setStatus('reconnecting');
             });
 
             connection.onreconnected(connectionId => {
                 console.log("SignalR reconnected. Connection ID:", connectionId);
-                setConnectionState(connection?.state ?? null);
+                setStatus('connected');
+                handlersRef.current.Reconnected?.();
             });
 
-            try {
-                await connection.start();
-                if (!disposed) {
-                    console.log("SignalR Connected");
-                    setConnectionState(connection.state);
-                }
-            }
-            catch (err) {
-                console.error("SignalR Connection Error: ", err);
-                setConnectionState(connection?.state ?? null);
-            }
+            await open(false);
         };
 
         startConnection();
@@ -196,5 +223,5 @@ export function useSignalR(handlers: {
         };
     }, []);
 
-    return { connection: connectionRef.current, connectionState };
+    return { status };
 }

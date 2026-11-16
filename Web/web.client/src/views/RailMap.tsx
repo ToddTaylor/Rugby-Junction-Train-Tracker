@@ -40,6 +40,7 @@ import { PassengerMapPin } from '../types/PassengerMapPin';
 import { DEFAULT_SELECTED_OWNERS, isTrackSelected, summarizeOwners } from '../utils/railroadOwners';
 import { getPassengerMapPins } from '../api/passengerMapPins';
 import { checkSession } from '../api/auth';
+import LiveStatusBanner from '../components/LiveStatusBanner';
 
 const ICON_CACHE_BUSTER = import.meta.env.VITE_APP_VERSION
     ? `?v=${import.meta.env.VITE_APP_VERSION}`
@@ -151,8 +152,8 @@ const RailMap: React.FC = () => {
     // Use custom hooks for data
     const { trackData, trackDataLoading } = useRailways();
     const railroadOwners = useMemo(() => summarizeOwners(trackData), [trackData]);
-    const { beacons, beaconsLoaded, setBeacons } = useBeacons();
-    const { mapPins, setMapPins } = useTelemetryPins();
+    const { beacons, beaconsLoaded, setBeacons, refreshBeacons } = useBeacons();
+    const { mapPins, setMapPins, refreshMapPins } = useTelemetryPins();
     const [passengerMapPins, setPassengerMapPins] = useState<PassengerMapPin[]>([]);
     const { milepostPoints } = useMileposts();
     const { defectDetectors } = useDefectDetectors();
@@ -172,19 +173,31 @@ const RailMap: React.FC = () => {
         });
     }, []);
 
-    useEffect(() => {
-        async function fetchPassengerPins() {
-            const response = await getPassengerMapPins();
-            if (response.errors.length > 0) {
-                console.error('Error fetching passenger map pins:', response.errors.join(', '));
-                return;
-            }
-
-            setPassengerMapPins((response.data || []).filter(pin => !pin.isStale));
+    const refreshPassengerPins = useCallback(async () => {
+        const response = await getPassengerMapPins();
+        if (response.errors.length > 0) {
+            console.error('Error fetching passenger map pins:', response.errors.join(', '));
+            return;
         }
 
-        fetchPassengerPins();
+        setPassengerMapPins((response.data || []).filter(pin => !pin.isStale));
     }, []);
+
+    useEffect(() => {
+        refreshPassengerPins();
+    }, [refreshPassengerPins]);
+
+    // Re-fetches everything the map shows live. Used after the tab was hidden long enough to be stale, and
+    // when the SignalR connection comes back, because messages sent while it was down are not replayed.
+    // Rejects when the train pins or beacons cannot be fetched.
+    const refreshLiveData = async () => {
+        await Promise.all([refreshMapPins(), refreshBeacons()]);
+        mergeLatestBeaconUpdates();
+        refreshPassengerPins();
+        refreshTrackedPinsFromApi().then(setTrackedPinsState).catch(() => {
+            // fallback silently to cached state
+        });
+    };
 
     useEffect(() => {
         window.mapPins = mapPins;
@@ -272,8 +285,11 @@ const RailMap: React.FC = () => {
         }
     }, [mapPins]);
 
-    // SignalR updates (retain reference to connection if needed for future reconnect logic)
-    useSignalR({
+    // SignalR updates
+    const { status: liveStatus } = useSignalR({
+        Reconnected: () => {
+            refreshLiveData().catch(error => console.warn('Refresh after reconnecting failed:', error));
+        },
         MapPinUpdate: (mapPin: MapPin) => {
             // Invalidate history cache for this beacon to ensure fresh data on next fetch
             invalidateBeaconHistoryCache(mapPin.beaconID);
@@ -382,8 +398,8 @@ const RailMap: React.FC = () => {
         }
     });
 
-    // Stale refresh on wake/tab visibility change (soft refresh first, fallback to hard reload handled inside hook)
-    useStaleRefresh(setMapPins, setBeacons, () => { /* beacons loaded flag is maintained by hook's fetchBeacons */ }, {
+    // Refresh on wake or when the tab becomes visible again after being hidden long enough to be stale
+    useStaleRefresh(refreshLiveData, {
         hiddenThresholdMsMobile: 30_000, // 30s for mobile
         hiddenThresholdMsDesktop: 120_000, // 2m desktop
         hardReloadFallbackMs: 10 * 60_000, // 10 minutes
@@ -1086,6 +1102,8 @@ const RailMap: React.FC = () => {
                         Loading railways…
                     </div>
                 )}
+
+                <LiveStatusBanner status={liveStatus} />
 
                 {/* Beacon markers */}
                 {beaconsLoaded && <BeaconMarkers 

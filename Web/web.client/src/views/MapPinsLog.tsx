@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import '../App.css';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { Box, Typography, FormControl, InputLabel, Select, MenuItem, Checkbox, ListItemText } from '@mui/material';
@@ -13,30 +13,32 @@ function MapPinsLog() {
     const [beaconNameFilter, setBeaconNameFilter] = useState<string[]>([]);
     const [trackedPins, setTrackedPins] = useState<TrackedPin[]>([]);
 
-    useEffect(() => {
-        const fetchMapPins = async () => {
-            try {
-                const apiUrl = import.meta.env.VITE_API_URL + "/api/v1/MapPins";
-                const response = await fetch(apiUrl, {
-                    headers: {
-                        'X-Api-Key': import.meta.env.VITE_API_KEY,  
-                        'Content-Type': 'application/json' 
-                    }
-                });
-                if (!response.ok) throw new Error('Failed to fetch map pins');
+    const fetchMapPins = useCallback(async () => {
+        try {
+            const apiUrl = import.meta.env.VITE_API_URL + "/api/v1/MapPins";
+            const response = await fetch(apiUrl, {
+                headers: {
+                    'X-Api-Key': import.meta.env.VITE_API_KEY,
+                    'Content-Type': 'application/json'
+                }
+            });
+            if (!response.ok) throw new Error('Failed to fetch map pins');
 
-                const { data: pins } = await response.json();
-                setMapPins(pins);
-            } catch (error) {
-                console.error('Error fetching map pins:', error);
-            }
-        };
-        
-        fetchMapPins();
+            const { data: pins } = await response.json();
+            setMapPins(pins);
+        } catch (error) {
+            console.error('Error fetching map pins:', error);
+        }
     }, []);
+
+    useEffect(() => {
+        fetchMapPins();
+    }, [fetchMapPins]);
 
     // SignalR real-time updates
     useSignalR({
+        // Updates sent while the connection was down are not replayed, so fetch the list again.
+        Reconnected: fetchMapPins,
         MapPinUpdate: (mapPin: MapPin) => {
             setMapPins((prevPins: MapPin[]) => updateMapPins(prevPins, mapPin));
         },
