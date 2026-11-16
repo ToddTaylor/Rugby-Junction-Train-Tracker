@@ -55,9 +55,10 @@ export default tseslint.config({
 
 ## Application Features (Project-specific)
 
-- Real-time telemetry updates via SignalR
+- Real-time telemetry updates via SignalR. The connection is retried without limit (`src/services/liveConnection.ts`), the map shows "Live updates paused. Reconnecting…" after it has been down for 3 seconds, and the map re-fetches its data when the connection returns.
+- Beacons are drawn from the browser's cached list first, then always replaced by the server's list (`loadBeacons` in `src/api/beaconsApi.ts`).
 - Beacon labels show last train time plus direction arrows (▲ ▼ ► ◄)
-- Stale-aware refresh on tab/device wake (`useStaleRefresh`): When the page becomes visible after being hidden beyond configurable thresholds (30s mobile / 2m desktop by default), a soft data re-fetch (telemetry + beacons) runs. If hidden extremely long (≥10m) or the soft refresh fails, a hard reload occurs to guarantee fresh state.
+- Stale-aware refresh on tab/device wake (`useStaleRefresh`): When the page becomes visible after being hidden beyond configurable thresholds (30s mobile / 2m desktop by default), a soft data re-fetch (train pins, beacons, passenger trains, tracked pins) runs. If hidden extremely long (≥10m), a hard reload occurs. A soft refresh that fails is only logged, because a device that has just woken often has no network yet; the SignalR reconnect runs the same re-fetch once the connection is back.
 
 ### Theming (Light/Dark Mode)
 The login screen and future UI components use a CSS variable theme defined in `src/index.css`. Dark mode variables are the default; light mode overrides activate via the `prefers-color-scheme: light` media query. Component styles (e.g. `src/views/Login.css`) reference shared variables such as `--color-bg`, `--color-text-primary`, and `--color-accent`. To extend the palette, add new variables under `:root` (dark baseline) and provide corresponding overrides inside the light media query. This keeps styling DRY and automatically adapts across user system preferences.

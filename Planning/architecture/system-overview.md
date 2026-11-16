@@ -23,8 +23,9 @@ RugbyJunctionTrainTracker is a train telemetry and map-tracking application. It 
 
 ## Frontend Responsibilities
 - Fetch and display map, beacon, telemetry, and user-specific tracked pin data.
-- Maintain live updates through SignalR.
-- Reflect stale-state recovery and refresh behavior after device or tab wake.
+- Maintain live updates through SignalR. `useSignalR` retries without limit, both when an open connection drops and when the first attempt fails. Messages sent while the connection was down are not replayed, so the map re-fetches train pins, beacons, passenger trains and tracked pins when it reconnects, and shows "Live updates paused. Reconnecting…" while it is down.
+- Reflect stale-state recovery and refresh behavior after device or tab wake. The wake refresh and the reconnect refresh are the same function in `RailMap`.
+- Draw beacons from the browser's cached list first, then always replace it with the server's list (`loadBeacons`). Statuses last pushed over SignalR are kept in localStorage and laid over either list, because the REST endpoint does not compute `telemetryStale`.
 - Keep map pin, beacon label, and tracked pin UI behavior aligned with server semantics.
 - Route HTTP access through frontend service modules instead of embedding API logic in components.
 

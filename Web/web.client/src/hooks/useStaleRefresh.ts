@@ -1,8 +1,4 @@
 import { useEffect, useRef } from 'react';
-import { fetchInitialTelemetryPins } from '../api/mapPinsApi';
-import { fetchBeacons } from '../api/beaconsApi';
-import { Beacon } from '../types/Beacon';
-import { MapPin } from '../types/MapPin';
 
 export interface StaleRefreshOptions {
   hiddenThresholdMsMobile?: number; // time hidden before refresh attempt on mobile
@@ -23,36 +19,36 @@ function isMobileUA(): boolean {
   return /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent);
 }
 
-// Hook to perform stale-aware refresh when returning from hidden state.
-// Expects caller to provide setters for pins and beacons.
+/**
+ * Refreshes the map's data when the tab or device comes back after being hidden long enough to be stale.
+ *
+ * refresh re-fetches the data and rejects when the server cannot be reached. A failed refresh is only
+ * logged: a device that has just woken often has no network yet, and reloading the page then would replace
+ * a stale map with a browser error page. The SignalR connection refreshes the data when it reconnects.
+ */
 export function useStaleRefresh(
-  setMapPins: (pins: MapPin[]) => void,
-  setBeacons: (beacons: Beacon[]) => void,
-  setBeaconsLoaded: (loaded: boolean) => void,
+  refresh: () => Promise<void>,
   opts: StaleRefreshOptions = {}
 ) {
   const options = { ...defaultOpts, ...opts };
   const lastHiddenAt = useRef<number | null>(null);
   const refreshInProgress = useRef<boolean>(false);
-
-  async function softRefresh(): Promise<boolean> {
-    if (refreshInProgress.current) return true; // Avoid overlapping
-    refreshInProgress.current = true;
-    try {
-      // Re-fetch telemetry pins
-      await fetchInitialTelemetryPins(setMapPins);
-      // Re-fetch beacons (beacons seldom change but safe)
-      await fetchBeacons(setBeacons, setBeaconsLoaded);
-      return true;
-    } catch (e) {
-      console.error('Soft refresh failed:', e);
-      return false;
-    } finally {
-      refreshInProgress.current = false;
-    }
-  }
+  const refreshRef = useRef(refresh);
+  refreshRef.current = refresh;
 
   useEffect(() => {
+    async function softRefresh() {
+      if (refreshInProgress.current) return; // Avoid overlapping
+      refreshInProgress.current = true;
+      try {
+        await refreshRef.current();
+      } catch (e) {
+        console.warn('Refresh after returning to the tab failed; waiting for the live connection:', e);
+      } finally {
+        refreshInProgress.current = false;
+      }
+    }
+
     function onVisibilityChange() {
       if (document.hidden) {
         lastHiddenAt.current = Date.now();
@@ -78,12 +74,7 @@ export function useStaleRefresh(
         return;
       }
 
-      // Attempt soft refresh first
-      softRefresh().then(success => {
-        if (!success && options.enableHardReload) {
-          window.location.reload();
-        }
-      });
+      softRefresh();
     }
 
     document.addEventListener('visibilitychange', onVisibilityChange);
