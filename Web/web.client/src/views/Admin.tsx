@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import './Admin.css';
 import { useAuth } from '../hooks/useAuth';
@@ -76,7 +76,10 @@ const Admin: React.FC = () => {
         </nav>
       </aside>
       <main className="admin-content">
-        <Outlet />
+        {/* Each admin page downloads the first time it is opened; the sidebar stays in place meanwhile. */}
+        <Suspense fallback={null}>
+          <Outlet />
+        </Suspense>
       </main>
     </div>
   );

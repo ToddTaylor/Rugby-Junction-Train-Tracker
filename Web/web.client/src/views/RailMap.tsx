@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
+﻿import React, { lazy, Suspense, useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import HamburgerMenu from '../components/HamburgerMenu';
 import RailroadFilterPanel from '../components/RailroadFilterPanel';
 import { TrainTrack } from 'lucide-react';
@@ -22,7 +22,6 @@ import MilepostLayer from '../components/MilepostLayer';
 import DefectDetectorLayer from '../components/DefectDetectorLayer';
 import UserLocationPin from '../components/UserLocationPin';
 import FindMeControl from '../components/FindMeControl';
-import { BeaconHistoryModal } from '../components/BeaconHistoryModal';
 import { getTrackedMapPins, updateTrackedPinLocation, refreshTrackedPinsFromApi, applyTrackedPinAddedOrUpdatedFromServer, applyTrackedPinRemovedFromServer, addTrackedMapPinByShareCode } from '../services/trackedPins';
 import { metersToLongitudeDegrees, pixelsToMeters } from '../utils/geo';
 import { updateMapPins, updateBeacon, removeMapPin } from '../utils/updateHelpers';
@@ -73,6 +72,9 @@ function trackStyle(theme: string, selected: boolean): L.PathOptions {
         ? { color: '#6f87a1', weight: 3, opacity: 0.95 }
         : { color: '#b0bfcf', weight: 2, opacity: 0.7 };
 }
+
+// The history modal brings in the data grid, which the map does not otherwise need, so it downloads on first use.
+const BeaconHistoryModal = lazy(() => import('../components/BeaconHistoryModal').then(m => ({ default: m.BeaconHistoryModal })));
 
 function trackedPinMatchesMapPin(trackedPin: ReturnType<typeof getTrackedMapPins>[number], mapPin: MapPin): boolean {
     if (String(trackedPin.id) === String(mapPin.id)) {
@@ -163,6 +165,7 @@ const RailMap: React.FC = () => {
 
     // Modal state for beacon history
     const [historyModalOpen, setHistoryModalOpen] = useState(false);
+    const [historyModalUsed, setHistoryModalUsed] = useState(false);
     const [selectedBeaconID, setSelectedBeaconID] = useState<string>('');
     const [selectedBeaconName, setSelectedBeaconName] = useState<string>('');
     const [selectedSubdivisionID, setSelectedSubdivisionID] = useState<string | undefined>(undefined);
@@ -658,6 +661,7 @@ const RailMap: React.FC = () => {
         setSelectedSubdivision(subdivision);
         setSelectedSubdivisions(subdivisions);
         setHistoryModalOpen(true);
+        setHistoryModalUsed(true);
     }, []);
 
     const handleMapPinDeleted = useCallback((deletedPinId: number) => {
@@ -1165,8 +1169,8 @@ const RailMap: React.FC = () => {
 
             </MapContainer>
 
-            {/* Beacon History Modal */}
-            <BeaconHistoryModal
+            {/* Beacon History Modal. It is downloaded the first time a beacon is clicked, and stays mounted after that. */}
+            {historyModalUsed && <Suspense fallback={null}><BeaconHistoryModal
                 open={historyModalOpen}
                 onClose={() => setHistoryModalOpen(false)}
                 beaconID={selectedBeaconID}
@@ -1185,7 +1189,7 @@ const RailMap: React.FC = () => {
                 isCustodian={isCustodian}
                 currentUserId={session?.userId ?? null}
                 onMapPinLocalStatusChanged={handleMapPinLocalStatusChanged}
-            />
+            /></Suspense>}
         </>
     );
 };
