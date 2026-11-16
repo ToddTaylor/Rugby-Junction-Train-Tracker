@@ -15,16 +15,19 @@ namespace Web.Server.Services
         private readonly IMapper _mapper;
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly int _telemetryStaleHoursDefault;
+        private readonly ILogger<BeaconRailroadHealthService> _logger;
 
         public BeaconRailroadHealthService(
             IHubContext<NotificationHub> hubContext,
             IMapper mapper,
             IServiceScopeFactory scopeFactory,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            ILogger<BeaconRailroadHealthService> logger)
         {
             _hubContext = hubContext;
             _mapper = mapper;
             _scopeFactory = scopeFactory;
+            _logger = logger;
             _telemetryStaleHoursDefault = configuration.GetValue<int>("ApplicationSettings:TelemetryStaleHoursDefault", 6);
         }
 
@@ -32,14 +35,28 @@ namespace Web.Server.Services
         /// Executes the background service to deliver updated beacon data to the UI every minute.
         /// Sets Online from the beacon PC's confirmed Server Health status and TelemetryStale from the
         /// effective telemetry-stale threshold (per-record override or app setting default).
+        /// A failed cycle is logged and the next one runs on schedule. An unhandled exception here would stop
+        /// the whole web host, and the map's beacon status would stop updating.
         /// </summary>
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             while (!stoppingToken.IsCancellationRequested)
             {
-                using var scope = _scopeFactory.CreateScope();
-                var dbContext = scope.ServiceProvider.GetRequiredService<TelemetryDbContext>();
-                await ComputeAndSendBeaconStatusAsync(dbContext, stoppingToken);
+                try
+                {
+                    using var scope = _scopeFactory.CreateScope();
+                    var dbContext = scope.ServiceProvider.GetRequiredService<TelemetryDbContext>();
+                    await ComputeAndSendBeaconStatusAsync(dbContext, stoppingToken);
+                }
+                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+                {
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Beacon railroad health cycle failed.");
+                }
+
                 await Task.Delay(_cleanupInterval, stoppingToken);
             }
         }

@@ -12,6 +12,7 @@ public class AuthAndTrackedPinFlowTests
     private static readonly HttpClient Client = new HttpClient();
 
     [TestMethod]
+    [Ignore("Needs a server running at localhost:5000 and calls endpoints that no longer exist. Kept until it is rewritten to host the app in-process.")]
     public async Task Login_Add_And_Untrack_Pin_Persists_Across_Restarts()
     {
         // 1. Login and get token
