@@ -7,11 +7,16 @@ import { format, parseISO } from "date-fns";
 import { getTrackedMapPins, TrackedPin, updateTrackedPinSymbol, refreshTrackedPinsFromApi, applyTrackedPinAddedOrUpdatedFromServer, applyTrackedPinRemovedFromServer } from '../services/trackedPins';
 import { useSignalR } from '../hooks/useSignalR';
 import { removeMapPin, updateMapPins } from '../utils/updateHelpers';
+import { sameTrackedPins } from '../utils/trackingDisplay';
 
 function MapPinsLog() {
     const [mapPins, setMapPins] = useState<MapPin[]>([]);
     const [beaconNameFilter, setBeaconNameFilter] = useState<string[]>([]);
-    const [trackedPins, setTrackedPins] = useState<TrackedPin[]>([]);
+    const [trackedPins, setTrackedPinsRaw] = useState<TrackedPin[]>([]);
+    // Keeps the old array when nothing changed, so re-reading the cache does not rebuild the grid.
+    const setTrackedPins = useCallback((next: TrackedPin[]) => {
+        setTrackedPinsRaw(prev => sameTrackedPins(prev, next) ? prev : next);
+    }, []);
 
     const fetchMapPins = useCallback(async () => {
         try {
@@ -99,9 +104,10 @@ function MapPinsLog() {
         };
         document.addEventListener('visibilitychange', handleVisibilityChange);
         
-        // Poll for changes every 100ms (for same-tab updates)
-        const interval = setInterval(updateTrackedPins, 100);
-        
+        // Re-read the cache every few seconds so expired tracked pins drop off. Same-tab changes made on this
+        // page set the state directly, and changes made elsewhere arrive through SignalR or the storage event.
+        const interval = setInterval(updateTrackedPins, 5000);
+
         // Also refresh from API every 10 seconds to ensure sync across devices
         const apiInterval = setInterval(() => {
             refreshTrackedPinsFromApi().then(pins => {
@@ -118,16 +124,12 @@ function MapPinsLog() {
             clearInterval(interval);
             clearInterval(apiInterval);
         };
-    }, []);
+    }, [setTrackedPins]);
 
-    const sortedData: MapPin[] = mapPins
-        .sort((a, b) => new Date(b.lastUpdate).getTime() - new Date(a.lastUpdate).getTime())
-        .map((pin) => ({
-            ...pin,
-            id: pin.id ,
-        }));
-
-    console.log('sortedData', sortedData);
+    // Newest first. Sorts a copy, because sorting the state array in place would change it behind React's back.
+    const sortedData: MapPin[] = useMemo(
+        () => [...mapPins].sort((a, b) => new Date(b.lastUpdate).getTime() - new Date(a.lastUpdate).getTime()),
+        [mapPins]);
 
     const columns: GridColDef[] = useMemo(() => [
         { field: 'id', headerName: 'ID' },
@@ -164,14 +166,11 @@ function MapPinsLog() {
                     e.stopPropagation();
                     const newSymbol = prompt('Enter a new Symbol (optional, max 10 characters, all caps):', symbol || '');
                     if (newSymbol !== null) {
-                        const trimmedSymbol = newSymbol.trim();
-                        if (trimmedSymbol) {
-                            updateTrackedPinSymbol(String(params.row.id), trimmedSymbol.toUpperCase().substring(0, 10));
-                        } else {
-                            updateTrackedPinSymbol(String(params.row.id), '');
-                        }
-                        // Force state update
-                        setTrackedPins(getTrackedMapPins());
+                        const symbolToSave = newSymbol.trim().toUpperCase().substring(0, 10);
+                        // The update returns the tracked pins as saved, so the new symbol shows once it is stored.
+                        updateTrackedPinSymbol(String(params.row.id), symbolToSave)
+                            .then(setTrackedPins)
+                            .catch(error => console.error('Error updating tracked pin symbol:', error));
                     }
                 };
                 
@@ -242,7 +241,7 @@ function MapPinsLog() {
         },
         { field: 'direction', headerName: 'Direction', width: 100 },
         { field: 'moving', headerName: 'Moving', width: 90 },
-    ], [trackedPins]);
+    ], [trackedPins, setTrackedPins]);
 
     // Get unique beacon names for dropdown
     const beaconNames = Array.from(new Set(sortedData.map(row => row.beaconName).filter(Boolean))).sort();
