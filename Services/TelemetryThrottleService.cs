@@ -12,14 +12,23 @@ namespace Services
         // Thread-safe dictionary to track last sent timestamp for each AddressID
         private readonly ConcurrentDictionary<int, DateTime> _lastSentTimestamps = new();
         private readonly int _throttleIntervalSeconds;
+        private readonly Func<DateTime> _utcNow;
 
         /// <summary>
         /// Initializes a new instance of the TelemetryThrottleService.
         /// </summary>
         /// <param name="throttleIntervalSeconds">The minimum interval in seconds between messages for the same AddressID.</param>
         public TelemetryThrottleService(int throttleIntervalSeconds)
+            : this(throttleIntervalSeconds, () => DateTime.UtcNow)
+        {
+        }
+
+        /// <param name="throttleIntervalSeconds">The minimum interval in seconds between messages for the same AddressID.</param>
+        /// <param name="utcNow">Returns the current UTC time. Replaced in tests.</param>
+        public TelemetryThrottleService(int throttleIntervalSeconds, Func<DateTime> utcNow)
         {
             _throttleIntervalSeconds = throttleIntervalSeconds;
+            _utcNow = utcNow;
         }
 
         /// <summary>
@@ -30,7 +39,7 @@ namespace Services
         /// <returns>True if the message should be sent; false if it should be throttled.</returns>
         public bool ShouldSendMessage(int addressId)
         {
-            var now = DateTime.UtcNow;
+            var now = _utcNow();
 
             // Try to get the last sent timestamp for this AddressID
             if (_lastSentTimestamps.TryGetValue(addressId, out var lastSent))

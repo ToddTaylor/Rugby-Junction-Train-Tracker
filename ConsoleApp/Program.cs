@@ -260,8 +260,17 @@ else
     ShowSettingsSummary(appSettings);
 }
 
-// Start processing telemetry logs on a background task
-_ = Task.Run(() => SoftEOTLogService.ProcessLogs(appSettings));
+// Start processing telemetry logs on a background task. It runs for as long as the app does, so if it ever
+// ends, say so: otherwise the window stays open while no telemetry is read and no health checks are sent.
+_ = Task.Run(() => SoftEOTLogService.ProcessLogs(appSettings)).ContinueWith(task =>
+{
+    Console.ForegroundColor = ConsoleColor.Red;
+    Console.WriteLine(task.IsFaulted
+        ? $"[ERROR] Telemetry processing stopped: {task.Exception?.GetBaseException()}"
+        : "[ERROR] Telemetry processing stopped.");
+    Console.WriteLine("Restart the app. If this happens again, check the settings (Ctrl+U).");
+    Console.ResetColor();
+}, TaskScheduler.Default);
 
 // Listen for Ctrl+U in the main thread
 while (true)

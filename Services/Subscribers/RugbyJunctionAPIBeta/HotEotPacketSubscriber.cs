@@ -5,19 +5,21 @@ namespace Services.Subscribers.RugbyJunctionAPIBeta
 {
     public class HotEotPacketSubscriber
     {
-        private readonly AppSettings _appSettings;
         private readonly Subscriber _subscriber;
         private readonly TelemetryThrottleService _throttleService;
+        private readonly TelemetryApiClient _apiClient;
+        private readonly TelemetrySendQueue _sendQueue;
 
         // Address IDs that should be ignored.
         private readonly int[] addressIdBlackList = new int[] { 0, 999999 };
 
         public HotEotPacketSubscriber(AppSettings appSettings)
         {
-            _appSettings = appSettings;
             _subscriber = appSettings.Subscribers
                 .First(s => s.ID == Constants.SUBSCRIBER_ID);
             _throttleService = new TelemetryThrottleService(_subscriber.TelemetryThrottleIntervalSeconds);
+            _apiClient = new TelemetryApiClient(appSettings, Constants.SUBSCRIBER_ID);
+            _sendQueue = TelemetrySendQueue.ForSubscriber(Constants.SUBSCRIBER_ID);
         }
 
         private void OnHotEotPacketReceived(object sender, HotEotPacketEventArgs e)
@@ -60,11 +62,9 @@ namespace Services.Subscribers.RugbyJunctionAPIBeta
                 Timestamp = e.Packet.TimeReceived
             };
 
-            var apiClient = new TelemetryApiClient(_appSettings, Constants.SUBSCRIBER_ID);
-            apiClient.SendTelemetryAsync(alert).GetAwaiter().GetResult();
-
-            // Let web page respond to previous request before sending the next one.
-            Thread.Sleep(100);
+            // Sent from this subscriber's own queue, so a slow or unreachable API does not hold up the log reader
+            // or the other subscribers.
+            _sendQueue.Enqueue(() => _apiClient.SendTelemetryAsync(alert));
         }
     }
 }

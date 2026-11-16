@@ -15,7 +15,7 @@ namespace Services.Subscribers.LiveTrainTrackingAPI
             {
                 var url = base.GetTelemetryUrl();
 
-                var request = new HttpRequestMessage(HttpMethod.Post, url)
+                using var request = new HttpRequestMessage(HttpMethod.Post, url)
                 {
                     Content = JsonContent.Create(telemetry)
                 };
@@ -24,7 +24,7 @@ namespace Services.Subscribers.LiveTrainTrackingAPI
                 var _apiKey = base.GetApiKey();
                 request.Headers.Add("X-Api-Key", _apiKey);
 
-                var response = await base._httpClient.SendAsync(request);
+                using var response = await base._httpClient.SendAsync(request);
 
                 if (response.IsSuccessStatusCode == false)
                 {

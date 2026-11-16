@@ -7,7 +7,8 @@ namespace Services
 {
     public class SoftEOTLogService
     {
-        // Offset set to zero as injecting old messages out-of-order can cause issues with rules processing in the web app.
+        // Packets received longer ago than this are skipped: injecting old messages out of order can upset the
+        // rules processing in the web app.
         private const int TIME_RECEIVED_OFFSET_MINUTES = 5;
 
         private const string FILE_NAME_PREFIX_HOT = "hot";
@@ -25,16 +26,13 @@ namespace Services
         public static event DpuPacketEventHandler DpuPacketReceived;
         public static event HotEotPacketEventHandler HotEotPacketReceived;
 
+        /// <summary>
+        /// Wires up the subscribers, starts the health checks and then reads the log files for as long as the app
+        /// runs. A log directory that is missing at startup does not stop it: the health checks still run, so
+        /// Server Health shows the PC, and reading starts once the directory appears.
+        /// </summary>
         public static void ProcessLogs(AppSettings appSettings)
         {
-            var logDirectoryPath = appSettings.LogDirectoryPath;
-
-            if (string.IsNullOrEmpty(logDirectoryPath) || !Directory.Exists(logDirectoryPath))
-            {
-                LogError($"Telemetry log file directory path is not valid: {logDirectoryPath}");
-                return;
-            }
-
             DeleteOldLogFiles(appSettings.LogDirectoryPath);
 
             AddHotEotEventSubscribers(appSettings);
@@ -46,9 +44,6 @@ namespace Services
             StartBeaconHealthServices(appSettings);
 
             ProcessTelemetryLogFiles(appSettings);
-
-            // Keep the app running...
-            Console.ReadLine();
         }
 
         private static void ProcessTelemetryLogFiles(AppSettings appSettings)
@@ -206,7 +201,7 @@ namespace Services
                         string? line;
                         while ((line = reader.ReadLine()) != null)
                         {
-                            if (!IsHeaderRow(line))
+                            if (!string.IsNullOrWhiteSpace(line) && !IsHeaderRow(line))
                             {
                                 ProcessLogLine(line, logFilePath);
                             }
@@ -230,9 +225,9 @@ namespace Services
             }
         }
 
-        private static bool IsHeaderRow(string? line)
+        private static bool IsHeaderRow(string line)
         {
-            return line.StartsWith("#");
+            return line.StartsWith('#');
         }
 
         private static void OnHotEotPacketReceived(object sender, HotEotPacketEventArgs e)
@@ -263,42 +258,89 @@ namespace Services
             }
         }
 
+        // A subscriber or health service that is misnamed in the settings, or that fails to start, is reported
+        // and skipped. Before, it was skipped without a word, or it stopped every subscriber after it.
+
         private static void StartBeaconHealthService(AppSettings appsettings, string serviceTypeName, string methodName)
         {
-            var type = Type.GetType(serviceTypeName);
-            if (type != null)
+            try
             {
-                var service = Activator.CreateInstance(type, appsettings);
-                if (service != null)
+                var type = Type.GetType(serviceTypeName);
+                if (type == null)
                 {
-                    var methodInfo = type.GetMethod(methodName, BindingFlags.Public | BindingFlags.Instance);
-                    if (methodInfo != null)
-                    {
-                        methodInfo.Invoke(service, null);
-                    }
-                    else
-                    {
-                        LogError($"Method {methodName} not found in {serviceTypeName}.");
-                    }
+                    LogError($"Beacon health service type not found: {serviceTypeName}. Check the settings.");
+                    return;
                 }
+
+                var service = Activator.CreateInstance(type, appsettings);
+                var methodInfo = type.GetMethod(methodName, BindingFlags.Public | BindingFlags.Instance);
+                if (service == null || methodInfo == null)
+                {
+                    LogError($"Method {methodName} not found in {serviceTypeName}.");
+                    return;
+                }
+
+                methodInfo.Invoke(service, null);
+            }
+            catch (Exception ex)
+            {
+                var cause = ex is TargetInvocationException { InnerException: not null } ? ex.InnerException : ex;
+                LogError($"Could not start beacon health service {serviceTypeName}: {cause.GetType().Name}: {cause.Message}");
             }
         }
 
         private static void SubscribeToPacketEvent(AppSettings appsettings, string subscriberTypeName, string eventName, string methodName)
         {
-            var type = Type.GetType(subscriberTypeName);
-            if (type != null)
+            try
             {
-                var subscriber = Activator.CreateInstance(type, appsettings);
-                if (subscriber != null)
+                var type = Type.GetType(subscriberTypeName);
+                if (type == null)
                 {
-                    var eventInfo = typeof(SoftEOTLogService).GetEvent(eventName);
-                    var methodInfo = type.GetMethod(methodName, BindingFlags.NonPublic | BindingFlags.Instance);
-                    if (eventInfo != null && methodInfo != null)
-                    {
-                        var handler = Delegate.CreateDelegate(eventInfo.EventHandlerType, subscriber, methodInfo);
-                        eventInfo.AddEventHandler(null, handler);
-                    }
+                    LogError($"Subscriber type not found: {subscriberTypeName}. Check the settings.");
+                    return;
+                }
+
+                var subscriber = Activator.CreateInstance(type, appsettings);
+                var eventInfo = typeof(SoftEOTLogService).GetEvent(eventName);
+                var methodInfo = type.GetMethod(methodName, BindingFlags.NonPublic | BindingFlags.Instance);
+                if (subscriber == null || eventInfo?.EventHandlerType == null || methodInfo == null)
+                {
+                    LogError($"Method {methodName} not found in {subscriberTypeName}.");
+                    return;
+                }
+
+                var handler = Delegate.CreateDelegate(eventInfo.EventHandlerType, subscriber, methodInfo);
+                eventInfo.AddEventHandler(null, handler);
+            }
+            catch (Exception ex)
+            {
+                var cause = ex is TargetInvocationException { InnerException: not null } ? ex.InnerException : ex;
+                LogError($"Could not start subscriber {subscriberTypeName}: {cause.GetType().Name}: {cause.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Calls each handler of an event in turn. An exception in one handler is logged and the rest still run;
+        /// a plain multicast call stops at the first exception, so one faulty subscriber hid packets from the
+        /// subscribers after it.
+        /// </summary>
+        internal static void InvokeEachHandler<TArgs>(Delegate? handlers, TArgs args, Action<string>? logError = null)
+        {
+            if (handlers == null)
+            {
+                return;
+            }
+
+            foreach (var handler in handlers.GetInvocationList())
+            {
+                try
+                {
+                    handler.DynamicInvoke(null, args);
+                }
+                catch (Exception ex)
+                {
+                    var cause = ex is TargetInvocationException { InnerException: not null } ? ex.InnerException : ex;
+                    (logError ?? LogError)($"{handler.Target?.GetType().FullName ?? handler.Method.Name} failed on a packet: {cause.GetType().Name}: {cause.Message}");
                 }
             }
         }
@@ -320,7 +362,7 @@ namespace Services
 
                     Console.WriteLine(line);
 
-                    HotEotPacketReceived?.Invoke(null, new HotEotPacketEventArgs(hotPacket));
+                    InvokeEachHandler(HotEotPacketReceived, new HotEotPacketEventArgs(hotPacket));
                 }
                 catch (Exception ex)
                 {
@@ -341,7 +383,7 @@ namespace Services
 
                     Console.WriteLine(line);
 
-                    DpuPacketReceived?.Invoke(null, new DpuPacketEventArgs(dpuPacket));
+                    InvokeEachHandler(DpuPacketReceived, new DpuPacketEventArgs(dpuPacket));
                 }
                 catch (Exception ex)
                 {
