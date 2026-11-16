@@ -1,13 +1,18 @@
 import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import type { Map as LeafletMap } from 'leaflet';
+import { useUserLocation } from '../hooks/useUserLocation';
 
 interface FindMeControlProps {
     mapRef: React.RefObject<LeafletMap | null>;
-    userLocation: { latitude: number; longitude: number } | null;
 }
 
-const FindMeControl: React.FC<FindMeControlProps> = ({ mapRef, userLocation }) => {
+/**
+ * Button that centers the map on the user. It watches the location itself, so a GPS fix re-renders only this
+ * control rather than the whole map.
+ */
+const FindMeControl: React.FC<FindMeControlProps> = ({ mapRef }) => {
+    const userLocation = useUserLocation();
     const controlRef = useRef<L.Control | null>(null);
     const userLocationRef = useRef<{ latitude: number; longitude: number } | null>(null);
 

@@ -7,8 +7,14 @@ Beacon labels on the map display the last known train time and direction (compas
 
 ### BeaconLabelPin Component
 The component displays beacon status with a label that includes:
-1. **Timestamp**: When the last train was detected (refreshed from live map pin updates)
+1. **Timestamp**: When the last train was detected, formatted with the user's 12- or 24-hour setting.
 2. **Direction Arrow**: A compass indicator (▲ N, ▼ S, ► E, ◄ W, etc.)
+
+### Where the Last Train Comes From
+- `RailMap` keeps `beaconLastUpdateMap`, keyed `beaconID|subdivisionID`, holding the latest time and direction for each beacon subdivision.
+- It is seeded with one `GET api/v1/MapPins/latest` request on load, again when the tab becomes visible, and after SignalR reconnects. Live `MapPinUpdate` messages and the map pin list keep it current between those.
+- `BeaconMarkers` passes each label the latest entry across its subdivisions (`latestBeaconUpdate`). Labels do not fetch history themselves; that used to cost one request per beacon on every page load.
+- The label icon is rebuilt only when its own text, tracked trains, size or theme changes. Rebuilding replaces the label's DOM element, so clicks are handled through the Leaflet marker's `click` event, which survives the swap.
 
 ### The Stale Arrow Bug
 **Symptom**: Timestamp updates (showing "30 seconds ago") but the arrow does not change, making the label appear inconsistent.
@@ -63,9 +69,9 @@ if ((utcNow - lastUpdate).TotalHours > StationaryDirectionNullThresholdHours)
 2. **MapPinService.UpsertMapPin()**: Calls DirectionService to calculate direction.
 3. **MapPin Updated**: Entity is saved with new LastUpdate and Direction.
 4. **SignalR Broadcast**: NotificationHub.OnMapPinUpdate() sends the updated MapPin DTO to all clients.
-5. **Client Receives Update**: Redux or local state updates with the new map pin. 
-6. **BeaconLabelPin Re-renders**: Dependencies on (lastUpdateTime, direction) trigger a re-render.
-7. **Leaflet Icon HTML Updated**: The new direction arrow appears on the map.
+5. **Client Receives Update**: `RailMap` updates its map pins and `beaconLastUpdateMap` with the new time and direction.
+6. **BeaconLabelPin Re-renders**: Only the label whose `lastUpdate` or `direction` prop changed re-renders; the others are memoized.
+7. **Leaflet Icon HTML Updated**: The new time and direction arrow appear on the map.
 
 ## Key Invariants
 
@@ -96,7 +102,7 @@ if ((utcNow - lastUpdate).TotalHours > StationaryDirectionNullThresholdHours)
   - Tests direction is set to null for stationary trains.
 
 ### Client-Side
-- **BeaconLabelPin Component Tests**: Should verify (if present) that direction updates alongside timestamp.
+- **mapRenderCost.test.tsx**: Labels show the last train without fetching, follow the hour format, redraw only when their own last train changes, and still open the history modal after redrawing.
 - **SignalR Integration**: Should verify that MapPin DTOs with updated directions are received and rendered.
 
 ## Common Failure Modes and Recovery

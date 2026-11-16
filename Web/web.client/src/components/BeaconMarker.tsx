@@ -166,7 +166,7 @@ const BeaconMarker: React.FC<BeaconMarkerProps> = ({ pin: beaconPin, zoom, idx, 
             <div class=\"beacon-container\" style=\"position: relative; width: ${outlineSize}px; height: ${outlineSize}px; pointer-events: none;\">
                 ${dottedOutline}
                 ${telemetryStaleRing}
-                <div class=\"beacon-dot\" title=\"${beaconName} ${title}\" style=\"
+                <div class=\"beacon-dot\" title=\"${escapeHtml(`${beaconName} ${title}`)}\" style=\"
                     width:${beaconDotSizePx}px;
                     height:${beaconDotSizePx}px;
                     background:${dotCenterColor};
@@ -274,4 +274,5 @@ const BeaconMarker: React.FC<BeaconMarkerProps> = ({ pin: beaconPin, zoom, idx, 
     );
 };
 
-export default BeaconMarker;
+// Its beacon object keeps its identity until that beacon changes, so a plain prop comparison is enough.
+export default React.memo(BeaconMarker);

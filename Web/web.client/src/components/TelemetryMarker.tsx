@@ -1,6 +1,6 @@
 import { Marker } from 'react-leaflet';
 import L from 'leaflet';
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { parseISO } from 'date-fns/parseISO';
 import { format } from 'date-fns';
 import { addTrackedMapPin, removeTrackedMapPin, getTrackedPinSymbol, updateTrackedPinSymbol, refreshTrackedPinsFromApi, copyTrackedPinShareUrl, buildTrackedPinShareUrl } from '../services/trackedPins';
@@ -11,18 +11,13 @@ declare global {
         setTrackedPinsStateFromApi?: (pins: import('../services/trackedPins').TrackedPin[]) => void;
     }
 }
-import type { TrackedPin } from '../services/trackedPins';
 import ReactDOMServer from 'react-dom/server';
-import { ArrowIcon } from './ArrowIcon'; // adjust import as needed
-import { UnknownIcon } from './UnknownIcon';
 import TrackSymbolModal from './TrackSymbolModal';
 import { MapPin } from '../types/MapPin';
 import { CopyIcon } from './CopyIcon';
 import { escapeHtml } from '../utils/escapeHtml';
-
-const ICON_CACHE_BUSTER = import.meta.env.VITE_APP_VERSION
-    ? `?v=${import.meta.env.VITE_APP_VERSION}`
-    : '';
+import { createTelemetryIcon } from './telemetryMarkerIcon';
+import { propsEqualWithShallowPin } from '../utils/shallowEqual';
 
 function getPinBrightness(lastUpdate: string, maxPinAgeMinutes?: number): number {
     const now = new Date();
@@ -39,11 +34,16 @@ function getPinBrightness(lastUpdate: string, maxPinAgeMinutes?: number): number
     return brightness;
 }
 
-interface TelemetryMarkerProps {
+export interface TelemetryMarkerProps {
     pin: MapPin;
     size: number;
     maxPinAgeMinutes?: number;
-    trackedPins: TrackedPin[];
+    /** True when the signed-in user tracks this map pin. */
+    isTracked?: boolean;
+    /** Color of the user's tracked pin for this map pin, when tracked. */
+    trackColor?: string;
+    /** Symbol the user gave this train, matched by map pin ID or share code. */
+    trackedSymbol?: string;
     longitudeOffset?: number;
     hourFormat?: string;
     canViewSupportAddresses?: boolean;
@@ -78,7 +78,9 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
     size,
     maxPinAgeMinutes,
     mapTheme,
-    trackedPins,
+    isTracked = false,
+    trackColor,
+    trackedSymbol,
     longitudeOffset = 0,
     hourFormat = '24',
     canViewSupportAddresses = false,
@@ -120,12 +122,6 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
     const shouldReopenPopupRef = useRef(false);
     const [brightness, setBrightness] = useState(() =>
         getPinBrightness(pin.lastUpdate, maxPinAgeMinutes)
-    );
-    const [isTracked, setIsTracked] = useState(() =>
-        !!trackedPins.find(tp => String(tp.id) === String(pin.id))
-    );
-    const [trackColor, setTrackColor] = useState<string | undefined>(() =>
-        trackedPins.find(tp => String(tp.id) === String(pin.id))?.color
     );
     const [modalOpen, setModalOpen] = useState(false);
     const [modalSymbol, setModalSymbol] = useState('');
@@ -169,12 +165,6 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
     };
 
     useEffect(() => {
-        const tracked = trackedPins.find(tp => String(tp.id) === String(pin.id));
-        setIsTracked(!!tracked);
-        setTrackColor(tracked?.color);
-    }, [trackedPins, pin.id]);
-
-    useEffect(() => {
         const update = () => {
             const newBrightness = getPinBrightness(pin.lastUpdate, maxPinAgeMinutes);
             setBrightness(newBrightness);
@@ -214,10 +204,7 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
         const shareTextId = `share-text-${pin.id}`;
         const shareStatusId = `share-status-${pin.id}`;
         const resetAddressesId = `reset-addresses-${pin.id}`;
-        const trackedPinForLabel =
-            trackedPins.find(tp => String(tp.id) === String(pin.id)) ||
-            (pin.shareCode ? trackedPins.find(tp => tp.shareCode === pin.shareCode) : undefined);
-        const trackedSymbolLabel = trackedPinForLabel?.symbol?.trim();
+        const trackedSymbolLabel = trackedSymbol?.trim();
         // Symbols are typed by users and shared between them, so they are escaped before going into the popup HTML.
         const displayTrainLabel = escapeHtml(trackedSymbolLabel || (pin.shareCode ? `Train ${pin.shareCode}` : ''));
         const safeTrackColor = escapeHtml(trackColor || '#FFD700');
@@ -476,55 +463,22 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
                 clearTimeout(shareFeedbackTimeout);
             }
         };
-    }, [pin.id, pin.shareCode, pin.beaconID, pin.beaconName, pin.railroad, pin.subdivision, pin.subdivisionID, pin.milepost, pin.direction, pin.moving, pin.isLocal, pin.lastUpdate, pin.addresses, isTracked, trackColor, mapTheme, hourFormat, isAdmin, canManageLocalTrains, canViewSupportAddresses, onMapPinDeleted]);
+    }, [pin.id, pin.shareCode, pin.beaconID, pin.beaconName, pin.railroad, pin.subdivision, pin.subdivisionID, pin.milepost, pin.direction, pin.moving, pin.isLocal, pin.lastUpdate, pin.addresses, pin.addressSourceTypes, isTracked, trackColor, trackedSymbol, mapTheme, hourFormat, isAdmin, canManageLocalTrains, canViewSupportAddresses, onMapPinDeleted]);
 
-    // Use ArrowMapPin as the icon, with rotation and border color
-    const createCustomIcon = () => {
-        const iconSrc = getArrowIconSrc(pin.direction, pin.moving != null ? !!pin.moving : undefined, mapTheme);
-
-        if (!pin.direction) {
-            return L.divIcon({
-                html: ReactDOMServer.renderToString(
-                    <UnknownIcon
-                        iconSrc={iconSrc}
-                        brightness={brightness}
-                        trackColor={trackColor}
-                        size={size}
-                        isLocal={pin.isLocal}
-                    />
-                ),
-                iconSize: [size, size],
-                iconAnchor: [size / 2, size / 2], // <-- absolute center of marker
-                popupAnchor: [0, -size / 2],      // popup appears above the marker, scales with size
-                className: 'telemetry-marker-z',
-            });
-        }
-
-        return L.divIcon({
-            html: ReactDOMServer.renderToString(
-                <ArrowIcon
-                    iconSrc={iconSrc}
-                    brightness={brightness}
-                    trackColor={trackColor}
-                    size={size}
-                    rotation={getRotation(pin.direction)}
-                    isLocal={pin.isLocal}
-                />
-            ),
-            iconSize: [size, size],
-            iconAnchor: [size / 2, size / 2], // <-- absolute center of marker
-            popupAnchor: [0, -size / 2],      // popup appears above the marker, scales with size
-            className: 'telemetry-marker-z',
-        });
-    };
+    // Built only when something it shows changes. A new icon makes Leaflet replace the marker's DOM element,
+    // so rebuilding it on every render redrew every train on the map for each update to any one of them.
+    const moving = pin.moving != null ? !!pin.moving : undefined;
+    const icon = useMemo(
+        () => createTelemetryIcon(pin.direction, moving, pin.isLocal, mapTheme, brightness, trackColor, size),
+        [pin.direction, moving, pin.isLocal, mapTheme, brightness, trackColor, size]
+    );
 
     return (
         <>
             <Marker
-                key={pin.id}
                 ref={markerRef}
                 position={[pin.latitude, pin.longitude + longitudeOffset]}
-                icon={createCustomIcon()}
+                icon={icon}
                 pane="telemetryPane"
             />
             <TrackSymbolModal
@@ -541,32 +495,5 @@ const TelemetryMarker: React.FC<TelemetryMarkerProps & { mapTheme: 'dark' | 'lig
     );
 };
 
-function getArrowIconSrc(direction?: string | null, moving?: boolean, mapTheme: 'dark' | 'light' = 'dark'): string {
-    const suffix = mapTheme === 'dark' ? '-dark' : '-light';
-    const cacheBuster = ICON_CACHE_BUSTER;
-
-    if (!direction) {
-        if (moving === true) return `/icons/unknown-green${suffix}.svg${cacheBuster}`;
-        if (moving === false) return `/icons/unknown-red${suffix}.svg${cacheBuster}`;
-        return `/icons/unknown${suffix}.svg${cacheBuster}`;
-    }
-    if (moving === true) return `/icons/arrow-green${suffix}.svg${cacheBuster}`;
-    if (moving === false) return `/icons/arrow-red${suffix}.svg${cacheBuster}`;
-    return `/icons/arrow${suffix}.svg${cacheBuster}`;
-}
-
-function getRotation(direction?: string | null): number {
-    switch ((direction || '').toUpperCase()) {
-        case 'N': return 0;
-        case 'NE': return 45;
-        case 'E': return 90;
-        case 'SE': return 135;
-        case 'S': return 180;
-        case 'SW': return 225;
-        case 'W': return 270;
-        case 'NW': return 315;
-        default: return 0;
-    }
-}
-
-export default TelemetryMarker;
+// Re-rendered only when this train or a setting it shows changes, not when another train updates.
+export default React.memo(TelemetryMarker, propsEqualWithShallowPin);
