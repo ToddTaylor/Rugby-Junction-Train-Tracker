@@ -19,13 +19,28 @@
 		<Content Include="appsettings.json">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</Content>
-		<Content Include="appsettings.Local.json">
+		<!-- These two files hold the API keys and are not in git. Create each from its .example.json copy. -->
+		<Content Include="appsettings.Local.json" Condition="Exists('appsettings.Local.json')">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</Content>
-		<Content Include="appsettings.Production.json">
+		<Content Include="appsettings.Production.json" Condition="Exists('appsettings.Production.json')">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</Content>
+		<None Include="appsettings.*.example.json" />
 	</ItemGroup>
+
+	<!--
+		Stops a ClickOnce publish that would ship without the production settings, or with the placeholder keys from
+		appsettings.Production.example.json. Without this check the PCs would install a release that cannot start or
+		cannot reach the API.
+	-->
+	<Target Name="RequireProductionSettings" BeforeTargets="GenerateDeploymentManifest;_DeploymentGenerateTrustInfo" Condition="'$(PublishProtocol)' == 'ClickOnce' Or '$(Install)' == 'true'">
+		<Error Condition="!Exists('appsettings.Production.json')" Text="ConsoleApp/appsettings.Production.json is missing. Copy appsettings.Production.example.json to appsettings.Production.json and fill in the API keys before publishing." />
+		<PropertyGroup Condition="Exists('appsettings.Production.json')">
+			<_ProductionSettingsText>$([System.IO.File]::ReadAllText('$(MSBuildProjectDirectory)/appsettings.Production.json'))</_ProductionSettingsText>
+		</PropertyGroup>
+		<Error Condition="$(_ProductionSettingsText.Contains('REPLACE_WITH_API_KEY'))" Text="ConsoleApp/appsettings.Production.json still has a REPLACE_WITH_API_KEY placeholder. Fill in the API keys before publishing." />
+	</Target>
 
 	<ItemGroup>
 		<ProjectReference Include="..\Services\Services.csproj" />

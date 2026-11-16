@@ -165,6 +165,15 @@ if (File.Exists(configPath))
 else
 {
     // First time or bundled config
+    if (!File.Exists(bundledConfigPath))
+    {
+        Console.ForegroundColor = ConsoleColor.Red;
+        Console.WriteLine($"Settings file not found: {bundledConfigPath}");
+        Console.WriteLine($"Copy appsettings.{environment}.example.json to appsettings.{environment}.json in the ConsoleApp folder, fill in the API keys, and rebuild.");
+        Console.ResetColor();
+        return;
+    }
+
     var json = File.ReadAllText(bundledConfigPath);
     var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
     appSettings = JsonSerializer.Deserialize<AppSettings>(json, options);
